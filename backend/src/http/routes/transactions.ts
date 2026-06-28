@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { and, asc, desc, eq, gte, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { transactions } from '../../db/schema.js';
+import { normalizeLabel } from '../../domain/imports/normalize.js';
+import { computeDedupKey } from '../../domain/imports/dedup.js';
+import { categorizeOne, loadRuleEngine } from '../../domain/rules/recategorize.js';
 
 const ListQuery = z.object({
   accountId: z.coerce.number().int().positive().optional(),
@@ -33,6 +36,22 @@ const PatchBody = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
+// Body for manual creation. raw_label is required; the server derives the
+// normalized_label + dedup_key. categoryId is optional — when omitted the rule
+// engine fires the same way it does at import time.
+const CreateBody = z.object({
+  accountId: z.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+  rawLabel: z.string().trim().min(1).max(512),
+  categoryId: z.number().int().positive().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+function isPgError(err: unknown): err is { code: string } {
+  return typeof err === 'object' && err !== null && 'code' in err && typeof (err as { code: unknown }).code === 'string';
+}
+
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 
 function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
@@ -46,6 +65,75 @@ function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
 
 export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
+
+  // Manual transaction creation. Same dedup discipline as the importer — the
+  // UNIQUE(account_id, dedup_key) constraint rejects exact duplicates at the
+  // DB level, which we translate to a clean 409.
+  app.post('/api/transactions', async (req, reply) => {
+    const parsed = CreateBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
+    }
+    const v = parsed.data;
+    const amount = Number(v.amount).toFixed(2);
+    const normalized = normalizeLabel(v.rawLabel);
+    const dedupKey = computeDedupKey({
+      accountId: v.accountId,
+      date: v.date,
+      amount,
+      normalizedLabel: normalized,
+      fitid: null,
+    });
+
+    try {
+      const [inserted] = await db
+        .insert(transactions)
+        .values({
+          accountId: v.accountId,
+          date: v.date,
+          amount,
+          rawLabel: v.rawLabel,
+          normalizedLabel: normalized,
+          memo: null,
+          notes: v.notes && v.notes.trim() ? v.notes : null,
+          fitid: null,
+          dedupKey,
+          categoryId: v.categoryId ?? null,
+          categorySource: v.categoryId ? 'manual' : 'auto',
+          sourceFileId: null,
+        })
+        .returning();
+      if (!inserted) {
+        return reply.code(500).send({ error: 'failed to insert transaction' });
+      }
+
+      // If the user didn't pick a category, run the same rule engine the
+      // importer runs — keeps semantics consistent across creation paths.
+      if (!v.categoryId) {
+        const { compiled, defaultId } = await loadRuleEngine();
+        await categorizeOne(
+          compiled,
+          defaultId,
+          inserted.id,
+          Number(amount),
+          normalized,
+        );
+      }
+
+      const [final] = await db.select().from(transactions).where(eq(transactions.id, inserted.id));
+      return reply.code(201).send({ transaction: final ?? inserted });
+    } catch (err) {
+      if (isPgError(err) && err.code === '23505') {
+        return reply.code(409).send({
+          error: 'une transaction identique existe déjà pour ce compte (même date, montant et libellé)',
+        });
+      }
+      if (isPgError(err) && err.code === '23503') {
+        return reply.code(400).send({ error: 'compte ou catégorie inconnu' });
+      }
+      throw err;
+    }
+  });
 
   app.get('/api/transactions', async (req, reply) => {
     const parsed = ListQuery.safeParse(req.query);

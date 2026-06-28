@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { Account, Category, Transaction } from '../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../lib/format';
 
@@ -37,6 +37,7 @@ export function Transactions() {
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [showNewTx, setShowNewTx] = useState(false);
 
   // Whenever the search input changes, route it to either `amount` or
   // `search`. We never send both at once.
@@ -109,9 +110,17 @@ export function Transactions() {
           <h1 className="page-title">Transactions</h1>
           <p className="page-subtitle">{total.toLocaleString('fr-FR')} ligne{total > 1 ? 's' : ''} au total</p>
         </div>
-        <button className="btn-secondary md:hidden" onClick={() => setShowFilters((s) => !s)}>
-          {showFilters ? 'Masquer' : 'Filtres'}
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary md:hidden" onClick={() => setShowFilters((s) => !s)}>
+            {showFilters ? 'Masquer' : 'Filtres'}
+          </button>
+          <button className="btn-primary" onClick={() => setShowNewTx(true)}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Nouvelle transaction
+          </button>
+        </div>
       </div>
 
       <div className={`surface p-4 md:p-5 ${showFilters ? '' : 'hidden md:block'}`}>
@@ -299,6 +308,225 @@ export function Transactions() {
           </button>
         </div>
       </div>
+
+      <NewTransactionModal
+        open={showNewTx}
+        onClose={() => setShowNewTx(false)}
+        accounts={accounts}
+        categories={categories}
+      />
+    </div>
+  );
+}
+
+{/* ---- Manual transaction form modal ---- */}
+
+function NewTransactionModal({
+  open,
+  onClose,
+  accounts,
+  categories,
+}: {
+  open: boolean;
+  onClose: () => void;
+  accounts: Account[];
+  categories: Category[];
+}) {
+  const qc = useQueryClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [accountId, setAccountId] = useState<number | ''>(accounts[0]?.id ?? '');
+  const [date, setDate] = useState(today);
+  const [amount, setAmount] = useState('');
+  const [rawLabel, setRawLabel] = useState('');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Re-seed defaults whenever the modal opens.
+  useEffect(() => {
+    if (open) {
+      setAccountId(accounts[0]?.id ?? '');
+      setDate(today);
+      setAmount('');
+      setRawLabel('');
+      setCategoryId('');
+      setNotes('');
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  const create = useMutation({
+    mutationFn: (input: {
+      accountId: number;
+      date: string;
+      amount: string;
+      rawLabel: string;
+      categoryId: number | null;
+      notes: string | null;
+    }) =>
+      api<{ transaction: Transaction }>('/api/transactions', {
+        method: 'POST',
+        json: input,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      onClose();
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  if (!open) return null;
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!accountId) {
+      setError('Choisissez un compte.');
+      return;
+    }
+    // Accept French ("338,50 €") or canonical ("338.50") and normalise.
+    const cleanedAmount = amount.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
+    if (!/^-?\d+(\.\d{1,2})?$/.test(cleanedAmount)) {
+      setError('Montant invalide. Format attendu : 338.50, -25,30, 1234, …');
+      return;
+    }
+    if (!rawLabel.trim()) {
+      setError('Le libellé est obligatoire.');
+      return;
+    }
+    create.mutate({
+      accountId,
+      date,
+      amount: cleanedAmount,
+      rawLabel: rawLabel.trim(),
+      categoryId: categoryId || null,
+      notes: notes.trim() || null,
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-ink-950/70 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={submit}
+        className="surface w-full max-w-lg p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="display text-xl text-ink-50 mb-1">Nouvelle transaction</div>
+        <div className="text-sm text-ink-400 mb-5">
+          Saisie manuelle. Le moteur de règles s'appliquera automatiquement si vous laissez
+          la catégorie vide.
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="label mb-1.5 block">Compte</label>
+            <select
+              className="input"
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
+              required
+            >
+              <option value="">—</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.currency})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label mb-1.5 block">Date</label>
+            <input
+              type="date"
+              className="input"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="label mb-1.5 block">Montant</label>
+            <input
+              className="input font-mono"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="-25,30"
+              required
+            />
+            <div className="text-[11px] text-ink-500 mt-1">
+              Signé : négatif = dépense, positif = revenu.
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label mb-1.5 block">Libellé</label>
+            <input
+              className="input"
+              value={rawLabel}
+              onChange={(e) => setRawLabel(e.target.value)}
+              placeholder="Carrefour Évry"
+              required
+            />
+          </div>
+          <div>
+            <label className="label mb-1.5 block">Catégorie (optionnelle)</label>
+            <select
+              className="input"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
+            >
+              <option value="">— (auto via règles)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label mb-1.5 block">Notes</label>
+            <input
+              className="input"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="…"
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200 mt-4">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button type="button" className="btn-ghost" onClick={onClose} disabled={create.isPending}>
+            Annuler
+          </button>
+          <button type="submit" className="btn-primary" disabled={create.isPending}>
+            {create.isPending ? 'Création…' : 'Créer la transaction'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
