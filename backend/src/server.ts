@@ -12,6 +12,8 @@ import { importsRoutes } from './http/routes/imports.js';
 import { categoriesRoutes } from './http/routes/categories.js';
 import { rulesRoutes } from './http/routes/rules.js';
 import { transferRulesRoutes } from './http/routes/transfer-rules.js';
+import { transactionsRoutes } from './http/routes/transactions.js';
+import { reportsRoutes } from './http/routes/reports.js';
 
 const app = Fastify({
   logger:
@@ -40,6 +42,8 @@ await app.register(importsRoutes);
 await app.register(categoriesRoutes);
 await app.register(rulesRoutes);
 await app.register(transferRulesRoutes);
+await app.register(transactionsRoutes);
+await app.register(reportsRoutes);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');
