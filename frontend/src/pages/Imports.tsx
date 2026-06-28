@@ -1,33 +1,15 @@
-import { useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, apiUpload, ApiError } from '../api/client';
-import type { Account, AccountFilenamePattern, FileImport } from '../api/types';
+import type { Account, FileImport } from '../api/types';
 import { formatDateTime } from '../lib/format';
-
-// Mirrors the server-side filename → account resolver. We do it client-side
-// too so the UI can show the chosen account *before* the user commits.
-function resolveAccountFromFilename(
-  filename: string,
-  patterns: AccountFilenamePattern[],
-): number | null {
-  if (!filename || patterns.length === 0) return null;
-  const lower = filename.toLowerCase();
-  const sorted = [...patterns].sort((a, b) => b.priority - a.priority);
-  for (const p of sorted) {
-    if (lower.includes(p.pattern.toLowerCase())) return p.accountId;
-  }
-  return null;
-}
-
-type AccountChoice = 'auto' | number;
 
 export function Imports() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [pickedFile, setPickedFile] = useState<File | null>(null);
-  const [accountChoice, setAccountChoice] = useState<AccountChoice>('auto');
+  const [file, setFile] = useState<File | null>(null);
+  const [accountId, setAccountId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
     filename: string;
@@ -40,36 +22,22 @@ export function Imports() {
     queryKey: ['accounts'],
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
   });
-  const patternsQ = useQuery({
-    queryKey: ['patterns'],
-    queryFn: () => api<{ patterns: AccountFilenamePattern[] }>('/api/account-filename-patterns'),
-  });
   const importsQ = useQuery({
     queryKey: ['imports'],
     queryFn: () => api<{ imports: FileImport[] }>('/api/imports'),
   });
 
   const accounts = accountsQ.data?.accounts ?? [];
-  const patterns = patternsQ.data?.patterns ?? [];
-
-  // Client-side preview: which account would the auto-resolver pick?
-  const autoResolvedAccountId = useMemo(
-    () => (pickedFile ? resolveAccountFromFilename(pickedFile.name, patterns) : null),
-    [pickedFile, patterns],
-  );
-
-  // The account that will actually be sent to the backend.
-  const effectiveAccountId =
-    accountChoice === 'auto' ? autoResolvedAccountId : accountChoice;
 
   const upload = useMutation({
-    mutationFn: ({ file, accountId }: { file: File; accountId: number | null }) =>
+    mutationFn: ({ file, accountId }: { file: File; accountId: number | '' }) =>
       apiUpload<{
         filename: string;
         insertedCount: number;
         dedupSkipped: number;
         totalLines: number;
       }>('/api/imports', file, {
+        // Empty string -> let the server auto-resolve via filename patterns.
         query: accountId ? { accountId } : undefined,
       }),
     onSuccess: (data, vars) => {
@@ -84,7 +52,7 @@ export function Imports() {
       qc.invalidateQueries({ queryKey: ['accounts'] });
       qc.invalidateQueries({ queryKey: ['reports'] });
       qc.invalidateQueries({ queryKey: ['tri-groups'] });
-      setPickedFile(null);
+      setFile(null);
       if (fileRef.current) fileRef.current.value = '';
     },
     onError: (err: ApiError) => {
@@ -93,45 +61,14 @@ export function Imports() {
     },
   });
 
-  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
     setError(null);
-    setLastResult(null);
-    setPickedFile(file);
-    // Reset choice on every new file — auto might match this one when the
-    // previous one didn't, and vice versa.
-    setAccountChoice('auto');
-  };
-
-  const reset = () => {
-    setPickedFile(null);
-    setError(null);
-    setAccountChoice('auto');
-    if (fileRef.current) fileRef.current.value = '';
-  };
-
-  const submit = () => {
-    if (!pickedFile) return;
-    if (!effectiveAccountId) return;
-    setError(null);
-    upload.mutate({ file: pickedFile, accountId: effectiveAccountId });
+    upload.mutate({ file, accountId });
   };
 
   const accountName = (id: number) => accounts.find((a) => a.id === id)?.name ?? `#${id}`;
-  const detectedAccount =
-    autoResolvedAccountId !== null ? accounts.find((a) => a.id === autoResolvedAccountId) : null;
-  const matchedPattern =
-    detectedAccount && pickedFile
-      ? [...patterns]
-          .sort((a, b) => b.priority - a.priority)
-          .find(
-            (p) =>
-              pickedFile.name.toLowerCase().includes(p.pattern.toLowerCase()) &&
-              p.accountId === detectedAccount.id,
-          )
-      : null;
-
-  const canImport = !!pickedFile && !!effectiveAccountId && !upload.isPending;
 
   return (
     <div className="flex flex-col gap-8">
@@ -144,110 +81,50 @@ export function Imports() {
         </div>
       </div>
 
-      {/* Step 1 — pick the file */}
-      <div className="surface p-5 md:p-6">
-        <div className="label mb-2">1. Choisir un fichier</div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".ofx,.qfx,.csv"
-          onChange={onPick}
-          disabled={upload.isPending}
-          className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
-        />
-      </div>
-
-      {/* Step 2 — confirm target account */}
-      {pickedFile && (
-        <div className="surface p-5 md:p-6 flex flex-col gap-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <div className="label">2. Compte cible</div>
-            <button className="text-[11px] text-ink-500 hover:text-ink-200 transition" onClick={reset}>
-              annuler
-            </button>
-          </div>
-          <div className="text-sm text-ink-400">
-            <span className="font-mono text-ink-200">{pickedFile.name}</span>{' '}
-            <span className="text-ink-500">· {formatBytes(pickedFile.size)}</span>
+      <form onSubmit={submit} className="surface p-5 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-end gap-4">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+            <label className="label">Fichier (.ofx · .qfx · .csv)</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".ofx,.qfx,.csv"
+              onChange={(e) => {
+                setFile(e.target.files?.[0] ?? null);
+                setError(null);
+                setLastResult(null);
+              }}
+              disabled={upload.isPending}
+              className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
+            />
           </div>
 
-          {/* Auto-detection result */}
-          {detectedAccount ? (
-            <div className="rounded-lg border border-sage-800/50 bg-sage-900/15 px-4 py-3 text-sm">
-              <div className="flex items-baseline gap-2">
-                <span className="badge-sage">détecté</span>
-                <span className="text-ink-100">
-                  → <span className="font-medium">{detectedAccount.name}</span>
-                </span>
-              </div>
-              {matchedPattern && (
-                <div className="text-[11px] text-ink-500 mt-1.5 font-mono">
-                  via motif « {matchedPattern.pattern} »
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-clay-800/50 bg-clay-900/15 px-4 py-3 text-sm text-clay-200">
-              <div className="font-medium text-ink-100 mb-1">Aucun motif ne correspond à ce nom de fichier.</div>
-              <div className="text-ink-400 text-[13px]">
-                Sélectionnez un compte ci-dessous, ou{' '}
-                <Link to="/accounts" className="underline text-sage-300 hover:text-sage-200">
-                  configurez un motif dans Comptes
-                </Link>{' '}
-                pour que les imports futurs se résolvent tout seuls.
-              </div>
-            </div>
-          )}
-
-          {/* Manual override */}
-          <div className="flex flex-col gap-1.5">
-            <label className="label">Compte (override manuel)</label>
+          <div className="flex flex-col gap-1.5 w-full md:w-60">
+            <label className="label">Compte</label>
             <select
               className="input"
-              value={accountChoice === 'auto' ? '' : accountChoice}
-              onChange={(e) =>
-                setAccountChoice(e.target.value ? Number(e.target.value) : 'auto')
-              }
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
             >
-              <option value="">
-                {detectedAccount
-                  ? `Auto — ${detectedAccount.name}`
-                  : 'Auto — aucun (impossible)'}
-              </option>
+              <option value="">Auto (via nom du fichier)</option>
               {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Submit */}
-          <div className="flex items-center gap-3 pt-2">
-            <button className="btn-primary" disabled={!canImport} onClick={submit}>
-              {upload.isPending
-                ? 'Import en cours…'
-                : effectiveAccountId
-                  ? `Importer dans ${accountName(effectiveAccountId)}`
-                  : 'Choisissez un compte'}
-            </button>
-            {effectiveAccountId === null && (
-              <div className="text-xs text-ink-500">
-                Aucun compte sélectionné — le bouton se débloque dès que vous en choisissez un.
-              </div>
-            )}
-          </div>
+          <button className="btn-primary" disabled={!file || upload.isPending}>
+            {upload.isPending ? 'Import…' : 'Importer'}
+          </button>
         </div>
-      )}
+      </form>
 
-      {/* Error */}
       {error && (
         <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-4 py-3 text-sm text-clay-200">
           {error}
         </div>
       )}
 
-      {/* Last result */}
       {lastResult && (
         <div className="surface p-5">
           <div className="label mb-2">Dernier import</div>
@@ -312,10 +189,4 @@ export function Imports() {
       </section>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Kio`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mio`;
 }
