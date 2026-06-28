@@ -6,6 +6,7 @@ RUN npm install --no-audit --no-fund
 
 COPY tsconfig.json drizzle.config.ts ./
 COPY src ./src
+COPY scripts ./scripts
 
 RUN npm run build
 
