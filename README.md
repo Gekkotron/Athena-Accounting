@@ -28,7 +28,7 @@ bank data never leaves your network.
 docker compose up --build
 ```
 
-Open <http://127.0.0.1:6000> — the first visit walks you through creating
+Open <http://127.0.0.1:8000> — the first visit walks you through creating
 your username and password. Your password is hashed with argon2id
 (per-user salt) before being stored; only the hash ever touches the
 database.
@@ -37,11 +37,12 @@ Default host ports (both bound to `127.0.0.1`):
 
 | Service  | Host port | Container port |
 |----------|-----------|----------------|
-| frontend | 6000      | 80 (nginx)     |
-| backend  | 6001      | 3000           |
+| frontend | 8000      | 80 (nginx)     |
+| backend  | 8001      | 3000           |
 | postgres | 5432      | 5432           |
 
-Override via `FRONTEND_PORT` / `BACKEND_PORT` in `.env`.
+Override via `FRONTEND_PORT` / `BACKEND_PORT` in `.env`. Avoid 6000, 6665–6669,
+and 6697 — Chrome blocks them as `ERR_UNSAFE_PORT`.
 
 ## Configuration env vars
 
@@ -55,8 +56,8 @@ freely if you want to customise.
 | `POSTGRES_DB`        | athena  | DB name.                                                                |
 | `SESSION_SECRET`     | random  | ≥ 32 chars. Used to sign the session cookie.                            |
 | `COOKIE_SECURE`      | false   | Set to `true` only behind an HTTPS-terminating reverse proxy.           |
-| `FRONTEND_PORT`      | 6000    | Host port for the SPA.                                                  |
-| `BACKEND_PORT`       | 6001    | Host port for the Fastify API.                                          |
+| `FRONTEND_PORT`      | 8000    | Host port for the SPA.                                                  |
+| `BACKEND_PORT`       | 8001    | Host port for the Fastify API.                                          |
 
 ## Importing a statement
 

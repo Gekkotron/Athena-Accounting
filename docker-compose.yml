@@ -31,7 +31,7 @@ services:
         condition: service_healthy
     ports:
       # Host port (configurable via BACKEND_PORT) -> container's internal 3000.
-      - "127.0.0.1:${BACKEND_PORT:-6001}:3000"
+      - "127.0.0.1:${BACKEND_PORT:-8001}:3000"
 
   frontend:
     build: ./frontend
@@ -40,4 +40,4 @@ services:
       - backend
     ports:
       # Host port (configurable via FRONTEND_PORT) -> nginx in the container.
-      - "127.0.0.1:${FRONTEND_PORT:-6000}:80"
+      - "127.0.0.1:${FRONTEND_PORT:-8000}:80"

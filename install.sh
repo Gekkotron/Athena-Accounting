@@ -68,8 +68,8 @@ POSTGRES_USER="${POSTGRES_USER:-athena}"
 POSTGRES_DB="${POSTGRES_DB:-athena}"
 POSTGRES_PASSWORD="$(rand_password)"
 SESSION_SECRET="$(rand_hex)"
-FRONTEND_PORT="${FRONTEND_PORT:-6000}"
-BACKEND_PORT="${BACKEND_PORT:-6001}"
+FRONTEND_PORT="${FRONTEND_PORT:-8000}"
+BACKEND_PORT="${BACKEND_PORT:-8001}"
 COOKIE_SECURE="${COOKIE_SECURE:-false}"
 
 # umask 077 also restricts the temp write; chmod afterwards is belt + braces.
@@ -96,7 +96,7 @@ echo
 echo "OK: .env généré (permissions 600)."
 echo "  Postgres user : $POSTGRES_USER"
 echo "  Postgres db   : $POSTGRES_DB"
-echo "  Frontend port : 127.0.0.1:$FRONTEND_PORT  (servi à l'étape 8)"
+echo "  Frontend port : 127.0.0.1:$FRONTEND_PORT"
 echo "  Backend port  : 127.0.0.1:$BACKEND_PORT"
 echo
 echo "Prochaine étape:"
