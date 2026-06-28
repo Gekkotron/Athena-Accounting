@@ -4,6 +4,7 @@ import { api, ApiError } from '../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../api/types';
 import { formatAmount } from '../lib/format';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export function Categories() {
   const qc = useQueryClient();
@@ -41,9 +42,20 @@ export function Categories() {
     },
     onError: (err: ApiError) => setError(err.message),
   });
+  const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const del = useMutation({
     mutationFn: (id: number) => api(`/api/categories/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['rules'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      setConfirmDelete(null);
+      setDeleteError(null);
+    },
+    onError: (err: ApiError) => setDeleteError(err.message),
   });
 
   const submit = (e: FormEvent) => {
@@ -203,7 +215,8 @@ export function Categories() {
                         <button
                           className="text-[11px] text-ink-500 hover:text-clay-300 transition"
                           onClick={() => {
-                            if (confirm(`Supprimer la catégorie « ${c.name} » ?`)) del.mutate(c.id);
+                            setDeleteError(null);
+                            setConfirmDelete(c);
                           }}
                         >
                           supprimer
@@ -217,6 +230,28 @@ export function Categories() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={confirmDelete ? `Supprimer « ${confirmDelete.name} » ?` : ''}
+        description={
+          <>
+            Les règles pointant vers cette catégorie seront aussi supprimées (cascade).
+            Les transactions qui y étaient assignées passeront en{' '}
+            <span className="display-italic">sans catégorie</span> — vous pourrez les
+            retrouver via l'onglet « Tri ».
+          </>
+        }
+        confirmLabel="Supprimer la catégorie"
+        destructive
+        busy={del.isPending}
+        error={deleteError}
+        onConfirm={() => confirmDelete && del.mutate(confirmDelete.id)}
+        onCancel={() => {
+          setConfirmDelete(null);
+          setDeleteError(null);
+        }}
+      />
     </div>
   );
 }

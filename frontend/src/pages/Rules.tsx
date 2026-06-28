@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { Category, MatchMode, Rule, SignConstraint } from '../api/types';
 import { normalizeLabel } from '../lib/normalize';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const SIGN_LABEL: Record<SignConstraint, string> = {
   positive: 'Positif',
@@ -44,6 +45,11 @@ export function Rules() {
 
   const [view, setView] = useState<View>('grouped');
   const [editing, setEditing] = useState<Rule | null>(null);
+  // One global "are you sure?" target for any rule deletion across all the
+  // sub-views (chips, flat table, advanced editor).
+  const [confirmDeleteRule, setConfirmDeleteRule] = useState<Rule | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmRecat, setConfirmRecat] = useState(false);
 
   const createBatch = useMutation({
     mutationFn: async (input: {
@@ -83,7 +89,16 @@ export function Rules() {
 
   const del = useMutation({
     mutationFn: (id: number) => api(`/api/rules/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rules'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rules'] });
+      setConfirmDeleteRule(null);
+      setDeleteError(null);
+      // If the deleted rule was open in the advanced editor, close it.
+      if (editing && confirmDeleteRule && editing.id === confirmDeleteRule.id) {
+        setEditing(null);
+      }
+    },
+    onError: (err: ApiError) => setDeleteError(err.message),
   });
 
   const recategorize = useMutation({
@@ -147,7 +162,7 @@ export function Rules() {
         </div>
         <button
           className="btn-secondary"
-          onClick={() => recategorize.mutate()}
+          onClick={() => setConfirmRecat(true)}
           disabled={recategorize.isPending}
         >
           {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser l\'historique'}
@@ -257,7 +272,10 @@ export function Rules() {
           grouped={grouped}
           createBatch={createBatch}
           updateRule={updateRule}
-          del={del}
+          onRequestDelete={(rule) => {
+            setDeleteError(null);
+            setConfirmDeleteRule(rule);
+          }}
           onEdit={setEditing}
         />
       ) : (
@@ -265,7 +283,10 @@ export function Rules() {
           rules={rules}
           cats={cats}
           updateRule={updateRule}
-          del={del}
+          onRequestDelete={(rule) => {
+            setDeleteError(null);
+            setConfirmDeleteRule(rule);
+          }}
         />
       )}
 
@@ -282,12 +303,45 @@ export function Rules() {
             );
           }}
           onDelete={() => {
-            if (confirm(`Supprimer la règle « ${editing.keyword} » ?`)) {
-              del.mutate(editing.id, { onSuccess: () => setEditing(null) });
-            }
+            setDeleteError(null);
+            setConfirmDeleteRule(editing);
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteRule}
+        title={confirmDeleteRule ? `Supprimer la règle « ${confirmDeleteRule.keyword} » ?` : ''}
+        description="La règle ne sera plus appliquée aux imports futurs. Les transactions déjà catégorisées par elle restent en place — relancez « Recatégoriser l'historique » si vous voulez réévaluer."
+        confirmLabel="Supprimer la règle"
+        destructive
+        busy={del.isPending}
+        error={deleteError}
+        onConfirm={() => confirmDeleteRule && del.mutate(confirmDeleteRule.id)}
+        onCancel={() => {
+          setConfirmDeleteRule(null);
+          setDeleteError(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmRecat}
+        title="Recatégoriser tout l'historique ?"
+        description={
+          <>
+            Toutes les règles activées sont ré-appliquées à l'ensemble des transactions
+            (hors virements internes). Vos{' '}
+            <span className="display-italic">choix manuels</span> sont préservés — seules
+            les transactions en source « auto » ou « default » sont réévaluées.
+          </>
+        }
+        confirmLabel="Recatégoriser"
+        busy={recategorize.isPending}
+        onConfirm={() =>
+          recategorize.mutate(undefined, { onSuccess: () => setConfirmRecat(false) })
+        }
+        onCancel={() => setConfirmRecat(false)}
+      />
     </div>
   );
 }
@@ -300,7 +354,7 @@ function GroupedView({
   grouped,
   createBatch,
   updateRule,
-  del,
+  onRequestDelete,
   onEdit,
 }: {
   grouped: GroupedEntry[];
@@ -316,7 +370,7 @@ function GroupedView({
     }
   >;
   updateRule: UseMutationResult<unknown, Error, { id: number; patch: Partial<Rule> }>;
-  del: UseMutationResult<unknown, Error, number>;
+  onRequestDelete: (rule: Rule) => void;
   onEdit: (rule: Rule) => void;
 }) {
   if (grouped.length === 0) {
@@ -336,7 +390,7 @@ function GroupedView({
             group={g}
             createBatch={createBatch}
             updateRule={updateRule}
-            del={del}
+            onRequestDelete={onRequestDelete}
             onEdit={onEdit}
           />
         ))}
@@ -349,7 +403,7 @@ function CategoryRow({
   group,
   createBatch,
   updateRule,
-  del,
+  onRequestDelete,
   onEdit,
 }: {
   group: GroupedEntry;
@@ -365,7 +419,7 @@ function CategoryRow({
     }
   >;
   updateRule: UseMutationResult<unknown, Error, { id: number; patch: Partial<Rule> }>;
-  del: UseMutationResult<unknown, Error, number>;
+  onRequestDelete: (rule: Rule) => void;
   onEdit: (rule: Rule) => void;
 }) {
   const { category, rules } = group;
@@ -413,9 +467,7 @@ function CategoryRow({
               rule={r}
               onToggle={() => updateRule.mutate({ id: r.id, patch: { enabled: !r.enabled } })}
               onAdvanced={() => onEdit(r)}
-              onDelete={() => {
-                if (confirm(`Supprimer la règle « ${r.keyword} » ?`)) del.mutate(r.id);
-              }}
+              onDelete={() => onRequestDelete(r)}
             />
           ))
         )}
@@ -774,12 +826,12 @@ function FlatTable({
   rules,
   cats,
   updateRule,
-  del,
+  onRequestDelete,
 }: {
   rules: Rule[];
   cats: Category[];
   updateRule: UseMutationResult<unknown, Error, { id: number; patch: Partial<Rule> }>;
-  del: UseMutationResult<unknown, Error, number>;
+  onRequestDelete: (rule: Rule) => void;
 }) {
   return (
     <div className="surface overflow-hidden">
@@ -898,9 +950,7 @@ function FlatTable({
                   <td className="px-4 py-2.5 text-right">
                     <button
                       className="text-[11px] text-ink-500 hover:text-clay-300 transition"
-                      onClick={() => {
-                        if (confirm(`Supprimer la règle « ${r.keyword} » ?`)) del.mutate(r.id);
-                      }}
+                      onClick={() => onRequestDelete(r)}
                     >
                       supprimer
                     </button>

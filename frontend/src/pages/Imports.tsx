@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, apiUpload, ApiError } from '../api/client';
 import type { Account, FileImport } from '../api/types';
 import { formatDateTime } from '../lib/format';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface BackupResult {
   imported: {
@@ -33,6 +34,9 @@ export function Imports() {
   const [backupError, setBackupError] = useState<string | null>(null);
   const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
   const [exporting, setExporting] = useState(false);
+  // Holds the parsed JSON between the user picking a file and confirming
+  // the destructive import in the dialog.
+  const [pendingImport, setPendingImport] = useState<unknown | null>(null);
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -138,14 +142,12 @@ export function Imports() {
       if (backupFileRef.current) backupFileRef.current.value = '';
       return;
     }
-    const ok = window.confirm(
-      'ATTENTION : importer cette sauvegarde EFFACE intégralement les comptes, catégories, règles et transactions actuels, puis les remplace par ceux du fichier. Continuer ?',
-    );
-    if (!ok) {
-      if (backupFileRef.current) backupFileRef.current.value = '';
-      return;
-    }
-    importBackupMut.mutate(json);
+    setPendingImport(json);
+  };
+
+  const cancelImport = () => {
+    setPendingImport(null);
+    if (backupFileRef.current) backupFileRef.current.value = '';
   };
 
   return (
@@ -278,6 +280,30 @@ export function Imports() {
           )}
         </div>
       </section>
+
+      <ConfirmDialog
+        open={!!pendingImport}
+        title="Importer cette sauvegarde ?"
+        description={
+          <>
+            <span className="display-italic">Toutes</span> les données actuelles (comptes,
+            catégories, règles, transactions) seront <span className="display-italic">effacées</span>
+            {' '}puis remplacées par celles du fichier. L'opération est transactionnelle :
+            si elle échoue à mi-chemin, rien n'est appliqué.
+          </>
+        }
+        confirmLabel="Effacer et restaurer"
+        destructive
+        busy={importBackupMut.isPending}
+        error={backupError}
+        onConfirm={() => {
+          if (!pendingImport) return;
+          importBackupMut.mutate(pendingImport, {
+            onSuccess: () => setPendingImport(null),
+          });
+        }}
+        onCancel={cancelImport}
+      />
 
       <section>
         <div className="section-rule mb-4">Historique</div>

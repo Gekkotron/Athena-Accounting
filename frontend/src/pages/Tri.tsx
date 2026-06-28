@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Category, TriGroup } from '../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../lib/format';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export function Tri() {
   const qc = useQueryClient();
@@ -23,6 +24,7 @@ export function Tri() {
   const [perGroupCategory, setPerGroupCategory] = useState<Map<string, number>>(new Map());
   const [bulkCategoryId, setBulkCategoryId] = useState<number | ''>('');
   const [createRules, setCreateRules] = useState(true);
+  const [confirmRecat, setConfirmRecat] = useState(false);
 
   const groups = groupsQ.data?.groups ?? [];
   const total = groupsQ.data?.pagination.total ?? groups.length;
@@ -100,12 +102,31 @@ export function Tri() {
         </div>
         <button
           className="btn-secondary"
-          onClick={() => recategorize.mutate()}
+          onClick={() => setConfirmRecat(true)}
           disabled={recategorize.isPending}
         >
           {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser l\'historique'}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmRecat}
+        title="Recatégoriser tout l'historique ?"
+        description={
+          <>
+            Toutes les règles activées sont ré-appliquées à l'ensemble des transactions
+            (hors virements internes). Vos{' '}
+            <span className="display-italic">choix manuels</span> sont préservés — seules
+            les transactions en source « auto » ou « default » sont réévaluées.
+          </>
+        }
+        confirmLabel="Recatégoriser"
+        busy={recategorize.isPending}
+        onConfirm={() =>
+          recategorize.mutate(undefined, { onSuccess: () => setConfirmRecat(false) })
+        }
+        onCancel={() => setConfirmRecat(false)}
+      />
 
       {recategorize.data && (
         <div className="surface p-4 text-sm text-sage-200">
