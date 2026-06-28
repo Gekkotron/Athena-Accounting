@@ -30,6 +30,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
+      # Host port (configurable via BACKEND_PORT) -> container's internal 3000.
+      - "127.0.0.1:${BACKEND_PORT:-6001}:3000"
 
-  # frontend will be added at Étape 8
+  # frontend will be added at Étape 8 — will bind to ${FRONTEND_PORT:-6000}

@@ -3,7 +3,7 @@
 Self-hosted personal accounting. Local-only, no cloud dependencies, your bank
 data never leaves your network.
 
-> Status: **Étape 2 / 10** — skeleton, database schema, `/health` endpoint.
+> Status: **Étape 3 / 10** — auth (argon2id + session), onboarding, accounts CRUD.
 
 ## Stack
 
@@ -22,9 +22,12 @@ docker compose up --build
 Then check the backend is healthy:
 
 ```sh
-curl http://127.0.0.1:3000/health
+curl http://127.0.0.1:6001/health
 # => {"ok":true,"ts":"..."}
 ```
+
+Default host ports: **frontend 6000**, **backend 6001** (both bound to
+`127.0.0.1` only). Override with `FRONTEND_PORT` / `BACKEND_PORT` in `.env`.
 
 The first time you open the app in a browser, you'll be walked through a
 small onboarding to create your username and password. Your password is
@@ -75,7 +78,7 @@ journal file Drizzle creates alongside.
 
 - [x] Étape 1 — Architecture + schema design
 - [x] Étape 2 — docker-compose + schema + `/health`
-- [ ] Étape 3 — Auth + accounts CRUD
+- [x] Étape 3 — Auth + onboarding + accounts CRUD
 - [ ] Étape 4 — OFX/CSV parsers + dedup
 - [ ] Étape 5 — Rule engine + retroactive recategorization
 - [ ] Étape 6 — Internal transfer detection

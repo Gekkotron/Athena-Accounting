@@ -68,7 +68,8 @@ POSTGRES_USER="${POSTGRES_USER:-athena}"
 POSTGRES_DB="${POSTGRES_DB:-athena}"
 POSTGRES_PASSWORD="$(rand_password)"
 SESSION_SECRET="$(rand_hex)"
-BACKEND_PORT="${BACKEND_PORT:-3000}"
+FRONTEND_PORT="${FRONTEND_PORT:-6000}"
+BACKEND_PORT="${BACKEND_PORT:-6001}"
 COOKIE_SECURE="${COOKIE_SECURE:-false}"
 
 # umask 077 also restricts the temp write; chmod afterwards is belt + braces.
@@ -84,6 +85,7 @@ POSTGRES_DB=$POSTGRES_DB
 
 SESSION_SECRET=$SESSION_SECRET
 
+FRONTEND_PORT=$FRONTEND_PORT
 BACKEND_PORT=$BACKEND_PORT
 COOKIE_SECURE=$COOKIE_SECURE
 EOF
@@ -94,10 +96,11 @@ echo
 echo "OK: .env généré (permissions 600)."
 echo "  Postgres user : $POSTGRES_USER"
 echo "  Postgres db   : $POSTGRES_DB"
+echo "  Frontend port : 127.0.0.1:$FRONTEND_PORT  (servi à l'étape 8)"
 echo "  Backend port  : 127.0.0.1:$BACKEND_PORT"
 echo
 echo "Prochaine étape:"
 echo "  docker compose up --build"
 echo
-echo "Au premier accès à http://127.0.0.1:$BACKEND_PORT, l'application"
-echo "vous proposera de créer votre identifiant et votre mot de passe."
+echo "Tant que le frontend n'est pas livré, l'API se teste directement sur"
+echo "http://127.0.0.1:$BACKEND_PORT (commencez par GET /api/onboarding/status)."
