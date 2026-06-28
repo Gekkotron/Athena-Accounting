@@ -1,21 +1,12 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import type { rules } from '../../db/schema.js';
+import { normalizeLabel } from '../imports/normalize.js';
 
 export type Rule = InferSelectModel<typeof rules>;
 
 export interface CompiledRule {
   rule: Rule;
   test: (normalizedLabel: string, amount: number) => boolean;
-}
-
-const ACCENT_RE = /[̀-ͯ]/g;
-
-// Same fold as in normalizeLabel — lowercase + strip diacritics. Keeping the
-// fold here (rather than reusing normalizeLabel) is intentional: the rule
-// matcher operates on `transactions.normalized_label` which is already
-// prefix/date-stripped, so we only need to align case and accents.
-function fold(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(ACCENT_RE, '');
 }
 
 function escapeRegex(s: string): string {
@@ -29,18 +20,34 @@ function signOk(amount: number, c: Rule['signConstraint']): boolean {
 }
 
 export function compileRule(rule: Rule): CompiledRule {
-  const k = fold(rule.keyword);
+  // Apply the same normalization to the keyword that was applied to the
+  // transaction's normalized_label at storage time. Without this, a keyword
+  // like "VIR INST ALAN" would never match because the "VIR " prefix is
+  // stripped during label normalization but kept verbatim in the keyword.
+  // The fix is symmetric: stripping both sides means "carrefour" still works
+  // as before (it has no prefix to strip), while "VIR INST ALAN" now matches
+  // every "vir inst alan ..." transaction.
+  const k = normalizeLabel(rule.keyword);
+
+  // A degenerate keyword — e.g. typed as just "VIR " or "27/06" — collapses
+  // to the empty string after normalization. Mark such rules as never-match
+  // rather than letting them match everything via an empty needle.
+  if (!k) {
+    return { rule, test: () => false };
+  }
 
   if (rule.matchMode === 'substring') {
     return {
       rule,
-      test: (label, amount) => signOk(amount, rule.signConstraint) && fold(label).includes(k),
+      test: (label, amount) =>
+        signOk(amount, rule.signConstraint) && label.includes(k),
     };
   }
 
   if (rule.matchMode === 'regex') {
-    // Compile against the folded keyword; tolerate user-written regexes by
-    // catching syntax errors and treating them as a non-match.
+    // In regex mode the user wrote a deliberate pattern — don't pre-normalize
+    // it. Apply it as-is to the (already-normalized) label, catching syntax
+    // errors gracefully.
     let re: RegExp | null = null;
     try {
       re = new RegExp(rule.keyword, 'i');
@@ -50,16 +57,17 @@ export function compileRule(rule: Rule): CompiledRule {
     return {
       rule,
       test: (label, amount) =>
-        signOk(amount, rule.signConstraint) && re !== null && re.test(fold(label)),
+        signOk(amount, rule.signConstraint) && re !== null && re.test(label),
     };
   }
 
-  // word — the default. Word boundaries on the folded label prevent
-  // "paye" from matching "payweb".
+  // word — the default. Word boundaries on the (already normalized) label
+  // prevent "paye" from matching "payweb".
   const re = new RegExp(`\\b${escapeRegex(k)}\\b`, 'i');
   return {
     rule,
-    test: (label, amount) => signOk(amount, rule.signConstraint) && re.test(fold(label)),
+    test: (label, amount) =>
+      signOk(amount, rule.signConstraint) && re.test(label),
   };
 }
 

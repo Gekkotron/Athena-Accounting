@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Category, MatchMode, Rule, SignConstraint } from '../api/types';
+import { normalizeLabel } from '../lib/normalize';
 
 const SIGN_LABEL: Record<SignConstraint, string> = {
   positive: 'Positif',
@@ -173,6 +174,7 @@ export function Rules() {
             placeholder="carrefour, leclerc, lidl"
             required
           />
+          <NormalizationHint input={keyword} matchMode={matchMode} />
           <div className="text-[11px] text-ink-500 mt-1.5">
             Séparez par des virgules pour créer plusieurs règles d'un coup.
           </div>
@@ -449,6 +451,56 @@ function CategoryRow({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// Shows what the matcher will *actually* search for, given the normalisation
+// applied to both rule keywords and transaction labels. Helps users avoid
+// the trap of typing prefixes like "VIR " or "CB " that get stripped.
+function NormalizationHint({
+  input,
+  matchMode,
+}: {
+  input: string;
+  matchMode: MatchMode;
+}) {
+  // Regex mode is a deliberate pattern — we don't pre-normalize it.
+  if (matchMode === 'regex' || !input.trim()) return null;
+
+  const parts = input
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const transformed = parts.map((p) => ({ raw: p, norm: normalizeLabel(p) }));
+  const anyChange = transformed.some(
+    (t) => t.norm !== t.raw.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''),
+  );
+  const anyEmpty = transformed.some((t) => !t.norm);
+
+  if (!anyChange && !anyEmpty) return null;
+
+  return (
+    <div className="text-[11px] mt-1.5 leading-relaxed">
+      {anyEmpty && (
+        <div className="text-clay-300">
+          ⚠️ Au moins un mot-clé devient vide après normalisation (préfixe ou date pur) — il ne matchera rien.
+        </div>
+      )}
+      {anyChange && (
+        <div className="text-ink-500">
+          Sera matché comme :{' '}
+          {transformed.map((t, i) => (
+            <span key={i}>
+              <span className={`font-mono ${t.norm ? 'text-sage-300' : 'text-clay-300 line-through'}`}>
+                {t.norm || t.raw}
+              </span>
+              {i < transformed.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
