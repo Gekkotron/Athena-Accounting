@@ -11,6 +11,7 @@ import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
 import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
+import { detectTransfers } from '../transfers/detector.js';
 
 export type ImportFormat = 'ofx' | 'csv';
 
@@ -118,6 +119,14 @@ export async function runImport(opts: {
       .set({ insertedCount: inserted, dedupSkipped: skipped })
       .where(eq(fileImports.id, fileImport.id));
 
+    // Transfer detection runs *before* categorization so transfer legs end up
+    // with categoryId = null (and category_source = 'auto'); the rule engine
+    // then skips them because the bucketing code below only processes rows
+    // still in `insertedIds` that aren't linked.
+    if (insertedIds.length > 0) {
+      await detectTransfers(tx, insertedIds);
+    }
+
     // Apply the rule engine to freshly inserted rows. We do this *inside* the
     // import transaction so an import either lands fully categorized or not at all.
     if (insertedIds.length > 0) {
@@ -128,6 +137,7 @@ export async function runImport(opts: {
           id: transactions.id,
           amount: transactions.amount,
           normalizedLabel: transactions.normalizedLabel,
+          transferGroupId: transactions.transferGroupId,
         })
         .from(transactions)
         .where(inArray(transactions.id, insertedIds));
@@ -135,6 +145,8 @@ export async function runImport(opts: {
       const autoBuckets = new Map<number, number[]>();
       const defaultBucket: number[] = [];
       for (const row of freshRows) {
+        // Skip transfer legs — they don't get a category.
+        if (row.transferGroupId) continue;
         const amount = Number(row.amount);
         const hit = firstMatch(compiled, row.normalizedLabel, amount);
         if (hit) {

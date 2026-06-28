@@ -11,6 +11,7 @@ import { patternRoutes } from './http/routes/account-patterns.js';
 import { importsRoutes } from './http/routes/imports.js';
 import { categoriesRoutes } from './http/routes/categories.js';
 import { rulesRoutes } from './http/routes/rules.js';
+import { transferRulesRoutes } from './http/routes/transfer-rules.js';
 
 const app = Fastify({
   logger:
@@ -38,6 +39,7 @@ await app.register(patternRoutes);
 await app.register(importsRoutes);
 await app.register(categoriesRoutes);
 await app.register(rulesRoutes);
+await app.register(transferRulesRoutes);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');
