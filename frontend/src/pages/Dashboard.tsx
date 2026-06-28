@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
@@ -25,6 +26,25 @@ export function Dashboard() {
   const currencies = balanceQ.data?.perCurrency ?? [];
   const accounts = accountsQ.data?.accounts ?? [];
   const primary = currencies[0];
+
+  // Chart scope: 'all' = sum across all accounts of the primary currency,
+  // otherwise a specific account_id (the chart then shows that single account
+  // in its own currency).
+  const [chartScope, setChartScope] = useState<'all' | number>('all');
+
+  const chartCurrency = useMemo(() => {
+    if (chartScope === 'all') return primary?.currency ?? 'EUR';
+    const acc = accounts.find((a) => a.id === chartScope);
+    return acc?.currency ?? primary?.currency ?? 'EUR';
+  }, [chartScope, accounts, primary]);
+
+  // Only feed the chart points matching the chosen scope. BalanceChart already
+  // filters by currency on top of this, so cross-currency rows are dropped too.
+  const chartPoints = useMemo<BalancePoint[]>(() => {
+    const all = seriesQ.data?.points ?? [];
+    if (chartScope === 'all') return all;
+    return all.filter((p) => p.account_id === chartScope);
+  }, [seriesQ.data, chartScope]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -63,9 +83,26 @@ export function Dashboard() {
       {/* Time series */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
-          <div className="section-rule mb-4">Évolution · {primary?.currency}</div>
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+            <div className="section-rule flex-1">Évolution · {chartCurrency}</div>
+            <select
+              className="input-sm w-full sm:w-56"
+              value={chartScope === 'all' ? 'all' : String(chartScope)}
+              onChange={(e) =>
+                setChartScope(e.target.value === 'all' ? 'all' : Number(e.target.value))
+              }
+              aria-label="Compte affiché"
+            >
+              <option value="all">Tous les comptes ({primary?.currency})</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.currency})
+                </option>
+              ))}
+            </select>
+          </div>
           {seriesQ.data && primary ? (
-            <BalanceChart points={seriesQ.data.points} currency={primary.currency} />
+            <BalanceChart points={chartPoints} currency={chartCurrency} />
           ) : (
             <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
           )}
