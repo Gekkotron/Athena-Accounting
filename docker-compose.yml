@@ -9,7 +9,9 @@ services:
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
     ports:
-      # Bound to localhost only — never exposed to the network.
+      # Postgres stays bound to localhost only — the backend talks to it over
+      # the compose network, never via the host. If you don't want it on the
+      # host at all, comment this whole `ports` block out.
       - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -30,8 +32,10 @@ services:
       db:
         condition: service_healthy
     ports:
-      # Host port (configurable via BACKEND_PORT) -> container's internal 3000.
-      - "127.0.0.1:${BACKEND_PORT:-8001}:3000"
+      # Listens on all host interfaces so other machines on your LAN can hit
+      # the API directly (curl tests). The application is meant to be accessed
+      # through the frontend instead.
+      - "${BACKEND_PORT:-8001}:3000"
 
   frontend:
     build: ./frontend
@@ -39,5 +43,7 @@ services:
     depends_on:
       - backend
     ports:
-      # Host port (configurable via FRONTEND_PORT) -> nginx in the container.
-      - "127.0.0.1:${FRONTEND_PORT:-8000}:80"
+      # Listens on all host interfaces so other devices on your LAN can reach
+      # the app via http://<host-ip>:${FRONTEND_PORT}. Restrict with a host
+      # firewall if needed.
+      - "${FRONTEND_PORT:-8000}:80"

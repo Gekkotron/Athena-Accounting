@@ -35,14 +35,22 @@ database.
 
 Default host ports (both bound to `127.0.0.1`):
 
-| Service  | Host port | Container port |
-|----------|-----------|----------------|
-| frontend | 8000      | 80 (nginx)     |
-| backend  | 8001      | 3000           |
-| postgres | 5432      | 5432           |
+| Service  | Host port | Container port | Listener         |
+|----------|-----------|----------------|------------------|
+| frontend | 8000      | 80 (nginx)     | all host IPs     |
+| backend  | 8001      | 3000           | all host IPs     |
+| postgres | 5432      | 5432           | 127.0.0.1 only   |
+
+Frontend and backend listen on every host interface so other devices on your
+LAN can reach the app (`http://<server-lan-ip>:8000`). Postgres stays bound
+to loopback because the backend reaches it via the compose network — nothing
+outside the host should touch it.
 
 Override via `FRONTEND_PORT` / `BACKEND_PORT` in `.env`. Avoid 6000, 6665–6669,
 and 6697 — Chrome blocks them as `ERR_UNSAFE_PORT`.
+
+If you actually want the app to stay loopback-only (single-machine access),
+prefix the port mappings in `docker-compose.yml` with `127.0.0.1:`.
 
 ## Configuration env vars
 
