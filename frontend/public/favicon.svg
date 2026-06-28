@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Rounded-square plaque keeps the mark legible at favicon sizes against
+       any browser tab background. Ink-900 to match the app's dark surface. -->
+  <rect width="32" height="32" rx="7" fill="#11141a"/>
+
+  <!-- Athena's owl — two large round eyes + a small triangular beak. The
+       sage emerald (#7dd3c0) ties to the app's primary accent. -->
+  <circle cx="11.5" cy="14" r="5" fill="none" stroke="#7dd3c0" stroke-width="1.8"/>
+  <circle cx="11.5" cy="14" r="2" fill="#7dd3c0"/>
+
+  <circle cx="20.5" cy="14" r="5" fill="none" stroke="#7dd3c0" stroke-width="1.8"/>
+  <circle cx="20.5" cy="14" r="2" fill="#7dd3c0"/>
+
+  <path d="M14 21.5 L18 21.5 L16 24.5 Z" fill="#7dd3c0"/>
+</svg>

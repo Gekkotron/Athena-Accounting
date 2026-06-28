@@ -3,15 +3,17 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { User } from '../api/types';
+import { Logo } from './Logo';
+import { navIcons, type NavIconName } from './NavIcons';
 
-const nav = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/transactions', label: 'Transactions' },
-  { to: '/tri', label: 'Tri' },
-  { to: '/categories', label: 'Catégories' },
-  { to: '/rules', label: 'Règles' },
-  { to: '/accounts', label: 'Comptes' },
-  { to: '/imports', label: 'Imports / Sauvegarde' },
+const nav: { to: string; label: string; end?: boolean; icon: NavIconName }[] = [
+  { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
+  { to: '/transactions', label: 'Transactions', icon: 'transactions' },
+  { to: '/tri', label: 'Tri', icon: 'tri' },
+  { to: '/categories', label: 'Catégories', icon: 'categories' },
+  { to: '/rules', label: 'Règles', icon: 'rules' },
+  { to: '/accounts', label: 'Comptes', icon: 'accounts' },
+  { to: '/imports', label: 'Imports / Sauvegarde', icon: 'imports' },
 ];
 
 export function Layout({ user }: { user: User }) {
@@ -28,7 +30,7 @@ export function Layout({ user }: { user: User }) {
   });
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `relative rounded-lg px-3 py-2 text-sm transition ${
+    `relative rounded-lg px-3 py-2 text-sm transition flex items-center gap-3 ${
       isActive
         ? 'text-ink-50 bg-ink-850'
         : 'text-ink-400 hover:text-ink-100 hover:bg-ink-900/70'
@@ -70,11 +72,19 @@ export function Layout({ user }: { user: User }) {
               </button>
             </div>
             <nav className="flex flex-col gap-1">
-              {nav.map((n) => (
-                <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setDrawerOpen(false)} className={navLinkClass}>
-                  {n.label}
-                </NavLink>
-              ))}
+              {nav.map((n) => {
+                const Icon = navIcons[n.icon];
+                return (
+                  <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setDrawerOpen(false)} className={navLinkClass}>
+                    {({ isActive }) => (
+                      <>
+                        <Icon className={isActive ? 'text-sage-300' : 'text-ink-500'} />
+                        <span>{n.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
             </nav>
             <UserCard user={user} onLogout={() => logout.mutate()} />
           </aside>
@@ -87,20 +97,19 @@ export function Layout({ user }: { user: User }) {
           <Brand />
         </div>
         <nav className="flex flex-col gap-1">
-          {nav.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} className={navLinkClass}>
-              {({ isActive }) => (
-                <span className="flex items-center gap-2">
-                  <span
-                    className={`h-1 w-1 rounded-full transition ${
-                      isActive ? 'bg-sage-300' : 'bg-transparent'
-                    }`}
-                  />
-                  {n.label}
-                </span>
-              )}
-            </NavLink>
-          ))}
+          {nav.map((n) => {
+            const Icon = navIcons[n.icon];
+            return (
+              <NavLink key={n.to} to={n.to} end={n.end} className={navLinkClass}>
+                {({ isActive }) => (
+                  <>
+                    <Icon className={isActive ? 'text-sage-300' : 'text-ink-500'} />
+                    <span>{n.label}</span>
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
         <UserCard user={user} onLogout={() => logout.mutate()} />
       </aside>
@@ -117,9 +126,12 @@ export function Layout({ user }: { user: User }) {
 
 function Brand() {
   return (
-    <div className="flex items-baseline gap-2">
-      <span className="display text-[22px] leading-none text-ink-50 tracking-tight">Athena</span>
-      <span className="display-italic text-[13px] text-ink-500">ledger</span>
+    <div className="flex items-center gap-2.5">
+      <Logo size={28} className="text-sage-300 shrink-0" />
+      <div className="flex flex-col leading-none">
+        <span className="display text-[20px] text-ink-50 tracking-tight">Athena</span>
+        <span className="display-italic text-[12px] text-ink-500 mt-0.5">Accounting</span>
+      </div>
     </div>
   );
 }

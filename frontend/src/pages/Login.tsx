@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { User } from '../api/types';
+import { Logo } from '../components/Logo';
 
 export function Login() {
   const navigate = useNavigate();
@@ -63,9 +64,10 @@ export function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="display text-5xl text-ink-50 tracking-tight">Athena</div>
-          <div className="display-italic text-base text-ink-400 mt-1">ledger</div>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Logo size={60} className="text-sage-300" />
+          <div className="display text-5xl text-ink-50 tracking-tight mt-5">Athena</div>
+          <div className="display-italic text-base text-ink-400 mt-1">Accounting</div>
           <div className="mt-4 text-xs uppercase tracking-[0.2em] text-ink-500">
             Comptabilité auto-hébergée
           </div>
