@@ -11,7 +11,7 @@ const nav = [
   { to: '/categories', label: 'Catégories' },
   { to: '/rules', label: 'Règles' },
   { to: '/accounts', label: 'Comptes' },
-  { to: '/imports', label: 'Imports' },
+  { to: '/imports', label: 'Imports / Sauvegarde' },
 ];
 
 export function Layout({ user }: { user: User }) {
