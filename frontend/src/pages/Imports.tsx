@@ -65,104 +65,114 @@ export function Imports() {
     accountsQ.data?.accounts.find((a) => a.id === id)?.name ?? `#${id}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Imports</h1>
-        <p className="text-sm text-slate-500">
-          OFX (Latin-1/UTF-8) ou CSV (FR, séparateur « ; », décimale virgule, dates JJ/MM/AAAA).
-          Le compte cible est déduit du nom du fichier — surchargez-le si nécessaire.
-        </p>
+    <div className="flex flex-col gap-8">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Imports</h1>
+          <p className="page-subtitle">
+            OFX (Latin-1/UTF-8) ou CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA).
+          </p>
+        </div>
       </div>
 
-      <div className="card p-5 flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="label">Fichier (.ofx / .qfx / .csv)</label>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".ofx,.qfx,.csv"
-            onChange={onFile}
-            disabled={upload.isPending}
-            className="block text-sm text-slate-300 file:mr-4 file:rounded-md file:border-0 file:bg-emerald-500 file:text-emerald-950 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-emerald-400"
-          />
+      <div className="surface p-5 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-end gap-4">
+          <div className="flex flex-col gap-1.5 flex-1">
+            <label className="label">Fichier (.ofx · .qfx · .csv)</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".ofx,.qfx,.csv"
+              onChange={onFile}
+              disabled={upload.isPending}
+              className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5 w-full md:w-56">
+            <label className="label">Compte (override)</label>
+            <select
+              className="input"
+              value={overrideAccountId}
+              onChange={(e) => setOverrideAccountId(e.target.value ? Number(e.target.value) : '')}
+            >
+              <option value="">Auto (via nom du fichier)</option>
+              {(accountsQ.data?.accounts ?? []).map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="label">Compte (override)</label>
-          <select
-            className="input w-56"
-            value={overrideAccountId}
-            onChange={(e) => setOverrideAccountId(e.target.value ? Number(e.target.value) : '')}
-          >
-            <option value="">Auto (via le nom du fichier)</option>
-            {(accountsQ.data?.accounts ?? []).map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        {upload.isPending && <div className="text-sm text-slate-400">Import en cours…</div>}
+        {upload.isPending && <div className="mt-4 text-sm text-ink-400 display-italic">Import en cours…</div>}
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-900 bg-rose-950 px-3 py-2 text-sm text-rose-200">
+        <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-4 py-3 text-sm text-clay-200">
           {error}
         </div>
       )}
 
       {lastResult && (
-        <div className="rounded-md border border-emerald-900 bg-emerald-950/40 px-4 py-3 text-sm">
-          <div className="text-emerald-200">
-            <strong>{lastResult.filename}</strong> · {lastResult.total} ligne(s) lue(s)
-          </div>
-          <div className="text-slate-300 mt-1">
-            <span className="text-emerald-400">{lastResult.inserted}</span> insérée(s),{' '}
-            <span className="text-slate-400">{lastResult.skipped}</span> ignorée(s) par déduplication
+        <div className="surface p-5">
+          <div className="label mb-2">Dernier import</div>
+          <div className="font-mono text-sm text-ink-100">{lastResult.filename}</div>
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div>
+              <span className="display text-2xl text-ink-100">{lastResult.total}</span>
+              <span className="text-ink-500 ml-2">lue{lastResult.total > 1 ? 's' : ''}</span>
+            </div>
+            <div>
+              <span className="display text-2xl text-sage-300">{lastResult.inserted}</span>
+              <span className="text-ink-500 ml-2">insérée{lastResult.inserted > 1 ? 's' : ''}</span>
+            </div>
+            <div>
+              <span className="display text-2xl text-ink-400">{lastResult.skipped}</span>
+              <span className="text-ink-500 ml-2">dédupliquée{lastResult.skipped > 1 ? 's' : ''}</span>
+            </div>
           </div>
         </div>
       )}
 
-      <div>
-        <h2 className="text-sm font-medium text-slate-200 mb-3">Historique des imports</h2>
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-left">
-              <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="px-4 py-3 font-normal">Fichier</th>
-                <th className="px-4 py-3 font-normal">Compte</th>
-                <th className="px-4 py-3 font-normal">Format</th>
-                <th className="px-4 py-3 font-normal text-right">Lues</th>
-                <th className="px-4 py-3 font-normal text-right">Insérées</th>
-                <th className="px-4 py-3 font-normal text-right">Dédupliquées</th>
-                <th className="px-4 py-3 font-normal">Quand</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(importsQ.data?.imports ?? []).length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
-                    Aucun import pour l'instant
-                  </td>
+      <section>
+        <div className="section-rule mb-4">Historique</div>
+        <div className="surface overflow-hidden">
+          <div className="table-scroll">
+            <table className="w-full text-sm">
+              <thead className="text-left">
+                <tr className="border-b border-ink-800/70">
+                  <th className="px-4 py-3 label font-normal">Fichier</th>
+                  <th className="px-4 py-3 label font-normal">Compte</th>
+                  <th className="px-4 py-3 label font-normal">Format</th>
+                  <th className="px-4 py-3 label font-normal text-right">Lues</th>
+                  <th className="px-4 py-3 label font-normal text-right">Insérées</th>
+                  <th className="px-4 py-3 label font-normal text-right">Dédup.</th>
+                  <th className="px-4 py-3 label font-normal">Quand</th>
                 </tr>
-              ) : (
-                (importsQ.data?.imports ?? []).map((i) => (
-                  <tr key={i.id} className="border-b border-slate-900 last:border-0">
-                    <td className="px-4 py-2 text-slate-200 font-mono text-xs">{i.filename}</td>
-                    <td className="px-4 py-2 text-slate-300">{accountName(i.accountId)}</td>
-                    <td className="px-4 py-2">
-                      <span className="badge text-[10px] py-0">{i.format}</span>
+              </thead>
+              <tbody>
+                {(importsQ.data?.imports ?? []).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-ink-500 display-italic">
+                      Aucun import pour l'instant.
                     </td>
-                    <td className="px-4 py-2 text-right text-slate-400">{i.totalLines}</td>
-                    <td className="px-4 py-2 text-right text-emerald-400">{i.insertedCount}</td>
-                    <td className="px-4 py-2 text-right text-slate-400">{i.dedupSkipped}</td>
-                    <td className="px-4 py-2 text-slate-400 text-xs">{formatDateTime(i.importedAt)}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  (importsQ.data?.imports ?? []).map((i) => (
+                    <tr key={i.id} className="border-b border-ink-800/40 last:border-0">
+                      <td className="px-4 py-2.5 text-ink-100 font-mono text-xs">{i.filename}</td>
+                      <td className="px-4 py-2.5 text-ink-300">{accountName(i.accountId)}</td>
+                      <td className="px-4 py-2.5"><span className="badge">{i.format}</span></td>
+                      <td className="px-4 py-2.5 text-right text-ink-300 font-mono">{i.totalLines}</td>
+                      <td className="px-4 py-2.5 text-right text-sage-300 font-mono">{i.insertedCount}</td>
+                      <td className="px-4 py-2.5 text-right text-ink-400 font-mono">{i.dedupSkipped}</td>
+                      <td className="px-4 py-2.5 text-ink-400 text-xs whitespace-nowrap">{formatDateTime(i.importedAt)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

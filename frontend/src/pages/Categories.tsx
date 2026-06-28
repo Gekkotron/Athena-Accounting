@@ -51,7 +51,6 @@ export function Categories() {
   const cats = catQ.data?.categories ?? [];
   const report = reportQ.data?.rows ?? [];
 
-  // Aggregate totals per category over the loaded report range.
   const totalsByCat = new Map<number | null, number>();
   for (const r of report) {
     const prev = totalsByCat.get(r.category_id) ?? 0;
@@ -59,94 +58,100 @@ export function Categories() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Catégories</h1>
-        <p className="text-sm text-slate-500">
-          Le « kind » alimente le garde-fou de signe : une catégorie « Revenu » ne s'applique jamais à un montant négatif.
+        <h1 className="page-title">Catégories</h1>
+        <p className="page-subtitle max-w-2xl">
+          Le <span className="display-italic">« kind »</span> alimente le garde-fou de signe :
+          une catégorie « Revenu » ne s'applique jamais à un montant négatif.
         </p>
       </div>
 
-      <form onSubmit={submit} className="card p-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="label">Nom</label>
-          <input className="input w-56" value={name} onChange={(e) => setName(e.target.value)} required />
+      <form onSubmit={submit} className="surface p-4 md:p-5 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <label className="label mb-1.5 block">Nom</label>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
-        <div>
-          <label className="label">Type</label>
-          <select className="input w-40" value={kind} onChange={(e) => setKind(e.target.value as CategoryKind)}>
+        <div className="w-full sm:w-40">
+          <label className="label mb-1.5 block">Type</label>
+          <select className="input" value={kind} onChange={(e) => setKind(e.target.value as CategoryKind)}>
             <option value="expense">Dépense</option>
             <option value="income">Revenu</option>
             <option value="transfer">Virement</option>
             <option value="neutral">Neutre</option>
           </select>
         </div>
-        <div>
-          <label className="label">Couleur (optionnel)</label>
+        <div className="w-full sm:w-32">
+          <label className="label mb-1.5 block">Couleur</label>
           <input
-            className="input w-32 font-mono"
+            className="input font-mono"
             value={color}
-            placeholder="#34d399"
+            placeholder="#7dd3c0"
             onChange={(e) => setColor(e.target.value)}
           />
         </div>
-        <button className="btn-primary" disabled={create.isPending}>
-          Ajouter
-        </button>
-        {error && <div className="text-sm text-rose-300 ml-2">{error}</div>}
+        <button className="btn-primary" disabled={create.isPending}>Ajouter</button>
+        {error && <div className="text-sm text-clay-300 w-full">{error}</div>}
       </form>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-normal">Nom</th>
-              <th className="px-4 py-3 font-normal">Type</th>
-              <th className="px-4 py-3 font-normal">Couleur</th>
-              <th className="px-4 py-3 font-normal text-right">Total (sur période chargée)</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {cats.map((c) => {
-              const t = totalsByCat.get(c.id) ?? 0;
-              return (
-                <tr key={c.id} className="border-b border-slate-900 last:border-0">
-                  <td className="px-4 py-3 text-slate-200">
-                    {c.name}
-                    {c.isDefault && <span className="badge ml-2 text-[10px] py-0">défaut</span>}
-                  </td>
-                  <td className="px-4 py-3 text-slate-400">{KIND_LABEL[c.kind]}</td>
-                  <td className="px-4 py-3">
-                    {c.color ? (
-                      <span
-                        className="inline-block h-3 w-3 rounded-sm border border-slate-700"
-                        style={{ backgroundColor: c.color }}
-                      />
-                    ) : (
-                      <span className="text-slate-600">—</span>
-                    )}
-                  </td>
-                  <td className={`px-4 py-3 text-right font-mono ${t < 0 ? 'text-rose-300' : t > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                    {formatAmount(t)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {!c.isDefault && (
-                      <button
-                        className="text-xs text-rose-300 hover:text-rose-200"
-                        onClick={() => {
-                          if (confirm(`Supprimer la catégorie « ${c.name} » ?`)) del.mutate(c.id);
-                        }}
-                      >
-                        Supprimer
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="surface overflow-hidden">
+        <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead className="text-left">
+              <tr className="border-b border-ink-800/70">
+                <th className="px-4 py-3 label font-normal">Nom</th>
+                <th className="px-4 py-3 label font-normal">Type</th>
+                <th className="px-4 py-3 label font-normal hidden sm:table-cell">Couleur</th>
+                <th className="px-4 py-3 label font-normal text-right">Total (période chargée)</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {cats.map((c) => {
+                const t = totalsByCat.get(c.id) ?? 0;
+                return (
+                  <tr key={c.id} className="border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
+                    <td className="px-4 py-2.5 text-ink-100">
+                      <span className="flex items-center gap-2">
+                        {c.color && (
+                          <span
+                            className="h-2 w-2 rounded-full border border-ink-700"
+                            style={{ backgroundColor: c.color }}
+                          />
+                        )}
+                        {c.name}
+                        {c.isDefault && <span className="badge ml-1">défaut</span>}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-ink-300">{KIND_LABEL[c.kind]}</td>
+                    <td className="px-4 py-2.5 hidden sm:table-cell">
+                      {c.color ? (
+                        <span className="font-mono text-xs text-ink-400">{c.color}</span>
+                      ) : (
+                        <span className="text-ink-600">—</span>
+                      )}
+                    </td>
+                    <td className={`px-4 py-2.5 text-right font-mono tabular-nums ${t < 0 ? 'text-clay-300' : t > 0 ? 'text-sage-300' : 'text-ink-500'}`}>
+                      {formatAmount(t)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {!c.isDefault && (
+                        <button
+                          className="text-[11px] text-ink-500 hover:text-clay-300 transition"
+                          onClick={() => {
+                            if (confirm(`Supprimer la catégorie « ${c.name} » ?`)) del.mutate(c.id);
+                          }}
+                        >
+                          supprimer
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

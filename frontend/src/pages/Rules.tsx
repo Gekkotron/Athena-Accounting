@@ -68,13 +68,7 @@ export function Rules() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!categoryId || !keyword.trim()) return;
-    create.mutate({
-      keyword: keyword.trim(),
-      categoryId,
-      signConstraint,
-      matchMode,
-      priority,
-    });
+    create.mutate({ keyword: keyword.trim(), categoryId, signConstraint, matchMode, priority });
   };
 
   const cats = catQ.data?.categories ?? [];
@@ -82,12 +76,13 @@ export function Rules() {
   const catName = (id: number) => cats.find((c) => c.id === id)?.name ?? `#${id}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
+    <div className="flex flex-col gap-8">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Règles</h1>
-          <p className="text-sm text-slate-500">
-            Le matcher est insensible aux accents/casse. « Mot entier » empêche « paye » de matcher « payweb ».
+          <h1 className="page-title">Règles</h1>
+          <p className="page-subtitle max-w-2xl">
+            Matching <span className="display-italic">insensible aux accents/casse</span>.
+            « Mot entier » empêche « paye » de matcher « payweb ».
           </p>
         </div>
         <button
@@ -95,22 +90,24 @@ export function Rules() {
           onClick={() => recategorize.mutate()}
           disabled={recategorize.isPending}
         >
-          {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser tout l\'historique'}
+          {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser l\'historique'}
         </button>
       </div>
 
       {recategorize.data && (
-        <div className="rounded-md border border-emerald-900 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200">
-          Total : {recategorize.data.total} · Recatégorisées : {recategorize.data.recategorized} ·
-          Inconnues : {recategorize.data.unknown} · Manuelles préservées : {recategorize.data.preserved}
+        <div className="surface p-4 text-sm text-sage-200">
+          Total <span className="font-mono">{recategorize.data.total}</span> · recatégorisées{' '}
+          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> · inconnues{' '}
+          <span className="font-mono">{recategorize.data.unknown}</span> · manuelles préservées{' '}
+          <span className="font-mono">{recategorize.data.preserved}</span>
         </div>
       )}
 
-      <form onSubmit={submit} className="card p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-        <div className="md:col-span-2">
-          <label className="label">Mot-clé</label>
+      <form onSubmit={submit} className="surface p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+        <div className="lg:col-span-2">
+          <label className="label mb-1.5 block">Mot-clé</label>
           <input
-            className="input w-full"
+            className="input"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="carrefour"
@@ -118,110 +115,102 @@ export function Rules() {
           />
         </div>
         <div>
-          <label className="label">Catégorie</label>
+          <label className="label mb-1.5 block">Catégorie</label>
           <select
-            className="input w-full"
+            className="input"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
             required
           >
             <option value="">—</option>
             {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="label">Signe</label>
-          <select
-            className="input w-full"
-            value={signConstraint}
-            onChange={(e) => setSignConstraint(e.target.value as SignConstraint)}
-          >
+          <label className="label mb-1.5 block">Signe</label>
+          <select className="input" value={signConstraint} onChange={(e) => setSignConstraint(e.target.value as SignConstraint)}>
             <option value="any">Tous</option>
-            <option value="negative">Négatif (dépense)</option>
-            <option value="positive">Positif (revenu)</option>
+            <option value="negative">Négatif</option>
+            <option value="positive">Positif</option>
           </select>
         </div>
         <div>
-          <label className="label">Mode</label>
-          <select
-            className="input w-full"
-            value={matchMode}
-            onChange={(e) => setMatchMode(e.target.value as MatchMode)}
-          >
+          <label className="label mb-1.5 block">Mode</label>
+          <select className="input" value={matchMode} onChange={(e) => setMatchMode(e.target.value as MatchMode)}>
             <option value="word">Mot entier</option>
             <option value="substring">Sous-chaîne</option>
             <option value="regex">Regex</option>
           </select>
         </div>
         <div>
-          <label className="label">Priorité</label>
+          <label className="label mb-1.5 block">Priorité</label>
           <input
             type="number"
-            className="input w-full"
+            className="input font-mono"
             value={priority}
             onChange={(e) => setPriority(Number(e.target.value))}
           />
         </div>
-        <div className="md:col-span-6">
+        <div className="sm:col-span-2 lg:col-span-6">
           <button className="btn-primary">Ajouter la règle</button>
         </div>
       </form>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-normal">Mot-clé</th>
-              <th className="px-4 py-3 font-normal">Catégorie</th>
-              <th className="px-4 py-3 font-normal">Signe</th>
-              <th className="px-4 py-3 font-normal">Mode</th>
-              <th className="px-4 py-3 font-normal text-right">Priorité</th>
-              <th className="px-4 py-3 font-normal">Activée</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
-                  Aucune règle pour l'instant — ajoutez-en ou utilisez « Tri » pour en générer.
-                </td>
+      <div className="surface overflow-hidden">
+        <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead className="text-left">
+              <tr className="border-b border-ink-800/70">
+                <th className="px-4 py-3 label font-normal">Mot-clé</th>
+                <th className="px-4 py-3 label font-normal">Catégorie</th>
+                <th className="px-4 py-3 label font-normal hidden md:table-cell">Signe</th>
+                <th className="px-4 py-3 label font-normal hidden md:table-cell">Mode</th>
+                <th className="px-4 py-3 label font-normal text-right">Pr.</th>
+                <th className="px-4 py-3 label font-normal">Actif</th>
+                <th className="px-4 py-3"></th>
               </tr>
-            ) : (
-              rules.map((r) => (
-                <tr key={r.id} className="border-b border-slate-900 last:border-0">
-                  <td className="px-4 py-2 text-slate-200 font-mono text-xs">{r.keyword}</td>
-                  <td className="px-4 py-2 text-slate-300">{catName(r.categoryId)}</td>
-                  <td className="px-4 py-2 text-slate-400">{SIGN_LABEL[r.signConstraint]}</td>
-                  <td className="px-4 py-2 text-slate-400">{MATCH_LABEL[r.matchMode]}</td>
-                  <td className="px-4 py-2 text-right text-slate-400">{r.priority}</td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="checkbox"
-                      checked={r.enabled}
-                      onChange={(e) => toggleEnabled.mutate({ id: r.id, enabled: e.target.checked })}
-                      className="h-4 w-4 rounded border-slate-700 bg-slate-900"
-                    />
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      className="text-xs text-rose-300 hover:text-rose-200"
-                      onClick={() => {
-                        if (confirm(`Supprimer la règle « ${r.keyword} » ?`)) del.mutate(r.id);
-                      }}
-                    >
-                      Supprimer
-                    </button>
+            </thead>
+            <tbody>
+              {rules.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-ink-500 display-italic">
+                    Aucune règle — ajoutez-en ou utilisez « Tri ».
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                rules.map((r) => (
+                  <tr key={r.id} className="border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
+                    <td className="px-4 py-2.5 text-ink-100 font-mono text-xs">{r.keyword}</td>
+                    <td className="px-4 py-2.5 text-ink-300">{catName(r.categoryId)}</td>
+                    <td className="px-4 py-2.5 text-ink-400 hidden md:table-cell">{SIGN_LABEL[r.signConstraint]}</td>
+                    <td className="px-4 py-2.5 text-ink-400 hidden md:table-cell">{MATCH_LABEL[r.matchMode]}</td>
+                    <td className="px-4 py-2.5 text-right text-ink-400 font-mono">{r.priority}</td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={r.enabled}
+                        onChange={(e) => toggleEnabled.mutate({ id: r.id, enabled: e.target.checked })}
+                        className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
+                      />
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        className="text-[11px] text-ink-500 hover:text-clay-300 transition"
+                        onClick={() => {
+                          if (confirm(`Supprimer la règle « ${r.keyword} » ?`)) del.mutate(r.id);
+                        }}
+                      >
+                        supprimer
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

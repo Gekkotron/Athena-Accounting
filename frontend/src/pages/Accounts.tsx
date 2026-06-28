@@ -12,8 +12,7 @@ export function Accounts() {
   });
   const patternsQ = useQuery({
     queryKey: ['patterns'],
-    queryFn: () =>
-      api<{ patterns: AccountFilenamePattern[] }>('/api/account-filename-patterns'),
+    queryFn: () => api<{ patterns: AccountFilenamePattern[] }>('/api/account-filename-patterns'),
   });
 
   const [showForm, setShowForm] = useState(false);
@@ -31,11 +30,7 @@ export function Accounts() {
       currency: string;
       openingBalance: string;
       openingDate: string;
-    }) =>
-      api<{ account: Account }>('/api/accounts', {
-        method: 'POST',
-        json: input,
-      }),
+    }) => api<{ account: Account }>('/api/accounts', { method: 'POST', json: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['accounts'] });
       qc.invalidateQueries({ queryKey: ['reports'] });
@@ -58,12 +53,12 @@ export function Accounts() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
+    <div className="flex flex-col gap-8">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Comptes</h1>
-          <p className="text-sm text-slate-500">
-            Le solde courant inclut le solde d'ouverture + toutes les transactions depuis cette date.
+          <h1 className="page-title">Comptes</h1>
+          <p className="page-subtitle">
+            <span className="display-italic">Solde courant</span> = solde d'ouverture + somme des transactions depuis cette date.
           </p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
@@ -72,14 +67,14 @@ export function Accounts() {
       </div>
 
       {showForm && (
-        <form onSubmit={submit} className="card p-5 grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div className="md:col-span-2">
-            <label className="label">Nom</label>
-            <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} required />
+        <form onSubmit={submit} className="surface p-5 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="lg:col-span-2">
+            <label className="label mb-1.5 block">Nom</label>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div>
-            <label className="label">Type</label>
-            <select className="input w-full" value={type} onChange={(e) => setType(e.target.value)}>
+            <label className="label mb-1.5 block">Type</label>
+            <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
               <option value="checking">Courant</option>
               <option value="savings">Épargne</option>
               <option value="credit">Crédit</option>
@@ -87,9 +82,9 @@ export function Accounts() {
             </select>
           </div>
           <div>
-            <label className="label">Devise</label>
+            <label className="label mb-1.5 block">Devise</label>
             <input
-              className="input w-full"
+              className="input"
               value={currency}
               onChange={(e) => setCurrency(e.target.value.toUpperCase())}
               maxLength={3}
@@ -97,30 +92,30 @@ export function Accounts() {
             />
           </div>
           <div>
-            <label className="label">Solde d'ouverture</label>
+            <label className="label mb-1.5 block">Solde d'ouverture</label>
             <input
-              className="input w-full font-mono"
+              className="input font-mono"
               value={openingBalance}
               onChange={(e) => setOpeningBalance(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="label">Date d'ouverture</label>
+            <label className="label mb-1.5 block">Date d'ouverture</label>
             <input
               type="date"
-              className="input w-full"
+              className="input"
               value={openingDate}
               onChange={(e) => setOpeningDate(e.target.value)}
               required
             />
           </div>
           {error && (
-            <div className="md:col-span-6 rounded-md border border-rose-900 bg-rose-950 px-3 py-2 text-sm text-rose-200">
+            <div className="sm:col-span-2 lg:col-span-6 rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
               {error}
             </div>
           )}
-          <div className="md:col-span-6">
+          <div className="sm:col-span-2 lg:col-span-6">
             <button className="btn-primary" disabled={create.isPending}>
               {create.isPending ? 'Création…' : 'Créer le compte'}
             </button>
@@ -128,47 +123,40 @@ export function Accounts() {
         </form>
       )}
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-normal">Nom</th>
-              <th className="px-4 py-3 font-normal">Type</th>
-              <th className="px-4 py-3 font-normal">Devise</th>
-              <th className="px-4 py-3 font-normal">Ouvert le</th>
-              <th className="px-4 py-3 font-normal text-right">Solde d'ouverture</th>
-              <th className="px-4 py-3 font-normal text-right">Solde courant</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <section>
+        <div className="section-rule mb-4">Mes comptes</div>
+        {(accountsQ.data?.accounts ?? []).length === 0 ? (
+          <div className="surface p-6 text-sm text-ink-400 display-italic">
+            Aucun compte pour l'instant.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {(accountsQ.data?.accounts ?? []).map((a) => (
-              <tr key={a.id} className="border-b border-slate-900 last:border-0">
-                <td className="px-4 py-3 text-slate-200">{a.name}</td>
-                <td className="px-4 py-3 text-slate-400">{a.type}</td>
-                <td className="px-4 py-3 text-slate-400">{a.currency}</td>
-                <td className="px-4 py-3 text-slate-400">{formatDate(a.openingDate)}</td>
-                <td className="px-4 py-3 text-right font-mono text-slate-300">
-                  {formatAmount(a.openingBalance, a.currency)}
-                </td>
-                <td className={`px-4 py-3 text-right font-mono ${amountSignClass(a.currentBalance ?? '0')}`}>
+              <div key={a.id} className="surface p-5 relative">
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
+                  <span className="badge">{a.currency}</span>
+                </div>
+                <div className="label mt-0.5">{a.type}</div>
+                <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
                   {formatAmount(a.currentBalance ?? '0', a.currency)}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    className="text-xs text-rose-300 hover:text-rose-200"
-                    onClick={() => {
-                      if (confirm(`Supprimer le compte « ${a.name} » ?`)) del.mutate(a.id);
-                    }}
-                  >
-                    Supprimer
-                  </button>
-                </td>
-              </tr>
+                </div>
+                <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
+                  ouvert {formatDate(a.openingDate)} · {formatAmount(a.openingBalance, a.currency)}
+                </div>
+                <button
+                  className="absolute top-3 right-3 text-[11px] text-ink-500 hover:text-clay-300 transition"
+                  onClick={() => {
+                    if (confirm(`Supprimer le compte « ${a.name} » ?`)) del.mutate(a.id);
+                  }}
+                >
+                  supprimer
+                </button>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        )}
+      </section>
 
       <PatternsSection patterns={patternsQ.data?.patterns ?? []} accounts={accountsQ.data?.accounts ?? []} />
     </div>
@@ -203,89 +191,83 @@ function PatternsSection({
   const acctName = (id: number) => accounts.find((a) => a.id === id)?.name ?? `#${id}`;
 
   return (
-    <div>
-      <h2 className="text-sm font-medium text-slate-200 mb-3">
-        Correspondance fichier → compte
-      </h2>
-      <p className="text-xs text-slate-500 mb-3">
-        Quand vous importez un fichier, le compte cible est déduit du nom du fichier via ces motifs (priorité la plus
-        haute d'abord). Exemple : « compte_courant » → Compte courant.
+    <section>
+      <div className="section-rule mb-2">Fichier → compte</div>
+      <p className="text-xs text-ink-500 mb-4 max-w-xl">
+        À l'import, le compte cible est déduit du nom du fichier via ces motifs (priorité la plus haute d'abord).
+        <span className="display-italic"> Exemple :</span> motif « compte_courant » → Compte courant.
       </p>
-      <div className="card p-3 flex flex-wrap items-end gap-3 mb-3">
-        <div>
-          <label className="label">Motif (sous-chaîne)</label>
-          <input className="input w-56" value={pattern} onChange={(e) => setPattern(e.target.value)} />
+      <div className="surface p-4 mb-3 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[180px]">
+          <label className="label mb-1.5 block">Motif</label>
+          <input className="input" value={pattern} onChange={(e) => setPattern(e.target.value)} />
         </div>
-        <div>
-          <label className="label">Compte</label>
+        <div className="w-full sm:w-44">
+          <label className="label mb-1.5 block">Compte</label>
           <select
-            className="input w-44"
+            className="input"
             value={accountId}
             onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
           >
             <option value="">—</option>
             {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
+              <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label className="label">Priorité</label>
+        <div className="w-24">
+          <label className="label mb-1.5 block">Priorité</label>
           <input
             type="number"
-            className="input w-24"
+            className="input font-mono"
             value={priority}
             onChange={(e) => setPriority(Number(e.target.value))}
           />
         </div>
         <button
           className="btn-secondary"
-          onClick={() => {
-            if (pattern && accountId) {
-              create.mutate({ pattern, accountId, priority });
-            }
-          }}
+          onClick={() => pattern && accountId && create.mutate({ pattern, accountId, priority })}
           disabled={!pattern || !accountId}
         >
           Ajouter
         </button>
       </div>
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-normal">Motif</th>
-              <th className="px-4 py-3 font-normal">Compte</th>
-              <th className="px-4 py-3 font-normal">Priorité</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {patterns.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
-                  Aucun motif configuré
-                </td>
+      <div className="surface overflow-hidden">
+        <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead className="text-left">
+              <tr className="border-b border-ink-800/70">
+                <th className="px-4 py-3 label font-normal">Motif</th>
+                <th className="px-4 py-3 label font-normal">Compte</th>
+                <th className="px-4 py-3 label font-normal">Priorité</th>
+                <th className="px-4 py-3"></th>
               </tr>
-            ) : (
-              patterns.map((p) => (
-                <tr key={p.id} className="border-b border-slate-900 last:border-0">
-                  <td className="px-4 py-2 text-slate-200 font-mono">{p.pattern}</td>
-                  <td className="px-4 py-2 text-slate-300">{acctName(p.accountId)}</td>
-                  <td className="px-4 py-2 text-slate-400">{p.priority}</td>
-                  <td className="px-4 py-2 text-right">
-                    <button className="text-xs text-rose-300 hover:text-rose-200" onClick={() => del.mutate(p.id)}>
-                      Supprimer
-                    </button>
+            </thead>
+            <tbody>
+              {patterns.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-ink-500 display-italic">
+                    Aucun motif configuré.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                patterns.map((p) => (
+                  <tr key={p.id} className="border-b border-ink-800/40 last:border-0">
+                    <td className="px-4 py-2.5 text-ink-100 font-mono text-xs">{p.pattern}</td>
+                    <td className="px-4 py-2.5 text-ink-300">{acctName(p.accountId)}</td>
+                    <td className="px-4 py-2.5 text-ink-400 font-mono">{p.priority}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button className="text-[11px] text-ink-500 hover:text-clay-300" onClick={() => del.mutate(p.id)}>
+                        supprimer
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -28,14 +28,13 @@ export function Tri() {
   const total = groupsQ.data?.pagination.total ?? groups.length;
   const categories = categoriesQ.data?.categories ?? [];
 
-  const toggle = (label: string) => {
+  const toggle = (label: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
       else next.add(label);
       return next;
     });
-  };
 
   const selectAll = () => setSelected(new Set(groups.map((g) => g.normalized_label)));
   const clearSel = () => setSelected(new Set());
@@ -48,10 +47,8 @@ export function Tri() {
     });
 
   const assign = useMutation({
-    mutationFn: (input: {
-      groups: { normalizedLabel: string; categoryId: number }[];
-      createRules: boolean;
-    }) => api<{ assigned: number; rulesCreated: number }>('/api/tri/assign', { method: 'POST', json: input }),
+    mutationFn: (input: { groups: { normalizedLabel: string; categoryId: number }[]; createRules: boolean }) =>
+      api<{ assigned: number; rulesCreated: number }>('/api/tri/assign', { method: 'POST', json: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tri-groups'] });
       qc.invalidateQueries({ queryKey: ['transactions'] });
@@ -76,10 +73,7 @@ export function Tri() {
   const assignSingle = (label: string) => {
     const categoryId = perGroupCategory.get(label);
     if (!categoryId) return;
-    assign.mutate({
-      groups: [{ normalizedLabel: label, categoryId }],
-      createRules,
-    });
+    assign.mutate({ groups: [{ normalizedLabel: label, categoryId }], createRules });
   };
 
   const assignBulk = () => {
@@ -97,11 +91,11 @@ export function Tri() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tri des catégories</h1>
-          <p className="text-sm text-slate-500">
-            {processed} / {total} groupe(s) en cours de traitement — triés par fréquence.
+          <h1 className="page-title">Tri</h1>
+          <p className="page-subtitle">
+            <span className="font-mono">{processed} / {total}</span> groupe{total > 1 ? 's' : ''} traité{processed > 1 ? 's' : ''} · triés par fréquence
           </p>
         </div>
         <button
@@ -109,142 +103,149 @@ export function Tri() {
           onClick={() => recategorize.mutate()}
           disabled={recategorize.isPending}
         >
-          {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser tout l\'historique'}
+          {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser l\'historique'}
         </button>
       </div>
 
       {recategorize.data && (
-        <div className="rounded-md border border-emerald-900 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200">
-          Total : {recategorize.data.total} · Recatégorisées : {recategorize.data.recategorized} ·
-          Inconnues : {recategorize.data.unknown} · Manuelles préservées : {recategorize.data.preserved}
+        <div className="surface p-4 text-sm text-sage-200">
+          Total <span className="font-mono">{recategorize.data.total}</span> · recatégorisées{' '}
+          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> · inconnues{' '}
+          <span className="font-mono">{recategorize.data.unknown}</span> · manuelles préservées{' '}
+          <span className="font-mono">{recategorize.data.preserved}</span>
         </div>
       )}
 
-      <div className="card p-4 flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="label">Catégorie pour la sélection</label>
+      <div className="surface p-4 md:p-5 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <label className="label mb-1.5 block">Catégorie pour la sélection</label>
           <select
-            className="input w-56"
+            className="input"
             value={bulkCategoryId}
             onChange={(e) => setBulkCategoryId(e.target.value ? Number(e.target.value) : '')}
           >
             <option value="">—</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-ink-300 cursor-pointer">
           <input
             type="checkbox"
             checked={createRules}
             onChange={(e) => setCreateRules(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-700 bg-slate-900"
+            className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
           />
-          Créer une règle pour chaque libellé
+          Créer une règle
         </label>
         <button
           className="btn-primary"
           onClick={assignBulk}
           disabled={!bulkCategoryId || selected.size === 0 || assign.isPending}
         >
-          Appliquer à {selected.size} groupe(s)
+          Appliquer à <span className="font-mono">{selected.size}</span> groupe{selected.size > 1 ? 's' : ''}
         </button>
-        <button className="btn-ghost ml-auto" onClick={selectAll} disabled={groups.length === 0}>
-          Tout sélectionner
-        </button>
-        <button className="btn-ghost" onClick={clearSel} disabled={selected.size === 0}>
-          Effacer
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+          <button className="btn-ghost" onClick={selectAll} disabled={groups.length === 0}>
+            Tout
+          </button>
+          <button className="btn-ghost" onClick={clearSel} disabled={selected.size === 0}>
+            Effacer
+          </button>
+        </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-normal w-8"></th>
-              <th className="px-4 py-3 font-normal">Libellé normalisé</th>
-              <th className="px-4 py-3 font-normal">Exemple brut</th>
-              <th className="px-4 py-3 font-normal text-right">Nombre</th>
-              <th className="px-4 py-3 font-normal text-right">Total</th>
-              <th className="px-4 py-3 font-normal">Période</th>
-              <th className="px-4 py-3 font-normal">Catégorie</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                  {groupsQ.isLoading
-                    ? 'Chargement…'
-                    : 'Aucun groupe à trier — toutes les transactions sont catégorisées.'}
-                </td>
+      <div className="surface overflow-hidden">
+        <div className="table-scroll">
+          <table className="w-full text-sm">
+            <thead className="text-left">
+              <tr className="border-b border-ink-800/70">
+                <th className="px-4 py-3 w-8"></th>
+                <th className="px-4 py-3 label font-normal">Libellé normalisé</th>
+                <th className="px-4 py-3 label font-normal hidden lg:table-cell">Exemple</th>
+                <th className="px-4 py-3 label font-normal text-right">Nb</th>
+                <th className="px-4 py-3 label font-normal text-right">Total</th>
+                <th className="px-4 py-3 label font-normal hidden md:table-cell">Période</th>
+                <th className="px-4 py-3 label font-normal">Catégorie</th>
+                <th className="px-4 py-3"></th>
               </tr>
-            ) : (
-              groups.map((g) => {
-                const selectedG = selected.has(g.normalized_label);
-                const localCat = perGroupCategory.get(g.normalized_label);
-                return (
-                  <tr key={g.normalized_label} className={`border-b border-slate-900 last:border-0 ${selectedG ? 'bg-emerald-950/20' : ''}`}>
-                    <td className="px-4 py-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedG}
-                        onChange={() => toggle(g.normalized_label)}
-                        className="h-4 w-4 rounded border-slate-700 bg-slate-900"
-                      />
-                    </td>
-                    <td className="px-4 py-2 text-slate-200 font-mono text-xs">{g.normalized_label}</td>
-                    <td className="px-4 py-2 text-slate-400 text-xs truncate max-w-xs" title={g.example_raw_label}>
-                      {g.example_raw_label}
-                    </td>
-                    <td className="px-4 py-2 text-right text-slate-300">{g.transaction_count}</td>
-                    <td className={`px-4 py-2 text-right font-mono ${amountSignClass(g.total_amount)}`}>
-                      {formatAmount(g.total_amount, 'EUR')}
-                    </td>
-                    <td className="px-4 py-2 text-slate-500 text-xs whitespace-nowrap">
-                      {formatDate(g.min_date)} → {formatDate(g.max_date)}
-                    </td>
-                    <td className="px-4 py-2">
-                      <select
-                        className="input py-1 text-xs"
-                        value={localCat ?? ''}
-                        onChange={(e) =>
-                          e.target.value
-                            ? setGroupCat(g.normalized_label, Number(e.target.value))
-                            : setPerGroupCategory((m) => {
-                                const next = new Map(m);
-                                next.delete(g.normalized_label);
-                                return next;
-                              })
-                        }
-                      >
-                        <option value="">—</option>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <button
-                        className="text-xs text-emerald-300 hover:text-emerald-200 disabled:opacity-40"
-                        disabled={!localCat || assign.isPending}
-                        onClick={() => assignSingle(g.normalized_label)}
-                      >
-                        Appliquer
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {groups.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-ink-500">
+                    <span className="display-italic">
+                      {groupsQ.isLoading ? 'Chargement…' : 'Toutes les transactions sont catégorisées.'}
+                    </span>
+                  </td>
+                </tr>
+              ) : (
+                groups.map((g) => {
+                  const selectedG = selected.has(g.normalized_label);
+                  const localCat = perGroupCategory.get(g.normalized_label);
+                  return (
+                    <tr
+                      key={g.normalized_label}
+                      className={`border-b border-ink-800/40 last:border-0 transition ${
+                        selectedG ? 'bg-sage-900/15' : 'hover:bg-ink-850/40'
+                      }`}
+                    >
+                      <td className="px-4 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedG}
+                          onChange={() => toggle(g.normalized_label)}
+                          className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
+                        />
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-100 font-mono text-xs max-w-[200px] truncate">{g.normalized_label}</td>
+                      <td className="px-4 py-2.5 text-ink-400 text-xs truncate max-w-xs hidden lg:table-cell" title={g.example_raw_label}>
+                        {g.example_raw_label}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-ink-200 font-mono">{g.transaction_count}</td>
+                      <td className={`px-4 py-2.5 text-right font-mono tabular-nums ${amountSignClass(g.total_amount)}`}>
+                        {formatAmount(g.total_amount, 'EUR')}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-500 text-[11px] font-mono whitespace-nowrap hidden md:table-cell">
+                        {formatDate(g.min_date)} → {formatDate(g.max_date)}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <select
+                          className="input-sm"
+                          value={localCat ?? ''}
+                          onChange={(e) =>
+                            e.target.value
+                              ? setGroupCat(g.normalized_label, Number(e.target.value))
+                              : setPerGroupCategory((m) => {
+                                  const next = new Map(m);
+                                  next.delete(g.normalized_label);
+                                  return next;
+                                })
+                          }
+                        >
+                          <option value="">—</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button
+                          className="text-xs text-sage-300 hover:text-sage-200 disabled:opacity-40 disabled:hover:text-sage-300 transition"
+                          disabled={!localCat || assign.isPending}
+                          onClick={() => assignSingle(g.normalized_label)}
+                        >
+                          Appliquer
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

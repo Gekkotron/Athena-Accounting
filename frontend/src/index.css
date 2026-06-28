@@ -1,52 +1,153 @@
+/* Self-hosted variable fonts — bundled at build time, no runtime CDN calls. */
+@import '@fontsource-variable/hanken-grotesk/index.css';
+@import '@fontsource-variable/fraunces/index.css';
+@import '@fontsource-variable/fraunces/wght-italic.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  html {
+  :root {
     color-scheme: dark;
   }
-  body {
-    font-feature-settings: 'cv01', 'cv11', 'ss01';
+  html {
+    -webkit-text-size-adjust: 100%;
   }
-  /* Slightly larger numeric tabular figures in tables */
+  body {
+    @apply bg-ink-950 text-ink-100 antialiased;
+    font-family: 'Hanken Grotesk Variable', system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'ss02', 'ss03', 'cv11';
+    /* very subtle noise + radial wash for atmosphere */
+    background-image:
+      radial-gradient(1200px 800px at 15% -10%, rgba(125, 211, 192, 0.06), transparent 60%),
+      radial-gradient(900px 600px at 115% 110%, rgba(220, 120, 97, 0.04), transparent 60%);
+    background-attachment: fixed;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+    background-image: theme('backgroundImage.noise');
+    mix-blend-mode: overlay;
+  }
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Tables get tabular numerals so columns of amounts align beautifully. */
   table {
     font-variant-numeric: tabular-nums;
   }
-  /* Subtle focus ring across inputs/buttons */
+
+  /* Distinctive focus: subtle sage ring, no offset because we use bg surfaces. */
   *:focus-visible {
-    @apply outline-none ring-1 ring-emerald-400/50 ring-offset-0;
+    @apply outline-none ring-2 ring-sage-300/40;
+  }
+
+  /* Native selects pick up our theme. */
+  select option {
+    background-color: theme('colors.ink.900');
+    color: theme('colors.ink.100');
+  }
+
+  /* Sharper headings */
+  h1, h2, h3 {
+    @apply tracking-tight;
   }
 }
 
 @layer components {
-  .card {
-    @apply rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm;
+  .surface {
+    @apply rounded-2xl border border-ink-800/70 bg-ink-900/60 backdrop-blur-sm shadow-card;
   }
+  .surface-soft {
+    @apply rounded-xl border border-ink-800/50 bg-ink-900/40;
+  }
+
   .input {
-    @apply rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100
-           placeholder:text-slate-500 focus:border-emerald-500/50;
+    @apply w-full rounded-lg border border-ink-800 bg-ink-900/80 px-3 py-2 text-sm text-ink-100
+           placeholder:text-ink-500 transition focus:border-sage-300/50;
   }
+  .input-sm {
+    @apply w-full rounded-md border border-ink-800 bg-ink-900/80 px-2 py-1 text-xs text-ink-100
+           placeholder:text-ink-500 focus:border-sage-300/50;
+  }
+
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium
-           transition active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
+           transition select-none active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed
+           min-h-[40px];
   }
   .btn-primary {
-    @apply btn bg-emerald-500 text-emerald-950 hover:bg-emerald-400;
+    @apply btn bg-sage-300 text-ink-950 hover:bg-sage-200 shadow-soft;
   }
   .btn-secondary {
-    @apply btn border border-slate-800 bg-slate-900 text-slate-100 hover:border-slate-700 hover:bg-slate-800;
+    @apply btn border border-ink-800 bg-ink-900/70 text-ink-100 hover:border-ink-700 hover:bg-ink-850;
   }
   .btn-danger {
-    @apply btn border border-rose-900 bg-rose-950 text-rose-200 hover:bg-rose-900;
+    @apply btn border border-clay-700/60 bg-clay-800/40 text-clay-200 hover:bg-clay-700/40;
   }
   .btn-ghost {
-    @apply btn text-slate-300 hover:bg-slate-800;
+    @apply btn text-ink-300 hover:bg-ink-900 hover:text-ink-100;
   }
+
   .badge {
-    @apply inline-flex items-center rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-xs text-slate-300;
+    @apply inline-flex items-center rounded-md border border-ink-800 bg-ink-900/70 px-2 py-0.5
+           text-[11px] font-medium tracking-wide text-ink-300;
   }
+  .badge-sage {
+    @apply badge border-sage-800/60 bg-sage-900/30 text-sage-200;
+  }
+  .badge-clay {
+    @apply badge border-clay-800/60 bg-clay-900/30 text-clay-200;
+  }
+
   .label {
-    @apply text-xs uppercase tracking-wider text-slate-500;
+    @apply text-[10px] uppercase tracking-[0.14em] text-ink-400 font-medium;
+  }
+
+  .display {
+    font-family: 'Fraunces Variable', Georgia, serif;
+    font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 0;
+  }
+  .display-italic {
+    font-family: 'Fraunces Variable', Georgia, serif;
+    font-style: italic;
+    font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 1;
+  }
+
+  /* Generic responsive table wrapper: forces horizontal scroll on small screens
+     instead of breaking the layout. */
+  .table-scroll {
+    @apply overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0;
+  }
+  .table-scroll table {
+    @apply min-w-[640px] w-full;
+  }
+
+  /* Page header pattern — used by every top-level page. */
+  .page-header {
+    @apply flex flex-col gap-1 md:flex-row md:items-end md:justify-between md:gap-6;
+  }
+  .page-title {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight text-ink-50 display;
+  }
+  .page-subtitle {
+    @apply text-sm text-ink-400;
+  }
+
+  /* Top-of-section thin separator with a small caps label. */
+  .section-rule {
+    @apply flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-ink-500;
+  }
+  .section-rule::after {
+    content: '';
+    @apply flex-1 h-px bg-ink-800;
   }
 }

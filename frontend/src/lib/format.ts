@@ -9,10 +9,27 @@ export function formatAmount(value: string | number, currency = 'EUR'): string {
   }).format(n);
 }
 
+export function formatAmountCompact(value: string | number, currency = 'EUR'): string {
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (!Number.isFinite(n)) return String(value);
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(n);
+}
+
 export function formatDate(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
   const [y, m, d] = iso.split('T')[0]!.split('-');
   return `${d}/${m}/${y}`;
+}
+
+export function formatDateShort(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+  const [, m, d] = iso.split('T')[0]!.split('-');
+  return `${d}/${m}`;
 }
 
 export function formatDateTime(iso: string): string {
@@ -30,6 +47,6 @@ export function formatDateTime(iso: string): string {
 
 export function amountSignClass(value: string | number): string {
   const n = typeof value === 'string' ? Number(value) : value;
-  if (!Number.isFinite(n) || n === 0) return 'text-slate-300';
-  return n > 0 ? 'text-emerald-400' : 'text-rose-300';
+  if (!Number.isFinite(n) || n === 0) return 'text-ink-300';
+  return n > 0 ? 'text-sage-300' : 'text-clay-300';
 }
