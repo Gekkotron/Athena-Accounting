@@ -2,6 +2,9 @@ import Fastify from 'fastify';
 import { env } from './env.js';
 import { pool } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
+import { authPlugin } from './http/plugins/auth.js';
+import { onboardingRoutes } from './http/routes/onboarding.js';
+import { authRoutes } from './http/routes/auth.js';
 
 const app = Fastify({
   logger:
@@ -11,10 +14,16 @@ const app = Fastify({
 });
 
 app.get('/health', async () => {
-  // ping the DB so /health reflects end-to-end readiness, not just the process
+  // Ping the DB so /health reflects end-to-end readiness, not just process liveness.
   await pool.query('SELECT 1');
   return { ok: true, ts: new Date().toISOString() };
 });
+
+await app.register(authPlugin);
+
+// Public routes (no auth required to discover / complete onboarding, or log in).
+await app.register(onboardingRoutes);
+await app.register(authRoutes);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');
