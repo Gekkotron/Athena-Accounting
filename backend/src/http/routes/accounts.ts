@@ -49,41 +49,63 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   // Every route in this plugin requires auth.
   app.addHook('preHandler', app.requireAuth);
 
-  // List accounts with computed current balance + counts. The two counts make
-  // empty-state diagnostics much clearer: if currentBalance == openingBalance
-  // and counted == 0, that's why.
+  // List accounts with computed current balance + counts. We use raw SQL here
+  // (same pattern as reports.ts) because Drizzle's column-reference
+  // interpolation across a correlated subquery turned out to silently miscorrelate
+  // — the inner WHERE never matched, and the counts came back as 0 despite
+  // matching transactions existing in the DB. Explicit aliases (`a`, `t`)
+  // guarantee the correlation lines up.
   app.get('/api/accounts', async () => {
-    const rows = await db
-      .select({
-        id: accounts.id,
-        name: accounts.name,
-        type: accounts.type,
-        currency: accounts.currency,
-        openingBalance: accounts.openingBalance,
-        openingDate: accounts.openingDate,
-        createdAt: accounts.createdAt,
-        currentBalance: sql<string>`
-          (${accounts.openingBalance} + COALESCE(
-            (SELECT SUM(${transactions.amount})
-             FROM ${transactions}
-             WHERE ${transactions.accountId} = ${accounts.id}
-               AND ${transactions.date} >= ${accounts.openingDate}),
+    const result = await db.execute<{
+      id: number;
+      name: string;
+      type: string;
+      currency: string;
+      opening_balance: string;
+      opening_date: string;
+      created_at: Date;
+      current_balance: string;
+      transaction_count: number;
+      counted_transaction_count: number;
+    }>(sql`
+      SELECT
+        a.id,
+        a.name,
+        a.type,
+        a.currency,
+        a.opening_balance::text                                AS opening_balance,
+        to_char(a.opening_date, 'YYYY-MM-DD')                  AS opening_date,
+        a.created_at,
+        (
+          a.opening_balance + COALESCE(
+            (SELECT SUM(t.amount) FROM transactions t
+              WHERE t.account_id = a.id AND t.date >= a.opening_date),
             0
-          ))::text
-        `.as('current_balance'),
-        transactionCount: sql<number>`
-          (SELECT COUNT(*)::int FROM ${transactions}
-           WHERE ${transactions.accountId} = ${accounts.id})
-        `.as('transaction_count'),
-        countedTransactionCount: sql<number>`
-          (SELECT COUNT(*)::int FROM ${transactions}
-           WHERE ${transactions.accountId} = ${accounts.id}
-             AND ${transactions.date} >= ${accounts.openingDate})
-        `.as('counted_transaction_count'),
-      })
-      .from(accounts)
-      .orderBy(accounts.name);
-    return { accounts: rows };
+          )
+        )::text                                                AS current_balance,
+        (SELECT COUNT(*)::int FROM transactions t
+          WHERE t.account_id = a.id)                           AS transaction_count,
+        (SELECT COUNT(*)::int FROM transactions t
+          WHERE t.account_id = a.id AND t.date >= a.opening_date)
+                                                               AS counted_transaction_count
+      FROM accounts a
+      ORDER BY a.name
+    `);
+
+    const accounts = result.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      currency: r.currency,
+      openingBalance: r.opening_balance,
+      openingDate: r.opening_date,
+      createdAt: r.created_at,
+      currentBalance: r.current_balance,
+      transactionCount: r.transaction_count,
+      countedTransactionCount: r.counted_transaction_count,
+    }));
+
+    return { accounts };
   });
 
   app.post('/api/accounts', async (req, reply) => {
