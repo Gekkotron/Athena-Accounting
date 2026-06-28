@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Account, BalancePoint } from '../api/types';
-import { formatAmount, amountSignClass } from '../lib/format';
+import { formatAmount, amountSignClass, formatDate } from '../lib/format';
 import { BalanceChart } from '../components/BalanceChart';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
 
@@ -89,21 +89,43 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {accounts.map((a) => (
-              <div key={a.id} className="surface p-5 group hover:border-ink-700 transition">
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
-                  <span className="badge">{a.currency}</span>
+            {accounts.map((a) => {
+              const current = Number(a.currentBalance ?? '0');
+              const opening = Number(a.openingBalance);
+              const delta = current - opening;
+              const hasMovement = Math.abs(delta) >= 0.005;
+              return (
+                <div key={a.id} className="surface p-5 group hover:border-ink-700 transition">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
+                    <span className="badge">{a.currency}</span>
+                  </div>
+                  <div className="text-[11px] text-ink-500 mt-0.5 uppercase tracking-wider">{a.type}</div>
+
+                  <div className="mt-4">
+                    <div className="label mb-0.5">Solde courant</div>
+                    <div className={`display text-3xl tabular-nums ${amountSignClass(current)}`}>
+                      {formatAmount(current, a.currency)}
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
+                    <div>
+                      ouvert {formatDate(a.openingDate)} ·{' '}
+                      {formatAmount(opening, a.currency)}
+                    </div>
+                    {hasMovement ? (
+                      <div className={delta > 0 ? 'text-sage-400 mt-0.5' : 'text-clay-300 mt-0.5'}>
+                        {delta > 0 ? '+' : ''}
+                        {formatAmount(delta, a.currency)} depuis l'ouverture
+                      </div>
+                    ) : (
+                      <div className="text-ink-600 mt-0.5 not-italic">aucun mouvement depuis</div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-[11px] text-ink-500 mt-0.5 uppercase tracking-wider">{a.type}</div>
-                <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
-                  {formatAmount(a.currentBalance ?? '0', a.currency)}
-                </div>
-                <div className="text-[11px] text-ink-500 mt-2 font-mono">
-                  ouvert avec {formatAmount(a.openingBalance, a.currency)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
