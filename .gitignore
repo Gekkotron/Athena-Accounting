@@ -2,9 +2,11 @@ node_modules/
 dist/
 .env
 .env.local
+.env.backup.*
 *.log
 .DS_Store
 postgres-data/
 coverage/
 .vscode/
 .idea/
+*.tsbuildinfo

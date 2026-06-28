@@ -33,4 +33,11 @@ services:
       # Host port (configurable via BACKEND_PORT) -> container's internal 3000.
       - "127.0.0.1:${BACKEND_PORT:-6001}:3000"
 
-  # frontend will be added at Étape 8 — will bind to ${FRONTEND_PORT:-6000}
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Host port (configurable via FRONTEND_PORT) -> nginx in the container.
+      - "127.0.0.1:${FRONTEND_PORT:-6000}:80"

@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    font-feature-settings: 'cv01', 'cv11', 'ss01';
+  }
+  /* Slightly larger numeric tabular figures in tables */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Subtle focus ring across inputs/buttons */
+  *:focus-visible {
+    @apply outline-none ring-1 ring-emerald-400/50 ring-offset-0;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm;
+  }
+  .input {
+    @apply rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100
+           placeholder:text-slate-500 focus:border-emerald-500/50;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium
+           transition active:scale-[0.98];
+  }
+  .btn-primary {
+    @apply btn bg-emerald-500 text-emerald-950 hover:bg-emerald-400;
+  }
+  .btn-secondary {
+    @apply btn border border-slate-800 bg-slate-900 text-slate-100 hover:border-slate-700 hover:bg-slate-800;
+  }
+  .btn-danger {
+    @apply btn border border-rose-900 bg-rose-950 text-rose-200 hover:bg-rose-900;
+  }
+  .btn-ghost {
+    @apply btn text-slate-300 hover:bg-slate-800;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 text-xs text-slate-300;
+  }
+  .label {
+    @apply text-xs uppercase tracking-wider text-slate-500;
+  }
+}
