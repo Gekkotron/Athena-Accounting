@@ -14,6 +14,7 @@ import { rulesRoutes } from './http/routes/rules.js';
 import { transferRulesRoutes } from './http/routes/transfer-rules.js';
 import { transactionsRoutes } from './http/routes/transactions.js';
 import { reportsRoutes } from './http/routes/reports.js';
+import { triRoutes } from './http/routes/tri.js';
 
 const app = Fastify({
   logger:
@@ -44,6 +45,7 @@ await app.register(rulesRoutes);
 await app.register(transferRulesRoutes);
 await app.register(transactionsRoutes);
 await app.register(reportsRoutes);
+await app.register(triRoutes);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');
