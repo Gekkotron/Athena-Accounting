@@ -3,9 +3,12 @@ interface Props {
   className?: string;
 }
 
-// Athena's owl, geometric and symmetric — two round eyes + a small beak.
-// Uses currentColor for stroke/fill so callers can colour it with Tailwind
-// (e.g. text-sage-300, text-ink-100, …) without prop drilling colour values.
+// Athena Accounting monogram. A geometric capital "A" with asymmetric stroke
+// weights — thin left, thick right, slim crossbar — borrowing the
+// high-contrast personality of Fraunces (the serif used in the wordmark).
+// The triangular silhouette also reads as a Greek temple pediment without
+// resorting to a literal column or mythological character.
+// All strokes use currentColor so the caller controls tint via Tailwind.
 export function Logo({ size = 28, className = '' }: Props) {
   return (
     <svg
@@ -15,14 +18,31 @@ export function Logo({ size = 28, className = '' }: Props) {
       className={className}
       aria-hidden="true"
       focusable="false"
+      fill="none"
     >
-      <circle cx="11.5" cy="14" r="5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="11.5" cy="14" r="2" fill="currentColor" />
-
-      <circle cx="20.5" cy="14" r="5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="20.5" cy="14" r="2" fill="currentColor" />
-
-      <path d="M14 21.5 L18 21.5 L16 24.5 Z" fill="currentColor" />
+      {/* Left stroke — thinner, to mimic the inner contrast of a serif */}
+      <path
+        d="M 8.5 26 L 16 5.5"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Right stroke — thicker, the dominant axis */}
+      <path
+        d="M 16 5.5 L 23.5 26"
+        stroke="currentColor"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Crossbar — slim, modernist */}
+      <path
+        d="M 12 19 L 20 19"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
