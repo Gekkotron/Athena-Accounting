@@ -5,13 +5,6 @@ import type { Category, CategoryKind, CategoryReportRow } from '../api/types';
 import { formatAmount } from '../lib/format';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
 
-const KIND_LABEL: Record<CategoryKind, string> = {
-  expense: 'Dépense',
-  income: 'Revenu',
-  transfer: 'Virement',
-  neutral: 'Neutre',
-};
-
 export function Categories() {
   const qc = useQueryClient();
   const catQ = useQuery({
@@ -35,6 +28,16 @@ export function Categories() {
       qc.invalidateQueries({ queryKey: ['categories'] });
       setName('');
       setColor('');
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+  const updateCategory = useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: Partial<Category> }) =>
+      api(`/api/categories/${id}`, { method: 'PUT', json: patch }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
     },
     onError: (err: ApiError) => setError(err.message),
   });
@@ -117,25 +120,80 @@ export function Categories() {
                 const t = totalsByCat.get(c.id) ?? 0;
                 return (
                   <tr key={c.id} className="border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
-                    <td className="px-4 py-2.5 text-ink-100">
-                      <span className="flex items-center gap-2">
+                    {/* Name — editable inline */}
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
                         {c.color && (
                           <span
-                            className="h-2 w-2 rounded-full border border-ink-700"
+                            className="h-2 w-2 rounded-full border border-ink-700 shrink-0"
                             style={{ backgroundColor: c.color }}
                           />
                         )}
-                        {c.name}
-                        {c.isDefault && <span className="badge ml-1">défaut</span>}
-                      </span>
+                        <input
+                          defaultValue={c.name}
+                          key={`name-${c.id}-${c.name}`}
+                          className="input-sm flex-1 min-w-0"
+                          onBlur={(e) => {
+                            const v = e.target.value.trim();
+                            if (v && v !== c.name) {
+                              updateCategory.mutate({ id: c.id, patch: { name: v } });
+                            } else if (!v) {
+                              e.target.value = c.name;
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                            if (e.key === 'Escape') (e.target as HTMLInputElement).value = c.name;
+                          }}
+                        />
+                        {c.isDefault && <span className="badge ml-1 shrink-0">défaut</span>}
+                      </div>
                     </td>
-                    <td className="px-4 py-2.5 text-ink-300">{KIND_LABEL[c.kind]}</td>
+                    {/* Kind — editable */}
+                    <td className="px-4 py-2.5">
+                      <select
+                        className="input-sm"
+                        value={c.kind}
+                        onChange={(e) =>
+                          updateCategory.mutate({
+                            id: c.id,
+                            patch: { kind: e.target.value as CategoryKind },
+                          })
+                        }
+                      >
+                        <option value="expense">Dépense</option>
+                        <option value="income">Revenu</option>
+                        <option value="transfer">Virement</option>
+                        <option value="neutral">Neutre</option>
+                      </select>
+                    </td>
+                    {/* Color — editable */}
                     <td className="px-4 py-2.5 hidden sm:table-cell">
-                      {c.color ? (
-                        <span className="font-mono text-xs text-ink-400">{c.color}</span>
-                      ) : (
-                        <span className="text-ink-600">—</span>
-                      )}
+                      <input
+                        type="text"
+                        defaultValue={c.color ?? ''}
+                        key={`color-${c.id}-${c.color ?? ''}`}
+                        placeholder="#7dd3c0"
+                        className="input-sm font-mono w-28"
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          if (raw === '') {
+                            if (c.color !== null) {
+                              updateCategory.mutate({ id: c.id, patch: { color: null } });
+                            }
+                          } else if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) {
+                            if (raw !== c.color) {
+                              updateCategory.mutate({ id: c.id, patch: { color: raw } });
+                            }
+                          } else {
+                            e.target.value = c.color ?? '';
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          if (e.key === 'Escape') (e.target as HTMLInputElement).value = c.color ?? '';
+                        }}
+                      />
                     </td>
                     <td className={`px-4 py-2.5 text-right font-mono tabular-nums ${t < 0 ? 'text-clay-300' : t > 0 ? 'text-sage-300' : 'text-ink-500'}`}>
                       {formatAmount(t)}
