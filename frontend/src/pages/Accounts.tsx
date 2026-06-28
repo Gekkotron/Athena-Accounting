@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { Account, AccountFilenamePattern } from '../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../lib/format';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export function Accounts() {
   const qc = useQueryClient();
@@ -52,9 +53,25 @@ export function Accounts() {
     onError: (err: ApiError) => setEditError(err.message),
   });
 
+  const [confirmDelete, setConfirmDelete] = useState<Account | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const del = useMutation({
     mutationFn: (id: number) => api(`/api/accounts/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      setConfirmDelete(null);
+      setDeleteError(null);
+      cancelEdit();
+    },
+    onError: (err: ApiError) => {
+      // Backend returns 409 with a clear message when the account has
+      // transactions; surface that text inside the dialog instead of letting
+      // the dialog close silently.
+      setDeleteError(err.message);
+    },
   });
 
   // Per-card edit state. Only one account can be in edit mode at a time; the
@@ -261,9 +278,8 @@ export function Accounts() {
                         <button
                           className="text-[11px] text-clay-300 hover:text-clay-200 transition"
                           onClick={() => {
-                            if (confirm(`Supprimer le compte « ${a.name} » ?`)) {
-                              del.mutate(a.id, { onSuccess: () => cancelEdit() });
-                            }
+                            setDeleteError(null);
+                            setConfirmDelete(a);
                           }}
                         >
                           supprimer
@@ -317,6 +333,29 @@ export function Accounts() {
       </section>
 
       <PatternsSection patterns={patternsQ.data?.patterns ?? []} accounts={accountsQ.data?.accounts ?? []} />
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={confirmDelete ? `Supprimer « ${confirmDelete.name} » ?` : 'Supprimer ?'}
+        description={
+          <>
+            Cette action est <span className="display-italic">irréversible</span>. Si le compte
+            a déjà des transactions, le serveur refusera la suppression — déplacez ou supprimez
+            d'abord les transactions concernées.
+          </>
+        }
+        confirmLabel="Supprimer le compte"
+        destructive
+        busy={del.isPending}
+        error={deleteError}
+        onConfirm={() => {
+          if (confirmDelete) del.mutate(confirmDelete.id);
+        }}
+        onCancel={() => {
+          setConfirmDelete(null);
+          setDeleteError(null);
+        }}
+      />
     </div>
   );
 }
