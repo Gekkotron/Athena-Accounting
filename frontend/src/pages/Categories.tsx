@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../api/types';
 import { formatAmount } from '../lib/format';
+import { CategoryBreakdown } from '../components/CategoryBreakdown';
 
 const KIND_LABEL: Record<CategoryKind, string> = {
   expense: 'Dépense',
@@ -66,6 +67,11 @@ export function Categories() {
           une catégorie « Revenu » ne s'applique jamais à un montant négatif.
         </p>
       </div>
+
+      <section className="surface p-5 md:p-6">
+        <div className="section-rule mb-4">Répartition par catégorie</div>
+        <CategoryBreakdown defaultRange="3m" />
+      </section>
 
       <form onSubmit={submit} className="surface p-4 md:p-5 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
