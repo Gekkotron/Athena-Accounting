@@ -10,17 +10,47 @@ interface Filters {
   fromDate?: string;
   toDate?: string;
   search?: string;
+  amount?: string;
   sort: 'date' | 'amount' | 'label';
   order: 'asc' | 'desc';
 }
 
 const PAGE = 50;
 
+// Try to interpret a search input as an amount. Accepts "338", "338€",
+// "338,50", "338.50", "338,50 €", with optional leading minus. Returns the
+// canonical "X.XX" form, or null when it's not a number.
+function parseAmountQuery(raw: string): string | null {
+  const cleaned = raw
+    .replace(/€/g, '')
+    .replace(/\s+/g, '')
+    .replace(',', '.')
+    .trim();
+  if (!cleaned) return null;
+  if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  return cleaned;
+}
+
 export function Transactions() {
   const qc = useQueryClient();
   const [filters, setFilters] = useState<Filters>({ sort: 'date', order: 'desc' });
+  const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Whenever the search input changes, route it to either `amount` or
+  // `search`. We never send both at once.
+  const onSearchChange = (value: string) => {
+    setSearchInput(value);
+    setOffset(0);
+    const amt = parseAmountQuery(value);
+    if (amt !== null) {
+      setFilters((f) => ({ ...f, amount: amt, search: undefined }));
+    } else {
+      setFilters((f) => ({ ...f, amount: undefined, search: value || undefined }));
+    }
+  };
+  const searchIsAmount = parseAmountQuery(searchInput) !== null && searchInput.trim() !== '';
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -79,12 +109,22 @@ export function Transactions() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
             <label className="label">Recherche</label>
-            <input
-              className="input"
-              placeholder="libellé…"
-              value={filters.search ?? ''}
-              onChange={(e) => set('search', e.target.value || undefined)}
-            />
+            <div className="relative">
+              <input
+                className="input pr-20"
+                placeholder="libellé ou montant (ex. 338)"
+                value={searchInput}
+                onChange={(e) => onSearchChange(e.target.value)}
+              />
+              {searchIsAmount && (
+                <span
+                  className="absolute inset-y-0 right-2 my-auto h-5 inline-flex items-center rounded-md border border-sage-800/40 bg-sage-900/30 px-1.5 text-[10px] tracking-wide text-sage-200 font-mono"
+                  title="Filtré par montant (signe ignoré)"
+                >
+                  MONTANT
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-1.5 w-full sm:w-44">
             <label className="label">Compte</label>
@@ -138,6 +178,7 @@ export function Transactions() {
             className="btn-ghost"
             onClick={() => {
               setFilters({ sort: 'date', order: 'desc' });
+              setSearchInput('');
               setOffset(0);
             }}
           >

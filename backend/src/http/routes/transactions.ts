@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { and, asc, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { transactions } from '../../db/schema.js';
 
@@ -11,6 +11,10 @@ const ListQuery = z.object({
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   minAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
   maxAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
+  // Match exact amount, sign-agnostic — a search for "338" hits both -338 and
+  // +338 transactions. The frontend auto-detects numeric input and routes here
+  // instead of the text search.
+  amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
   search: z.string().trim().max(128).optional(),
   includeTransfers: z
     .union([z.boolean(), z.enum(['true', 'false'])])
@@ -54,6 +58,14 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     if (q.toDate) where.push(lte(transactions.date, q.toDate));
     if (q.minAmount) where.push(gte(transactions.amount, q.minAmount));
     if (q.maxAmount) where.push(lte(transactions.amount, q.maxAmount));
+    if (q.amount) {
+      // Exact match on the absolute value: matches both the credit and the
+      // debit, which is what the user usually means by "find 338€".
+      const abs = Math.abs(Number(q.amount)).toFixed(2);
+      const neg = (-Math.abs(Number(q.amount))).toFixed(2);
+      const cond = or(eq(transactions.amount, abs), eq(transactions.amount, neg));
+      if (cond) where.push(cond);
+    }
     if (!q.includeTransfers) where.push(isNull(transactions.transferGroupId));
 
     if (q.search) {
