@@ -23,6 +23,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SESSION_SECRET: ${SESSION_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       NODE_ENV: production
       PORT: 3000
     depends_on:

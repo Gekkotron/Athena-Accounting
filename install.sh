@@ -69,6 +69,7 @@ POSTGRES_DB="${POSTGRES_DB:-athena}"
 POSTGRES_PASSWORD="$(rand_password)"
 SESSION_SECRET="$(rand_hex)"
 BACKEND_PORT="${BACKEND_PORT:-3000}"
+COOKIE_SECURE="${COOKIE_SECURE:-false}"
 
 # umask 077 also restricts the temp write; chmod afterwards is belt + braces.
 umask 077
@@ -84,6 +85,7 @@ POSTGRES_DB=$POSTGRES_DB
 SESSION_SECRET=$SESSION_SECRET
 
 BACKEND_PORT=$BACKEND_PORT
+COOKIE_SECURE=$COOKIE_SECURE
 EOF
 
 chmod 600 .env
