@@ -3,17 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Category, MatchMode, Rule, SignConstraint } from '../api/types';
 
-const SIGN_LABEL: Record<SignConstraint, string> = {
-  positive: 'Positif',
-  negative: 'Négatif',
-  any: 'Tous',
-};
-const MATCH_LABEL: Record<MatchMode, string> = {
-  word: 'Mot entier',
-  substring: 'Sous-chaîne',
-  regex: 'Regex',
-};
-
 export function Rules() {
   const qc = useQueryClient();
   const rulesQ = useQuery({
@@ -44,9 +33,9 @@ export function Rules() {
       setKeyword('');
     },
   });
-  const toggleEnabled = useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
-      api(`/api/rules/${id}`, { method: 'PUT', json: { enabled } }),
+  const updateRule = useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: Partial<Rule> }) =>
+      api(`/api/rules/${id}`, { method: 'PUT', json: patch }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rules'] }),
   });
   const del = useMutation({
@@ -73,7 +62,6 @@ export function Rules() {
 
   const cats = catQ.data?.categories ?? [];
   const rules = rulesQ.data?.rules ?? [];
-  const catName = (id: number) => cats.find((c) => c.id === id)?.name ?? `#${id}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -182,16 +170,97 @@ export function Rules() {
               ) : (
                 rules.map((r) => (
                   <tr key={r.id} className="border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
-                    <td className="px-4 py-2.5 text-ink-100 font-mono text-xs">{r.keyword}</td>
-                    <td className="px-4 py-2.5 text-ink-300">{catName(r.categoryId)}</td>
-                    <td className="px-4 py-2.5 text-ink-400 hidden md:table-cell">{SIGN_LABEL[r.signConstraint]}</td>
-                    <td className="px-4 py-2.5 text-ink-400 hidden md:table-cell">{MATCH_LABEL[r.matchMode]}</td>
-                    <td className="px-4 py-2.5 text-right text-ink-400 font-mono">{r.priority}</td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        defaultValue={r.keyword}
+                        // Remount the input when the server-side value changes so
+                        // defaultValue stays in sync after a save.
+                        key={`kw-${r.id}-${r.keyword}`}
+                        className="input-sm font-mono"
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (v && v !== r.keyword) {
+                            updateRule.mutate({ id: r.id, patch: { keyword: v } });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          if (e.key === 'Escape') (e.target as HTMLInputElement).value = r.keyword;
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <select
+                        className="input-sm"
+                        value={r.categoryId}
+                        onChange={(e) =>
+                          updateRule.mutate({
+                            id: r.id,
+                            patch: { categoryId: Number(e.target.value) },
+                          })
+                        }
+                      >
+                        {cats.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-2.5 hidden md:table-cell">
+                      <select
+                        className="input-sm"
+                        value={r.signConstraint}
+                        onChange={(e) =>
+                          updateRule.mutate({
+                            id: r.id,
+                            patch: { signConstraint: e.target.value as SignConstraint },
+                          })
+                        }
+                      >
+                        <option value="any">Tous</option>
+                        <option value="negative">Négatif</option>
+                        <option value="positive">Positif</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-2.5 hidden md:table-cell">
+                      <select
+                        className="input-sm"
+                        value={r.matchMode}
+                        onChange={(e) =>
+                          updateRule.mutate({
+                            id: r.id,
+                            patch: { matchMode: e.target.value as MatchMode },
+                          })
+                        }
+                      >
+                        <option value="word">Mot entier</option>
+                        <option value="substring">Sous-chaîne</option>
+                        <option value="regex">Regex</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <input
+                        type="number"
+                        defaultValue={r.priority}
+                        key={`pri-${r.id}-${r.priority}`}
+                        className="input-sm font-mono text-right w-16 ml-auto"
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (Number.isInteger(v) && v >= 0 && v !== r.priority) {
+                            updateRule.mutate({ id: r.id, patch: { priority: v } });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        }}
+                      />
+                    </td>
                     <td className="px-4 py-2.5">
                       <input
                         type="checkbox"
                         checked={r.enabled}
-                        onChange={(e) => toggleEnabled.mutate({ id: r.id, enabled: e.target.checked })}
+                        onChange={(e) =>
+                          updateRule.mutate({ id: r.id, patch: { enabled: e.target.checked } })
+                        }
                         className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
                       />
                     </td>
