@@ -49,7 +49,9 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   // Every route in this plugin requires auth.
   app.addHook('preHandler', app.requireAuth);
 
-  // List accounts with computed current balance.
+  // List accounts with computed current balance + counts. The two counts make
+  // empty-state diagnostics much clearer: if currentBalance == openingBalance
+  // and counted == 0, that's why.
   app.get('/api/accounts', async () => {
     const rows = await db
       .select({
@@ -69,6 +71,15 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
             0
           ))::text
         `.as('current_balance'),
+        transactionCount: sql<number>`
+          (SELECT COUNT(*)::int FROM ${transactions}
+           WHERE ${transactions.accountId} = ${accounts.id})
+        `.as('transaction_count'),
+        countedTransactionCount: sql<number>`
+          (SELECT COUNT(*)::int FROM ${transactions}
+           WHERE ${transactions.accountId} = ${accounts.id}
+             AND ${transactions.date} >= ${accounts.openingDate})
+        `.as('counted_transaction_count'),
       })
       .from(accounts)
       .orderBy(accounts.name);

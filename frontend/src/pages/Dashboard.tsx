@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Account, BalancePoint } from '../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../lib/format';
@@ -94,6 +95,9 @@ export function Dashboard() {
               const opening = Number(a.openingBalance);
               const delta = current - opening;
               const hasMovement = Math.abs(delta) >= 0.005;
+              const total = a.transactionCount ?? 0;
+              const counted = a.countedTransactionCount ?? 0;
+              const excluded = total - counted;
               return (
                 <div key={a.id} className="surface p-5 group hover:border-ink-700 transition">
                   <div className="flex items-baseline justify-between gap-3">
@@ -121,6 +125,24 @@ export function Dashboard() {
                       </div>
                     ) : (
                       <div className="text-ink-600 mt-0.5 not-italic">aucun mouvement depuis</div>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-ink-500 mt-3 pt-3 border-t border-ink-800/60 flex items-baseline justify-between gap-2">
+                    <Link
+                      to={`/transactions?accountId=${a.id}`}
+                      className="text-ink-400 hover:text-ink-100 transition"
+                    >
+                      <span className="font-mono">{total}</span> transaction{total > 1 ? 's' : ''}
+                      {' '}<span className="text-ink-600">→</span>
+                    </Link>
+                    {excluded > 0 && (
+                      <span
+                        className="text-amber-300/80"
+                        title={`${excluded} transaction(s) datée(s) avant la date d'ouverture, exclue(s) du calcul.`}
+                      >
+                        <span className="font-mono">{excluded}</span> hors période
+                      </span>
                     )}
                   </div>
                 </div>

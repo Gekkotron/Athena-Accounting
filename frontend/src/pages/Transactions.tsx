@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { Account, Category, Transaction } from '../api/types';
@@ -33,7 +34,20 @@ function parseAmountQuery(raw: string): string | null {
 
 export function Transactions() {
   const qc = useQueryClient();
-  const [filters, setFilters] = useState<Filters>({ sort: 'date', order: 'desc' });
+  const [searchParams] = useSearchParams();
+  // Pick up an optional ?accountId=… from the URL so links from the dashboard
+  // land on the right pre-filtered view.
+  const initialAccountId = (() => {
+    const v = searchParams.get('accountId');
+    if (!v) return undefined;
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : undefined;
+  })();
+  const [filters, setFilters] = useState<Filters>({
+    sort: 'date',
+    order: 'desc',
+    accountId: initialAccountId,
+  });
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
