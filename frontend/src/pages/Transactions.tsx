@@ -81,6 +81,15 @@ export function Transactions() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   });
 
+  const updateNotes = useMutation({
+    mutationFn: ({ id, notes }: { id: number; notes: string | null }) =>
+      api<{ transaction: Transaction }>(`/api/transactions/${id}`, {
+        method: 'PATCH',
+        json: { notes },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+
   const accounts = accountsQ.data?.accounts ?? [];
   const categories = categoriesQ.data?.categories ?? [];
   const txs = txQ.data?.transactions ?? [];
@@ -196,13 +205,14 @@ export function Transactions() {
                 <th className="px-4 py-3 label font-normal hidden sm:table-cell">Compte</th>
                 <Th sort="label" filters={filters} setFilters={setFilters} setOffset={setOffset}>Libellé</Th>
                 <th className="px-4 py-3 label font-normal">Catégorie</th>
+                <th className="px-4 py-3 label font-normal hidden md:table-cell">Notes</th>
                 <Th sort="amount" filters={filters} setFilters={setFilters} setOffset={setOffset} align="right">Montant</Th>
               </tr>
             </thead>
             <tbody>
               {txs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-ink-500 display-italic">
+                  <td colSpan={6} className="px-4 py-10 text-center text-ink-500 display-italic">
                     {txQ.isLoading ? 'Chargement…' : 'Aucune transaction.'}
                   </td>
                 </tr>
@@ -244,6 +254,25 @@ export function Transactions() {
                           ))}
                         </select>
                         {t.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">manuel</div>}
+                      </td>
+                      <td className="px-4 py-2.5 hidden md:table-cell">
+                        <input
+                          defaultValue={t.notes ?? ''}
+                          key={`notes-${t.id}-${t.notes ?? ''}`}
+                          placeholder="…"
+                          className="input-sm w-40 placeholder:text-ink-700"
+                          onBlur={(e) => {
+                            const v = e.target.value;
+                            const current = t.notes ?? '';
+                            if (v !== current) {
+                              updateNotes.mutate({ id: t.id, notes: v || null });
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                            if (e.key === 'Escape') (e.target as HTMLInputElement).value = t.notes ?? '';
+                          }}
+                        />
                       </td>
                       <td className={`px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums ${amountSignClass(t.amount)}`}>
                         {formatAmount(t.amount, acct?.currency ?? 'EUR')}

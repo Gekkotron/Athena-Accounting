@@ -26,8 +26,11 @@ const ListQuery = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+// All fields optional — the PATCH applies whichever ones are present, so the
+// frontend can update categoryId OR notes without sending the other.
 const PatchBody = z.object({
-  categoryId: z.number().int().positive().nullable(),
+  categoryId: z.number().int().positive().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
@@ -120,12 +123,25 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
+    // Build the actual SET clause from the fields present in the patch.
+    // category_source flips to 'manual' only when the categoryId itself is
+    // touched — updating just a note shouldn't change provenance.
+    const updates: { categoryId?: number | null; categorySource?: 'manual'; notes?: string | null } = {};
+    if ('categoryId' in parsed.data) {
+      updates.categoryId = parsed.data.categoryId ?? null;
+      updates.categorySource = 'manual';
+    }
+    if ('notes' in parsed.data) {
+      const raw = parsed.data.notes;
+      // Empty string → null, so we don't store useless whitespace.
+      updates.notes = raw && raw.trim() ? raw : null;
+    }
+    if (Object.keys(updates).length === 0) {
+      return reply.code(400).send({ error: 'no fields to update' });
+    }
     const [updated] = await db
       .update(transactions)
-      .set({
-        categoryId: parsed.data.categoryId,
-        categorySource: 'manual',
-      })
+      .set(updates)
       .where(eq(transactions.id, id))
       .returning();
     if (!updated) return reply.code(404).send({ error: 'not found' });

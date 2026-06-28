@@ -55,6 +55,7 @@ export interface Transaction {
   rawLabel: string;
   normalizedLabel: string;
   memo: string | null;
+  notes: string | null;
   fitid: string | null;
   dedupKey: string;
   categoryId: number | null;

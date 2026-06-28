@@ -188,6 +188,7 @@ export const transactions = pgTable(
     rawLabel: text('raw_label').notNull(),
     normalizedLabel: text('normalized_label').notNull(),
     memo: text('memo'),
+    notes: text('notes'),
     fitid: text('fitid'),
     dedupKey: text('dedup_key').notNull(),
     categoryId: integer('category_id').references(() => categories.id, {
