@@ -1,8 +1,12 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Account, BalancePoint } from '../api/types';
+import type { Account, BalancePoint, Category, CategoryReportRow } from '../api/types';
 import { formatAmount, amountSignClass } from '../lib/format';
 import { BalanceChart } from '../components/BalanceChart';
+import { CategoryDonut, type CategorySegment } from '../components/CategoryDonut';
+
+type DonutMode = 'expense' | 'income';
 
 export function Dashboard() {
   const accountsQ = useQuery({
@@ -19,10 +23,51 @@ export function Dashboard() {
     queryKey: ['reports', 'timeseries'],
     queryFn: () => api<{ points: BalancePoint[] }>('/api/reports/timeseries', { query: { granularity: 'day' } }),
   });
+  const catReportQ = useQuery({
+    queryKey: ['reports', 'categories'],
+    queryFn: () => api<{ rows: CategoryReportRow[] }>('/api/reports/categories'),
+  });
+  const categoriesQ = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
+  });
 
   const currencies = balanceQ.data?.perCurrency ?? [];
   const accounts = accountsQ.data?.accounts ?? [];
   const primary = currencies[0];
+
+  const [donutMode, setDonutMode] = useState<DonutMode>('expense');
+
+  // Aggregate the per-category-per-month report into a single total per
+  // category for the donut. Sign convention: expenses are stored negative; the
+  // donut wants positive magnitudes, so we flip when in expense mode.
+  const donutData: CategorySegment[] = useMemo(() => {
+    const report = catReportQ.data?.rows ?? [];
+    const cats = categoriesQ.data?.categories ?? [];
+    const byCatId = new Map(cats.map((c) => [c.id, c] as const));
+    const aggregated = new Map<number | null, number>();
+
+    for (const row of report) {
+      const amt = Number(row.total);
+      if (!Number.isFinite(amt) || amt === 0) continue;
+      if (donutMode === 'expense' && amt >= 0) continue;
+      if (donutMode === 'income' && amt <= 0) continue;
+      const prev = aggregated.get(row.category_id) ?? 0;
+      aggregated.set(row.category_id, prev + amt);
+    }
+
+    return Array.from(aggregated.entries())
+      .map(([catId, sum]) => {
+        const c = catId !== null ? byCatId.get(catId) : null;
+        return {
+          id: catId,
+          name: c?.name ?? 'Sans catégorie',
+          color: c?.color ?? null,
+          amount: Math.abs(sum),
+        } satisfies CategorySegment;
+      })
+      .filter((s) => s.amount > 0);
+  }, [catReportQ.data, categoriesQ.data, donutMode]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -66,6 +111,48 @@ export function Dashboard() {
             <BalanceChart points={seriesQ.data.points} currency={primary.currency} />
           ) : (
             <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
+          )}
+        </section>
+      )}
+
+      {/* Category breakdown — donut */}
+      {currencies.length > 0 && (
+        <section className="surface p-5 md:p-6">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="section-rule flex-1">
+              Répartition par catégorie
+            </div>
+            <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
+              <button
+                onClick={() => setDonutMode('expense')}
+                className={`px-3 py-1.5 rounded-md transition ${
+                  donutMode === 'expense'
+                    ? 'bg-ink-850 text-ink-100'
+                    : 'text-ink-400 hover:text-ink-100'
+                }`}
+              >
+                Dépenses
+              </button>
+              <button
+                onClick={() => setDonutMode('income')}
+                className={`px-3 py-1.5 rounded-md transition ${
+                  donutMode === 'income'
+                    ? 'bg-ink-850 text-ink-100'
+                    : 'text-ink-400 hover:text-ink-100'
+                }`}
+              >
+                Revenus
+              </button>
+            </div>
+          </div>
+          {catReportQ.isLoading || categoriesQ.isLoading ? (
+            <div className="h-60 animate-pulse rounded-lg bg-ink-900" />
+          ) : (
+            <CategoryDonut
+              data={donutData}
+              currency={primary?.currency ?? 'EUR'}
+              centerLabel={donutMode === 'expense' ? 'Dépenses' : 'Revenus'}
+            />
           )}
         </section>
       )}
