@@ -20,14 +20,33 @@ export function Rules() {
   const [matchMode, setMatchMode] = useState<MatchMode>('word');
   const [priority, setPriority] = useState(0);
 
-  const create = useMutation({
-    mutationFn: (input: {
-      keyword: string;
+  // Accepts an array of keywords and creates one rule per keyword, sharing
+  // the same category / sign / mode / priority. The DB model is one keyword
+  // per row — this hook just spares the user from clicking "Add" N times.
+  const createBatch = useMutation({
+    mutationFn: async (input: {
+      keywords: string[];
       categoryId: number;
       signConstraint: SignConstraint;
       matchMode: MatchMode;
       priority: number;
-    }) => api('/api/rules', { method: 'POST', json: input }),
+    }) => {
+      await Promise.all(
+        input.keywords.map((keyword) =>
+          api('/api/rules', {
+            method: 'POST',
+            json: {
+              keyword,
+              categoryId: input.categoryId,
+              signConstraint: input.signConstraint,
+              matchMode: input.matchMode,
+              priority: input.priority,
+            },
+          }),
+        ),
+      );
+      return input.keywords.length;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rules'] });
       setKeyword('');
@@ -57,7 +76,11 @@ export function Rules() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!categoryId || !keyword.trim()) return;
-    create.mutate({ keyword: keyword.trim(), categoryId, signConstraint, matchMode, priority });
+    const keywords = Array.from(
+      new Set(keyword.split(',').map((s) => s.trim()).filter(Boolean)),
+    );
+    if (keywords.length === 0) return;
+    createBatch.mutate({ keywords, categoryId, signConstraint, matchMode, priority });
   };
 
   const cats = catQ.data?.categories ?? [];
@@ -93,14 +116,17 @@ export function Rules() {
 
       <form onSubmit={submit} className="surface p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
         <div className="lg:col-span-2">
-          <label className="label mb-1.5 block">Mot-clé</label>
+          <label className="label mb-1.5 block">Mot-clé(s)</label>
           <input
             className="input"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="carrefour"
+            placeholder="carrefour, leclerc, lidl"
             required
           />
+          <div className="text-[11px] text-ink-500 mt-1.5">
+            Séparez par des virgules pour créer plusieurs règles d'un coup, toutes vers la même catégorie.
+          </div>
         </div>
         <div>
           <label className="label mb-1.5 block">Catégorie</label>
@@ -141,8 +167,15 @@ export function Rules() {
             onChange={(e) => setPriority(Number(e.target.value))}
           />
         </div>
-        <div className="sm:col-span-2 lg:col-span-6">
-          <button className="btn-primary">Ajouter la règle</button>
+        <div className="sm:col-span-2 lg:col-span-6 flex items-center gap-3">
+          <button className="btn-primary" disabled={createBatch.isPending}>
+            {createBatch.isPending ? 'Ajout…' : 'Ajouter la règle'}
+          </button>
+          {createBatch.isSuccess && createBatch.data && (
+            <span className="text-xs text-sage-300">
+              {createBatch.data} règle{createBatch.data > 1 ? 's' : ''} ajoutée{createBatch.data > 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       </form>
 
