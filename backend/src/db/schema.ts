@@ -1,0 +1,209 @@
+import {
+  bigserial,
+  boolean,
+  date,
+  index,
+  integer,
+  numeric,
+  pgEnum,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+export const categoryKindEnum = pgEnum('category_kind', [
+  'expense',
+  'income',
+  'transfer',
+  'neutral',
+]);
+
+export const signConstraintEnum = pgEnum('sign_constraint', [
+  'positive',
+  'negative',
+  'any',
+]);
+
+export const matchModeEnum = pgEnum('match_mode', ['word', 'substring', 'regex']);
+
+export const categorySourceEnum = pgEnum('category_source', [
+  'manual',
+  'auto',
+  'default',
+  'llm',
+]);
+
+export const transferDirectionEnum = pgEnum('transfer_direction', [
+  'outgoing',
+  'incoming',
+]);
+
+export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv']);
+
+// ---------------------------------------------------------------------------
+// users  —  single-user auth (login basique, self-hosted)
+// ---------------------------------------------------------------------------
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// accounts  —  one row per bank account (current, savings, etc.)
+//
+// opening_balance + opening_date are mandatory: every reported balance is
+// computed as opening_balance + SUM(amount WHERE date >= opening_date).
+// Multi-currency: each account has its own `currency`; aggregates are reported
+// per currency until an explicit FX-rate table is introduced.
+// ---------------------------------------------------------------------------
+
+export const accounts = pgTable('accounts', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  type: text('type').notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
+  openingBalance: numeric('opening_balance', { precision: 14, scale: 2 })
+    .notNull()
+    .default('0'),
+  openingDate: date('opening_date').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Map "compte_courant.ofx" → account id. Multiple patterns per account, ranked
+// by `priority` (highest first).
+export const accountFilenamePatterns = pgTable('account_filename_patterns', {
+  id: serial('id').primaryKey(),
+  pattern: text('pattern').notNull(),
+  accountId: integer('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  priority: integer('priority').notNull().default(0),
+});
+
+// ---------------------------------------------------------------------------
+// categories  —  `kind` powers the sign guard: an income rule won't fire on a
+// negative amount, an expense rule won't fire on a positive one.
+// One row with is_default=true (`Divers`) is the fallback bucket.
+// ---------------------------------------------------------------------------
+
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  kind: categoryKindEnum('kind').notNull(),
+  color: varchar('color', { length: 9 }),
+  parentId: integer('parent_id').references((): any => categories.id, {
+    onDelete: 'set null',
+  }),
+  isDefault: boolean('is_default').notNull().default(false),
+});
+
+// ---------------------------------------------------------------------------
+// rules  —  rule engine. match_mode='word' is the default and prevents
+// "paye" from matching "payweb"; matching is accent/case-insensitive thanks
+// to an index on immutable_unaccent(lower(keyword)).
+// ---------------------------------------------------------------------------
+
+export const rules = pgTable(
+  'rules',
+  {
+    id: serial('id').primaryKey(),
+    categoryId: integer('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'cascade' }),
+    keyword: text('keyword').notNull(),
+    signConstraint: signConstraintEnum('sign_constraint').notNull().default('any'),
+    matchMode: matchModeEnum('match_mode').notNull().default('word'),
+    priority: integer('priority').notNull().default(0),
+    enabled: boolean('enabled').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    idxPriority: index('rules_priority_idx').on(t.priority),
+  }),
+);
+
+// Separate from `rules`: a transfer rule does not assign a category — it
+// annotates a transaction as one leg of an internal transfer and links it to
+// its mirror leg in the counterpart account via `transfer_group_id`.
+export const transferRules = pgTable('transfer_rules', {
+  id: serial('id').primaryKey(),
+  keyword: text('keyword').notNull(),
+  direction: transferDirectionEnum('direction').notNull(),
+  counterpartAccountId: integer('counterpart_account_id').references(
+    () => accounts.id,
+    { onDelete: 'set null' },
+  ),
+  enabled: boolean('enabled').notNull().default(true),
+});
+
+// ---------------------------------------------------------------------------
+// file_imports  —  audit row per uploaded file. Lets the UI explain "this
+// import inserted 0 transactions because every row was already in the DB".
+// ---------------------------------------------------------------------------
+
+export const fileImports = pgTable('file_imports', {
+  id: serial('id').primaryKey(),
+  filename: text('filename').notNull(),
+  accountId: integer('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  format: importFormatEnum('format').notNull(),
+  importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+  totalLines: integer('total_lines').notNull(),
+  insertedCount: integer('inserted_count').notNull(),
+  dedupSkipped: integer('dedup_skipped').notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// transactions  —  one row per leg.
+// An internal transfer is two rows (one per account) linked by
+// `transfer_group_id`. This keeps per-account balances as a plain SUM(amount)
+// and excludes transfers from expense/income aggregates via
+// `WHERE transfer_group_id IS NULL`.
+//
+// `dedup_key` is FITID when present, else sha1(account|date|amount|normalized_label).
+// UNIQUE(account_id, dedup_key) makes re-imports idempotent at the DB level.
+// ---------------------------------------------------------------------------
+
+export const transactions = pgTable(
+  'transactions',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    accountId: integer('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'restrict' }),
+    date: date('date').notNull(),
+    amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    rawLabel: text('raw_label').notNull(),
+    normalizedLabel: text('normalized_label').notNull(),
+    memo: text('memo'),
+    fitid: text('fitid'),
+    dedupKey: text('dedup_key').notNull(),
+    categoryId: integer('category_id').references(() => categories.id, {
+      onDelete: 'set null',
+    }),
+    categorySource: categorySourceEnum('category_source').notNull().default('auto'),
+    transferGroupId: uuid('transfer_group_id'),
+    sourceFileId: integer('source_file_id').references(() => fileImports.id, {
+      onDelete: 'set null',
+    }),
+    importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqDedup: uniqueIndex('transactions_account_dedup_uq').on(t.accountId, t.dedupKey),
+    idxAccountDate: index('transactions_account_date_idx').on(t.accountId, t.date),
+    idxTransferGroup: index('transactions_transfer_group_idx').on(t.transferGroupId),
+    idxCategory: index('transactions_category_idx').on(t.categoryId),
+  }),
+);
