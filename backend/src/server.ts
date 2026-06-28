@@ -9,6 +9,8 @@ import { authRoutes } from './http/routes/auth.js';
 import { accountsRoutes } from './http/routes/accounts.js';
 import { patternRoutes } from './http/routes/account-patterns.js';
 import { importsRoutes } from './http/routes/imports.js';
+import { categoriesRoutes } from './http/routes/categories.js';
+import { rulesRoutes } from './http/routes/rules.js';
 
 const app = Fastify({
   logger:
@@ -34,6 +36,8 @@ await app.register(authRoutes);
 await app.register(accountsRoutes);
 await app.register(patternRoutes);
 await app.register(importsRoutes);
+await app.register(categoriesRoutes);
+await app.register(rulesRoutes);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');

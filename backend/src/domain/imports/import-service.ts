@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import {
   accountFilenamePatterns,
@@ -9,6 +9,8 @@ import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
+import { loadRuleEngine } from '../rules/recategorize.js';
+import { firstMatch } from '../rules/matcher.js';
 
 export type ImportFormat = 'ofx' | 'csv';
 
@@ -115,6 +117,48 @@ export async function runImport(opts: {
       .update(fileImports)
       .set({ insertedCount: inserted, dedupSkipped: skipped })
       .where(eq(fileImports.id, fileImport.id));
+
+    // Apply the rule engine to freshly inserted rows. We do this *inside* the
+    // import transaction so an import either lands fully categorized or not at all.
+    if (insertedIds.length > 0) {
+      const { compiled, defaultId } = await loadRuleEngine();
+
+      const freshRows = await tx
+        .select({
+          id: transactions.id,
+          amount: transactions.amount,
+          normalizedLabel: transactions.normalizedLabel,
+        })
+        .from(transactions)
+        .where(inArray(transactions.id, insertedIds));
+
+      const autoBuckets = new Map<number, number[]>();
+      const defaultBucket: number[] = [];
+      for (const row of freshRows) {
+        const amount = Number(row.amount);
+        const hit = firstMatch(compiled, row.normalizedLabel, amount);
+        if (hit) {
+          const arr = autoBuckets.get(hit.rule.categoryId) ?? [];
+          arr.push(row.id);
+          autoBuckets.set(hit.rule.categoryId, arr);
+        } else {
+          defaultBucket.push(row.id);
+        }
+      }
+
+      for (const [categoryId, ids] of autoBuckets) {
+        await tx
+          .update(transactions)
+          .set({ categoryId, categorySource: 'auto' })
+          .where(inArray(transactions.id, ids));
+      }
+      if (defaultBucket.length > 0 && defaultId !== null) {
+        await tx
+          .update(transactions)
+          .set({ categoryId: defaultId, categorySource: 'default' })
+          .where(inArray(transactions.id, defaultBucket));
+      }
+    }
 
     return {
       fileImportId: fileImport.id,
