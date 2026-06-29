@@ -1,6 +1,6 @@
 import { db } from '../../../db/client.js';
 import { pdfStatementTemplates, pdfImportDrafts } from '../../../db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { extractText, type PdfTextItem, type PdfPageText } from './text-extract.js';
 import { fingerprintHeader } from './fingerprint.js';
 import { runHeuristic } from './heuristic.js';
@@ -41,12 +41,21 @@ export async function importPdf(opts: {
   const noText = pages.every((p) => p.items.length === 0);
   const fingerprint = noText ? '' : fingerprintHeader(pages[0]!);
 
-  // 1) Existing template? Apply it.
+  // 1) Existing template for THIS (fingerprint, accountId)? Apply it.
+  //    Multi-account PDFs: different accounts on the same statement have their
+  //    own templates, so the same PDF re-uploaded with a different accountId
+  //    correctly drops to the interactive flow instead of re-using the wrong
+  //    page selection.
   if (fingerprint) {
     const [tpl] = await db
       .select()
       .from(pdfStatementTemplates)
-      .where(eq(pdfStatementTemplates.fingerprint, fingerprint));
+      .where(
+        and(
+          eq(pdfStatementTemplates.fingerprint, fingerprint),
+          eq(pdfStatementTemplates.accountId, opts.accountId),
+        ),
+      );
     if (tpl) {
       const { rows, skippedRows } = applyTemplate(pages, tpl.zones as TemplateZones);
       if (rows.length === 0) {
@@ -84,11 +93,14 @@ export async function importPdf(opts: {
     await db.insert(pdfStatementTemplates)
       .values({
         fingerprint,
+        accountId: opts.accountId,
         label: opts.filename,
         zones: h.zones,
         source: 'heuristic',
       })
-      .onConflictDoNothing({ target: pdfStatementTemplates.fingerprint });
+      .onConflictDoNothing({
+        target: [pdfStatementTemplates.fingerprint, pdfStatementTemplates.accountId],
+      });
     return { kind: 'imported', result, skippedRows: h.skippedRows };
   }
   const suggested = h.confidence >= HEURISTIC_SUGGEST_THRESHOLD ? h.zones : null;
@@ -178,11 +190,12 @@ export async function applyTemplateAndImport(opts: {
   });
   await db.insert(pdfStatementTemplates).values({
     fingerprint: draft.fingerprint,
+    accountId: draft.accountId,
     label: opts.label,
     zones: opts.zones,
     source: 'interactive',
   }).onConflictDoUpdate({
-    target: pdfStatementTemplates.fingerprint,
+    target: [pdfStatementTemplates.fingerprint, pdfStatementTemplates.accountId],
     set: { label: opts.label, zones: opts.zones, source: 'interactive', updatedAt: sql`now()` },
   });
   await db.delete(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));

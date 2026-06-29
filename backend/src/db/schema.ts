@@ -223,15 +223,25 @@ export const transactions = pgTable(
 // content fingerprint (SHA-256 of PDF text items).
 // ---------------------------------------------------------------------------
 
-export const pdfStatementTemplates = pgTable('pdf_statement_templates', {
-  id: serial('id').primaryKey(),
-  fingerprint: text('fingerprint').notNull().unique(),
-  label: text('label').notNull(),
-  zones: jsonb('zones').notNull(),
-  source: text('source').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const pdfStatementTemplates = pgTable(
+  'pdf_statement_templates',
+  {
+    id: serial('id').primaryKey(),
+    fingerprint: text('fingerprint').notNull(),
+    // Nullable for legacy rows created before migration 0006. The orchestrator
+    // requires a non-null accountId match for the auto-apply path.
+    accountId: integer('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    zones: jsonb('zones').notNull(),
+    source: text('source').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqFingerprintAccount: uniqueIndex('pdf_statement_templates_fingerprint_account_idx')
+      .on(t.fingerprint, t.accountId),
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // pdf_import_drafts — parked uploads, expires after 24 hours.
