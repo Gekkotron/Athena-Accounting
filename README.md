@@ -74,10 +74,12 @@ freely if you want to customise.
    `opening_balance + SUM(amount WHERE date >= opening_date)`).
 2. *(Optional)* add filename patterns in the same tab so the importer
    resolves the target account automatically.
-3. In **Imports**, upload your `.ofx` / `.qfx` / `.csv` file. The
+3. In **Imports**, upload your `.ofx` / `.qfx` / `.csv` / `.pdf` file. The
    response surfaces inserted vs deduped counts — a "0 inserted" outcome
    on a re-import means the dedup keys matched, not that anything went
-   wrong.
+   wrong. For PDFs, the first import of a new bank format opens a small
+   wizard to define the table layout once; future imports of the same
+   format go through automatically.
 
 CSV format the parser expects:
 
@@ -190,6 +192,7 @@ journal file Drizzle creates alongside.
 - [x] Étape 8 — Frontend: layout + dashboard + transactions + accounts + imports
 - [x] Étape 9 — "Tri des catégories" tab
 - [x] Étape 10 — Categories/rules UI + README polish
+- [x] Étape 11 — PDF bank statement import (heuristic + interactive template)
 
 ## Possible next steps (v2)
 
