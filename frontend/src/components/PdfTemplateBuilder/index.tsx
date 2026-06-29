@@ -121,25 +121,21 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
     }
   }
 
-  // Build the reference-rect overlay shown beneath the column-painting canvases:
-  // - the table zone (always when inside a column step)
-  // - any columns the user has already painted on prior column steps
-  const columnRefs = (current: Step) => {
-    if (!tableRect) return [];
-    const refs: Array<{ rect: PageRect; label?: string; color?: string }> = [
-      { rect: tableRect, label: 'Tableau', color: '#5b6478' },
-    ];
-    const add = (rect: PageRect | null, lbl: string, color: string) => {
-      if (rect) refs.push({ rect, label: lbl, color });
-    };
-    if (current !== 'date') add(dateCol, 'Date', '#7dd3c0');
-    if (current !== 'description') add(descCol, 'Libellé', '#7dd3c0');
-    if (current !== 'amount') {
-      if (amountMode === 'signed') add(signedCol, 'Montant', '#e69782');
-      else {
-        add(debitCol, 'Débit', '#e69782');
-        add(creditCol, 'Crédit', '#e69782');
-      }
+  // Reference rectangles drawn (dashed) under the user's paint, so they can
+  // see the table outline + every column they've already drawn. Each canvas
+  // hides its own role from the list (otherwise the dashed overlay would
+  // fight the user's live paint).
+  type Canvas = 'date' | 'description' | 'signed' | 'debit' | 'credit';
+  const refsFor = (current: Canvas) => {
+    const refs: Array<{ rect: PageRect; label?: string; color?: string }> = [];
+    if (tableRect) refs.push({ rect: tableRect, label: 'Tableau', color: '#5b6478' });
+    if (current !== 'date' && dateCol) refs.push({ rect: dateCol, label: 'Date', color: '#7dd3c0' });
+    if (current !== 'description' && descCol) refs.push({ rect: descCol, label: 'Libellé', color: '#7dd3c0' });
+    if (amountMode === 'signed') {
+      if (current !== 'signed' && signedCol) refs.push({ rect: signedCol, label: 'Montant', color: '#e69782' });
+    } else {
+      if (current !== 'debit' && debitCol) refs.push({ rect: debitCol, label: 'Débit', color: '#e69782' });
+      if (current !== 'credit' && creditCol) refs.push({ rect: creditCol, label: 'Crédit', color: '#7dd3c0' });
     }
     return refs;
   };
@@ -249,8 +245,9 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               widthPt={firstPage.widthPt}
               heightPt={firstPage.heightPt}
               initialRect={dateCol}
-              referenceRects={columnRefs('date')}
+              referenceRects={refsFor('date')}
               paintColor={PAINT_COLOR.date}
+              paintLabel="Date"
               onChange={setDateCol}
             />
           </>
@@ -267,8 +264,9 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               widthPt={firstPage.widthPt}
               heightPt={firstPage.heightPt}
               initialRect={descCol}
-              referenceRects={columnRefs('description')}
+              referenceRects={refsFor('description')}
               paintColor={PAINT_COLOR.description}
+              paintLabel="Libellé"
               onChange={setDescCol}
             />
           </>
@@ -304,41 +302,52 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
             {amountMode === 'signed' ? (
               <>
-                <p className="text-xs text-ink-300 mb-1">Colonne Montant</p>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-clay-300 mb-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-clay-300" /> Colonne Montant
+                </h3>
                 <ZoneCanvas
                   pngBase64={firstPage.pngBase64}
                   widthPt={firstPage.widthPt}
                   heightPt={firstPage.heightPt}
                   initialRect={signedCol}
-                  referenceRects={columnRefs('amount')}
+                  referenceRects={refsFor('signed')}
                   paintColor={PAINT_COLOR.amount}
+                  paintLabel="Montant"
                   onChange={setSignedCol}
                 />
               </>
             ) : (
-              <div className="grid gap-4">
-                <div>
-                  <p className="text-xs text-ink-300 mb-1">Colonne Débit</p>
+              <div className="grid gap-5">
+                <div className="border-l-4 border-clay-300 pl-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-clay-300 mb-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-clay-300" />
+                    Canvas 1/2 — Tracez la colonne <span className="uppercase tracking-wide">Débit</span>
+                  </h3>
                   <ZoneCanvas
                     pngBase64={firstPage.pngBase64}
                     widthPt={firstPage.widthPt}
                     heightPt={firstPage.heightPt}
                     initialRect={debitCol}
-                    referenceRects={columnRefs('amount').filter((r) => r.label !== 'Crédit')}
+                    referenceRects={refsFor('debit')}
                     paintColor={PAINT_COLOR.amount}
+                    paintLabel="Débit"
                     onChange={setDebitCol}
                     displayMaxWidth={520}
                   />
                 </div>
-                <div>
-                  <p className="text-xs text-ink-300 mb-1">Colonne Crédit</p>
+                <div className="border-l-4 border-sage-300 pl-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-sage-300 mb-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-sage-300" />
+                    Canvas 2/2 — Tracez la colonne <span className="uppercase tracking-wide">Crédit</span>
+                  </h3>
                   <ZoneCanvas
                     pngBase64={firstPage.pngBase64}
                     widthPt={firstPage.widthPt}
                     heightPt={firstPage.heightPt}
                     initialRect={creditCol}
-                    referenceRects={columnRefs('amount').filter((r) => r.label !== 'Débit')}
-                    paintColor={PAINT_COLOR.amount}
+                    referenceRects={refsFor('credit')}
+                    paintColor="#7dd3c0"
+                    paintLabel="Crédit"
                     onChange={setCreditCol}
                     displayMaxWidth={520}
                   />

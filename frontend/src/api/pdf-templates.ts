@@ -41,8 +41,7 @@ export async function submitPdf(file: File, accountId: number): Promise<PdfImpor
     method: 'POST', body: form, credentials: 'include',
   });
   if (!r.ok) {
-    const body = await r.json().catch(() => ({}));
-    throw Object.assign(new Error(body.error ?? 'upload failed'), { code: body.code, status: r.status });
+    return failure(r, 'upload failed');
   }
   return await r.json();
 }
@@ -55,8 +54,7 @@ export async function submitZones(draftId: number, label: string, zones: Templat
     body: JSON.stringify({ draftId, label, zones }),
   });
   if (!r.ok) {
-    const body = await r.json().catch(() => ({}));
-    throw Object.assign(new Error(body.error ?? 'apply failed'), { code: body.code, status: r.status });
+    return failure(r, 'apply failed');
   }
   const { result, skippedRows } = await r.json();
   return { kind: 'imported', result, skippedRows };
@@ -69,7 +67,15 @@ export interface PdfTemplateRow {
 
 async function failure(r: Response, fallback: string): Promise<never> {
   const body = await r.json().catch(() => ({}));
-  throw Object.assign(new Error(body.error ?? fallback), { code: body.code, status: r.status });
+  // The backend sends { error, message?, code? }. Surface both so the UI can
+  // show the underlying cause instead of just the generic "apply failed".
+  const head = body.error ?? fallback;
+  const text = body.message ? `${head}: ${body.message}` : head;
+  throw Object.assign(new Error(text), {
+    code: body.code,
+    status: r.status,
+    detail: body.message ?? null,
+  });
 }
 
 export async function listPdfTemplates(): Promise<PdfTemplateRow[]> {

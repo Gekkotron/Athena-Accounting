@@ -14,12 +14,15 @@ interface Props {
   referenceRects?: Array<{ rect: PageRect; label?: string; color?: string }>;
   // Color used for the user's painted rectangle. Defaults to sage-300.
   paintColor?: string;
+  // Optional caption drawn inside the user's painted rect at top-left, so the
+  // user can tell two stacked canvases apart at a glance (e.g. "Débit"/"Crédit").
+  paintLabel?: string;
   onChange: (rect: PageRect) => void;
 }
 
 export function ZoneCanvas({
   pngBase64, widthPt, heightPt, initialRect, displayMaxWidth = 720,
-  referenceRects, paintColor = '#7dd3c0', onChange,
+  referenceRects, paintColor = '#7dd3c0', paintLabel, onChange,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -85,23 +88,32 @@ export function ZoneCanvas({
 
     // User's painted rectangle (solid stroke + fill).
     if (rect) {
+      const rx = rect.x * displayScale;
+      const ry = rect.y * displayScale;
+      const rw = rect.w * displayScale;
+      const rh = rect.h * displayScale;
       ctx.strokeStyle = paintColor;
       ctx.lineWidth = 2;
-      ctx.strokeRect(
-        rect.x * displayScale,
-        rect.y * displayScale,
-        rect.w * displayScale,
-        rect.h * displayScale,
-      );
+      ctx.strokeRect(rx, ry, rw, rh);
       ctx.fillStyle = `${paintColor}33`; // ~20% alpha
-      ctx.fillRect(
-        rect.x * displayScale,
-        rect.y * displayScale,
-        rect.w * displayScale,
-        rect.h * displayScale,
-      );
+      ctx.fillRect(rx, ry, rw, rh);
+      if (paintLabel && rw > 30 && rh > 16) {
+        ctx.save();
+        ctx.font = '700 12px "Hanken Grotesk Variable", system-ui, sans-serif';
+        const padX = 5;
+        const padY = 3;
+        const metrics = ctx.measureText(paintLabel);
+        const tagW = metrics.width + padX * 2;
+        const tagH = 18;
+        ctx.fillStyle = paintColor;
+        ctx.fillRect(rx, ry, Math.min(tagW, rw), tagH);
+        ctx.fillStyle = '#0b0d11'; // ink-950 ≈ near-black for legibility on bright sage/clay
+        ctx.textBaseline = 'top';
+        ctx.fillText(paintLabel, rx + padX, ry + padY);
+        ctx.restore();
+      }
     }
-  }, [imgReady, rect, displayScale, referenceRects, paintColor]);
+  }, [imgReady, rect, displayScale, referenceRects, paintColor, paintLabel]);
 
   function toPagePt(ev: React.MouseEvent): { x: number; y: number } {
     const cnv = canvasRef.current!;
