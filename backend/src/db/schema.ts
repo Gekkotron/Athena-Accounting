@@ -77,6 +77,9 @@ export const accounts = pgTable('accounts', {
     .notNull()
     .default('0'),
   openingDate: date('opening_date').notNull(),
+  // User-controlled display order. Lower values appear first; name is the
+  // tie-breaker when several rows share the same display_order.
+  displayOrder: integer('display_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

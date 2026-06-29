@@ -53,6 +53,42 @@ export function Accounts() {
     onError: (err: ApiError) => setEditError(err.message),
   });
 
+  const reorder = useMutation({
+    mutationFn: (ids: number[]) =>
+      api('/api/accounts/order', { method: 'PUT', json: { ids } }),
+    onMutate: async (ids) => {
+      // Optimistic update: rewrite the cached order immediately so the cards
+      // don't snap back-and-forth while the PUT round-trips.
+      await qc.cancelQueries({ queryKey: ['accounts'] });
+      const previous = qc.getQueryData<{ accounts: Account[] }>(['accounts']);
+      if (previous) {
+        const byId = new Map(previous.accounts.map((a) => [a.id, a] as const));
+        const reordered = ids.map((id) => byId.get(id)).filter((a): a is Account => !!a);
+        qc.setQueryData(['accounts'], { accounts: reordered });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(['accounts'], context.previous);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+
+  const move = (id: number, dir: -1 | 1) => {
+    const list = accountsQ.data?.accounts ?? [];
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx < 0) return;
+    const target = idx + dir;
+    if (target < 0 || target >= list.length) return;
+    const next = list.slice();
+    const [moved] = next.splice(idx, 1);
+    if (!moved) return;
+    next.splice(target, 0, moved);
+    reorder.mutate(next.map((a) => a.id));
+  };
+
   const [confirmDelete, setConfirmDelete] = useState<Account | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -205,7 +241,7 @@ export function Accounts() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(accountsQ.data?.accounts ?? []).map((a) => {
+            {(accountsQ.data?.accounts ?? []).map((a, idx, arr) => {
               if (editingId === a.id && editDraft) {
                 return (
                   <div key={a.id} className="surface p-5 relative">
@@ -315,16 +351,41 @@ export function Accounts() {
                   <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
                     ouvert {formatDate(a.openingDate)} · {formatAmount(a.openingBalance, a.currency)}
                   </div>
-                  <button
-                    className="absolute top-3 right-3 inline-flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
-                    onClick={() => startEdit(a)}
-                    title="Modifier"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-                      <path d="M2 7.5l5-5 1.5 1.5-5 5L2 9.5V7.5z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round" />
-                    </svg>
-                    modifier
-                  </button>
+                  {/* Top-right cluster: reorder up/down + modify */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1">
+                    <button
+                      className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition disabled:opacity-30 disabled:hover:text-ink-600 disabled:hover:bg-transparent"
+                      onClick={() => move(a.id, -1)}
+                      disabled={idx === 0 || reorder.isPending}
+                      title="Monter"
+                      aria-label="Déplacer vers le haut"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                        <path d="M3 7l3-3 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    <button
+                      className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition disabled:opacity-30 disabled:hover:text-ink-600 disabled:hover:bg-transparent"
+                      onClick={() => move(a.id, 1)}
+                      disabled={idx === arr.length - 1 || reorder.isPending}
+                      title="Descendre"
+                      aria-label="Déplacer vers le bas"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                        <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    <button
+                      className="ml-1 inline-flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
+                      onClick={() => startEdit(a)}
+                      title="Modifier"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+                        <path d="M2 7.5l5-5 1.5 1.5-5 5L2 9.5V7.5z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round" />
+                      </svg>
+                      modifier
+                    </button>
+                  </div>
                 </div>
               );
             })}

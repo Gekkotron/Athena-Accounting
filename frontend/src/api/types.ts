@@ -22,6 +22,8 @@ export interface Account {
   // into currentBalance. If this is 0 but transactionCount > 0, the user has
   // rows dated before opening_date that are being excluded.
   countedTransactionCount?: number;
+  // User-controlled position in the accounts grid / dashboard. Lower first.
+  displayOrder?: number;
   createdAt?: string;
 }
 

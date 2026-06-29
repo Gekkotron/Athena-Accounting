@@ -63,6 +63,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       currency: string;
       opening_balance: string;
       opening_date: string;
+      display_order: number;
       created_at: Date;
       current_balance: string;
       transaction_count: number;
@@ -75,6 +76,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
         a.currency,
         a.opening_balance::text                                AS opening_balance,
         to_char(a.opening_date, 'YYYY-MM-DD')                  AS opening_date,
+        a.display_order,
         a.created_at,
         (
           a.opening_balance + COALESCE(
@@ -89,7 +91,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
           WHERE t.account_id = a.id AND t.date >= a.opening_date)
                                                                AS counted_transaction_count
       FROM accounts a
-      ORDER BY a.name
+      ORDER BY a.display_order ASC, a.name ASC
     `);
 
     const accounts = result.rows.map((r) => ({
@@ -99,6 +101,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       currency: r.currency,
       openingBalance: r.opening_balance,
       openingDate: r.opening_date,
+      displayOrder: r.display_order,
       createdAt: r.created_at,
       currentBalance: r.current_balance,
       transactionCount: r.transaction_count,
@@ -106,6 +109,32 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
     }));
 
     return { accounts };
+  });
+
+  // Bulk reorder: PUT /api/accounts/order { ids: [3, 1, 2] } assigns
+  // display_order = index to each id in the array. Wrapped in a transaction
+  // so a partial failure leaves the previous order intact.
+  const ReorderBody = z.object({
+    ids: z.array(z.number().int().positive()).min(1).max(200),
+  });
+  app.put('/api/accounts/order', async (req, reply) => {
+    const parsed = ReorderBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
+    }
+    const { ids } = parsed.data;
+    if (new Set(ids).size !== ids.length) {
+      return reply.code(400).send({ error: 'duplicate ids in order list' });
+    }
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < ids.length; i++) {
+        await tx
+          .update(accounts)
+          .set({ displayOrder: i })
+          .where(eq(accounts.id, ids[i]!));
+      }
+    });
+    return { ok: true };
   });
 
   app.post('/api/accounts', async (req, reply) => {
