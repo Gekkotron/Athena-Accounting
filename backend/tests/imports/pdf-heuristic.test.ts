@@ -77,8 +77,8 @@ describe('runHeuristic', () => {
     ];
     const result = runHeuristic([page(items)]);
     expect(result.rows).toHaveLength(2);
-    expect(result.rows[0]!.rawLabel).toBe('MAGASIN U CARTE 4964');
-    expect(result.rows[1]!.rawLabel).toBe('RESTAURANT 27 CARTE 4964');
+    expect(result.rows[0]!.rawLabel).toBe('MAGASIN U - CARTE 4964');
+    expect(result.rows[1]!.rawLabel).toBe('RESTAURANT 27 - CARTE 4964');
   });
 
   it('handles multi-page repeating tables', () => {

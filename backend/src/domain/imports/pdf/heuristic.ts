@@ -198,7 +198,7 @@ function extractRows(
     const descText = valueInColumn(r, descCol);
     if (!dateRaw) {
       if (descText && lastRow) {
-        lastRow.rawLabel = lastRow.rawLabel ? `${lastRow.rawLabel} ${descText}` : descText;
+        lastRow.rawLabel = lastRow.rawLabel ? `${lastRow.rawLabel} - ${descText}` : descText;
       }
       continue;
     }

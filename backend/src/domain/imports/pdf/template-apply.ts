@@ -67,7 +67,7 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
         // or footer row — skip silently.
         if (descText && pageLastRow) {
           pageLastRow.rawLabel = pageLastRow.rawLabel
-            ? `${pageLastRow.rawLabel} ${descText}`
+            ? `${pageLastRow.rawLabel} - ${descText}`
             : descText;
         }
         continue;
