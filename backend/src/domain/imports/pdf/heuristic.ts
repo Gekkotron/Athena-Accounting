@@ -2,7 +2,7 @@ import type { PdfPageText, PdfTextItem } from './text-extract.js';
 import type { TemplateZones, ColumnRole, ZoneRect } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
-import { mergeContinuationLabel, truncateLabel } from './label.js';
+import { isBalanceLine, mergeContinuationLabel, truncateLabel } from './label.js';
 
 export interface HeuristicResult {
   zones: TemplateZones | null;
@@ -197,6 +197,10 @@ function extractRows(
     const rowText = r.items.map((i) => i.str).join(' ');
     const dateRaw = valueInColumn(r, dateCol);
     const descText = valueInColumn(r, descCol);
+
+    // Statement balance markers (top/bottom of the table) — skip outright.
+    if (isBalanceLine(descText)) continue;
+
     if (!dateRaw) {
       if (descText && lastRow) {
         lastRow.rawLabel = mergeContinuationLabel(lastRow.rawLabel, descText);

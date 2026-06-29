@@ -80,6 +80,24 @@ describe('applyTemplate', () => {
     expect(r.rows[2]!.rawLabel).toBe('SALAIRE');
   });
 
+  it('skips statement balance marker rows ("Solde créditeur au …", "Nouveau solde …")', () => {
+    const pages = [page([
+      // top-of-table balance marker — has a date AND an amount but is not a transaction
+      item('01/07/2025', 40, 215),
+      item('SOLDE CREDITEUR AU 01/07/2025', 120, 215),
+      item('1 500,00', 480, 215),
+      // a real transaction below
+      item('15/06/2026', 40, 240), item('A', 120, 240), item('-1,00', 480, 240),
+      // bottom-of-table balance marker
+      item('31/07/2025', 40, 280),
+      item('NOUVEAU SOLDE AU 31/07/2025', 120, 280),
+      item('1 499,00', 480, 280),
+    ])];
+    const r = applyTemplate(pages, zones);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]!.rawLabel).toBe('A');
+  });
+
   it('promotes the continuation to primary when the date row is a bank-prefix line', () => {
     // CIC layout: "PAIEMENT CB ..." sits on the date row, "GREEN MOJO ..." is
     // the continuation. The bank's OFX export uses the merchant — mirror that.

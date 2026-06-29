@@ -21,6 +21,17 @@ export function truncateLabel(s: string, max = OFX_NAME_LENGTH): string {
 // and keeps the lead.
 const BANK_PREFIX_RE = /^(paiement|paiment|vir(ement)?|prlv|prelvt|prelevement|cb|carte|retrait|dab|cheque|chq|tip|achat)\b/i;
 
+// Rows whose description column starts with a balance keyword are statement
+// markers ("Ancien solde / Solde créditeur au 01/07/2025 / Nouveau solde"),
+// not transactions. They typically carry a date and an amount that look just
+// like transaction data, so we have to filter them by label content. Skip the
+// row entirely — don't create a transaction, don't treat as a continuation
+// candidate, don't count toward the heuristic's confidence denominator.
+const BALANCE_LINE_RE = /^\s*(nouveau\s+|ancien\s+|total\s+)?solde\b/i;
+export function isBalanceLine(s: string): boolean {
+  return BALANCE_LINE_RE.test(s);
+}
+
 export function mergeContinuationLabel(parent: string, continuation: string): string {
   if (!parent) return truncateLabel(continuation);
   if (!continuation) return truncateLabel(parent);

@@ -2,7 +2,7 @@ import type { PdfPageText, PdfTextItem } from './text-extract.js';
 import type { TemplateZones } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
-import { mergeContinuationLabel, truncateLabel } from './label.js';
+import { isBalanceLine, mergeContinuationLabel, truncateLabel } from './label.js';
 
 export interface ApplyResult {
   rows: ParsedTransaction[];
@@ -60,6 +60,11 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
     for (const r of rowClusters) {
       const dateRaw = valueIn(r, dateCol.xStart, dateCol.xEnd);
       const descText = valueIn(r, descCol.xStart, descCol.xEnd);
+
+      // Statement balance markers ("Solde créditeur au …", "Nouveau solde …")
+      // sit inside the table zone with a date and an amount but are not
+      // transactions. Skip them entirely.
+      if (isBalanceLine(descText)) continue;
 
       if (!dateRaw) {
         // Row has no date in the date column. If it carries description text,

@@ -81,6 +81,23 @@ describe('runHeuristic', () => {
     expect(result.rows[1]!.rawLabel).toBe('RESTAURANT 27 - CARTE 4964');
   });
 
+  it('skips statement balance marker rows', () => {
+    const items: PdfTextItem[] = [
+      item('Date', 40, 200), item('Libellé', 120, 200), item('Montant', 480, 200),
+      item('01/07/2025', 40, 215),
+      item('SOLDE CREDITEUR AU 01/07/2025', 120, 215),
+      item('1 500,00', 480, 215),
+      item('15/06/2026', 40, 240), item('A', 120, 240), item('-1,00', 480, 240),
+      item('16/06/2026', 40, 260), item('B', 120, 260), item('-2,00', 480, 260),
+      item('31/07/2025', 40, 290),
+      item('NOUVEAU SOLDE AU 31/07/2025', 120, 290),
+      item('1 497,00', 480, 290),
+    ];
+    const result = runHeuristic([page(items)]);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows.map((r) => r.rawLabel)).toEqual(['A', 'B']);
+  });
+
   it('promotes the continuation to primary when the date row is a bank-prefix line', () => {
     const items: PdfTextItem[] = [
       item('Date', 40, 200), item('Libellé', 120, 200), item('Montant', 480, 200),
