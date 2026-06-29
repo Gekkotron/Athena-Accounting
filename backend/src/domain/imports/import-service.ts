@@ -13,7 +13,7 @@ import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { detectTransfers } from '../transfers/detector.js';
 
-export type ImportFormat = 'ofx' | 'csv';
+export type ImportFormat = 'ofx' | 'csv' | 'pdf';
 
 export interface ImportResult {
   fileImportId: number;
@@ -43,21 +43,24 @@ export function inferFormat(filename: string): ImportFormat | null {
   const ext = filename.toLowerCase().split('.').pop();
   if (ext === 'ofx' || ext === 'qfx') return 'ofx';
   if (ext === 'csv') return 'csv';
+  if (ext === 'pdf') return 'pdf';
   return null;
 }
 
 function parseFile(buf: Buffer, format: ImportFormat): ParsedTransaction[] {
   if (format === 'ofx') return parseOfx(buf);
-  return parseFrenchCsv(buf);
+  if (format === 'csv') return parseFrenchCsv(buf);
+  throw new Error(`parseFile: format ${format} not handled here`);
 }
 
 export async function runImport(opts: {
   filename: string;
   accountId: number;
   format: ImportFormat;
-  buffer: Buffer;
+  buffer?: Buffer;
+  prepared?: ParsedTransaction[];
 }): Promise<ImportResult> {
-  const parsed = parseFile(opts.buffer, opts.format);
+  const parsed = opts.prepared ?? parseFile(opts.buffer!, opts.format);
 
   return await db.transaction(async (tx) => {
     const [fileImport] = await tx
