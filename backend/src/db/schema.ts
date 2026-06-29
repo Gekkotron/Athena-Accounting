@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   bigserial,
   boolean,
@@ -244,7 +245,9 @@ export const pdfImportDrafts = pgTable(
     textItems: jsonb('text_items').notNull(),
     fingerprint: text('fingerprint').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '24 hours'`),
   },
   (t) => ({
     idxExpires: index('pdf_import_drafts_expires_at_idx').on(t.expiresAt),
