@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, lte, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { fileImports } from '../../db/schema.js';
+import { accounts, fileImports, transactions } from '../../db/schema.js';
 import {
   inferFormat,
   resolveAccountFromFilename,
@@ -11,6 +11,35 @@ import { importPdf, applyTemplateAndImport } from '../../domain/imports/pdf/inde
 import type { TemplateZones } from '../../domain/imports/pdf/zones.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
+
+// Sum of opening_balance + every transaction up to and including `asOf`.
+// Returns a "14.2"-style string so the API surface stays consistent with
+// how Drizzle serializes numeric(14,2) columns elsewhere.
+async function computedBalanceAt(accountId: number, asOf: string): Promise<string> {
+  const [row] = await db
+    .select({
+      opening: accounts.openingBalance,
+      sum: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`.as('sum'),
+    })
+    .from(accounts)
+    .leftJoin(
+      transactions,
+      and(eq(transactions.accountId, accounts.id), lte(transactions.date, asOf)),
+    )
+    .where(eq(accounts.id, accountId))
+    .groupBy(accounts.openingBalance);
+  if (!row) return '0.00';
+  return (Number(row.opening) + Number(row.sum)).toFixed(2);
+}
+
+async function enrichImport(row: typeof fileImports.$inferSelect) {
+  if (!row.statedBalance || !row.statedBalanceDate) {
+    return { ...row, computedBalance: null as string | null, delta: null as string | null };
+  }
+  const computed = await computedBalanceAt(row.accountId, row.statedBalanceDate);
+  const delta = (Number(row.statedBalance) - Number(computed)).toFixed(2);
+  return { ...row, computedBalance: computed, delta };
+}
 
 export async function importsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -87,7 +116,8 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/api/imports', async () => {
     const rows = await db.select().from(fileImports).orderBy(desc(fileImports.importedAt)).limit(100);
-    return { imports: rows };
+    const enriched = await Promise.all(rows.map(enrichImport));
+    return { imports: enriched };
   });
 
   app.get('/api/imports/:id', async (req, reply) => {
@@ -95,6 +125,44 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
     const [row] = await db.select().from(fileImports).where(eq(fileImports.id, id));
     if (!row) return reply.code(404).send({ error: 'not found' });
-    return { fileImport: row };
+    return { fileImport: await enrichImport(row) };
+  });
+
+  // Reconciliation: record the closing balance printed on a statement so the
+  // app can compare it to its own computed balance. Either field may be null
+  // (sent as null to clear) or a NUMERIC/DATE string.
+  app.patch('/api/imports/:id', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
+    const body = req.body as { statedBalance?: string | null; statedBalanceDate?: string | null };
+    if (body == null || (body.statedBalance === undefined && body.statedBalanceDate === undefined)) {
+      return reply.code(400).send({ error: 'statedBalance and/or statedBalanceDate required' });
+    }
+    const updates: Record<string, unknown> = {};
+    if (body.statedBalance !== undefined) {
+      if (body.statedBalance === null || body.statedBalance === '') {
+        updates.statedBalance = null;
+      } else {
+        const n = Number(body.statedBalance);
+        if (!Number.isFinite(n)) return reply.code(400).send({ error: 'statedBalance must be a number' });
+        updates.statedBalance = n.toFixed(2);
+      }
+    }
+    if (body.statedBalanceDate !== undefined) {
+      if (body.statedBalanceDate === null || body.statedBalanceDate === '') {
+        updates.statedBalanceDate = null;
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(body.statedBalanceDate)) {
+        return reply.code(400).send({ error: 'statedBalanceDate must be YYYY-MM-DD' });
+      } else {
+        updates.statedBalanceDate = body.statedBalanceDate;
+      }
+    }
+    const [row] = await db
+      .update(fileImports)
+      .set(updates)
+      .where(eq(fileImports.id, id))
+      .returning();
+    if (!row) return reply.code(404).send({ error: 'not found' });
+    return { fileImport: await enrichImport(row) };
   });
 }

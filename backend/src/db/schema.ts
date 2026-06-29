@@ -168,6 +168,10 @@ export const fileImports = pgTable('file_imports', {
   totalLines: integer('total_lines').notNull(),
   insertedCount: integer('inserted_count').notNull(),
   dedupSkipped: integer('dedup_skipped').notNull(),
+  // Closing balance printed on the statement + the date that balance is "as of".
+  // Optional — set when the user reconciles the import against the bank's PDF.
+  statedBalance: numeric('stated_balance', { precision: 14, scale: 2 }),
+  statedBalanceDate: date('stated_balance_date'),
 });
 
 // ---------------------------------------------------------------------------

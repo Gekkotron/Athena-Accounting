@@ -84,11 +84,19 @@ export interface FileImport {
   id: number;
   filename: string;
   accountId: number;
-  format: 'ofx' | 'csv';
+  format: 'ofx' | 'csv' | 'pdf';
   importedAt: string;
   totalLines: number;
   insertedCount: number;
   dedupSkipped: number;
+  // Reconciliation: the closing balance printed on the statement (set by the
+  // user post-import) and the matching "as of" date. computedBalance and delta
+  // are derived server-side from accounts.opening_balance + sum of transactions
+  // up to statedBalanceDate.
+  statedBalance: string | null;
+  statedBalanceDate: string | null;
+  computedBalance: string | null;
+  delta: string | null;
 }
 
 export interface TriGroup {
