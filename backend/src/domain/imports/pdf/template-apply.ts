@@ -1,5 +1,5 @@
 import type { PdfPageText, PdfTextItem } from './text-extract.js';
-import type { TemplateZones, ColumnRole } from './zones.js';
+import type { TemplateZones } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
 
