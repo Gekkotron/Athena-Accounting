@@ -99,10 +99,11 @@ async function parkDraft(
   reason: 'no_text_layer' | 'low_confidence',
 ): Promise<ImportPdfResult> {
   const rendered = await renderPagesToPng(opts.buffer);
+  const textItems = flattenItems(pages);
   const [draft] = await db.insert(pdfImportDrafts).values({
     accountId: opts.accountId,
     pdfBytes: opts.buffer.toString('base64'),
-    textItems: flattenItems(pages),
+    textItems,
     fingerprint,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   }).returning();
@@ -111,7 +112,7 @@ async function parkDraft(
     draftId: draft!.id,
     fingerprint,
     pages: rendered,
-    textItems: flattenItems(pages),
+    textItems,
     suggestedZones,
     reason,
   };
