@@ -75,8 +75,8 @@ describe('applyTemplate', () => {
     ])];
     const r = applyTemplate(pages, zones);
     expect(r.rows).toHaveLength(3);
-    expect(r.rows[0]!.rawLabel).toBe('MAGASIN U - CARTE 4964');
-    expect(r.rows[1]!.rawLabel).toBe('RESTAURANT 27 - CARTE 4964');
+    expect(r.rows[0]!.rawLabel).toBe('MAGASIN U CARTE 4964');
+    expect(r.rows[1]!.rawLabel).toBe('RESTAURANT 27 CARTE 4964');
     expect(r.rows[2]!.rawLabel).toBe('SALAIRE');
   });
 

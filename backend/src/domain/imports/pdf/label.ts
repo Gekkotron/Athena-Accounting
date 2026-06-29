@@ -35,8 +35,13 @@ export function isBalanceLine(s: string): boolean {
 export function mergeContinuationLabel(parent: string, continuation: string): string {
   if (!parent) return truncateLabel(continuation);
   if (!continuation) return truncateLabel(parent);
+  // Plain-space join, no " - " separator. OFX exports concatenate the wrapped
+  // lines with a single space; introducing " - " here eats 3 chars of the
+  // 32-char OFX cap and shifts the truncation point, producing labels that
+  // don't dedup against the OFX-imported version of the same transaction
+  // (see the MAISON THIRIET case: "CARTE 7883 - PAIE" vs "CARTE 7883 PAIEME").
   const order = BANK_PREFIX_RE.test(parent)
-    ? `${continuation} - ${parent}`
-    : `${parent} - ${continuation}`;
+    ? `${continuation} ${parent}`
+    : `${parent} ${continuation}`;
   return truncateLabel(order);
 }
