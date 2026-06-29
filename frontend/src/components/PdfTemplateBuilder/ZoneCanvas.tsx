@@ -15,6 +15,8 @@ export function ZoneCanvas({
   pngBase64, widthPt, heightPt, initialRect, displayMaxWidth = 720, onChange,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [imgReady, setImgReady] = useState(false);
   const [rect, setRect] = useState<PageRect | null>(initialRect);
   const [drag, setDrag] = useState<{ x0: number; y0: number } | null>(null);
   const displayScale = Math.min(1, displayMaxWidth / widthPt);
@@ -22,33 +24,40 @@ export function ZoneCanvas({
   const displayHeight = heightPt * displayScale;
 
   useEffect(() => {
-    const cnv = canvasRef.current;
-    if (!cnv) return;
-    const ctx = cnv.getContext('2d')!;
+    setImgReady(false);
     const img = new Image();
     img.onload = () => {
-      ctx.clearRect(0, 0, cnv.width, cnv.height);
-      ctx.drawImage(img, 0, 0, cnv.width, cnv.height);
-      if (rect) {
-        ctx.strokeStyle = '#0a84ff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(
-          rect.x * displayScale,
-          rect.y * displayScale,
-          rect.w * displayScale,
-          rect.h * displayScale,
-        );
-        ctx.fillStyle = 'rgba(10,132,255,0.10)';
-        ctx.fillRect(
-          rect.x * displayScale,
-          rect.y * displayScale,
-          rect.w * displayScale,
-          rect.h * displayScale,
-        );
-      }
+      imgRef.current = img;
+      setImgReady(true);
     };
     img.src = `data:image/png;base64,${pngBase64}`;
-  }, [pngBase64, rect, displayScale]);
+  }, [pngBase64]);
+
+  useEffect(() => {
+    const cnv = canvasRef.current;
+    const img = imgRef.current;
+    if (!cnv || !img || !imgReady) return;
+    const ctx = cnv.getContext('2d')!;
+    ctx.clearRect(0, 0, cnv.width, cnv.height);
+    ctx.drawImage(img, 0, 0, cnv.width, cnv.height);
+    if (rect) {
+      ctx.strokeStyle = '#0a84ff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(
+        rect.x * displayScale,
+        rect.y * displayScale,
+        rect.w * displayScale,
+        rect.h * displayScale,
+      );
+      ctx.fillStyle = 'rgba(10,132,255,0.10)';
+      ctx.fillRect(
+        rect.x * displayScale,
+        rect.y * displayScale,
+        rect.w * displayScale,
+        rect.h * displayScale,
+      );
+    }
+  }, [imgReady, rect, displayScale]);
 
   function toPagePt(ev: React.MouseEvent): { x: number; y: number } {
     const cnv = canvasRef.current!;
