@@ -54,6 +54,11 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   const [tableRepeats, setTableRepeats] = useState<boolean>(
     needsTemplate.suggestedZones?.tableRepeatsPerPage ?? true,
   );
+  // Which pages of the PDF belong to *this* import / account. Defaults to every
+  // page; the user un-ticks pages that belong to a different account. For a
+  // single-account statement this just stays as "all".
+  const allPageIndices = needsTemplate.pages.map((p) => p.pageIndex);
+  const [selectedPages, setSelectedPages] = useState<number[]>(allPageIndices);
   const [dateCol, setDateCol] = useState<PageRect | null>(null);
   const [descCol, setDescCol] = useState<PageRect | null>(null);
   const [amountMode, setAmountMode] = useState<AmountMode>('signed');
@@ -101,6 +106,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       headerZone: { page: 0, ...headerRect },
       tableZone: { page: 0, ...tableRect },
       tableRepeatsPerPage: tableRepeats,
+      selectedPages: [...selectedPages].sort((a, b) => a - b),
       columns: cols,
       rowsStartY: tableRect.y,
     };
@@ -231,6 +237,53 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               />
               Le tableau se répète sur chaque page
             </label>
+
+            {needsTemplate.pages.length > 1 && (
+              <div className="mt-5 pt-4 border-t border-ink-800/60">
+                <div className="text-sm text-ink-100 font-medium mb-1">
+                  Pages à importer pour ce compte
+                </div>
+                <p className="text-xs text-ink-400 mb-3">
+                  Si le relevé contient plusieurs comptes, ne cochez que les pages qui appartiennent au
+                  compte choisi à l'upload. Les autres pages seront ignorées pour cet import.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {needsTemplate.pages.map((p) => {
+                    const checked = selectedPages.includes(p.pageIndex);
+                    return (
+                      <label
+                        key={p.pageIndex}
+                        className={
+                          'cursor-pointer rounded-lg border px-3 py-1.5 text-sm transition ' +
+                          (checked
+                            ? 'border-sage-300 bg-sage-300/10 text-sage-300'
+                            : 'border-ink-700 text-ink-400 hover:text-ink-200')
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={checked}
+                          onChange={(e) => {
+                            setSelectedPages((prev) =>
+                              e.target.checked
+                                ? Array.from(new Set([...prev, p.pageIndex])).sort((a, b) => a - b)
+                                : prev.filter((i) => i !== p.pageIndex),
+                            );
+                          }}
+                        />
+                        Page {p.pageIndex + 1}
+                      </label>
+                    );
+                  })}
+                </div>
+                {selectedPages.length === 0 && (
+                  <p className="mt-2 text-xs text-clay-300">
+                    Sélectionnez au moins une page.
+                  </p>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -382,7 +435,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               className="px-4 py-2 rounded-lg bg-sage-300 text-ink-950 font-medium hover:bg-sage-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={next}
               disabled={
-                (step === 'table' && !tableRect) ||
+                (step === 'table' && (!tableRect || selectedPages.length === 0)) ||
                 (step === 'date' && !dateCol) ||
                 (step === 'description' && !descCol)
               }

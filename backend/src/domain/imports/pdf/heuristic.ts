@@ -312,6 +312,9 @@ export function runHeuristic(pages: PdfPageText[]): HeuristicResult {
   const headerZone: ZoneRect = {
     page: 0, x: 0, y: 0, w: pages[0]!.widthPt, h: pages[0]!.heightPt * 0.15,
   };
+  // selectedPages stays undefined when the heuristic auto-detects — the legacy
+  // tableRepeatsPerPage carries the semantics. The interactive modal sets
+  // selectedPages explicitly when the user picks pages for a multi-account PDF.
   const zones: TemplateZones = {
     headerZone,
     tableZone,

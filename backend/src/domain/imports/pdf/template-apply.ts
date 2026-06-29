@@ -43,13 +43,25 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
   const rows: ParsedTransaction[] = [];
   const skipped: Array<{ rowText: string; reason: string }> = [];
 
+  // Page set:
+  //   - explicit `selectedPages` wins (multi-account flow)
+  //   - else legacy `tableRepeatsPerPage`: true = all pages, false = [0]
+  const allPageIndices = pages.map((_, i) => i);
+  const pageSet = new Set(
+    zones.selectedPages && zones.selectedPages.length > 0
+      ? zones.selectedPages
+      : zones.tableRepeatsPerPage
+      ? allPageIndices
+      : [0],
+  );
+
   for (let p = 0; p < pages.length; p++) {
-    if (p > 0 && !zones.tableRepeatsPerPage) break;
+    if (!pageSet.has(p)) continue;
     const page = pages[p]!;
     const tableItems = page.items.filter((i) =>
       i.xLeft >= zones.tableZone.x - 1 &&
       i.xLeft <= zones.tableZone.x + zones.tableZone.w &&
-      i.yTop >= (p === 0 ? zones.rowsStartY : 0) &&
+      i.yTop >= (p === Math.min(...pageSet) ? zones.rowsStartY : 0) &&
       i.yTop <= page.heightPt,
     );
     const rowClusters = clusterRows(tableItems);

@@ -12,6 +12,12 @@ export interface ZoneRect {
 export interface TemplateZones {
   headerZone: ZoneRect;
   tableZone: ZoneRect;
+  // Page indices (0-based) that the import should process. When the PDF holds
+  // multiple accounts, the user picks which pages belong to *this* account.
+  // Undefined falls back to the legacy tableRepeatsPerPage semantics:
+  //   - true  → all pages
+  //   - false → only page 0
+  selectedPages?: number[];
   tableRepeatsPerPage: boolean;
   columns: Array<{ xStart: number; xEnd: number; role: ColumnRole }>;
   rowsStartY: number;

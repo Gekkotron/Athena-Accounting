@@ -6,6 +6,7 @@ export interface ZoneRect { page: number; x: number; y: number; w: number; h: nu
 export interface TemplateZones {
   headerZone: ZoneRect;
   tableZone: ZoneRect;
+  selectedPages?: number[];
   tableRepeatsPerPage: boolean;
   columns: Array<{ xStart: number; xEnd: number; role: ColumnRole }>;
   rowsStartY: number;
