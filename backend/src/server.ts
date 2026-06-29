@@ -10,6 +10,7 @@ import { accountsRoutes } from './http/routes/accounts.js';
 import { patternRoutes } from './http/routes/account-patterns.js';
 import { importsRoutes } from './http/routes/imports.js';
 import { categoriesRoutes } from './http/routes/categories.js';
+import { startDraftSweeper } from './domain/imports/pdf/draft-sweeper.js';
 import { rulesRoutes } from './http/routes/rules.js';
 import { transferRulesRoutes } from './http/routes/transfer-rules.js';
 import { transactionsRoutes } from './http/routes/transactions.js';
@@ -46,6 +47,8 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(reportsRoutes);
   await app.register(triRoutes);
   await app.register(backupRoutes);
+
+  startDraftSweeper(app);
 
   return app;
 }
