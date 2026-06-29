@@ -40,7 +40,7 @@ export async function submitPdf(file: File, accountId: number): Promise<PdfImpor
   const r = await fetch(`/api/imports?accountId=${accountId}`, {
     method: 'POST', body: form, credentials: 'include',
   });
-  if (!r.ok && r.status !== 200) {
+  if (!r.ok) {
     const body = await r.json().catch(() => ({}));
     throw Object.assign(new Error(body.error ?? 'upload failed'), { code: body.code, status: r.status });
   }
@@ -67,9 +67,14 @@ export interface PdfTemplateRow {
   source: 'heuristic' | 'interactive'; createdAt: string; updatedAt: string;
 }
 
+async function failure(r: Response, fallback: string): Promise<never> {
+  const body = await r.json().catch(() => ({}));
+  throw Object.assign(new Error(body.error ?? fallback), { code: body.code, status: r.status });
+}
+
 export async function listPdfTemplates(): Promise<PdfTemplateRow[]> {
   const r = await fetch('/api/pdf-templates', { credentials: 'include' });
-  if (!r.ok) throw new Error('failed to list templates');
+  if (!r.ok) return failure(r, 'failed to list templates');
   return (await r.json()).templates;
 }
 
@@ -80,10 +85,10 @@ export async function renamePdfTemplate(id: number, label: string): Promise<void
     credentials: 'include',
     body: JSON.stringify({ label }),
   });
-  if (!r.ok) throw new Error('rename failed');
+  if (!r.ok) return failure(r, 'rename failed');
 }
 
 export async function deletePdfTemplate(id: number): Promise<void> {
   const r = await fetch(`/api/pdf-templates/${id}`, { method: 'DELETE', credentials: 'include' });
-  if (!r.ok) throw new Error('delete failed');
+  if (!r.ok) return failure(r, 'delete failed');
 }
