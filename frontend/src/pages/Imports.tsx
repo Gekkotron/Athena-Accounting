@@ -94,8 +94,7 @@ export function Imports() {
     if (!file) return;
 
     if (file.name.toLowerCase().endsWith('.pdf')) {
-      const resolvedAccountId = accountId !== '' ? accountId : 0;
-      if (!resolvedAccountId) {
+      if (accountId === '') {
         setError('Veuillez sélectionner un compte pour importer un PDF.');
         return;
       }
@@ -105,7 +104,7 @@ export function Imports() {
       setNeedsTpl(null);
       setPdfPending(true);
       try {
-        const r = await submitPdf(file, resolvedAccountId);
+        const r = await submitPdf(file, accountId);
         if (r.kind === 'imported') {
           setLastImported(r);
           qc.invalidateQueries({ queryKey: ['imports'] });
