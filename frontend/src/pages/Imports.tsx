@@ -158,6 +158,29 @@ export function Imports() {
     }
   };
 
+  // Cascading delete: removes the import row and all transactions that came
+  // from it. Used to undo a bad import or replay an old PDF with the new label
+  // logic without leaving duplicates behind.
+  const [pendingDeleteImport, setPendingDeleteImport] = useState<FileImport | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteImportMut = useMutation({
+    mutationFn: (id: number) =>
+      api<{ deleted: { transactions: number; fileImport: number } }>(
+        `/api/imports/${id}`,
+        { method: 'DELETE' },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['imports'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      setPendingDeleteImport(null);
+      setDeleteError(null);
+    },
+    onError: (err: ApiError) => setDeleteError(err.message),
+  });
+
   // Reconciliation: state + mutation to set the closing balance on an import.
   const [reconcilingId, setReconcilingId] = useState<number | null>(null);
   const [reconcileForm, setReconcileForm] = useState<{ statedBalance: string; statedBalanceDate: string }>(
@@ -427,6 +450,30 @@ export function Imports() {
       </section>
 
       <ConfirmDialog
+        open={!!pendingDeleteImport}
+        title="Supprimer cet import ?"
+        description={
+          pendingDeleteImport ? (
+            <>
+              <span className="display-italic">{pendingDeleteImport.filename}</span> et les{' '}
+              <span className="display-italic">{pendingDeleteImport.insertedCount}</span>{' '}
+              transaction(s) qui en proviennent seront définitivement supprimées.
+              L'opération est transactionnelle&nbsp;: tout ou rien.
+            </>
+          ) : null
+        }
+        confirmLabel="Supprimer"
+        destructive
+        busy={deleteImportMut.isPending}
+        error={deleteError}
+        onConfirm={() => {
+          if (!pendingDeleteImport) return;
+          deleteImportMut.mutate(pendingDeleteImport.id);
+        }}
+        onCancel={() => { setPendingDeleteImport(null); setDeleteError(null); }}
+      />
+
+      <ConfirmDialog
         open={!!pendingImport}
         title="Importer cette sauvegarde ?"
         description={
@@ -466,12 +513,13 @@ export function Imports() {
                   <th className="px-4 py-3 label font-normal">Quand</th>
                   <th className="px-4 py-3 label font-normal text-right">Solde déclaré</th>
                   <th className="px-4 py-3 label font-normal text-right">Δ</th>
+                  <th className="px-4 py-3 label font-normal w-8"></th>
                 </tr>
               </thead>
               <tbody>
                 {(importsQ.data?.imports ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-ink-500 display-italic">
+                    <td colSpan={10} className="px-4 py-10 text-center text-ink-500 display-italic">
                       Aucun import pour l'instant.
                     </td>
                   </tr>
@@ -520,12 +568,20 @@ export function Imports() {
                             ? '—'
                             : `${deltaNum >= 0 ? '+' : ''}${deltaNum.toFixed(2)}`}
                         </td>
+                        <td className="px-2 py-2.5 text-right">
+                          <button
+                            className="text-ink-500 hover:text-clay-300 transition px-1"
+                            onClick={() => { setDeleteError(null); setPendingDeleteImport(i); }}
+                            title="Supprimer cet import et toutes ses transactions"
+                            aria-label="Supprimer l'import"
+                          >🗑</button>
+                        </td>
                       </tr>,
                     ];
                     if (editing) {
                       rows.push(
                         <tr key={`${i.id}-edit`} className="border-b border-ink-800/40 bg-ink-850/50">
-                          <td colSpan={9} className="px-4 py-3">
+                          <td colSpan={10} className="px-4 py-3">
                             <div className="flex flex-wrap items-end gap-3">
                               <div>
                                 <label className="block text-xs text-ink-400 mb-1">Date du solde</label>

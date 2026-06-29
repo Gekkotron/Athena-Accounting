@@ -128,6 +128,27 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     return { fileImport: await enrichImport(row) };
   });
 
+  // Cascading delete: removes the file_imports row AND every transaction whose
+  // source_file_id points to it. Wraps both deletes in a single transaction so
+  // a partial failure can't leave orphan transactions with a dangling FK.
+  app.delete('/api/imports/:id', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
+    const result = await db.transaction(async (tx) => {
+      const txDeleted = await tx
+        .delete(transactions)
+        .where(eq(transactions.sourceFileId, id))
+        .returning({ id: transactions.id });
+      const fiDeleted = await tx
+        .delete(fileImports)
+        .where(eq(fileImports.id, id))
+        .returning({ id: fileImports.id });
+      return { transactions: txDeleted.length, fileImport: fiDeleted.length };
+    });
+    if (result.fileImport === 0) return reply.code(404).send({ error: 'not found' });
+    return reply.code(200).send({ deleted: result });
+  });
+
   // Reconciliation: record the closing balance printed on a statement so the
   // app can compare it to its own computed balance. Either field may be null
   // (sent as null to clear) or a NUMERIC/DATE string.
