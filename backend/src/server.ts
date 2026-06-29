@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import { env } from './env.js';
 import { pool } from './db/client.js';
@@ -17,39 +17,40 @@ import { reportsRoutes } from './http/routes/reports.js';
 import { triRoutes } from './http/routes/tri.js';
 import { backupRoutes } from './http/routes/backup.js';
 
-const app = Fastify({
-  logger:
-    env.NODE_ENV === 'development'
-      ? { transport: { target: 'pino-pretty' } }
-      : true,
-});
+export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
+  const logger = opts?.logger === false
+    ? false
+    : (env.NODE_ENV === 'development' ? { transport: { target: 'pino-pretty' } } : true);
+  const app = Fastify({ logger });
 
-app.get('/health', async () => {
-  // Ping the DB so /health reflects end-to-end readiness, not just process liveness.
-  await pool.query('SELECT 1');
-  return { ok: true, ts: new Date().toISOString() };
-});
+  app.get('/health', async () => {
+    await pool.query('SELECT 1');
+    return { ok: true, ts: new Date().toISOString() };
+  });
 
-await app.register(multipart);
-await app.register(authPlugin);
+  await app.register(multipart);
+  await app.register(authPlugin);
 
-// Public routes (no auth required to discover / complete onboarding, or log in).
-await app.register(onboardingRoutes);
-await app.register(authRoutes);
+  // Public routes (no auth required to discover / complete onboarding, or log in).
+  await app.register(onboardingRoutes);
+  await app.register(authRoutes);
 
-// Authenticated routes (preHandler enforced inside each plugin via addHook).
-await app.register(accountsRoutes);
-await app.register(patternRoutes);
-await app.register(importsRoutes);
-await app.register(categoriesRoutes);
-await app.register(rulesRoutes);
-await app.register(transferRulesRoutes);
-await app.register(transactionsRoutes);
-await app.register(reportsRoutes);
-await app.register(triRoutes);
-await app.register(backupRoutes);
+  // Authenticated routes (preHandler enforced inside each plugin via addHook).
+  await app.register(accountsRoutes);
+  await app.register(patternRoutes);
+  await app.register(importsRoutes);
+  await app.register(categoriesRoutes);
+  await app.register(rulesRoutes);
+  await app.register(transferRulesRoutes);
+  await app.register(transactionsRoutes);
+  await app.register(reportsRoutes);
+  await app.register(triRoutes);
+  await app.register(backupRoutes);
 
-const shutdown = async (signal: string) => {
+  return app;
+}
+
+const shutdown = async (app: FastifyInstance, signal: string) => {
   app.log.info({ signal }, 'shutting down');
   try {
     await app.close();
@@ -61,10 +62,12 @@ const shutdown = async (signal: string) => {
   }
 };
 
-process.on('SIGINT', () => void shutdown('SIGINT'));
-process.on('SIGTERM', () => void shutdown('SIGTERM'));
+if (env.NODE_ENV !== 'test') {
+  const app = await build();
 
-const start = async () => {
+  process.on('SIGINT', () => void shutdown(app, 'SIGINT'));
+  process.on('SIGTERM', () => void shutdown(app, 'SIGTERM'));
+
   try {
     await runMigrations();
     await app.listen({ host: '0.0.0.0', port: env.PORT });
@@ -72,6 +75,4 @@ const start = async () => {
     app.log.error(err);
     process.exit(1);
   }
-};
-
-start();
+}
