@@ -174,7 +174,11 @@ function valueInColumn(row: Row, col: { xStart: number; xEnd: number }): string 
 function extractRows(
   rows: Row[],
   columns: Array<{ xStart: number; xEnd: number; role: ColumnRole }>,
-): { parsed: ParsedTransaction[]; skipped: Array<{ rowText: string; reason: string }> } {
+): {
+  parsed: ParsedTransaction[];
+  skipped: Array<{ rowText: string; reason: string }>;
+  dateRowCount: number; // rows whose date column was non-empty — used as the confidence denominator
+} {
   const dateCol = columns.find((c) => c.role === 'date')!;
   const descCol = columns.find((c) => c.role === 'description')!;
   const signedCol = columns.find((c) => c.role === 'amountSigned');
@@ -183,11 +187,22 @@ function extractRows(
 
   const parsed: ParsedTransaction[] = [];
   const skipped: Array<{ rowText: string; reason: string }> = [];
+  // Continuation tracking: a row with no date but a description text
+  // ("CARTE 4964" under "MAGASIN U", etc.) is appended to the previous row.
+  let lastRow: ParsedTransaction | null = null;
+  let dateRowCount = 0;
 
   for (const r of rows) {
     const rowText = r.items.map((i) => i.str).join(' ');
     const dateRaw = valueInColumn(r, dateCol);
-    if (!dateRaw) continue;
+    const descText = valueInColumn(r, descCol);
+    if (!dateRaw) {
+      if (descText && lastRow) {
+        lastRow.rawLabel = lastRow.rawLabel ? `${lastRow.rawLabel} ${descText}` : descText;
+      }
+      continue;
+    }
+    dateRowCount++;
     const date = tryParseFrenchDate(dateRaw);
     if (!date) { skipped.push({ rowText, reason: `unparseable date "${dateRaw}"` }); continue; }
 
@@ -214,10 +229,11 @@ function extractRows(
       throw new Error('extractRows: invalid column set');
     }
 
-    const rawLabel = valueInColumn(r, descCol);
-    parsed.push({ date, amount, rawLabel, memo: null, fitid: null });
+    const newRow: ParsedTransaction = { date, amount, rawLabel: descText, memo: null, fitid: null };
+    parsed.push(newRow);
+    lastRow = newRow;
   }
-  return { parsed, skipped };
+  return { parsed, skipped, dateRowCount };
 }
 
 export function runHeuristic(pages: PdfPageText[]): HeuristicResult {
@@ -262,16 +278,15 @@ export function runHeuristic(pages: PdfPageText[]): HeuristicResult {
     const dataRows = p === 0 ? pageRows.filter((r) => r.yTop >= rowsStartY) : pageRows;
     if (!tableRepeatsPerPage && p > 0) continue;
 
-    // Only rows that have *something* in the date column count toward the denominator,
-    // so totals like "Solde au 31/01/2026" can sit below without dragging confidence down.
-    const candidate = dataRows.filter((r) => {
-      const v = valueInColumn(r, columns[dateColIdx]!);
-      return v !== '';
-    });
-    const { parsed, skipped } = extractRows(candidate, columns);
+    // Don't pre-filter by date — extractRows handles continuation rows (no date,
+    // description only) by appending them to the previous transaction. It also
+    // counts how many rows had a date so the confidence denominator stays
+    // unaffected by continuations or footer/separator rows.
+    void dateColIdx; // still referenced from the table-repeats check above
+    const { parsed, skipped, dateRowCount } = extractRows(dataRows, columns);
     allParsed = allParsed.concat(parsed);
     allSkipped = allSkipped.concat(skipped);
-    totalConsidered += candidate.length;
+    totalConsidered += dateRowCount;
   }
 
   const confidence = totalConsidered === 0 ? 0 : allParsed.length / totalConsidered;

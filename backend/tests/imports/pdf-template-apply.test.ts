@@ -65,6 +65,21 @@ describe('applyTemplate', () => {
     expect(r.rows).toHaveLength(2);
   });
 
+  it('appends continuation rows (no date, has description) to the previous transaction', () => {
+    const pages = [page([
+      item('15/01/2026', 40, 220), item('MAGASIN U',     120, 220), item('-42,30', 480, 220),
+                                   item('CARTE 4964',    120, 232),
+      item('16/01/2026', 40, 250), item('RESTAURANT 27', 120, 250), item('-85,00', 480, 250),
+                                   item('CARTE 4964',    120, 262),
+      item('17/01/2026', 40, 280), item('SALAIRE',       120, 280), item('1 200,00', 480, 280),
+    ])];
+    const r = applyTemplate(pages, zones);
+    expect(r.rows).toHaveLength(3);
+    expect(r.rows[0]!.rawLabel).toBe('MAGASIN U CARTE 4964');
+    expect(r.rows[1]!.rawLabel).toBe('RESTAURANT 27 CARTE 4964');
+    expect(r.rows[2]!.rawLabel).toBe('SALAIRE');
+  });
+
   it('handles debit/credit column pair', () => {
     const dcZones: TemplateZones = {
       ...zones,

@@ -52,9 +52,26 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
       i.yTop <= page.heightPt,
     );
     const rowClusters = clusterRows(tableItems);
+    // Continuation tracking lives within a single page — cross-page continuations
+    // are rare enough to drop, and page-boundary header rows would otherwise
+    // get mis-attached to the previous page's last transaction.
+    let pageLastRow: ParsedTransaction | null = null;
     for (const r of rowClusters) {
       const dateRaw = valueIn(r, dateCol.xStart, dateCol.xEnd);
-      if (!dateRaw) continue;
+      const descText = valueIn(r, descCol.xStart, descCol.xEnd);
+
+      if (!dateRaw) {
+        // Row has no date in the date column. If it carries description text,
+        // treat it as a wrapped continuation line of the previous transaction
+        // (e.g. "CARTE 4964" under "MAGASIN U"). Otherwise it's a separator
+        // or footer row — skip silently.
+        if (descText && pageLastRow) {
+          pageLastRow.rawLabel = pageLastRow.rawLabel
+            ? `${pageLastRow.rawLabel} ${descText}`
+            : descText;
+        }
+        continue;
+      }
       const rowText = r.items.map((i) => i.str).join(' ');
       const date = tryParseFrenchDate(dateRaw);
       if (!date) { skipped.push({ rowText, reason: `unparseable date "${dateRaw}"` }); continue; }
@@ -82,8 +99,9 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
         throw new Error('template: invalid amount column configuration');
       }
 
-      const rawLabel = valueIn(r, descCol.xStart, descCol.xEnd);
-      rows.push({ date, amount, rawLabel, memo: null, fitid: null });
+      const newRow: ParsedTransaction = { date, amount, rawLabel: descText, memo: null, fitid: null };
+      rows.push(newRow);
+      pageLastRow = newRow;
     }
   }
   return { rows, skippedRows: skipped };
