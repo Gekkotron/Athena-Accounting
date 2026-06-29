@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import type { User } from '../api/types';
 import { Logo } from './Logo';
 import { navIcons, type NavIconName } from './NavIcons';
+import { usePrivacy } from '../contexts/PrivacyContext';
 
 const nav: { to: string; label: string; end?: boolean; icon: NavIconName }[] = [
   { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
@@ -137,10 +138,19 @@ function Brand() {
 }
 
 function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const privacy = usePrivacy();
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60 mt-8">
       <div className="label mb-1">Connecté</div>
       <div className="text-sm text-ink-100 mb-3 truncate font-medium">{user.username}</div>
+      <button
+        className="btn-ghost w-full justify-start text-xs mb-1"
+        onClick={privacy.toggle}
+        title={privacy.hidden ? 'Afficher les montants' : 'Masquer les montants (auto après 5 min)'}
+      >
+        {privacy.hidden ? <EyeOpenIcon /> : <EyeClosedIcon />}
+        {privacy.hidden ? 'Afficher les montants' : 'Masquer les montants'}
+      </button>
       <button className="btn-ghost w-full justify-start text-xs" onClick={onLogout}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2M9 9l3-2-3-2M12 7H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -148,5 +158,23 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
         Se déconnecter
       </button>
     </div>
+  );
+}
+
+function EyeOpenIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M1.5 7C2.7 4.5 4.7 3 7 3s4.3 1.5 5.5 4c-1.2 2.5-3.2 4-5.5 4S2.7 9.5 1.5 7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function EyeClosedIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M1.5 7C2.7 4.5 4.7 3 7 3s4.3 1.5 5.5 4c-1.2 2.5-3.2 4-5.5 4S2.7 9.5 1.5 7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M1.5 1.5l11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
   );
 }
