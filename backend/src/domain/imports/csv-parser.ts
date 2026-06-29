@@ -1,6 +1,7 @@
 import { parse } from 'csv-parse/sync';
 import iconv from 'iconv-lite';
 import type { ParsedTransaction } from './ofx-parser.js';
+import { parseFrenchDate, parseFrenchAmount } from './french-numerics.js';
 
 // French banks export CSV with:
 //   - separator ';'  (because the decimal is ',')
@@ -45,27 +46,6 @@ function decodeBuffer(buf: Buffer): string {
     return iconv.decode(buf, 'windows-1252');
   }
   return utf8;
-}
-
-function parseFrenchDate(s: string): string {
-  // JJ/MM/AAAA, JJ-MM-AAAA, JJ.MM.AAAA
-  const m = s.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})$/);
-  if (!m) throw new Error(`invalid French date: ${JSON.stringify(s)}`);
-  let [, d, mo, y] = m;
-  if (y!.length === 2) y = (Number(y) >= 70 ? '19' : '20') + y;
-  return `${y}-${mo!.padStart(2, '0')}-${d!.padStart(2, '0')}`;
-}
-
-function parseFrenchAmount(s: string): string {
-  if (!s || !s.trim()) return '';
-  // Strip currency symbols, spaces, NBSP
-  let v = s.replace(/[€$ \s]/g, '').trim();
-  // French: '.' may be thousands sep, ',' decimal. Remove dot, then convert comma to dot.
-  v = v.replace(/\./g, '').replace(',', '.');
-  if (!/^-?\d+(\.\d+)?$/.test(v)) {
-    throw new Error(`invalid amount: ${JSON.stringify(s)}`);
-  }
-  return Number(v).toFixed(2);
 }
 
 export function parseFrenchCsv(buf: Buffer): ParsedTransaction[] {
