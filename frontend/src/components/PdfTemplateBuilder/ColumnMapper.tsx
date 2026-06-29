@@ -85,15 +85,19 @@ export function ColumnMapper({
         ref={canvasRef}
         width={widthPt * displayScale}
         height={heightPt * displayScale}
-        style={{ border: '1px solid #ddd', maxWidth: '100%' }}
+        className="rounded-lg border border-ink-700 max-w-full block"
       />
-      <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
+      <div className="mt-3 grid gap-1.5">
         {columns.map((c, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontFamily: 'monospace', minWidth: 110 }}>
+          <div key={`${c.xStart}-${c.xEnd}`} className="flex items-center gap-3">
+            <span className="font-mono text-xs text-ink-400 min-w-[6.5rem]">
               x {Math.round(c.xStart)}–{Math.round(c.xEnd)}
             </span>
-            <select value={c.role} onChange={(e) => setRole(i, e.target.value as ColumnRole)}>
+            <select
+              value={c.role}
+              onChange={(e) => setRole(i, e.target.value as ColumnRole)}
+              className="rounded-lg border border-ink-700 bg-ink-850 text-ink-100 px-2 py-1 text-sm focus:border-sage-300 focus:outline-none transition"
+            >
               {(Object.keys(ROLE_LABELS) as ColumnRole[]).map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
               ))}

@@ -94,7 +94,7 @@ export function ZoneCanvas({
       ref={canvasRef}
       width={displayWidth}
       height={displayHeight}
-      style={{ border: '1px solid #ddd', cursor: 'crosshair', maxWidth: '100%' }}
+      style={{ border: '1px solid #272d3b', borderRadius: 8, cursor: 'crosshair', maxWidth: '100%', display: 'block' }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

@@ -74,14 +74,18 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Définir le template PDF</h2>
-          <button onClick={onClose} className="text-gray-500">✕</button>
+    <div className="fixed inset-0 bg-ink-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-ink-900 border border-ink-800 rounded-xl shadow-card max-w-4xl w-full max-h-[90vh] overflow-auto p-6 text-ink-100">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="display text-xl text-ink-50">Définir le template PDF</h2>
+          <button
+            onClick={onClose}
+            className="text-ink-400 hover:text-ink-100 transition text-lg leading-none px-2"
+            aria-label="Fermer"
+          >✕</button>
         </div>
         {needsTemplate.reason === 'no_text_layer' && (
-          <div className="bg-amber-100 border border-amber-300 text-amber-900 p-3 rounded mb-4 text-sm">
+          <div className="bg-clay-900/30 border border-clay-800/60 text-clay-200 p-3 rounded-lg mb-4 text-sm">
             Ce PDF semble être une image scannée. La sélection de zones fonctionne, mais l'extraction
             de lignes sera vide — l'OCR n'est pas encore disponible.
           </div>
@@ -89,8 +93,8 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'header' && (
           <>
-            <p className="mb-2 text-sm">
-              Étape 1/3 — Sélectionnez l'en-tête (utilisé pour reconnaître cette banque la prochaine fois).
+            <p className="mb-3 text-sm font-medium text-ink-100">
+              Étape 1/3 — Sélectionnez l'en-tête <span className="text-ink-400 font-normal">(utilisé pour reconnaître cette banque la prochaine fois)</span>.
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -99,15 +103,18 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               initialRect={headerRect}
               onChange={setHeaderRect}
             />
-            <div className="flex justify-end gap-2 mt-4">
-              <button className="px-3 py-1 border rounded" onClick={() => setStep('table')}>Suivant →</button>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                className="px-4 py-2 rounded-lg bg-sage-300 text-ink-950 font-medium hover:bg-sage-200 transition"
+                onClick={() => setStep('table')}
+              >Suivant →</button>
             </div>
           </>
         )}
 
         {step === 'table' && (
           <>
-            <p className="mb-2 text-sm">
+            <p className="mb-3 text-sm font-medium text-ink-100">
               Étape 2/3 — Sélectionnez le tableau des transactions.
             </p>
             <ZoneCanvas
@@ -117,14 +124,22 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               initialRect={tableRect}
               onChange={setTableRect}
             />
-            <label className="flex items-center gap-2 mt-3 text-sm">
-              <input type="checkbox" checked={tableRepeats} onChange={(e) => setTableRepeats(e.target.checked)} />
+            <label className="flex items-center gap-2 mt-4 text-sm text-ink-200">
+              <input
+                type="checkbox"
+                checked={tableRepeats}
+                onChange={(e) => setTableRepeats(e.target.checked)}
+                className="accent-sage-300"
+              />
               Le tableau se répète sur chaque page
             </label>
-            <div className="flex justify-between gap-2 mt-4">
-              <button className="px-3 py-1 border rounded" onClick={() => setStep('header')}>← Précédent</button>
+            <div className="flex justify-between gap-2 mt-5">
               <button
-                className="px-3 py-1 border rounded"
+                className="px-4 py-2 rounded-lg border border-ink-700 text-ink-200 hover:bg-ink-850 transition"
+                onClick={() => setStep('header')}
+              >← Précédent</button>
+              <button
+                className="px-4 py-2 rounded-lg bg-sage-300 text-ink-950 font-medium hover:bg-sage-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={!tableRect}
                 onClick={() => setStep('columns')}
               >Suivant →</button>
@@ -134,7 +149,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'columns' && tableRect && (
           <>
-            <p className="mb-2 text-sm">
+            <p className="mb-3 text-sm font-medium text-ink-100">
               Étape 3/3 — Étiquetez chaque colonne.
             </p>
             <ColumnMapper
@@ -146,25 +161,30 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               initialColumns={columns.length > 0 ? columns : null}
               onChange={setColumns}
             />
-            <div className="mt-4">
-              <label className="block text-sm mb-1">Nom du template</label>
+            <div className="mt-5">
+              <label className="block text-sm text-ink-200 mb-1.5">Nom du template</label>
               <input
-                className="border rounded px-2 py-1 w-full"
+                className="w-full rounded-lg border border-ink-700 bg-ink-850 text-ink-100 placeholder-ink-500 px-3 py-2 text-sm focus:border-sage-300 focus:outline-none transition"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="ex: BNP — Compte Chèques"
               />
             </div>
             {!columnsValid && (
-              <p className="text-amber-700 text-sm mt-2">
+              <p className="mt-3 text-sm text-clay-200">
                 Il faut exactement 1 colonne Date, 1 colonne Libellé, et soit 1 Montant (signé), soit 1 Débit + 1 Crédit.
               </p>
             )}
-            {err && <p className="text-red-700 text-sm mt-2">{err}</p>}
-            <div className="flex justify-between gap-2 mt-4">
-              <button className="px-3 py-1 border rounded" onClick={() => setStep('table')}>← Précédent</button>
+            {err && (
+              <p className="mt-3 text-sm text-clay-300">{err}</p>
+            )}
+            <div className="flex justify-between gap-2 mt-5">
               <button
-                className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                className="px-4 py-2 rounded-lg border border-ink-700 text-ink-200 hover:bg-ink-850 transition"
+                onClick={() => setStep('table')}
+              >← Précédent</button>
+              <button
+                className="px-4 py-2 rounded-lg bg-sage-300 text-ink-950 font-medium hover:bg-sage-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={!columnsValid || submitting || !label.trim()}
                 onClick={handleSubmit}
               >{submitting ? 'Import…' : 'Importer'}</button>
