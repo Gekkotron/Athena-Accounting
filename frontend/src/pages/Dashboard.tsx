@@ -53,7 +53,7 @@ export function Dashboard() {
         <div className="label">Solde net</div>
         {primary ? (
           <>
-            <div className={`display text-5xl md:text-7xl leading-[1.05] mt-2 ${amountSignClass(primary.total)}`}>
+            <div className={`display text-5xl md:text-7xl leading-[1.05] mt-2 tabular-nums ${amountSignClass(primary.total)}`}>
               {formatAmount(primary.total, primary.currency)}
             </div>
             <div className="text-sm text-ink-500 mt-3">
@@ -72,7 +72,7 @@ export function Dashboard() {
           {currencies.slice(1).map((c) => (
             <div key={c.currency} className="surface-soft px-4 py-3">
               <div className="label">{c.currency}</div>
-              <div className={`display text-xl mt-0.5 ${amountSignClass(c.total)}`}>
+              <div className={`display text-xl mt-0.5 tabular-nums ${amountSignClass(c.total)}`}>
                 {formatAmount(c.total, c.currency)}
               </div>
             </div>
