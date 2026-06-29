@@ -4,6 +4,8 @@ import { api, apiUpload, ApiError } from '../api/client';
 import type { Account, FileImport } from '../api/types';
 import { formatDateTime } from '../lib/format';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { submitPdf, type PdfImportNeedsTemplate, type PdfImportImported } from '../api/pdf-templates';
+import { PdfTemplateBuilder } from '../components/PdfTemplateBuilder/index';
 
 interface BackupResult {
   imported: {
@@ -37,6 +39,12 @@ export function Imports() {
   // Holds the parsed JSON between the user picking a file and confirming
   // the destructive import in the dialog.
   const [pendingImport, setPendingImport] = useState<unknown | null>(null);
+
+  // PDF-specific state
+  const [needsTpl, setNeedsTpl] = useState<PdfImportNeedsTemplate | null>(null);
+  const [lastImported, setLastImported] = useState<PdfImportImported | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfPending, setPdfPending] = useState(false);
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -81,9 +89,43 @@ export function Imports() {
     },
   });
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
+
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      const resolvedAccountId = accountId !== '' ? accountId : 0;
+      if (!resolvedAccountId) {
+        setError('Veuillez sélectionner un compte pour importer un PDF.');
+        return;
+      }
+      setError(null);
+      setPdfError(null);
+      setLastImported(null);
+      setNeedsTpl(null);
+      setPdfPending(true);
+      try {
+        const r = await submitPdf(file, resolvedAccountId);
+        if (r.kind === 'imported') {
+          setLastImported(r);
+          qc.invalidateQueries({ queryKey: ['imports'] });
+          qc.invalidateQueries({ queryKey: ['transactions'] });
+          qc.invalidateQueries({ queryKey: ['accounts'] });
+          qc.invalidateQueries({ queryKey: ['reports'] });
+          qc.invalidateQueries({ queryKey: ['tri-groups'] });
+          setFile(null);
+          if (fileRef.current) fileRef.current.value = '';
+        } else {
+          setNeedsTpl(r);
+        }
+      } catch (err) {
+        setPdfError(err instanceof Error ? err.message : 'Erreur lors de l\'import PDF.');
+      } finally {
+        setPdfPending(false);
+      }
+      return;
+    }
+
     setError(null);
     upload.mutate({ file, accountId });
   };
@@ -156,7 +198,7 @@ export function Imports() {
         <div>
           <h1 className="page-title">Imports</h1>
           <p className="page-subtitle">
-            OFX (Latin-1/UTF-8) ou CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA).
+            OFX (Latin-1/UTF-8), CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA) ou PDF relevé bancaire.
           </p>
         </div>
       </div>
@@ -164,17 +206,19 @@ export function Imports() {
       <form onSubmit={submit} className="surface p-5 md:p-6">
         <div className="flex flex-col md:flex-row md:items-end gap-4">
           <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-            <label className="label">Fichier (.ofx · .qfx · .csv)</label>
+            <label className="label">Fichier (.ofx · .qfx · .csv · .pdf)</label>
             <input
               ref={fileRef}
               type="file"
-              accept=".ofx,.qfx,.csv"
+              accept=".ofx,.qfx,.csv,.pdf"
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
                 setError(null);
                 setLastResult(null);
+                setPdfError(null);
+                setLastImported(null);
               }}
-              disabled={upload.isPending}
+              disabled={upload.isPending || pdfPending}
               className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
             />
           </div>
@@ -193,8 +237,8 @@ export function Imports() {
             </select>
           </div>
 
-          <button className="btn-primary" disabled={!file || upload.isPending}>
-            {upload.isPending ? 'Import…' : 'Importer'}
+          <button className="btn-primary" disabled={!file || upload.isPending || pdfPending}>
+            {(upload.isPending || pdfPending) ? 'Import…' : 'Importer'}
           </button>
         </div>
       </form>
@@ -203,6 +247,58 @@ export function Imports() {
         <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-4 py-3 text-sm text-clay-200">
           {error}
         </div>
+      )}
+
+      {pdfError && (
+        <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-4 py-3 text-sm text-clay-200">
+          {pdfError}
+        </div>
+      )}
+
+      {lastImported && (
+        <div className="surface p-5">
+          <div className="label mb-2">Dernier import PDF</div>
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div>
+              <span className="display text-2xl text-ink-100">{lastImported.result.totalLines}</span>
+              <span className="text-ink-500 ml-2">lue{lastImported.result.totalLines !== 1 ? 's' : ''}</span>
+            </div>
+            <div>
+              <span className="display text-2xl text-sage-300">{lastImported.result.insertedCount}</span>
+              <span className="text-ink-500 ml-2">insérée{lastImported.result.insertedCount !== 1 ? 's' : ''}</span>
+            </div>
+            <div>
+              <span className="display text-2xl text-ink-400">{lastImported.result.dedupSkipped}</span>
+              <span className="text-ink-500 ml-2">dédupliquée{lastImported.result.dedupSkipped !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          {lastImported.skippedRows.length > 0 && (
+            <details className="mt-3 text-sm text-ink-400">
+              <summary className="cursor-pointer">{lastImported.skippedRows.length} ligne(s) ignorée(s)</summary>
+              <ul className="mt-2 space-y-1 font-mono text-xs">
+                {lastImported.skippedRows.map((s, i) => (
+                  <li key={i}><code>{s.rowText}</code> — {s.reason}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
+      {needsTpl && (
+        <PdfTemplateBuilder
+          needsTemplate={needsTpl}
+          onClose={() => setNeedsTpl(null)}
+          onImported={(r) => {
+            setNeedsTpl(null);
+            setLastImported(r);
+            qc.invalidateQueries({ queryKey: ['imports'] });
+            qc.invalidateQueries({ queryKey: ['transactions'] });
+            qc.invalidateQueries({ queryKey: ['accounts'] });
+            qc.invalidateQueries({ queryKey: ['reports'] });
+            qc.invalidateQueries({ queryKey: ['tri-groups'] });
+          }}
+        />
       )}
 
       {lastResult && (
