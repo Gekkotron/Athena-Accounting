@@ -139,6 +139,53 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // Soft-dedup detection: find transactions that share (account, date, amount)
+  // but have a different dedup_key — i.e. labels that differ enough to evade
+  // the strict UNIQUE constraint but match enough on identity to be plausible
+  // duplicates worth a human glance. Used by the Imports page to surface these
+  // after every import.
+  app.get('/api/transactions/duplicates', async (req, reply) => {
+    const q = req.query as { accountId?: string };
+    let accountIdFilter: number | null = null;
+    if (q.accountId) {
+      const n = Number(q.accountId);
+      if (!Number.isInteger(n) || n <= 0) {
+        return reply.code(400).send({ error: 'invalid accountId' });
+      }
+      accountIdFilter = n;
+    }
+    const rows = await db.execute(sql`
+      SELECT t.*
+      FROM transactions t
+      WHERE (t.account_id, t.date, t.amount) IN (
+        SELECT account_id, date, amount
+        FROM transactions
+        ${accountIdFilter !== null ? sql`WHERE account_id = ${accountIdFilter}` : sql``}
+        GROUP BY account_id, date, amount
+        HAVING count(*) >= 2 AND count(distinct dedup_key) >= 2
+      )
+      ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
+      ORDER BY t.account_id, t.date DESC, t.amount, t.id
+    `);
+    const groupsMap = new Map<string, Array<Record<string, unknown>>>();
+    for (const r of rows.rows as Array<Record<string, unknown>>) {
+      const key = `${r.account_id}|${r.date}|${r.amount}`;
+      const arr = groupsMap.get(key) ?? [];
+      arr.push(r);
+      groupsMap.set(key, arr);
+    }
+    const groups = Array.from(groupsMap.entries()).map(([k, txns]) => {
+      const [accId, date, amount] = k.split('|');
+      return {
+        accountId: Number(accId),
+        date,
+        amount,
+        transactions: txns,
+      };
+    });
+    return { groups };
+  });
+
   app.get('/api/transactions', async (req, reply) => {
     const parsed = ListQuery.safeParse(req.query);
     if (!parsed.success) {

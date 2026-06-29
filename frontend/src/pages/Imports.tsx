@@ -112,6 +112,7 @@ export function Imports() {
           qc.invalidateQueries({ queryKey: ['accounts'] });
           qc.invalidateQueries({ queryKey: ['reports'] });
           qc.invalidateQueries({ queryKey: ['tri-groups'] });
+          qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
           setFile(null);
           if (fileRef.current) fileRef.current.value = '';
         } else {
@@ -157,6 +158,21 @@ export function Imports() {
       setExporting(false);
     }
   };
+
+  // Soft-dup detection: groups of transactions sharing (account, date, amount)
+  // but with different dedup_keys. Surfaces after each import so the user can
+  // resolve labels-that-look-the-same-but-aren't (the OFX/PDF gap).
+  type DupGroup = {
+    accountId: number;
+    date: string;
+    amount: string;
+    transactions: Array<{ id: number; raw_label: string; normalized_label: string; source_file_id: number | null; category_id: number | null }>;
+  };
+  const dupsQ = useQuery({
+    queryKey: ['transaction-duplicates'],
+    queryFn: () => api<{ groups: DupGroup[] }>('/api/transactions/duplicates'),
+    refetchOnWindowFocus: false,
+  });
 
   // Cascading delete: removes the import row and all transactions that came
   // from it. Used to undo a bad import or replay an old PDF with the new label
@@ -496,6 +512,52 @@ export function Imports() {
         }}
         onCancel={cancelImport}
       />
+
+      {(dupsQ.data?.groups ?? []).length > 0 && (
+        <section>
+          <div className="section-rule mb-4">Possibles doublons</div>
+          <div className="surface p-5">
+            <p className="text-sm text-ink-300 mb-3">
+              Ces transactions partagent compte + date + montant mais ont des libellés différents.
+              Probable doublon entre un import OFX et un import PDF de la même transaction. Vérifiez et
+              supprimez la version en trop via la page <span className="display-italic">Transactions</span>.
+            </p>
+            <div className="table-scroll">
+              <table className="w-full text-sm">
+                <thead className="text-left">
+                  <tr className="border-b border-ink-800/70">
+                    <th className="px-4 py-3 label font-normal">Compte</th>
+                    <th className="px-4 py-3 label font-normal">Date</th>
+                    <th className="px-4 py-3 label font-normal text-right">Montant</th>
+                    <th className="px-4 py-3 label font-normal">Libellés en conflit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(dupsQ.data?.groups ?? []).map((g, gi) => (
+                    <tr key={`${g.accountId}-${g.date}-${g.amount}-${gi}`} className="border-b border-ink-800/40 last:border-0 align-top">
+                      <td className="px-4 py-2.5 text-ink-300">{accountName(g.accountId)}</td>
+                      <td className="px-4 py-2.5 text-ink-300 font-mono text-xs whitespace-nowrap">{g.date}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-ink-100">
+                        {Number(g.amount).toFixed(2).replace('.', ',')} €
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <ul className="space-y-1">
+                          {g.transactions.map((t) => (
+                            <li key={t.id} className="flex items-baseline gap-2">
+                              <code className="text-xs text-ink-500 min-w-[3.5rem]">#{t.id}</code>
+                              <span className="font-mono text-xs text-ink-100">{t.raw_label}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="section-rule mb-4">Historique</div>
