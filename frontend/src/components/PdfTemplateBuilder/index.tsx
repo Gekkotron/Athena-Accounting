@@ -5,7 +5,6 @@ import {
   type PdfImportNeedsTemplate,
   type PdfImportImported,
   type TemplateZones,
-  type ColumnRole,
 } from '../../api/pdf-templates.js';
 
 interface Props {
@@ -35,21 +34,13 @@ const PAINT_COLOR: Partial<Record<Step, string>> = {
   amount: '#e69782',
 };
 
-function suggestedColumn(
-  suggested: TemplateZones | null | undefined,
-  role: ColumnRole,
-  tableRect: PageRect | null,
-): PageRect | null {
-  if (!suggested || !tableRect) return null;
-  const c = suggested.columns.find((x) => x.role === role);
-  if (!c) return null;
-  return { x: c.xStart, y: tableRect.y, w: Math.max(c.xEnd - c.xStart, 1), h: tableRect.h };
-}
-
 export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props) {
   const firstPage = needsTemplate.pages[0]!;
   const [step, setStep] = useState<Step>('header');
 
+  // Header + table zones get a sensible default so the user has something to
+  // nudge if the heuristic already had a guess. Column rectangles start empty —
+  // the user paints every one from scratch.
   const [headerRect, setHeaderRect] = useState<PageRect>(
     needsTemplate.suggestedZones?.headerZone ?? {
       x: 0, y: 0, w: firstPage.widthPt, h: firstPage.heightPt * 0.15,
@@ -63,27 +54,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   const [tableRepeats, setTableRepeats] = useState<boolean>(
     needsTemplate.suggestedZones?.tableRepeatsPerPage ?? true,
   );
-  const [dateCol, setDateCol] = useState<PageRect | null>(
-    suggestedColumn(needsTemplate.suggestedZones, 'date', tableRect),
-  );
-  const [descCol, setDescCol] = useState<PageRect | null>(
-    suggestedColumn(needsTemplate.suggestedZones, 'description', tableRect),
-  );
-  const [amountMode, setAmountMode] = useState<AmountMode>(() => {
-    const hasPair =
-      needsTemplate.suggestedZones?.columns.some((c) => c.role === 'debit') &&
-      needsTemplate.suggestedZones?.columns.some((c) => c.role === 'credit');
-    return hasPair ? 'pair' : 'signed';
-  });
-  const [signedCol, setSignedCol] = useState<PageRect | null>(
-    suggestedColumn(needsTemplate.suggestedZones, 'amountSigned', tableRect),
-  );
-  const [debitCol, setDebitCol] = useState<PageRect | null>(
-    suggestedColumn(needsTemplate.suggestedZones, 'debit', tableRect),
-  );
-  const [creditCol, setCreditCol] = useState<PageRect | null>(
-    suggestedColumn(needsTemplate.suggestedZones, 'credit', tableRect),
-  );
+  const [dateCol, setDateCol] = useState<PageRect | null>(null);
+  const [descCol, setDescCol] = useState<PageRect | null>(null);
+  const [amountMode, setAmountMode] = useState<AmountMode>('signed');
+  const [signedCol, setSignedCol] = useState<PageRect | null>(null);
+  const [debitCol, setDebitCol] = useState<PageRect | null>(null);
+  const [creditCol, setCreditCol] = useState<PageRect | null>(null);
 
   const [label, setLabel] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
