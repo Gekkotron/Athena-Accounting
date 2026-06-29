@@ -8,11 +8,18 @@ interface Props {
   heightPt: number;
   initialRect: PageRect | null;
   displayMaxWidth?: number;
+  // Optional context rectangles drawn as dashed outlines underneath the
+  // user's paint rectangle. Used in the column-painting steps to show
+  // where the table zone lives, so the user has a target to draw inside.
+  referenceRects?: Array<{ rect: PageRect; label?: string; color?: string }>;
+  // Color used for the user's painted rectangle. Defaults to sage-300.
+  paintColor?: string;
   onChange: (rect: PageRect) => void;
 }
 
 export function ZoneCanvas({
-  pngBase64, widthPt, heightPt, initialRect, displayMaxWidth = 720, onChange,
+  pngBase64, widthPt, heightPt, initialRect, displayMaxWidth = 720,
+  referenceRects, paintColor = '#7dd3c0', onChange,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -40,8 +47,45 @@ export function ZoneCanvas({
     const ctx = cnv.getContext('2d')!;
     ctx.clearRect(0, 0, cnv.width, cnv.height);
     ctx.drawImage(img, 0, 0, cnv.width, cnv.height);
+
+    // Reference rectangles (dashed, behind the user's paint).
+    if (referenceRects) {
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.font = '600 11px "Hanken Grotesk Variable", system-ui, sans-serif';
+      ctx.textBaseline = 'bottom';
+      for (const r of referenceRects) {
+        const color = r.color ?? '#5b6478';
+        ctx.strokeStyle = color;
+        ctx.fillStyle = `${color}1a`; // ~10% alpha
+        ctx.fillRect(
+          r.rect.x * displayScale,
+          r.rect.y * displayScale,
+          r.rect.w * displayScale,
+          r.rect.h * displayScale,
+        );
+        ctx.strokeRect(
+          r.rect.x * displayScale,
+          r.rect.y * displayScale,
+          r.rect.w * displayScale,
+          r.rect.h * displayScale,
+        );
+        if (r.label) {
+          ctx.fillStyle = color;
+          ctx.fillText(
+            r.label,
+            r.rect.x * displayScale + 4,
+            r.rect.y * displayScale - 2,
+          );
+        }
+      }
+      ctx.restore();
+    }
+
+    // User's painted rectangle (solid stroke + fill).
     if (rect) {
-      ctx.strokeStyle = '#0a84ff';
+      ctx.strokeStyle = paintColor;
       ctx.lineWidth = 2;
       ctx.strokeRect(
         rect.x * displayScale,
@@ -49,7 +93,7 @@ export function ZoneCanvas({
         rect.w * displayScale,
         rect.h * displayScale,
       );
-      ctx.fillStyle = 'rgba(10,132,255,0.10)';
+      ctx.fillStyle = `${paintColor}33`; // ~20% alpha
       ctx.fillRect(
         rect.x * displayScale,
         rect.y * displayScale,
@@ -57,7 +101,7 @@ export function ZoneCanvas({
         rect.h * displayScale,
       );
     }
-  }, [imgReady, rect, displayScale]);
+  }, [imgReady, rect, displayScale, referenceRects, paintColor]);
 
   function toPagePt(ev: React.MouseEvent): { x: number; y: number } {
     const cnv = canvasRef.current!;
