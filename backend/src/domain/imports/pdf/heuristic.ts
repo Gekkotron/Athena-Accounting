@@ -2,6 +2,7 @@ import type { PdfPageText, PdfTextItem } from './text-extract.js';
 import type { TemplateZones, ColumnRole, ZoneRect } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
+import { truncateLabel } from './label.js';
 
 export interface HeuristicResult {
   zones: TemplateZones | null;
@@ -198,7 +199,9 @@ function extractRows(
     const descText = valueInColumn(r, descCol);
     if (!dateRaw) {
       if (descText && lastRow) {
-        lastRow.rawLabel = lastRow.rawLabel ? `${lastRow.rawLabel} - ${descText}` : descText;
+        lastRow.rawLabel = truncateLabel(
+          lastRow.rawLabel ? `${lastRow.rawLabel} - ${descText}` : descText,
+        );
       }
       continue;
     }
@@ -229,7 +232,13 @@ function extractRows(
       throw new Error('extractRows: invalid column set');
     }
 
-    const newRow: ParsedTransaction = { date, amount, rawLabel: descText, memo: null, fitid: null };
+    const newRow: ParsedTransaction = {
+      date,
+      amount,
+      rawLabel: truncateLabel(descText),
+      memo: null,
+      fitid: null,
+    };
     parsed.push(newRow);
     lastRow = newRow;
   }

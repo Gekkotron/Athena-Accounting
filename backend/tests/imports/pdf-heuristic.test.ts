@@ -81,6 +81,21 @@ describe('runHeuristic', () => {
     expect(result.rows[1]!.rawLabel).toBe('RESTAURANT 27 - CARTE 4964');
   });
 
+  it('caps rawLabel at 32 chars for OFX dedup consistency', () => {
+    const items: PdfTextItem[] = [
+      item('Date', 40, 200), item('Libellé', 120, 200), item('Montant', 480, 200),
+      item('15/01/2026', 40, 220),
+      item('CASTORAMA CARTE 7883 PAIEMENT MOB', 120, 220),
+      item('-42,30', 480, 220),
+                                   item('0107 KINGERSH1478/', 120, 232),
+      item('16/01/2026', 40, 250), item('A', 120, 250), item('-1,00', 480, 250),
+    ];
+    const result = runHeuristic([page(items)]);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]!.rawLabel).toBe('CASTORAMA CARTE 7883 PAIEMENT MO');
+    expect(result.rows[0]!.rawLabel.length).toBe(32);
+  });
+
   it('handles multi-page repeating tables', () => {
     const tableRows = (yStart: number) => [
       item('Date', 40, 200), item('Libellé', 120, 200), item('Montant', 480, 200),

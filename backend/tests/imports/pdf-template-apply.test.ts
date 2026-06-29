@@ -80,6 +80,19 @@ describe('applyTemplate', () => {
     expect(r.rows[2]!.rawLabel).toBe('SALAIRE');
   });
 
+  it('caps rawLabel at 32 chars for OFX dedup consistency', () => {
+    const pages = [page([
+      item('15/01/2026', 40, 220),
+      item('CASTORAMA CARTE 7883 PAIEMENT MOB', 120, 220),
+      item('-42,30', 480, 220),
+                                   item('0107 KINGERSH1478/', 120, 232),
+    ])];
+    const r = applyTemplate(pages, zones);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]!.rawLabel).toBe('CASTORAMA CARTE 7883 PAIEMENT MO');
+    expect(r.rows[0]!.rawLabel.length).toBe(32);
+  });
+
   it('handles debit/credit column pair', () => {
     const dcZones: TemplateZones = {
       ...zones,

@@ -2,6 +2,7 @@ import type { PdfPageText, PdfTextItem } from './text-extract.js';
 import type { TemplateZones } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
+import { truncateLabel } from './label.js';
 
 export interface ApplyResult {
   rows: ParsedTransaction[];
@@ -66,9 +67,11 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
         // (e.g. "CARTE 4964" under "MAGASIN U"). Otherwise it's a separator
         // or footer row — skip silently.
         if (descText && pageLastRow) {
-          pageLastRow.rawLabel = pageLastRow.rawLabel
-            ? `${pageLastRow.rawLabel} - ${descText}`
-            : descText;
+          pageLastRow.rawLabel = truncateLabel(
+            pageLastRow.rawLabel
+              ? `${pageLastRow.rawLabel} - ${descText}`
+              : descText,
+          );
         }
         continue;
       }
@@ -99,7 +102,13 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
         throw new Error('template: invalid amount column configuration');
       }
 
-      const newRow: ParsedTransaction = { date, amount, rawLabel: descText, memo: null, fitid: null };
+      const newRow: ParsedTransaction = {
+        date,
+        amount,
+        rawLabel: truncateLabel(descText),
+        memo: null,
+        fitid: null,
+      };
       rows.push(newRow);
       pageLastRow = newRow;
     }
