@@ -81,6 +81,21 @@ describe('runHeuristic', () => {
     expect(result.rows[1]!.rawLabel).toBe('RESTAURANT 27 - CARTE 4964');
   });
 
+  it('promotes the continuation to primary when the date row is a bank-prefix line', () => {
+    const items: PdfTextItem[] = [
+      item('Date', 40, 200), item('Libellé', 120, 200), item('Montant', 480, 200),
+      item('15/06/2026', 40, 220),
+      item('PAIEMENT CB 2506 LA BRESSE', 120, 220),
+      item('-42,30', 480, 220),
+                                   item('GREEN MOJO PAYWEB7883 PAIEMENT CB', 120, 232),
+      item('16/06/2026', 40, 250), item('A', 120, 250), item('-1,00', 480, 250),
+    ];
+    const result = runHeuristic([page(items)]);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]!.rawLabel).toBe('GREEN MOJO PAYWEB7883 PAIEMENT C');
+    expect(result.rows[0]!.rawLabel.length).toBe(32);
+  });
+
   it('caps rawLabel at 32 chars for OFX dedup consistency', () => {
     const items: PdfTextItem[] = [
       item('Date', 40, 200), item('Libellé', 120, 200), item('Montant', 480, 200),

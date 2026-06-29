@@ -80,6 +80,21 @@ describe('applyTemplate', () => {
     expect(r.rows[2]!.rawLabel).toBe('SALAIRE');
   });
 
+  it('promotes the continuation to primary when the date row is a bank-prefix line', () => {
+    // CIC layout: "PAIEMENT CB ..." sits on the date row, "GREEN MOJO ..." is
+    // the continuation. The bank's OFX export uses the merchant — mirror that.
+    const pages = [page([
+      item('15/06/2026', 40, 220),
+      item('PAIEMENT CB 2506 LA BRESSE', 120, 220),
+      item('-42,30', 480, 220),
+                                   item('GREEN MOJO PAYWEB7883 PAIEMENT CB', 120, 232),
+    ])];
+    const r = applyTemplate(pages, zones);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]!.rawLabel).toBe('GREEN MOJO PAYWEB7883 PAIEMENT C');
+    expect(r.rows[0]!.rawLabel.length).toBe(32);
+  });
+
   it('caps rawLabel at 32 chars for OFX dedup consistency', () => {
     const pages = [page([
       item('15/01/2026', 40, 220),

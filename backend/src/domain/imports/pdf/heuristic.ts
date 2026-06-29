@@ -2,7 +2,7 @@ import type { PdfPageText, PdfTextItem } from './text-extract.js';
 import type { TemplateZones, ColumnRole, ZoneRect } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
-import { truncateLabel } from './label.js';
+import { mergeContinuationLabel, truncateLabel } from './label.js';
 
 export interface HeuristicResult {
   zones: TemplateZones | null;
@@ -199,9 +199,7 @@ function extractRows(
     const descText = valueInColumn(r, descCol);
     if (!dateRaw) {
       if (descText && lastRow) {
-        lastRow.rawLabel = truncateLabel(
-          lastRow.rawLabel ? `${lastRow.rawLabel} - ${descText}` : descText,
-        );
+        lastRow.rawLabel = mergeContinuationLabel(lastRow.rawLabel, descText);
       }
       continue;
     }
