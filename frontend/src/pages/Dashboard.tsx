@@ -153,12 +153,15 @@ export function Dashboard() {
                   <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
                     <div>
                       ouvert {formatDate(a.openingDate)} ·{' '}
-                      {formatAmount(opening, a.currency)}
+                      <span className="private">{formatAmount(opening, a.currency)}</span>
                     </div>
                     {hasMovement ? (
                       <div className={delta > 0 ? 'text-sage-400 mt-0.5' : 'text-clay-300 mt-0.5'}>
-                        {delta > 0 ? '+' : ''}
-                        {formatAmount(delta, a.currency)} depuis l'ouverture
+                        <span className="private">
+                          {delta > 0 ? '+' : ''}
+                          {formatAmount(delta, a.currency)}
+                        </span>{' '}
+                        depuis l'ouverture
                       </div>
                     ) : (
                       <div className="text-ink-600 mt-0.5 not-italic">aucun mouvement depuis</div>

@@ -142,6 +142,7 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
               fontFamily="Fraunces Variable, Georgia, serif"
               fontStyle="italic"
               style={{ transition: 'fill 200ms' }}
+              className={hovered === null ? 'private' : undefined}
             >
               {hovered !== null
                 ? `${Math.round(segments[hovered]!.fraction * 100)}%`
@@ -155,6 +156,7 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
                 fill="#7c8493"
                 fontSize="10"
                 fontFamily="JetBrains Mono Variable, monospace"
+                className="private"
               >
                 {formatAmount(segments[hovered]!.amount, currency)}
               </text>

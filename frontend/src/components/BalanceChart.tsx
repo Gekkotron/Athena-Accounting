@@ -193,6 +193,7 @@ export function BalanceChart({ points, currency, height = 240 }: Props) {
               fontSize="11"
               textAnchor="end"
               fontFamily="JetBrains Mono Variable, monospace"
+              className="private"
             >
               {formatAmountCompact(t, currency)}
             </text>

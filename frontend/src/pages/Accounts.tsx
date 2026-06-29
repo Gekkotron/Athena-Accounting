@@ -349,7 +349,8 @@ export function Accounts() {
                     {formatAmount(a.currentBalance ?? '0', a.currency)}
                   </div>
                   <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
-                    ouvert {formatDate(a.openingDate)} · {formatAmount(a.openingBalance, a.currency)}
+                    ouvert {formatDate(a.openingDate)} ·{' '}
+                    <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>
                   </div>
                   {/* Top-right cluster: reorder up/down + modify */}
                   <div className="absolute top-3 right-3 flex items-center gap-1">
