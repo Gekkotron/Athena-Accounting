@@ -174,6 +174,25 @@ export function Imports() {
     refetchOnWindowFocus: false,
   });
 
+  // Delete a single transaction directly from the doublons panel. Confirms inline
+  // before firing to avoid an accidental click on the trash icon.
+  const [confirmDeleteTxId, setConfirmDeleteTxId] = useState<number | null>(null);
+  const [dupDeleteError, setDupDeleteError] = useState<string | null>(null);
+  const deleteTxMut = useMutation({
+    mutationFn: (id: number) =>
+      api<{ ok: true }>(`/api/transactions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      setConfirmDeleteTxId(null);
+      setDupDeleteError(null);
+    },
+    onError: (err: ApiError) => setDupDeleteError(err.message),
+  });
+
   // Cascading delete: removes the import row and all transactions that came
   // from it. Used to undo a bad import or replay an old PDF with the new label
   // logic without leaving duplicates behind.
@@ -542,13 +561,40 @@ export function Imports() {
                       </td>
                       <td className="px-4 py-2.5">
                         <ul className="space-y-1">
-                          {g.transactions.map((t) => (
-                            <li key={t.id} className="flex items-baseline gap-2">
-                              <code className="text-xs text-ink-500 min-w-[3.5rem]">#{t.id}</code>
-                              <span className="font-mono text-xs text-ink-100">{t.raw_label}</span>
-                            </li>
-                          ))}
+                          {g.transactions.map((t) => {
+                            const confirming = confirmDeleteTxId === t.id;
+                            return (
+                              <li key={t.id} className="flex items-baseline gap-2">
+                                <code className="text-xs text-ink-500 min-w-[3.5rem]">#{t.id}</code>
+                                <span className="font-mono text-xs text-ink-100 flex-1">{t.raw_label}</span>
+                                {confirming ? (
+                                  <span className="flex items-center gap-1">
+                                    <button
+                                      className="px-2 py-0.5 rounded-md bg-clay-300 text-ink-950 text-xs font-medium hover:bg-clay-200 transition disabled:opacity-40"
+                                      disabled={deleteTxMut.isPending}
+                                      onClick={() => deleteTxMut.mutate(t.id)}
+                                    >{deleteTxMut.isPending ? '…' : 'Supprimer'}</button>
+                                    <button
+                                      className="px-2 py-0.5 rounded-md border border-ink-700 text-ink-200 text-xs hover:bg-ink-850 transition"
+                                      onClick={() => { setConfirmDeleteTxId(null); setDupDeleteError(null); }}
+                                    >Annuler</button>
+                                  </span>
+                                ) : (
+                                  <button
+                                    className="text-ink-500 hover:text-clay-300 transition px-1"
+                                    onClick={() => { setConfirmDeleteTxId(t.id); setDupDeleteError(null); }}
+                                    title={`Supprimer la transaction #${t.id}`}
+                                    aria-label="Supprimer cette transaction"
+                                  >🗑</button>
+                                )}
+                              </li>
+                            );
+                          })}
                         </ul>
+                        {dupDeleteError && confirmDeleteTxId !== null &&
+                          g.transactions.some((t) => t.id === confirmDeleteTxId) && (
+                            <p className="mt-2 text-xs text-clay-300">{dupDeleteError}</p>
+                          )}
                       </td>
                     </tr>
                   ))}
