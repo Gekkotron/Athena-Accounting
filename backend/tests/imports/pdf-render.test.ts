@@ -21,7 +21,9 @@ describe('renderPagesToPng', () => {
     const pages = await renderPagesToPng(buf);
     expect(pages).toHaveLength(2);
     expect(pages[0]!.pageIndex).toBe(0);
+    expect(pages[1]!.pageIndex).toBe(1);
     expect(pages[0]!.widthPt).toBeCloseTo(595, 0);     // A4 width in points
+    expect(pages[0]!.heightPt).toBeCloseTo(842, 0);    // A4 height in points
     expect(pages[0]!.pngBase64.length).toBeGreaterThan(1000);
     expect(pages[0]!.pngBase64.startsWith('iVBORw0KGgo')).toBe(true);   // PNG magic in base64
   });
