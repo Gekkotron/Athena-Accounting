@@ -319,15 +319,15 @@ export function Transactions() {
                         {formatAmount(t.amount, acct?.currency ?? 'EUR')}
                       </td>
                       <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                        <div className="inline-flex gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+                        <div className="inline-flex gap-0.5">
                           <button
                             onClick={() => setModalTx(t)}
-                            className="p-1.5 rounded text-ink-500 hover:text-ink-100 hover:bg-ink-900 transition"
+                            className="p-1.5 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition"
                             title="Modifier"
                             aria-label="Modifier"
                           >
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden>
-                              <path d="M2 9l6-6 2 2-6 6L2 11V9z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                              <path d="M2 10l6-6 2 2-6 6L2 12V10z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
                             </svg>
                           </button>
                           <button
@@ -335,12 +335,12 @@ export function Transactions() {
                               setDeleteError(null);
                               setDeletingTx(t);
                             }}
-                            className="p-1.5 rounded text-ink-500 hover:text-clay-300 hover:bg-ink-900 transition"
+                            className="p-1.5 rounded text-ink-600 hover:text-clay-300 hover:bg-ink-900 transition"
                             title="Supprimer"
                             aria-label="Supprimer"
                           >
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden>
-                              <path d="M3 4h7M5 4V2.5h3V4M4 4l0.7 7h3.6L9 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                              <path d="M3 4h8M5.5 4V2.5h3V4M4 4l0.7 8h4.6L10 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           </button>
                         </div>
