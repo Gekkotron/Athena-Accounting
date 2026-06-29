@@ -4,6 +4,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -46,7 +47,7 @@ export const transferDirectionEnum = pgEnum('transfer_direction', [
   'incoming',
 ]);
 
-export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv']);
+export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf']);
 
 // ---------------------------------------------------------------------------
 // users  —  single-user auth (login basique, self-hosted)
@@ -209,5 +210,43 @@ export const transactions = pgTable(
     idxAccountDate: index('transactions_account_date_idx').on(t.accountId, t.date),
     idxTransferGroup: index('transactions_transfer_group_idx').on(t.transferGroupId),
     idxCategory: index('transactions_category_idx').on(t.categoryId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// pdf_statement_templates — one row per learned bank layout, keyed by
+// content fingerprint (SHA-256 of PDF text items).
+// ---------------------------------------------------------------------------
+
+export const pdfStatementTemplates = pgTable('pdf_statement_templates', {
+  id: serial('id').primaryKey(),
+  fingerprint: text('fingerprint').notNull().unique(),
+  label: text('label').notNull(),
+  zones: jsonb('zones').notNull(),
+  source: text('source').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// pdf_import_drafts — parked uploads, expires after 24 hours.
+// The user paints zones on the UI, which fires a POST to finalize the template.
+// ---------------------------------------------------------------------------
+
+export const pdfImportDrafts = pgTable(
+  'pdf_import_drafts',
+  {
+    id: serial('id').primaryKey(),
+    accountId: integer('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    pdfBytes: text('pdf_bytes').notNull(),
+    textItems: jsonb('text_items').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    idxExpires: index('pdf_import_drafts_expires_at_idx').on(t.expiresAt),
   }),
 );
