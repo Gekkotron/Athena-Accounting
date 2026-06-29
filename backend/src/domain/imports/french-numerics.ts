@@ -2,6 +2,9 @@ export function parseFrenchDate(s: string): string {
   const m = s.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})$/);
   if (!m) throw new Error(`invalid French date: ${JSON.stringify(s)}`);
   let [, d, mo, y] = m;
+  const day = Number(d), month = Number(mo);
+  if (month < 1 || month > 12) throw new Error(`invalid French date: ${JSON.stringify(s)}`);
+  if (day < 1 || day > 31) throw new Error(`invalid French date: ${JSON.stringify(s)}`);
   if (y!.length === 2) y = (Number(y) >= 70 ? '19' : '20') + y;
   return `${y}-${mo!.padStart(2, '0')}-${d!.padStart(2, '0')}`;
 }
