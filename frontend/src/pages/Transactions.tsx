@@ -446,14 +446,14 @@ function TransactionModal({
     if (!open) return;
     if (transaction) {
       setAccountId(transaction.accountId);
-      setDate(transaction.date.slice(0, 10));
+      setDate(formatDate(transaction.date.slice(0, 10)));
       setAmount(transaction.amount);
       setRawLabel(transaction.rawLabel);
       setCategoryId(transaction.categoryId ?? '');
       setNotes(transaction.notes ?? '');
     } else {
       setAccountId(accounts[0]?.id ?? '');
-      setDate(today);
+      setDate(todayFr);
       setAmount('');
       setRawLabel('');
       setCategoryId('');
