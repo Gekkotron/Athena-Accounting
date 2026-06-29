@@ -145,7 +145,21 @@ export async function applyTemplateAndImport(opts: {
     (err as any).code = 'draft_expired';
     throw err;
   }
-  const buf = Buffer.from(draft.pdfBytes as string, 'base64');
+  // The column SHOULD be TEXT holding a base64 string (migration 0004 aligns
+  // the runtime shape with the schema). Defensive Buffer handling stays as a
+  // safety net so a regression surfaces with a clear message rather than a
+  // mystery "Invalid PDF structure" from pdfjs.
+  const stored = draft.pdfBytes as unknown;
+  const b64 = typeof stored === 'string' ? stored : (stored as Buffer).toString('utf8');
+  const buf = Buffer.from(b64, 'base64');
+  if (buf.length < 4 || buf.subarray(0, 4).toString('latin1') !== '%PDF') {
+    const head = buf.subarray(0, 8).toString('hex');
+    const err = new Error(
+      `stored draft is not a valid PDF (got first bytes ${head}); ` +
+      `re-upload the file or check migration 0004_pdf_bytes_to_text has been applied`,
+    );
+    throw err;
+  }
   const pages = await extractText(buf);
   const { rows, skippedRows } = applyTemplate(pages, opts.zones);
   if (rows.length === 0) {
