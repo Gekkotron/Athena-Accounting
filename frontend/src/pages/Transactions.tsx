@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { Account, Category, Transaction } from '../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../lib/format';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface Filters {
   accountId?: number;
@@ -51,7 +52,10 @@ export function Transactions() {
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
-  const [showNewTx, setShowNewTx] = useState(false);
+  // null means "create"; a Transaction means "edit"; undefined means "closed".
+  const [modalTx, setModalTx] = useState<Transaction | null | undefined>(undefined);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Whenever the search input changes, route it to either `amount` or
   // `search`. We never send both at once.
@@ -105,6 +109,19 @@ export function Transactions() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   });
 
+  const deleteTransaction = useMutation({
+    mutationFn: (id: number) => api(`/api/transactions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      setDeletingTx(null);
+      setDeleteError(null);
+    },
+    onError: (err: ApiError) => setDeleteError(err.message),
+  });
+
   const accounts = accountsQ.data?.accounts ?? [];
   const categories = categoriesQ.data?.categories ?? [];
   const txs = txQ.data?.transactions ?? [];
@@ -128,7 +145,7 @@ export function Transactions() {
           <button className="btn-secondary md:hidden" onClick={() => setShowFilters((s) => !s)}>
             {showFilters ? 'Masquer' : 'Filtres'}
           </button>
-          <button className="btn-primary" onClick={() => setShowNewTx(true)}>
+          <button className="btn-primary" onClick={() => setModalTx(null)}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -230,12 +247,13 @@ export function Transactions() {
                 <th className="px-4 py-3 label font-normal">Catégorie</th>
                 <th className="px-4 py-3 label font-normal hidden md:table-cell">Notes</th>
                 <Th sort="amount" filters={filters} setFilters={setFilters} setOffset={setOffset} align="right">Montant</Th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {txs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-ink-500 display-italic">
+                  <td colSpan={7} className="px-4 py-10 text-center text-ink-500 display-italic">
                     {txQ.isLoading ? 'Chargement…' : 'Aucune transaction.'}
                   </td>
                 </tr>
@@ -243,7 +261,7 @@ export function Transactions() {
                 txs.map((t) => {
                   const acct = accountById.get(t.accountId);
                   return (
-                    <tr key={t.id} className="border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
+                    <tr key={t.id} className="group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
                       <td className="px-4 py-2.5 text-ink-300 whitespace-nowrap font-mono text-xs">{formatDate(t.date)}</td>
                       <td className="px-4 py-2.5 text-ink-400 whitespace-nowrap hidden sm:table-cell">{acct?.name ?? '?'}</td>
                       <td className="px-4 py-2.5 text-ink-100">
@@ -300,6 +318,33 @@ export function Transactions() {
                       <td className={`px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums ${amountSignClass(t.amount)}`}>
                         {formatAmount(t.amount, acct?.currency ?? 'EUR')}
                       </td>
+                      <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                        <div className="inline-flex gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+                          <button
+                            onClick={() => setModalTx(t)}
+                            className="p-1.5 rounded text-ink-500 hover:text-ink-100 hover:bg-ink-900 transition"
+                            title="Modifier"
+                            aria-label="Modifier"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden>
+                              <path d="M2 9l6-6 2 2-6 6L2 11V9z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteError(null);
+                              setDeletingTx(t);
+                            }}
+                            className="p-1.5 rounded text-ink-500 hover:text-clay-300 hover:bg-ink-900 transition"
+                            title="Supprimer"
+                            aria-label="Supprimer"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden>
+                              <path d="M3 4h7M5 4V2.5h3V4M4 4l0.7 7h3.6L9 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
@@ -323,33 +368,68 @@ export function Transactions() {
         </div>
       </div>
 
-      <NewTransactionModal
-        open={showNewTx}
-        onClose={() => setShowNewTx(false)}
+      <TransactionModal
+        // modalTx undefined = closed; null = create; Transaction = edit.
+        open={modalTx !== undefined}
+        transaction={modalTx ?? null}
+        onClose={() => setModalTx(undefined)}
         accounts={accounts}
         categories={categories}
+      />
+
+      <ConfirmDialog
+        open={!!deletingTx}
+        title={
+          deletingTx
+            ? `Supprimer la transaction « ${truncate(deletingTx.rawLabel, 40)} » ?`
+            : ''
+        }
+        description={
+          <>
+            Cette action est <span className="display-italic">irréversible</span>. Si la
+            transaction fait partie d'un virement interne, la jambe miroir est délinkée
+            (transfer_group_id mis à null) pour ne pas devenir invisible dans les agrégats.
+          </>
+        }
+        confirmLabel="Supprimer la transaction"
+        destructive
+        busy={deleteTransaction.isPending}
+        error={deleteError}
+        onConfirm={() => deletingTx && deleteTransaction.mutate(deletingTx.id)}
+        onCancel={() => {
+          setDeletingTx(null);
+          setDeleteError(null);
+        }}
       />
     </div>
   );
 }
 
-{/* ---- Manual transaction form modal ---- */}
+function truncate(s: string, n: number): string {
+  return s.length <= n ? s : s.slice(0, n - 1) + '…';
+}
 
-function NewTransactionModal({
+{/* ---- Create / edit transaction modal ---- */}
+
+function TransactionModal({
   open,
+  transaction,
   onClose,
   accounts,
   categories,
 }: {
   open: boolean;
+  // null = create mode; populated = edit mode.
+  transaction: Transaction | null;
   onClose: () => void;
   accounts: Account[];
   categories: Category[];
 }) {
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
+  const isEdit = !!transaction;
 
-  const [accountId, setAccountId] = useState<number | ''>(accounts[0]?.id ?? '');
+  const [accountId, setAccountId] = useState<number | ''>('');
   const [date, setDate] = useState(today);
   const [amount, setAmount] = useState('');
   const [rawLabel, setRawLabel] = useState('');
@@ -357,19 +437,28 @@ function NewTransactionModal({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Re-seed defaults whenever the modal opens.
+  // Re-seed defaults / draft from the target transaction whenever the modal
+  // opens or the target changes.
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (transaction) {
+      setAccountId(transaction.accountId);
+      setDate(transaction.date.slice(0, 10));
+      setAmount(transaction.amount);
+      setRawLabel(transaction.rawLabel);
+      setCategoryId(transaction.categoryId ?? '');
+      setNotes(transaction.notes ?? '');
+    } else {
       setAccountId(accounts[0]?.id ?? '');
       setDate(today);
       setAmount('');
       setRawLabel('');
       setCategoryId('');
       setNotes('');
-      setError(null);
     }
+    setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, transaction]);
 
   useEffect(() => {
     if (!open) return;
@@ -379,6 +468,13 @@ function NewTransactionModal({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['transactions'] });
+    qc.invalidateQueries({ queryKey: ['accounts'] });
+    qc.invalidateQueries({ queryKey: ['reports'] });
+    qc.invalidateQueries({ queryKey: ['tri-groups'] });
+  };
 
   const create = useMutation({
     mutationFn: (input: {
@@ -394,10 +490,30 @@ function NewTransactionModal({
         json: input,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      invalidate();
+      onClose();
+    },
+    onError: (err: ApiError) => setError(err.message),
+  });
+
+  const update = useMutation({
+    mutationFn: (input: {
+      id: number;
+      patch: Partial<{
+        accountId: number;
+        date: string;
+        amount: string;
+        rawLabel: string;
+        categoryId: number | null;
+        notes: string | null;
+      }>;
+    }) =>
+      api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
+        method: 'PATCH',
+        json: input.patch,
+      }),
+    onSuccess: () => {
+      invalidate();
       onClose();
     },
     onError: (err: ApiError) => setError(err.message),
@@ -412,7 +528,6 @@ function NewTransactionModal({
       setError('Choisissez un compte.');
       return;
     }
-    // Accept French ("338,50 €") or canonical ("338.50") and normalise.
     const cleanedAmount = amount.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
     if (!/^-?\d+(\.\d{1,2})?$/.test(cleanedAmount)) {
       setError('Montant invalide. Format attendu : 338.50, -25,30, 1234, …');
@@ -422,15 +537,45 @@ function NewTransactionModal({
       setError('Le libellé est obligatoire.');
       return;
     }
-    create.mutate({
-      accountId,
-      date,
-      amount: cleanedAmount,
-      rawLabel: rawLabel.trim(),
-      categoryId: categoryId || null,
-      notes: notes.trim() || null,
-    });
+
+    if (isEdit && transaction) {
+      // Diff against the original so the PATCH only sends fields that changed.
+      const patch: Partial<{
+        accountId: number;
+        date: string;
+        amount: string;
+        rawLabel: string;
+        categoryId: number | null;
+        notes: string | null;
+      }> = {};
+      if (accountId !== transaction.accountId) patch.accountId = accountId;
+      if (date !== transaction.date.slice(0, 10)) patch.date = date;
+      if (cleanedAmount !== transaction.amount) patch.amount = cleanedAmount;
+      if (rawLabel.trim() !== transaction.rawLabel) patch.rawLabel = rawLabel.trim();
+      if ((categoryId || null) !== transaction.categoryId) {
+        patch.categoryId = categoryId || null;
+      }
+      const cleanedNotes = notes.trim() || null;
+      if (cleanedNotes !== transaction.notes) patch.notes = cleanedNotes;
+
+      if (Object.keys(patch).length === 0) {
+        onClose();
+        return;
+      }
+      update.mutate({ id: transaction.id, patch });
+    } else {
+      create.mutate({
+        accountId,
+        date,
+        amount: cleanedAmount,
+        rawLabel: rawLabel.trim(),
+        categoryId: categoryId || null,
+        notes: notes.trim() || null,
+      });
+    }
   };
+
+  const pending = create.isPending || update.isPending;
 
   return (
     <div
@@ -444,10 +589,13 @@ function NewTransactionModal({
         className="surface w-full max-w-lg p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="display text-xl text-ink-50 mb-1">Nouvelle transaction</div>
+        <div className="display text-xl text-ink-50 mb-1">
+          {isEdit ? 'Modifier la transaction' : 'Nouvelle transaction'}
+        </div>
         <div className="text-sm text-ink-400 mb-5">
-          Saisie manuelle. Le moteur de règles s'appliquera automatiquement si vous laissez
-          la catégorie vide.
+          {isEdit
+            ? 'Le dedup_key reste figé : un re-import du fichier source ne créera pas de doublon.'
+            : 'Saisie manuelle. Le moteur de règles s\'appliquera automatiquement si vous laissez la catégorie vide.'}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -533,11 +681,13 @@ function NewTransactionModal({
         )}
 
         <div className="flex justify-end gap-2 mt-6">
-          <button type="button" className="btn-ghost" onClick={onClose} disabled={create.isPending}>
+          <button type="button" className="btn-ghost" onClick={onClose} disabled={pending}>
             Annuler
           </button>
-          <button type="submit" className="btn-primary" disabled={create.isPending}>
-            {create.isPending ? 'Création…' : 'Créer la transaction'}
+          <button type="submit" className="btn-primary" disabled={pending}>
+            {pending
+              ? isEdit ? 'Enregistrement…' : 'Création…'
+              : isEdit ? 'Enregistrer' : 'Créer la transaction'}
           </button>
         </div>
       </form>

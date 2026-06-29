@@ -30,8 +30,12 @@ const ListQuery = z.object({
 });
 
 // All fields optional — the PATCH applies whichever ones are present, so the
-// frontend can update categoryId OR notes without sending the other.
+// frontend can update any subset without sending the others.
 const PatchBody = z.object({
+  accountId: z.number().int().positive().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
+  rawLabel: z.string().trim().min(1).max(512).optional(),
   categoryId: z.number().int().positive().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
@@ -214,25 +218,81 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     // Build the actual SET clause from the fields present in the patch.
     // category_source flips to 'manual' only when the categoryId itself is
     // touched — updating just a note shouldn't change provenance.
-    const updates: { categoryId?: number | null; categorySource?: 'manual'; notes?: string | null } = {};
+    // dedup_key stays static so re-imports of the source file still find the
+    // row (edits change content, not identity).
+    const updates: {
+      accountId?: number;
+      date?: string;
+      amount?: string;
+      rawLabel?: string;
+      normalizedLabel?: string;
+      categoryId?: number | null;
+      categorySource?: 'manual';
+      notes?: string | null;
+    } = {};
+    if ('accountId' in parsed.data && parsed.data.accountId !== undefined) {
+      updates.accountId = parsed.data.accountId;
+    }
+    if ('date' in parsed.data && parsed.data.date !== undefined) {
+      updates.date = parsed.data.date;
+    }
+    if ('amount' in parsed.data && parsed.data.amount !== undefined) {
+      updates.amount = Number(parsed.data.amount).toFixed(2);
+    }
+    if ('rawLabel' in parsed.data && parsed.data.rawLabel !== undefined) {
+      updates.rawLabel = parsed.data.rawLabel;
+      updates.normalizedLabel = normalizeLabel(parsed.data.rawLabel);
+    }
     if ('categoryId' in parsed.data) {
       updates.categoryId = parsed.data.categoryId ?? null;
       updates.categorySource = 'manual';
     }
     if ('notes' in parsed.data) {
       const raw = parsed.data.notes;
-      // Empty string → null, so we don't store useless whitespace.
       updates.notes = raw && raw.trim() ? raw : null;
     }
     if (Object.keys(updates).length === 0) {
       return reply.code(400).send({ error: 'no fields to update' });
     }
-    const [updated] = await db
-      .update(transactions)
-      .set(updates)
-      .where(eq(transactions.id, id))
-      .returning();
-    if (!updated) return reply.code(404).send({ error: 'not found' });
-    return { transaction: updated };
+
+    try {
+      const [updated] = await db
+        .update(transactions)
+        .set(updates)
+        .where(eq(transactions.id, id))
+        .returning();
+      if (!updated) return reply.code(404).send({ error: 'not found' });
+      return { transaction: updated };
+    } catch (err) {
+      if (isPgError(err) && err.code === '23503') {
+        return reply.code(400).send({ error: 'compte ou catégorie inconnu' });
+      }
+      throw err;
+    }
+  });
+
+  // Delete a single transaction. If the row is half of a linked internal
+  // transfer pair, also unlink the mirror leg so it doesn't silently become
+  // an "invisible" orphan (transfer_group_id IS NULL filters in the
+  // aggregates would otherwise hide it).
+  app.delete('/api/transactions/:id', async (req, reply) => {
+    const id = parseId(req, reply);
+    if (id === null) return;
+
+    const [existing] = await db
+      .select({ id: transactions.id, transferGroupId: transactions.transferGroupId })
+      .from(transactions)
+      .where(eq(transactions.id, id));
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+
+    if (existing.transferGroupId) {
+      await db
+        .update(transactions)
+        .set({ transferGroupId: null })
+        .where(eq(transactions.transferGroupId, existing.transferGroupId));
+    }
+
+    await db.delete(transactions).where(eq(transactions.id, id));
+    return { ok: true };
   });
 }
