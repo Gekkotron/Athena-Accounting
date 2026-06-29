@@ -43,6 +43,17 @@ describe('fingerprintHeader', () => {
     expect(fingerprintHeader(a)).toBe(fingerprintHeader(b));
   });
 
+  it('is independent of input array ordering', () => {
+    const items = [
+      item('BANQUE EXAMPLE', 40, 30),
+      item('Relevé de compte', 40, 60),
+      item('Période 01/01 - 31/01', 40, 90),
+    ];
+    const ordered = page(items);
+    const reversed = page([...items].reverse());
+    expect(fingerprintHeader(ordered)).toBe(fingerprintHeader(reversed));
+  });
+
   it('defaultHeaderZone returns the top 15% of the page', () => {
     const p = page([]);
     const z = defaultHeaderZone(p);
