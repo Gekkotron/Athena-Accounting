@@ -73,14 +73,16 @@
 html.privacy-on .display.tabular-nums,
 html.privacy-on .font-mono.tabular-nums,
 html.privacy-on .private {
-  /* Heavy blur + zero saturation: digit shapes melt into a soft monochrome
-     smudge so the magnitude can't be guessed from a glance. */
-  filter: blur(18px) saturate(0);
-  color: transparent;
-  text-shadow: 0 0 18px currentColor;
+  /* Heavy blur on the original colored text. Saturate(0) drops the sage/clay
+     hue so the colour can't hint at sign/magnitude. The previous attempt
+     used color:transparent + text-shadow currentColor, but currentColor
+     resolves to "transparent" too — the whole thing became invisible
+     rather than blurred. Keeping the text visibly coloured and just
+     blurring it heavily is the correct primitive. */
+  filter: blur(16px) saturate(0) brightness(0.75);
   user-select: none;
   -webkit-user-select: none;
-  transition: filter 220ms, color 220ms, text-shadow 220ms;
+  transition: filter 220ms;
 }
 
 @layer components {
