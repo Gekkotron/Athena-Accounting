@@ -73,10 +73,14 @@
 html.privacy-on .display.tabular-nums,
 html.privacy-on .font-mono.tabular-nums,
 html.privacy-on .private {
-  filter: blur(7px) saturate(0.5);
+  /* Heavy blur + zero saturation: digit shapes melt into a soft monochrome
+     smudge so the magnitude can't be guessed from a glance. */
+  filter: blur(18px) saturate(0);
+  color: transparent;
+  text-shadow: 0 0 18px currentColor;
   user-select: none;
   -webkit-user-select: none;
-  transition: filter 220ms;
+  transition: filter 220ms, color 220ms, text-shadow 220ms;
 }
 
 @layer components {
