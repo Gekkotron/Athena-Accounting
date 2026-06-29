@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { Account, Category, Transaction } from '../api/types';
-import { formatAmount, formatDate, amountSignClass } from '../lib/format';
+import { formatAmount, formatDate, amountSignClass, parseUserDate } from '../lib/format';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface Filters {
@@ -426,11 +426,14 @@ function TransactionModal({
   categories: Category[];
 }) {
   const qc = useQueryClient();
-  const today = new Date().toISOString().slice(0, 10);
+  // We hold the date in the FRENCH textual form (JJ/MM/AAAA) and parse to
+  // ISO only at submit time. This lets the user paste "14/07/2025"
+  // straight from a bank statement without fighting the picker.
+  const todayFr = formatDate(new Date().toISOString().slice(0, 10));
   const isEdit = !!transaction;
 
   const [accountId, setAccountId] = useState<number | ''>('');
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(todayFr);
   const [amount, setAmount] = useState('');
   const [rawLabel, setRawLabel] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
@@ -528,6 +531,11 @@ function TransactionModal({
       setError('Choisissez un compte.');
       return;
     }
+    const isoDate = parseUserDate(date);
+    if (!isoDate) {
+      setError('Date invalide. Format attendu : JJ/MM/AAAA (ex. 14/07/2025).');
+      return;
+    }
     const cleanedAmount = amount.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
     if (!/^-?\d+(\.\d{1,2})?$/.test(cleanedAmount)) {
       setError('Montant invalide. Format attendu : 338.50, -25,30, 1234, …');
@@ -549,7 +557,7 @@ function TransactionModal({
         notes: string | null;
       }> = {};
       if (accountId !== transaction.accountId) patch.accountId = accountId;
-      if (date !== transaction.date.slice(0, 10)) patch.date = date;
+      if (isoDate !== transaction.date.slice(0, 10)) patch.date = isoDate;
       if (cleanedAmount !== transaction.amount) patch.amount = cleanedAmount;
       if (rawLabel.trim() !== transaction.rawLabel) patch.rawLabel = rawLabel.trim();
       if ((categoryId || null) !== transaction.categoryId) {
@@ -566,7 +574,7 @@ function TransactionModal({
     } else {
       create.mutate({
         accountId,
-        date,
+        date: isoDate,
         amount: cleanedAmount,
         rawLabel: rawLabel.trim(),
         categoryId: categoryId || null,
@@ -618,12 +626,18 @@ function TransactionModal({
           <div>
             <label className="label mb-1.5 block">Date</label>
             <input
-              type="date"
-              className="input"
+              type="text"
+              inputMode="numeric"
+              className="input font-mono"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              placeholder="JJ/MM/AAAA"
               required
+              autoComplete="off"
             />
+            <div className="text-[11px] text-ink-500 mt-1">
+              Format JJ/MM/AAAA — collage direct depuis un relevé bancaire accepté.
+            </div>
           </div>
           <div>
             <label className="label mb-1.5 block">Montant</label>

@@ -20,6 +20,27 @@ export function formatAmountCompact(value: string | number, currency = 'EUR'): s
   }).format(n);
 }
 
+// Parse a user-entered date string into ISO YYYY-MM-DD. Accepts:
+//   "14/07/2025", "14-07-2025", "14.07.2025"  (French day-first)
+//   "14/7/25"                                  (2-digit year, '70+ → 19xx, else 20xx)
+//   "2025-07-14"                               (ISO, passthrough)
+// Returns null when the input can't be parsed.
+export function parseUserDate(input: string): string | null {
+  const s = input.trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})$/);
+  if (!m) return null;
+  const d = m[1]!;
+  const mo = m[2]!;
+  let y = m[3]!;
+  if (y.length === 2) y = (Number(y) >= 70 ? '19' : '20') + y;
+  // Sanity-check ranges so "32/01/2025" doesn't sneak through.
+  const dn = Number(d), mn = Number(mo);
+  if (mn < 1 || mn > 12 || dn < 1 || dn > 31) return null;
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
 export function formatDate(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
   const [y, m, d] = iso.split('T')[0]!.split('-');
