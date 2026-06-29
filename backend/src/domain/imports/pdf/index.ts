@@ -71,6 +71,16 @@ export async function importPdf(opts: {
   const h = runHeuristic(pages);
   if (h.confidence >= HEURISTIC_AUTO_THRESHOLD && h.zones) {
     validateZones(h.zones);
+    // Import FIRST. Only persist the heuristic template if rows actually landed —
+    // otherwise a runImport failure would leave a stale template pointing at this
+    // fingerprint and a retry would silently use it instead of re-running the
+    // heuristic.
+    const result = await runImport({
+      filename: opts.filename,
+      accountId: opts.accountId,
+      format: 'pdf',
+      prepared: h.rows,
+    });
     await db.insert(pdfStatementTemplates)
       .values({
         fingerprint,
@@ -79,12 +89,6 @@ export async function importPdf(opts: {
         source: 'heuristic',
       })
       .onConflictDoNothing({ target: pdfStatementTemplates.fingerprint });
-    const result = await runImport({
-      filename: opts.filename,
-      accountId: opts.accountId,
-      format: 'pdf',
-      prepared: h.rows,
-    });
     return { kind: 'imported', result, skippedRows: h.skippedRows };
   }
   const suggested = h.confidence >= HEURISTIC_SUGGEST_THRESHOLD ? h.zones : null;
@@ -149,6 +153,15 @@ export async function applyTemplateAndImport(opts: {
     (err as any).code = 'template_yielded_no_rows';
     throw err;
   }
+  // Import FIRST. If runImport throws, the template upsert and draft delete
+  // never happen — the draft stays alive (so the user can retry), and the
+  // template isn't created/overwritten on a failed run.
+  const result = await runImport({
+    filename: opts.label,
+    accountId: draft.accountId,
+    format: 'pdf',
+    prepared: rows,
+  });
   await db.insert(pdfStatementTemplates).values({
     fingerprint: draft.fingerprint,
     label: opts.label,
@@ -157,12 +170,6 @@ export async function applyTemplateAndImport(opts: {
   }).onConflictDoUpdate({
     target: pdfStatementTemplates.fingerprint,
     set: { label: opts.label, zones: opts.zones, source: 'interactive', updatedAt: sql`now()` },
-  });
-  const result = await runImport({
-    filename: opts.label,
-    accountId: draft.accountId,
-    format: 'pdf',
-    prepared: rows,
   });
   await db.delete(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));
   return { result, skippedRows };
