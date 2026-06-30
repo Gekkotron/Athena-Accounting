@@ -5,8 +5,13 @@
 // canonical normalization used both at import time (stored in
 // transactions.normalized_label) and as the grouping key downstream.
 
+// VIR INST and VIR SEPA are the same transfer with a different bank-side
+// label; collapse the modifier so both normalize to the same string.
+// Otherwise "VIR INST 12345 REF" and "VIR SEPA 12345 REF" stay distinct after
+// normalization and dodge the strict dedup constraint, only to resurface in
+// the soft-dedup panel for every dual-logged transfer.
 const PREFIX_RE =
-  /^(cb|carte|paiement|paiment|achat|vir(ement)?|prlv|prelvt|prelevement|cheque|chq|tip|retrait|dab)\s+/i;
+  /^(cb|carte|paiement|paiment|achat|vir(ement)?(\s+(inst(antan[eé])?|sepa))?|prlv|prelvt|prelevement|cheque|chq|tip|retrait|dab)\s+/i;
 
 // dd, dd/mm, dd/mm/yy, dd/mm/yyyy with / . or - as separators
 const DATE_RE = /\b\d{1,2}([\/.\-]\d{1,2}([\/.\-]\d{2,4})?)?\b/g;
