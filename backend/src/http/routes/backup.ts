@@ -32,6 +32,9 @@ const BackupBody = z.object({
       currency: z.string(),
       openingBalance: z.string(),
       openingDate: z.string(),
+      // Added later; optional so older backups that omit it still validate.
+      // Missing displayOrder defaults to 0 on import.
+      displayOrder: z.number().int().optional(),
     }),
   ),
   categories: z.array(
@@ -125,6 +128,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         currency: a.currency,
         openingBalance: a.openingBalance,
         openingDate: a.openingDate,
+        displayOrder: a.displayOrder,
       })),
       categories: cats.map((c) => ({
         name: c.name,
@@ -221,6 +225,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
             currency: a.currency,
             openingBalance: a.openingBalance,
             openingDate: a.openingDate,
+            displayOrder: a.displayOrder ?? 0,
           })
           .returning({ id: accounts.id });
         if (inserted) accountIdByName.set(a.name, inserted.id);
