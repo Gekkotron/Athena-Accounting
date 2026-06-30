@@ -28,7 +28,11 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     return { needsOnboarding: !(await hasUser()) };
   });
 
-  app.post('/api/onboarding/create', async (req, reply) => {
+  // Registration is open by design on a LAN-only install — rate limit so it
+  // can't be flooded if the URL ever leaks somewhere it shouldn't.
+  app.post('/api/onboarding/create', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     // Multi-user mode (migration 0007): the endpoint now accepts new
     // registrations after the first user. Behaves as "register" once the
     // initial onboarding is past. Open by design because the app is LAN-only;

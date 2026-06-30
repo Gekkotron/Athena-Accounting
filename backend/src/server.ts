@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
 import { env } from './env.js';
 import { pool } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
@@ -31,6 +32,14 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   });
 
   await app.register(multipart);
+  // Rate limiting. Global default is permissive (300 req/min) — the actual
+  // protection is the per-route config on /api/auth/login and
+  // /api/onboarding/create, which are stricter. Keyed on the client IP.
+  await app.register(rateLimit, {
+    global: false,
+    max: 300,
+    timeWindow: '1 minute',
+  });
   await app.register(authPlugin);
 
   // Public routes (no auth required to discover / complete onboarding, or log in).

@@ -29,7 +29,12 @@ function getDummyHash(): Promise<string> {
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/api/auth/login', async (req, reply) => {
+  // Login is the prime brute-force target. 10 attempts per IP per minute is
+  // enough for the legitimate "I mistyped my password three times" case while
+  // making automated guessing a non-starter.
+  app.post('/api/auth/login', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     const parsed = LoginBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input' });
