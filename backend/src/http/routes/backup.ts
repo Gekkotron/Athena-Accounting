@@ -170,9 +170,15 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
       })),
     };
 
-    const today = new Date().toISOString().slice(0, 10);
+    // Local-time stamp so multiple exports on the same day stay distinct in the
+    // download folder. Shape: athena-backup-YYYY-MM-DD-HHMMSS.json
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const stamp =
+      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+      `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     reply.header('Content-Type', 'application/json; charset=utf-8');
-    reply.header('Content-Disposition', `attachment; filename="athena-backup-${today}.json"`);
+    reply.header('Content-Disposition', `attachment; filename="athena-backup-${stamp}.json"`);
     return dump;
   });
 
