@@ -407,7 +407,11 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           categorySource: t.categorySource,
           transferGroupId: t.transferGroupId ?? null,
           sourceFileId: srcId,
-          notDuplicate: t.notDuplicate ?? false,
+          // Backup restores represent a known-good dataset the user has already
+          // lived with — mark every imported row as "not a duplicate" so the
+          // Possibles doublons panel starts empty after restore. Fresh imports
+          // (PDF / OFX / CSV) made later will still surface new suspect groups.
+          notDuplicate: true,
         });
         txCount++;
       }
