@@ -174,6 +174,21 @@ export function Imports() {
     refetchOnWindowFocus: false,
   });
 
+  // Mark every row in a doublons group as "not a duplicate". The group then
+  // disappears from the panel because BOOL_OR(NOT not_duplicate) goes false.
+  // If a NEW row with the same (account, date, amount) shows up later, the
+  // group re-appears so the user can re-evaluate.
+  const markNotDuplicateMut = useMutation({
+    mutationFn: (ids: number[]) =>
+      api<{ updated: number }>('/api/transactions/mark-not-duplicate', {
+        method: 'POST',
+        json: { ids },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+    },
+  });
+
   // Delete a single transaction directly from the doublons panel. Confirms inline
   // before firing to avoid an accidental click on the trash icon.
   const [confirmDeleteTxId, setConfirmDeleteTxId] = useState<number | null>(null);
@@ -549,6 +564,7 @@ export function Imports() {
                     <th className="px-4 py-3 label font-normal">Date</th>
                     <th className="px-4 py-3 label font-normal text-right">Montant</th>
                     <th className="px-4 py-3 label font-normal">Libellés en conflit</th>
+                    <th className="px-4 py-3 label font-normal text-right w-44">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -595,6 +611,16 @@ export function Imports() {
                           g.transactions.some((t) => t.id === confirmDeleteTxId) && (
                             <p className="mt-2 text-xs text-clay-300">{dupDeleteError}</p>
                           )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right align-top">
+                        <button
+                          className="text-xs text-sage-300 hover:text-sage-200 border border-sage-300/40 hover:border-sage-300 rounded-md px-2 py-1 transition disabled:opacity-40"
+                          disabled={markNotDuplicateMut.isPending}
+                          onClick={() => markNotDuplicateMut.mutate(g.transactions.map((t) => t.id))}
+                          title="Marquer chaque ligne du groupe comme validée — le groupe ne réapparaîtra que si une nouvelle ligne du même montant/date arrive plus tard."
+                        >
+                          ✓ Pas un doublon
+                        </button>
                       </td>
                     </tr>
                   ))}

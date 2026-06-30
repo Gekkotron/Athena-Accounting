@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { and, asc, desc, eq, gte, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { transactions } from '../../db/schema.js';
 import { normalizeLabel } from '../../domain/imports/normalize.js';
@@ -156,6 +156,9 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       }
       accountIdFilter = n;
     }
+    // Surface a group only when at least one of its rows is still unmarked.
+    // Once the user clicks "Ce n'est pas un doublon" on every row in the
+    // group, BOOL_OR(NOT not_duplicate) flips to false and the group is hidden.
     const rows = await db.execute(sql`
       SELECT t.*
       FROM transactions t
@@ -166,7 +169,9 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
           WHERE user_id = ${uid}
           ${accountIdFilter !== null ? sql`AND account_id = ${accountIdFilter}` : sql``}
           GROUP BY account_id, date, amount
-          HAVING count(*) >= 2 AND count(distinct dedup_key) >= 2
+          HAVING count(*) >= 2
+             AND count(distinct dedup_key) >= 2
+             AND BOOL_OR(NOT not_duplicate)
         )
       ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
       ORDER BY t.account_id, t.date DESC, t.amount, t.id
@@ -247,6 +252,33 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       transactions: rows,
       pagination: { total, limit: q.limit, offset: q.offset },
     };
+  });
+
+  // Batch-mark a set of transaction ids as "not a duplicate". Used by the
+  // Possibles doublons panel — clicking the group-level "Ce n'est pas un
+  // doublon" button posts every row id in that group at once. Scoped to the
+  // calling user so a malicious id list can't flip flags on someone else's
+  // rows.
+  app.post('/api/transactions/mark-not-duplicate', async (req, reply) => {
+    const uid = userId(req);
+    const body = req.body as { ids?: unknown };
+    if (!body || !Array.isArray(body.ids) || body.ids.length === 0) {
+      return reply.code(400).send({ error: 'ids must be a non-empty array of integers' });
+    }
+    const ids: number[] = [];
+    for (const v of body.ids) {
+      const n = Number(v);
+      if (!Number.isInteger(n) || n <= 0) {
+        return reply.code(400).send({ error: 'every id must be a positive integer' });
+      }
+      ids.push(n);
+    }
+    const updated = await db
+      .update(transactions)
+      .set({ notDuplicate: true })
+      .where(and(eq(transactions.userId, uid), inArray(transactions.id, ids)))
+      .returning({ id: transactions.id });
+    return { updated: updated.length };
   });
 
   app.get('/api/transactions/:id', async (req, reply) => {

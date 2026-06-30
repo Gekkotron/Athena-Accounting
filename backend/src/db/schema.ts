@@ -240,6 +240,9 @@ export const transactions = pgTable(
       onDelete: 'set null',
     }),
     importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+    // True when the user has reviewed the row in the "Possibles doublons" panel
+    // and confirmed it is NOT a duplicate of its same-date/same-amount neighbours.
+    notDuplicate: boolean('not_duplicate').notNull().default(false),
   },
   (t) => ({
     uqDedup: uniqueIndex('transactions_account_dedup_uq').on(t.accountId, t.dedupKey),
