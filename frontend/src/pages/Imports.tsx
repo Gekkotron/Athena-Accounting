@@ -15,6 +15,7 @@ interface BackupResult {
     rules: number;
     transferRules: number;
     transactions: number;
+    fileImports?: number;
   };
 }
 
@@ -493,6 +494,9 @@ export function Imports() {
                 {backupResult.imported.rules} règle(s) · {backupResult.imported.transferRules} transfer-rule(s) ·{' '}
                 {backupResult.imported.accountFilenamePatterns} motif(s) ·{' '}
                 {backupResult.imported.transactions} transaction(s)
+                {backupResult.imported.fileImports !== undefined && (
+                  <> · {backupResult.imported.fileImports} import(s)</>
+                )}
               </div>
             </div>
           )}
