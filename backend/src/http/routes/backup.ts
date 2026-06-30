@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import {
   accounts,
@@ -11,6 +11,7 @@ import {
   transactions,
   transferRules,
 } from '../../db/schema.js';
+import { userId } from '../plugins/auth.js';
 
 // Versioned envelope. Bump `version` when the shape changes in a non-additive
 // way — the importer refuses unknown versions outright.
@@ -89,18 +90,18 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
   // ---------------------------------------------------------------------------
-  // Export — emits a portable JSON dump that uses *natural keys* (account /
-  // category names) instead of numeric ids. This makes the file resilient to
-  // wipe + restore on the same instance, and also portable to a fresh instance.
+  // Export — emits a portable JSON dump using natural keys (account / category
+  // names). Multi-user safe: only the calling user's data is included.
   // ---------------------------------------------------------------------------
-  app.get('/api/backup/export', async (_req, reply) => {
+  app.get('/api/backup/export', async (req, reply) => {
+    const uid = userId(req);
     const [accs, cats, patterns, rls, trls, txs] = await Promise.all([
-      db.select().from(accounts),
-      db.select().from(categories),
-      db.select().from(accountFilenamePatterns),
-      db.select().from(rules),
-      db.select().from(transferRules),
-      db.select().from(transactions),
+      db.select().from(accounts).where(eq(accounts.userId, uid)),
+      db.select().from(categories).where(eq(categories.userId, uid)),
+      db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
+      db.select().from(rules).where(eq(rules.userId, uid)),
+      db.select().from(transferRules).where(eq(transferRules.userId, uid)),
+      db.select().from(transactions).where(eq(transactions.userId, uid)),
     ]);
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
@@ -176,16 +177,14 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ---------------------------------------------------------------------------
-  // Import — REPLACE semantics. Wipes the database (within a single
-  // transaction) and reinserts every row from the dump. If anything fails the
-  // whole thing rolls back, so a botched import never leaves the user in a
-  // half-restored state.
+  // Import — REPLACE semantics, scoped to the calling user only. Wipes only
+  // the caller's rows (via WHERE user_id = $uid) and reinserts every row from
+  // the dump with that user_id stamped. Other users' data is untouched.
   // ---------------------------------------------------------------------------
   app.post('/api/backup/import', {
-    // A year of transactions easily exceeds Fastify's 1 MiB default. 50 MiB
-    // is generous enough for a multi-year personal accounting history.
     bodyLimit: 50 * 1024 * 1024,
   }, async (req, reply) => {
+    const uid = userId(req);
     const parsed = BackupBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({
@@ -196,22 +195,21 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
     const dump = parsed.data;
 
     const result = await db.transaction(async (tx) => {
-      // Wipe in reverse dependency order. file_imports references accounts;
-      // transactions reference accounts + categories + file_imports.
-      await tx.delete(transactions);
-      await tx.delete(fileImports);
-      await tx.delete(rules);
-      await tx.delete(transferRules);
-      await tx.delete(accountFilenamePatterns);
-      await tx.delete(categories); // self-FK is ON DELETE SET NULL so cascades cleanly
-      await tx.delete(accounts);
+      // Wipe only THIS user's rows, in reverse dependency order.
+      await tx.delete(transactions).where(eq(transactions.userId, uid));
+      await tx.delete(fileImports).where(eq(fileImports.userId, uid));
+      await tx.delete(rules).where(eq(rules.userId, uid));
+      await tx.delete(transferRules).where(eq(transferRules.userId, uid));
+      await tx.delete(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid));
+      await tx.delete(categories).where(eq(categories.userId, uid));
+      await tx.delete(accounts).where(eq(accounts.userId, uid));
 
-      // Accounts — keep a name -> id map for the FK resolutions below.
       const accountIdByName = new Map<string, number>();
       for (const a of dump.accounts) {
         const [inserted] = await tx
           .insert(accounts)
           .values({
+            userId: uid,
             name: a.name,
             type: a.type,
             currency: a.currency,
@@ -222,14 +220,13 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         if (inserted) accountIdByName.set(a.name, inserted.id);
       }
 
-      // Categories — pass 1 without parent (forward references are common in
-      // a hierarchical setup), then pass 2 to wire parent_id.
       const categoryIdByName = new Map<string, number>();
       let defaultId: number | null = null;
       for (const c of dump.categories) {
         const [inserted] = await tx
           .insert(categories)
           .values({
+            userId: uid,
             name: c.name,
             kind: c.kind,
             color: c.color ?? null,
@@ -250,16 +247,15 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
             await tx
               .update(categories)
               .set({ parentId })
-              .where(eq(categories.id, childId));
+              .where(and(eq(categories.id, childId), eq(categories.userId, uid)));
           }
         }
       }
-      // Make sure a default "Divers" category exists — the rule engine relies
-      // on it as a fallback.
+      // Seed Divers if the dump didn't bring its own default.
       if (defaultId === null) {
         const [inserted] = await tx
           .insert(categories)
-          .values({ name: 'Divers', kind: 'neutral', isDefault: true })
+          .values({ userId: uid, name: 'Divers', kind: 'neutral', isDefault: true })
           .returning({ id: categories.id });
         if (inserted) {
           defaultId = inserted.id;
@@ -267,23 +263,23 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      // Filename patterns
       for (const p of dump.accountFilenamePatterns) {
         const accId = p.account ? accountIdByName.get(p.account) : undefined;
         if (!accId) continue;
         await tx.insert(accountFilenamePatterns).values({
+          userId: uid,
           pattern: p.pattern,
           accountId: accId,
           priority: p.priority,
         });
       }
 
-      // Rules — skip any that point at a category we couldn't resolve.
       let rulesInserted = 0;
       for (const r of dump.rules) {
         const catId = r.category ? categoryIdByName.get(r.category) : undefined;
         if (!catId) continue;
         await tx.insert(rules).values({
+          userId: uid,
           keyword: r.keyword,
           categoryId: catId,
           signConstraint: r.signConstraint,
@@ -294,12 +290,12 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         rulesInserted++;
       }
 
-      // Transfer rules — counterpart is optional.
       for (const r of dump.transferRules) {
         const counterpartId = r.counterpartAccount
           ? accountIdByName.get(r.counterpartAccount)
           : undefined;
         await tx.insert(transferRules).values({
+          userId: uid,
           keyword: r.keyword,
           direction: r.direction,
           counterpartAccountId: counterpartId ?? null,
@@ -307,14 +303,13 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      // Transactions — drop any that point at an unknown account (we don't
-      // want orphan rows). categoryId can be null safely.
       let txCount = 0;
       for (const t of dump.transactions) {
         const accId = accountIdByName.get(t.account);
         if (!accId) continue;
         const catId = t.category ? categoryIdByName.get(t.category) ?? null : null;
         await tx.insert(transactions).values({
+          userId: uid,
           accountId: accId,
           date: t.date,
           amount: t.amount,
