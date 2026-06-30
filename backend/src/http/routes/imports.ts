@@ -64,7 +64,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       }
       accountId = n;
     } else {
-      accountId = await resolveAccountFromFilename(filename);
+      accountId = await resolveAccountFromFilename(userId(req), filename);
     }
     if (!accountId) {
       return reply.code(400).send({
@@ -117,16 +117,26 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get('/api/imports', async () => {
-    const rows = await db.select().from(fileImports).orderBy(desc(fileImports.importedAt)).limit(100);
+  app.get('/api/imports', async (req) => {
+    const uid = userId(req);
+    const rows = await db
+      .select()
+      .from(fileImports)
+      .where(eq(fileImports.userId, uid))
+      .orderBy(desc(fileImports.importedAt))
+      .limit(100);
     const enriched = await Promise.all(rows.map(enrichImport));
     return { imports: enriched };
   });
 
   app.get('/api/imports/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
-    const [row] = await db.select().from(fileImports).where(eq(fileImports.id, id));
+    const [row] = await db
+      .select()
+      .from(fileImports)
+      .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
     return { fileImport: await enrichImport(row) };
   });
@@ -135,16 +145,17 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
   // source_file_id points to it. Wraps both deletes in a single transaction so
   // a partial failure can't leave orphan transactions with a dangling FK.
   app.delete('/api/imports/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
     const result = await db.transaction(async (tx) => {
       const txDeleted = await tx
         .delete(transactions)
-        .where(eq(transactions.sourceFileId, id))
+        .where(and(eq(transactions.sourceFileId, id), eq(transactions.userId, uid)))
         .returning({ id: transactions.id });
       const fiDeleted = await tx
         .delete(fileImports)
-        .where(eq(fileImports.id, id))
+        .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)))
         .returning({ id: fileImports.id });
       return { transactions: txDeleted.length, fileImport: fiDeleted.length };
     });
@@ -156,6 +167,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
   // app can compare it to its own computed balance. Either field may be null
   // (sent as null to clear) or a NUMERIC/DATE string.
   app.patch('/api/imports/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
     const body = req.body as { statedBalance?: string | null; statedBalanceDate?: string | null };
@@ -184,7 +196,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     const [row] = await db
       .update(fileImports)
       .set(updates)
-      .where(eq(fileImports.id, id))
+      .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)))
       .returning();
     if (!row) return reply.code(404).send({ error: 'not found' });
     return { fileImport: await enrichImport(row) };

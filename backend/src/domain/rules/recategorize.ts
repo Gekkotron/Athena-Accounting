@@ -1,9 +1,10 @@
-import { desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { categories, rules, transactions } from '../../db/schema.js';
 import { compileRule, firstMatch, type CompiledRule } from './matcher.js';
 
 export interface RecategorizeOptions {
+  userId: number;
   preserveManual: boolean;
 }
 
@@ -16,20 +17,20 @@ export interface RecategorizeResult {
 
 const BATCH = 500;
 
-async function loadCompiledRules(): Promise<CompiledRule[]> {
+async function loadCompiledRules(userId: number): Promise<CompiledRule[]> {
   const rs = await db
     .select()
     .from(rules)
-    .where(eq(rules.enabled, true))
+    .where(and(eq(rules.userId, userId), eq(rules.enabled, true)))
     .orderBy(desc(rules.priority), rules.id);
   return rs.map(compileRule);
 }
 
-async function loadDefaultCategoryId(): Promise<number | null> {
+async function loadDefaultCategoryId(userId: number): Promise<number | null> {
   const [d] = await db
     .select({ id: categories.id })
     .from(categories)
-    .where(eq(categories.isDefault, true))
+    .where(and(eq(categories.userId, userId), eq(categories.isDefault, true)))
     .limit(1);
   return d?.id ?? null;
 }
@@ -38,8 +39,8 @@ async function loadDefaultCategoryId(): Promise<number | null> {
 // Honors `preserveManual` — rows tagged category_source = 'manual' are left
 // alone when the flag is set (the default in the API).
 export async function recategorizeAll(opts: RecategorizeOptions): Promise<RecategorizeResult> {
-  const compiled = await loadCompiledRules();
-  const defaultId = await loadDefaultCategoryId();
+  const compiled = await loadCompiledRules(opts.userId);
+  const defaultId = await loadDefaultCategoryId(opts.userId);
 
   const txs = await db
     .select({
@@ -49,7 +50,7 @@ export async function recategorizeAll(opts: RecategorizeOptions): Promise<Recate
       categorySource: transactions.categorySource,
     })
     .from(transactions)
-    .where(isNull(transactions.transferGroupId));
+    .where(and(eq(transactions.userId, opts.userId), isNull(transactions.transferGroupId)));
 
   // Bucket per target category, so we can flush as IN(...) batched updates.
   const autoBuckets = new Map<number, number[]>();
@@ -125,10 +126,10 @@ export async function categorizeOne(
   return { categoryId: defaultId, source: 'default' };
 }
 
-export async function loadRuleEngine() {
+export async function loadRuleEngine(userId: number) {
   const [compiled, defaultId] = await Promise.all([
-    loadCompiledRules(),
-    loadDefaultCategoryId(),
+    loadCompiledRules(userId),
+    loadDefaultCategoryId(userId),
   ]);
   return { compiled, defaultId };
 }

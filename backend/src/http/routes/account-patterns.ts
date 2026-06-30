@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { eq, desc } from 'drizzle-orm';
+import { and, eq, desc } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accountFilenamePatterns } from '../../db/schema.js';
+import { userId } from '../plugins/auth.js';
 
 const CreateBody = z.object({
   pattern: z.string().trim().min(1).max(256),
@@ -26,16 +27,18 @@ function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
 export async function patternRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
-  app.get('/api/account-filename-patterns', async () => {
+  app.get('/api/account-filename-patterns', async (req) => {
+    const uid = userId(req);
     const rows = await db
       .select()
       .from(accountFilenamePatterns)
-      // Highest priority first (matches the order used by the import pipeline)
+      .where(eq(accountFilenamePatterns.userId, uid))
       .orderBy(desc(accountFilenamePatterns.priority));
     return { patterns: rows };
   });
 
   app.post('/api/account-filename-patterns', async (req, reply) => {
+    const uid = userId(req);
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
@@ -43,7 +46,7 @@ export async function patternRoutes(app: FastifyInstance): Promise<void> {
     try {
       const [created] = await db
         .insert(accountFilenamePatterns)
-        .values(parsed.data)
+        .values({ ...parsed.data, userId: uid })
         .returning();
       return reply.code(201).send({ pattern: created });
     } catch (err) {
@@ -55,6 +58,7 @@ export async function patternRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.put('/api/account-filename-patterns/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const parsed = UpdateBody.safeParse(req.body);
@@ -67,18 +71,19 @@ export async function patternRoutes(app: FastifyInstance): Promise<void> {
     const [updated] = await db
       .update(accountFilenamePatterns)
       .set(parsed.data)
-      .where(eq(accountFilenamePatterns.id, id))
+      .where(and(eq(accountFilenamePatterns.id, id), eq(accountFilenamePatterns.userId, uid)))
       .returning();
     if (!updated) return reply.code(404).send({ error: 'not found' });
     return { pattern: updated };
   });
 
   app.delete('/api/account-filename-patterns/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const [deleted] = await db
       .delete(accountFilenamePatterns)
-      .where(eq(accountFilenamePatterns.id, id))
+      .where(and(eq(accountFilenamePatterns.id, id), eq(accountFilenamePatterns.userId, uid)))
       .returning({ id: accountFilenamePatterns.id });
     if (!deleted) return reply.code(404).send({ error: 'not found' });
     return { ok: true };

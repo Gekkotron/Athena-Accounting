@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { hash, Algorithm } from '@node-rs/argon2';
 import { count } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { users } from '../../db/schema.js';
+import { categories, users } from '../../db/schema.js';
 
 // OWASP 2024 minimum for argon2id: 19 MiB memory, 2 iterations, parallelism 1.
 const ARGON2_OPTS = {
@@ -59,6 +59,16 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     if (!user) {
       return reply.code(500).send({ error: 'failed to create user' });
     }
+
+    // Seed the default "Divers" category so the rule engine has a fallback
+    // bucket for the new user's first imports. The first user got this from
+    // migration 0000_init.sql; subsequent users get it here.
+    await db.insert(categories).values({
+      userId: user.id,
+      name: 'Divers',
+      kind: 'expense',
+      isDefault: true,
+    }).onConflictDoNothing();
 
     req.session.userId = user.id;
     req.session.username = user.username;

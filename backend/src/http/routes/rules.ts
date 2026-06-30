@@ -1,9 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { rules } from '../../db/schema.js';
 import { recategorizeAll } from '../../domain/rules/recategorize.js';
+import { userId } from '../plugins/auth.js';
 
 const CreateBody = z.object({
   categoryId: z.number().int().positive(),
@@ -91,11 +92,12 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
   // Re-run the engine over the entire (non-transfer) history. Default keeps
   // manual choices safe — pass {"preserveManual": false} to overwrite them too.
   app.post('/api/recategorize', async (req, reply) => {
+    const uid = userId(req);
     const parsed = RecatBody.safeParse(req.body ?? {});
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
-    const result = await recategorizeAll(parsed.data);
+    const result = await recategorizeAll({ ...parsed.data, userId: uid });
     return result;
   });
 }

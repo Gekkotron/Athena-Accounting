@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { categories, rules, transactions } from '../../db/schema.js';
+import { userId } from '../plugins/auth.js';
 
 const GroupsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(100),
@@ -31,6 +32,7 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
   // Groups are returned most-frequent first so a handful of clicks can clear
   // the long tail.
   app.get('/api/tri/groups', async (req, reply) => {
+    const uid = userId(req);
     const parsed = GroupsQuery.safeParse(req.query);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
@@ -56,7 +58,8 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
         MAX(t.date)::text AS max_date
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id
-      WHERE t.transfer_group_id IS NULL
+      WHERE t.user_id = ${uid}
+        AND t.transfer_group_id IS NULL
         AND (t.category_id IS NULL OR c.is_default = TRUE OR t.category_source = 'default')
       GROUP BY t.normalized_label
       ORDER BY transaction_count DESC, t.normalized_label
@@ -68,7 +71,8 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
       SELECT COUNT(DISTINCT t.normalized_label)::int AS total
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id
-      WHERE t.transfer_group_id IS NULL
+      WHERE t.user_id = ${uid}
+        AND t.transfer_group_id IS NULL
         AND (t.category_id IS NULL OR c.is_default = TRUE OR t.category_source = 'default')
     `);
 
@@ -83,18 +87,19 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
   // imports get categorized automatically. category_source is set to 'manual'
   // (these are the user's deliberate choices).
   app.post('/api/tri/assign', async (req, reply) => {
+    const uid = userId(req);
     const parsed = AssignBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     const { groups, createRules } = parsed.data;
 
-    // Validate that all categories exist before touching anything.
+    // Validate that all categories exist AND belong to the current user.
     const wantedCategoryIds = Array.from(new Set(groups.map((g) => g.categoryId)));
     const cats = await db
       .select({ id: categories.id, kind: categories.kind })
       .from(categories)
-      .where(inArray(categories.id, wantedCategoryIds));
+      .where(and(eq(categories.userId, uid), inArray(categories.id, wantedCategoryIds)));
     if (cats.length !== wantedCategoryIds.length) {
       return reply.code(400).send({ error: 'one or more categoryId values do not exist' });
     }
@@ -111,6 +116,7 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
         .set({ categoryId: g.categoryId, categorySource: 'manual' })
         .where(
           and(
+            eq(transactions.userId, uid),
             eq(transactions.normalizedLabel, g.normalizedLabel),
             isNull(transactions.transferGroupId),
             or(
@@ -124,8 +130,6 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
       assigned += result.length;
 
       if (createRules) {
-        // Tie sign_constraint to the category kind so the new rule has the
-        // right semantics from the start.
         const kind = catKind.get(g.categoryId);
         const signConstraint =
           kind === 'expense'
@@ -135,6 +139,7 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
               : 'any';
 
         await db.insert(rules).values({
+          userId: uid,
           categoryId: g.categoryId,
           keyword: g.normalizedLabel,
           signConstraint,

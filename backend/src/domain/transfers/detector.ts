@@ -37,6 +37,7 @@ type Tx = PgTransaction<any, any, any>;
 
 export async function detectTransfers(
   tx: Tx,
+  userId: number,
   insertedTxIds: number[],
 ): Promise<TransferDetectionResult> {
   if (insertedTxIds.length === 0) return { linked: 0, legsAnnotated: 0 };
@@ -44,7 +45,7 @@ export async function detectTransfers(
   const allRules = await tx
     .select()
     .from(transferRules)
-    .where(eq(transferRules.enabled, true));
+    .where(and(eq(transferRules.userId, userId), eq(transferRules.enabled, true)));
 
   if (allRules.length === 0) return { linked: 0, legsAnnotated: 0 };
 
@@ -90,12 +91,12 @@ export async function detectTransfers(
       .from(transactions)
       .where(
         and(
+          eq(transactions.userId, userId),
           accountFilter,
           eq(transactions.amount, mirrorAmount),
           gte(transactions.date, windowStart),
           lte(transactions.date, windowEnd),
           isNull(transactions.transferGroupId),
-          // Don't match against the same row (in the rare case it's the only "mirror")
           ne(transactions.id, row.id),
         ),
       )

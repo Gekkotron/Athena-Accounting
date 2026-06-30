@@ -115,7 +115,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       // If the user didn't pick a category, run the same rule engine the
       // importer runs — keeps semantics consistent across creation paths.
       if (!v.categoryId) {
-        const { compiled, defaultId } = await loadRuleEngine();
+        const { compiled, defaultId } = await loadRuleEngine(userId(req));
         await categorizeOne(
           compiled,
           defaultId,

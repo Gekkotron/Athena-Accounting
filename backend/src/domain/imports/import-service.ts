@@ -27,10 +27,11 @@ export interface ImportResult {
 
 // Pick the destination account from the filename via the configured patterns.
 // Returns the highest-priority match; null when no pattern matches.
-export async function resolveAccountFromFilename(filename: string): Promise<number | null> {
+export async function resolveAccountFromFilename(userId: number, filename: string): Promise<number | null> {
   const patterns = await db
     .select()
     .from(accountFilenamePatterns)
+    .where(eq(accountFilenamePatterns.userId, userId))
     .orderBy(desc(accountFilenamePatterns.priority));
   const lower = filename.toLowerCase();
   for (const p of patterns) {
@@ -130,13 +131,13 @@ export async function runImport(opts: {
     // then skips them because the bucketing code below only processes rows
     // still in `insertedIds` that aren't linked.
     if (insertedIds.length > 0) {
-      await detectTransfers(tx, insertedIds);
+      await detectTransfers(tx, opts.userId, insertedIds);
     }
 
     // Apply the rule engine to freshly inserted rows. We do this *inside* the
     // import transaction so an import either lands fully categorized or not at all.
     if (insertedIds.length > 0) {
-      const { compiled, defaultId } = await loadRuleEngine();
+      const { compiled, defaultId } = await loadRuleEngine(opts.userId);
 
       const freshRows = await tx
         .select({

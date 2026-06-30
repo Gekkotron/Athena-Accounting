@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
+import { userId } from '../plugins/auth.js';
 
 const RangeQuery = z.object({
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -14,7 +15,8 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
 
   // Total balance grouped by currency. Multi-currency accounts are returned
   // separately (no auto-conversion).
-  app.get('/api/reports/balance', async () => {
+  app.get('/api/reports/balance', async (req) => {
+    const uid = userId(req);
     const rows = await db.execute<{
       currency: string;
       total: string;
@@ -31,6 +33,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         )::text AS total,
         COUNT(*)::int AS account_count
       FROM accounts a
+      WHERE a.user_id = ${uid}
       GROUP BY a.currency
       ORDER BY a.currency
     `);
@@ -42,6 +45,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   // ARE included here — they affect per-account balances even though they're
   // neutral overall.
   app.get('/api/reports/timeseries', async (req, reply) => {
+    const uid = userId(req);
     const parsed = RangeQuery.safeParse(req.query);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
@@ -65,8 +69,9 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
           SUM(t.amount) AS delta
         FROM transactions t
         JOIN accounts a ON a.id = t.account_id
-        ${fromDate ? sql`WHERE t.date >= ${fromDate}` : sql``}
-        ${toDate ? sql`${fromDate ? sql`AND` : sql`WHERE`} t.date <= ${toDate}` : sql``}
+        WHERE t.user_id = ${uid}
+          ${fromDate ? sql`AND t.date >= ${fromDate}` : sql``}
+          ${toDate ? sql`AND t.date <= ${toDate}` : sql``}
         GROUP BY t.account_id, a.currency, bucket
       ),
       with_opening AS (
@@ -77,6 +82,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
           to_char(a.opening_date::timestamp, 'YYYY-MM-DD') AS bucket,
           a.opening_balance AS delta
         FROM accounts a
+        WHERE a.user_id = ${uid}
         UNION ALL
         SELECT account_id, currency, 'tx' AS kind, bucket, delta FROM per_bucket
       )
@@ -103,6 +109,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   // expenses (we just return everything and let the UI filter — keeps the API
   // simple).
   app.get('/api/reports/categories', async (req, reply) => {
+    const uid = userId(req);
     const parsed = RangeQuery.safeParse(req.query);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
@@ -126,7 +133,8 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         COUNT(*)::int AS transaction_count
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id
-      WHERE t.transfer_group_id IS NULL
+      WHERE t.user_id = ${uid}
+        AND t.transfer_group_id IS NULL
         ${fromDate ? sql`AND t.date >= ${fromDate}` : sql``}
         ${toDate ? sql`AND t.date <= ${toDate}` : sql``}
       GROUP BY c.id, c.name, c.kind, month
