@@ -85,9 +85,34 @@ const BackupBody = z.object({
       category: z.string().nullable().optional(),
       categorySource,
       transferGroupId: z.string().nullable().optional(),
+      // Natural-key reference to a fileImports row in the same backup.
+      // Shape: "<filename>|<importedAt-ISO>". Missing means "no source file".
+      sourceFileKey: z.string().nullable().optional(),
+      // Validated as "not a duplicate" via the Possibles doublons panel.
+      // Optional for backward compatibility with pre-fix exports.
+      notDuplicate: z.boolean().optional(),
     }),
   ),
+  // Audit trail of past imports — the rows that power the Imports → Historique
+  // table. Optional for backward compatibility with pre-fix exports.
+  fileImports: z.array(
+    z.object({
+      account: z.string(),
+      filename: z.string(),
+      format: z.enum(['ofx', 'csv', 'pdf']),
+      importedAt: z.string(),
+      totalLines: z.number().int(),
+      insertedCount: z.number().int(),
+      dedupSkipped: z.number().int(),
+      statedBalance: z.string().nullable().optional(),
+      statedBalanceDate: z.string().nullable().optional(),
+    }),
+  ).optional(),
 });
+
+function fileImportKey(filename: string, importedAtISO: string): string {
+  return `${filename}|${importedAtISO}`;
+}
 
 export async function backupRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -98,17 +123,19 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
   // ---------------------------------------------------------------------------
   app.get('/api/backup/export', async (req, reply) => {
     const uid = userId(req);
-    const [accs, cats, patterns, rls, trls, txs] = await Promise.all([
+    const [accs, cats, patterns, rls, trls, txs, fimps] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
       db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
       db.select().from(rules).where(eq(rules.userId, uid)),
       db.select().from(transferRules).where(eq(transferRules.userId, uid)),
       db.select().from(transactions).where(eq(transactions.userId, uid)),
+      db.select().from(fileImports).where(eq(fileImports.userId, uid)),
     ]);
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
     const categoryById = new Map(cats.map((c) => [c.id, c]));
+    const fileImportById = new Map(fimps.map((f) => [f.id, f]));
 
     const dump = {
       version: VERSION,
@@ -121,6 +148,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         transferRules: trls.length,
         transactions: txs.length,
         accountFilenamePatterns: patterns.length,
+        fileImports: fimps.length,
       },
       accounts: accs.map((a) => ({
         name: a.name,
@@ -158,19 +186,35 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           : null,
         enabled: r.enabled,
       })),
-      transactions: txs.map((t) => ({
-        account: accountById.get(t.accountId)?.name ?? null,
-        date: t.date,
-        amount: t.amount,
-        rawLabel: t.rawLabel,
-        normalizedLabel: t.normalizedLabel,
-        memo: t.memo,
-        notes: t.notes,
-        fitid: t.fitid,
-        dedupKey: t.dedupKey,
-        category: t.categoryId ? categoryById.get(t.categoryId)?.name ?? null : null,
-        categorySource: t.categorySource,
-        transferGroupId: t.transferGroupId,
+      transactions: txs.map((t) => {
+        const src = t.sourceFileId ? fileImportById.get(t.sourceFileId) : undefined;
+        return {
+          account: accountById.get(t.accountId)?.name ?? null,
+          date: t.date,
+          amount: t.amount,
+          rawLabel: t.rawLabel,
+          normalizedLabel: t.normalizedLabel,
+          memo: t.memo,
+          notes: t.notes,
+          fitid: t.fitid,
+          dedupKey: t.dedupKey,
+          category: t.categoryId ? categoryById.get(t.categoryId)?.name ?? null : null,
+          categorySource: t.categorySource,
+          transferGroupId: t.transferGroupId,
+          sourceFileKey: src ? fileImportKey(src.filename, src.importedAt.toISOString()) : null,
+          notDuplicate: t.notDuplicate,
+        };
+      }),
+      fileImports: fimps.map((f) => ({
+        account: accountById.get(f.accountId)?.name ?? null,
+        filename: f.filename,
+        format: f.format,
+        importedAt: f.importedAt.toISOString(),
+        totalLines: f.totalLines,
+        insertedCount: f.insertedCount,
+        dedupSkipped: f.dedupSkipped,
+        statedBalance: f.statedBalance,
+        statedBalanceDate: f.statedBalanceDate,
       })),
     };
 
@@ -314,11 +358,40 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
+      // file_imports — restore the Imports → Historique audit trail. Keep a
+      // natural-key → new-id map so transactions can re-link via source_file_id.
+      const fileImportIdByKey = new Map<string, number>();
+      let fileImportsInserted = 0;
+      for (const f of dump.fileImports ?? []) {
+        const accId = accountIdByName.get(f.account);
+        if (!accId) continue;
+        const [inserted] = await tx
+          .insert(fileImports)
+          .values({
+            userId: uid,
+            accountId: accId,
+            filename: f.filename,
+            format: f.format,
+            importedAt: new Date(f.importedAt),
+            totalLines: f.totalLines,
+            insertedCount: f.insertedCount,
+            dedupSkipped: f.dedupSkipped,
+            statedBalance: f.statedBalance ?? null,
+            statedBalanceDate: f.statedBalanceDate ?? null,
+          })
+          .returning({ id: fileImports.id });
+        if (inserted) {
+          fileImportIdByKey.set(fileImportKey(f.filename, f.importedAt), inserted.id);
+          fileImportsInserted++;
+        }
+      }
+
       let txCount = 0;
       for (const t of dump.transactions) {
         const accId = accountIdByName.get(t.account);
         if (!accId) continue;
         const catId = t.category ? categoryIdByName.get(t.category) ?? null : null;
+        const srcId = t.sourceFileKey ? fileImportIdByKey.get(t.sourceFileKey) ?? null : null;
         await tx.insert(transactions).values({
           userId: uid,
           accountId: accId,
@@ -333,6 +406,8 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           categoryId: catId,
           categorySource: t.categorySource,
           transferGroupId: t.transferGroupId ?? null,
+          sourceFileId: srcId,
+          notDuplicate: t.notDuplicate ?? false,
         });
         txCount++;
       }
@@ -345,6 +420,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           rules: rulesInserted,
           transferRules: dump.transferRules.length,
           transactions: txCount,
+          fileImports: fileImportsInserted,
         },
       };
     });
