@@ -9,6 +9,7 @@ import {
 } from '../../domain/imports/import-service.js';
 import { importPdf, applyTemplateAndImport } from '../../domain/imports/pdf/index.js';
 import type { TemplateZones } from '../../domain/imports/pdf/zones.js';
+import { userId } from '../plugins/auth.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -71,12 +72,14 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    const uid = userId(req);
+
     if (format === 'pdf') {
       if (buffer.byteLength > PDF_MAX_BYTES) {
         return reply.code(413).send({ code: 'pdf_too_large', error: 'PDF exceeds 10MB limit' });
       }
       try {
-        const r = await importPdf({ filename, accountId, buffer });
+        const r = await importPdf({ filename, accountId, userId: uid, buffer });
         if (r.kind === 'imported') return reply.code(201).send(r);
         return reply.code(200).send(r);
       } catch (err: any) {
@@ -90,7 +93,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     try {
-      const result = await runImport({ filename, accountId, format, buffer });
+      const result = await runImport({ filename, accountId, userId: uid, format, buffer });
       return reply.code(201).send(result);
     } catch (err) {
       app.log.error({ err, filename }, 'import failed');

@@ -46,3 +46,13 @@ export const authPlugin = fp(async function authPlugin(app: FastifyInstance) {
 
   app.decorate('requireAuth', requireAuth);
 });
+
+// Safe accessor for the session's user id from inside any route handler that
+// sits behind app.requireAuth. The pre-handler hook guarantees session.userId
+// is set before this runs; the runtime guard catches misuse where a route
+// forgot to add the requireAuth pre-handler.
+export function userId(req: FastifyRequest): number {
+  const id = req.session.userId;
+  if (!id) throw new Error('userId() called without an authenticated session');
+  return id;
+}

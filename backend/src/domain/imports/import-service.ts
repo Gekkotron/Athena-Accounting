@@ -56,6 +56,7 @@ function parseFile(buf: Buffer, format: ImportFormat): ParsedTransaction[] {
 export async function runImport(opts: {
   filename: string;
   accountId: number;
+  userId: number;
   format: ImportFormat;
   buffer?: Buffer;
   prepared?: ParsedTransaction[];
@@ -66,6 +67,7 @@ export async function runImport(opts: {
     const [fileImport] = await tx
       .insert(fileImports)
       .values({
+        userId: opts.userId,
         filename: opts.filename,
         accountId: opts.accountId,
         format: opts.format,
@@ -94,6 +96,7 @@ export async function runImport(opts: {
       const result = await tx
         .insert(transactions)
         .values({
+          userId: opts.userId,
           accountId: opts.accountId,
           date: p.date,
           amount: p.amount,

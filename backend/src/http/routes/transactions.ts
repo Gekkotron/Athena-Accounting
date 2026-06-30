@@ -6,6 +6,7 @@ import { transactions } from '../../db/schema.js';
 import { normalizeLabel } from '../../domain/imports/normalize.js';
 import { computeDedupKey } from '../../domain/imports/dedup.js';
 import { categorizeOne, loadRuleEngine } from '../../domain/rules/recategorize.js';
+import { userId } from '../plugins/auth.js';
 
 const ListQuery = z.object({
   accountId: z.coerce.number().int().positive().optional(),
@@ -145,6 +146,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   // duplicates worth a human glance. Used by the Imports page to surface these
   // after every import.
   app.get('/api/transactions/duplicates', async (req, reply) => {
+    const uid = userId(req);
     const q = req.query as { accountId?: string };
     let accountIdFilter: number | null = null;
     if (q.accountId) {
@@ -157,13 +159,15 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     const rows = await db.execute(sql`
       SELECT t.*
       FROM transactions t
-      WHERE (t.account_id, t.date, t.amount) IN (
-        SELECT account_id, date, amount
-        FROM transactions
-        ${accountIdFilter !== null ? sql`WHERE account_id = ${accountIdFilter}` : sql``}
-        GROUP BY account_id, date, amount
-        HAVING count(*) >= 2 AND count(distinct dedup_key) >= 2
-      )
+      WHERE t.user_id = ${uid}
+        AND (t.account_id, t.date, t.amount) IN (
+          SELECT account_id, date, amount
+          FROM transactions
+          WHERE user_id = ${uid}
+          ${accountIdFilter !== null ? sql`AND account_id = ${accountIdFilter}` : sql``}
+          GROUP BY account_id, date, amount
+          HAVING count(*) >= 2 AND count(distinct dedup_key) >= 2
+        )
       ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
       ORDER BY t.account_id, t.date DESC, t.amount, t.id
     `);
@@ -187,13 +191,14 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/api/transactions', async (req, reply) => {
+    const uid = userId(req);
     const parsed = ListQuery.safeParse(req.query);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
     }
     const q = parsed.data;
 
-    const where: SQL[] = [];
+    const where: SQL[] = [eq(transactions.userId, uid)];
     if (q.accountId) where.push(eq(transactions.accountId, q.accountId));
     if (q.categoryId) where.push(eq(transactions.categoryId, q.categoryId));
     if (q.fromDate) where.push(gte(transactions.date, q.fromDate));
@@ -245,9 +250,13 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/api/transactions/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
-    const [row] = await db.select().from(transactions).where(eq(transactions.id, id));
+    const [row] = await db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
     return { transaction: row };
   });
@@ -256,6 +265,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   // endpoint flips category_source to 'manual' — this is the flag the
   // retroactive recategorizer respects when `preserveManual: true`.
   app.patch('/api/transactions/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const parsed = PatchBody.safeParse(req.body);
@@ -306,7 +316,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       const [updated] = await db
         .update(transactions)
         .set(updates)
-        .where(eq(transactions.id, id))
+        .where(and(eq(transactions.id, id), eq(transactions.userId, uid)))
         .returning();
       if (!updated) return reply.code(404).send({ error: 'not found' });
       return { transaction: updated };
@@ -326,20 +336,21 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     const id = parseId(req, reply);
     if (id === null) return;
 
+    const uid = userId(req);
     const [existing] = await db
       .select({ id: transactions.id, transferGroupId: transactions.transferGroupId })
       .from(transactions)
-      .where(eq(transactions.id, id));
+      .where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
     if (!existing) return reply.code(404).send({ error: 'not found' });
 
     if (existing.transferGroupId) {
       await db
         .update(transactions)
         .set({ transferGroupId: null })
-        .where(eq(transactions.transferGroupId, existing.transferGroupId));
+        .where(and(eq(transactions.transferGroupId, existing.transferGroupId), eq(transactions.userId, uid)));
     }
 
-    await db.delete(transactions).where(eq(transactions.id, id));
+    await db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
     return { ok: true };
   });
 }

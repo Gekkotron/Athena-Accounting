@@ -15,6 +15,11 @@ export function Login() {
   });
 
   const isOnboarding = status.data?.needsOnboarding ?? false;
+  // Even after the first user exists, the registration endpoint is open so a
+  // second person on the LAN can create their own account. The form toggles
+  // between "se connecter" and "créer un compte" via this flag.
+  const [registerMode, setRegisterMode] = useState(false);
+  const isRegister = isOnboarding || registerMode;
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +49,7 @@ export function Login() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (isOnboarding) {
+    if (isRegister) {
       if (password.length < 8) {
         setError('Le mot de passe doit faire au moins 8 caractères.');
         return;
@@ -76,11 +81,13 @@ export function Login() {
         <div className="surface p-7 md:p-8">
           <div className="mb-6">
             <h1 className="text-lg font-semibold text-ink-50 mb-1">
-              {isOnboarding ? 'Première utilisation' : 'Bon retour'}
+              {isOnboarding ? 'Première utilisation' : isRegister ? 'Nouveau compte' : 'Bon retour'}
             </h1>
             <p className="text-sm text-ink-400">
               {isOnboarding
                 ? 'Créez votre identifiant et votre mot de passe pour commencer.'
+                : isRegister
+                ? 'Choisissez un identifiant et un mot de passe. Vos données seront totalement séparées des autres utilisateurs.'
                 : 'Connectez-vous pour accéder à vos comptes.'}
             </p>
           </div>
@@ -104,12 +111,12 @@ export function Login() {
                 className="input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete={isOnboarding ? 'new-password' : 'current-password'}
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
                 required
-                minLength={isOnboarding ? 8 : 1}
+                minLength={isRegister ? 8 : 1}
               />
             </div>
-            {isOnboarding && (
+            {isRegister && (
               <div>
                 <label className="label mb-1.5 block">Confirmer</label>
                 <input
@@ -131,9 +138,33 @@ export function Login() {
             )}
 
             <button className="btn-primary w-full" disabled={submitting}>
-              {submitting ? 'Patientez…' : isOnboarding ? 'Créer le compte' : 'Se connecter'}
+              {submitting ? 'Patientez…' : isRegister ? 'Créer le compte' : 'Se connecter'}
             </button>
           </form>
+
+          {!isOnboarding && (
+            <div className="mt-5 text-center text-sm text-ink-400">
+              {registerMode ? (
+                <>
+                  Vous avez déjà un compte ?{' '}
+                  <button
+                    type="button"
+                    className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
+                    onClick={() => { setRegisterMode(false); setError(null); }}
+                  >Se connecter</button>
+                </>
+              ) : (
+                <>
+                  Pas encore de compte ?{' '}
+                  <button
+                    type="button"
+                    className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
+                    onClick={() => { setRegisterMode(true); setError(null); }}
+                  >Créer un compte</button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-6 text-center text-[11px] text-ink-500">

@@ -70,25 +70,36 @@ export const users = pgTable('users', {
 // per currency until an explicit FX-rate table is introduced.
 // ---------------------------------------------------------------------------
 
-export const accounts = pgTable('accounts', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull().unique(),
-  type: text('type').notNull(),
-  currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
-  openingBalance: numeric('opening_balance', { precision: 14, scale: 2 })
-    .notNull()
-    .default('0'),
-  openingDate: date('opening_date').notNull(),
-  // User-controlled display order. Lower values appear first; name is the
-  // tie-breaker when several rows share the same display_order.
-  displayOrder: integer('display_order').notNull().default(0),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const accounts = pgTable(
+  'accounts',
+  {
+    id: serial('id').primaryKey(),
+    // Nullable at the Drizzle layer (so legacy code paths that haven't been
+    // updated still compile) but enforced NOT NULL at the DB level by
+    // migration 0007. Insert sites must supply userId or Postgres rejects.
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
+    openingBalance: numeric('opening_balance', { precision: 14, scale: 2 })
+      .notNull()
+      .default('0'),
+    openingDate: date('opening_date').notNull(),
+    // User-controlled display order. Lower values appear first; name is the
+    // tie-breaker when several rows share the same display_order.
+    displayOrder: integer('display_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqUserName: uniqueIndex('accounts_user_name_idx').on(t.userId, t.name),
+  }),
+);
 
 // Map "compte_courant.ofx" → account id. Multiple patterns per account, ranked
 // by `priority` (highest first).
 export const accountFilenamePatterns = pgTable('account_filename_patterns', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   pattern: text('pattern').notNull(),
   accountId: integer('account_id')
     .notNull()
@@ -102,16 +113,26 @@ export const accountFilenamePatterns = pgTable('account_filename_patterns', {
 // One row with is_default=true (`Divers`) is the fallback bucket.
 // ---------------------------------------------------------------------------
 
-export const categories = pgTable('categories', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull().unique(),
-  kind: categoryKindEnum('kind').notNull(),
-  color: varchar('color', { length: 9 }),
-  parentId: integer('parent_id').references((): any => categories.id, {
-    onDelete: 'set null',
+export const categories = pgTable(
+  'categories',
+  {
+    id: serial('id').primaryKey(),
+    // Nullable at the Drizzle layer (so legacy code paths that haven't been
+    // updated still compile) but enforced NOT NULL at the DB level by
+    // migration 0007. Insert sites must supply userId or Postgres rejects.
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    kind: categoryKindEnum('kind').notNull(),
+    color: varchar('color', { length: 9 }),
+    parentId: integer('parent_id').references((): any => categories.id, {
+      onDelete: 'set null',
+    }),
+    isDefault: boolean('is_default').notNull().default(false),
+  },
+  (t) => ({
+    uqUserName: uniqueIndex('categories_user_name_idx').on(t.userId, t.name),
   }),
-  isDefault: boolean('is_default').notNull().default(false),
-});
+);
 
 // ---------------------------------------------------------------------------
 // rules  —  rule engine. match_mode='word' is the default and prevents
@@ -123,6 +144,10 @@ export const rules = pgTable(
   'rules',
   {
     id: serial('id').primaryKey(),
+    // Nullable at the Drizzle layer (so legacy code paths that haven't been
+    // updated still compile) but enforced NOT NULL at the DB level by
+    // migration 0007. Insert sites must supply userId or Postgres rejects.
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
     categoryId: integer('category_id')
       .notNull()
       .references(() => categories.id, { onDelete: 'cascade' }),
@@ -143,6 +168,7 @@ export const rules = pgTable(
 // its mirror leg in the counterpart account via `transfer_group_id`.
 export const transferRules = pgTable('transfer_rules', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   keyword: text('keyword').notNull(),
   direction: transferDirectionEnum('direction').notNull(),
   counterpartAccountId: integer('counterpart_account_id').references(
@@ -159,6 +185,7 @@ export const transferRules = pgTable('transfer_rules', {
 
 export const fileImports = pgTable('file_imports', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   filename: text('filename').notNull(),
   accountId: integer('account_id')
     .notNull()
@@ -189,6 +216,10 @@ export const transactions = pgTable(
   'transactions',
   {
     id: bigserial('id', { mode: 'number' }).primaryKey(),
+    // Nullable at the Drizzle layer (so legacy code paths that haven't been
+    // updated still compile) but enforced NOT NULL at the DB level by
+    // migration 0007. Insert sites must supply userId or Postgres rejects.
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
     accountId: integer('account_id')
       .notNull()
       .references(() => accounts.id, { onDelete: 'restrict' }),
@@ -227,6 +258,9 @@ export const pdfStatementTemplates = pgTable(
   'pdf_statement_templates',
   {
     id: serial('id').primaryKey(),
+    // Nullable for legacy rows from before migration 0007 — those stay around
+    // but the per-user lookup won't pick them up.
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
     fingerprint: text('fingerprint').notNull(),
     // Nullable for legacy rows created before migration 0006. The orchestrator
     // requires a non-null accountId match for the auto-apply path.
@@ -252,6 +286,10 @@ export const pdfImportDrafts = pgTable(
   'pdf_import_drafts',
   {
     id: serial('id').primaryKey(),
+    // Nullable at the Drizzle layer (so legacy code paths that haven't been
+    // updated still compile) but enforced NOT NULL at the DB level by
+    // migration 0007. Insert sites must supply userId or Postgres rejects.
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
     accountId: integer('account_id')
       .notNull()
       .references(() => accounts.id, { onDelete: 'cascade' }),

@@ -29,13 +29,10 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/api/onboarding/create', async (req, reply) => {
-    // Anti-takeover: refuse if onboarding has already been completed. Even on a
-    // LAN, this prevents a second open browser tab from silently overwriting
-    // the admin user.
-    if (await hasUser()) {
-      return reply.code(409).send({ error: 'onboarding already complete' });
-    }
-
+    // Multi-user mode (migration 0007): the endpoint now accepts new
+    // registrations after the first user. Behaves as "register" once the
+    // initial onboarding is past. Open by design because the app is LAN-only;
+    // restrict via firewall/VPN if you need stricter control.
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
@@ -44,10 +41,20 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
 
     const passwordHash = await hash(password, ARGON2_OPTS);
 
-    const [user] = await db
-      .insert(users)
-      .values({ username, passwordHash })
-      .returning({ id: users.id, username: users.username });
+    let user: { id: number; username: string } | undefined;
+    try {
+      const inserted = await db
+        .insert(users)
+        .values({ username, passwordHash })
+        .returning({ id: users.id, username: users.username });
+      user = inserted[0];
+    } catch (err: any) {
+      // 23505 is unique_violation on the users_username_unique constraint.
+      if (err?.code === '23505') {
+        return reply.code(409).send({ error: 'username already taken' });
+      }
+      throw err;
+    }
 
     if (!user) {
       return reply.code(500).send({ error: 'failed to create user' });

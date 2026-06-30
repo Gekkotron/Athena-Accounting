@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { categories } from '../../db/schema.js';
+import { userId } from '../plugins/auth.js';
 
 const kindEnum = z.enum(['expense', 'income', 'transfer', 'neutral']);
 
@@ -36,18 +37,24 @@ function isPgError(err: unknown): err is { code: string } {
 export async function categoriesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
-  app.get('/api/categories', async () => {
-    const rows = await db.select().from(categories).orderBy(categories.kind, categories.name);
+  app.get('/api/categories', async (req) => {
+    const uid = userId(req);
+    const rows = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.userId, uid))
+      .orderBy(categories.kind, categories.name);
     return { categories: rows };
   });
 
   app.post('/api/categories', async (req, reply) => {
+    const uid = userId(req);
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     try {
-      const [created] = await db.insert(categories).values(parsed.data).returning();
+      const [created] = await db.insert(categories).values({ ...parsed.data, userId: uid }).returning();
       return reply.code(201).send({ category: created });
     } catch (err) {
       if (isPgError(err) && err.code === '23505') {
@@ -58,6 +65,7 @@ export async function categoriesRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.put('/api/categories/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const parsed = UpdateBody.safeParse(req.body);
@@ -71,7 +79,7 @@ export async function categoriesRoutes(app: FastifyInstance): Promise<void> {
       const [updated] = await db
         .update(categories)
         .set(parsed.data)
-        .where(eq(categories.id, id))
+        .where(and(eq(categories.id, id), eq(categories.userId, uid)))
         .returning();
       if (!updated) return reply.code(404).send({ error: 'not found' });
       return { category: updated };
@@ -84,16 +92,20 @@ export async function categoriesRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/api/categories/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
-    // Refuse deletion of the default "Divers" bucket — it's the fallback used
-    // by the rule engine for unmatched transactions.
-    const [row] = await db.select().from(categories).where(eq(categories.id, id));
+    const [row] = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.id, id), eq(categories.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
     if (row.isDefault) {
       return reply.code(409).send({ error: 'cannot delete the default category' });
     }
-    await db.delete(categories).where(and(eq(categories.id, id), eq(categories.isDefault, false)));
+    await db
+      .delete(categories)
+      .where(and(eq(categories.id, id), eq(categories.userId, uid), eq(categories.isDefault, false)));
     return { ok: true };
   });
 }

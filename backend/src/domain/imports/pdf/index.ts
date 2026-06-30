@@ -35,6 +35,7 @@ function flattenItems(pages: PdfPageText[]): PdfTextItem[] {
 export async function importPdf(opts: {
   filename: string;
   accountId: number;
+  userId: number;
   buffer: Buffer;
 }): Promise<ImportPdfResult> {
   const pages = await extractText(opts.buffer);
@@ -66,6 +67,7 @@ export async function importPdf(opts: {
       const result = await runImport({
         filename: opts.filename,
         accountId: opts.accountId,
+        userId: opts.userId,
         format: 'pdf',
         prepared: rows,
       });
@@ -87,11 +89,13 @@ export async function importPdf(opts: {
     const result = await runImport({
       filename: opts.filename,
       accountId: opts.accountId,
+      userId: opts.userId,
       format: 'pdf',
       prepared: h.rows,
     });
     await db.insert(pdfStatementTemplates)
       .values({
+        userId: opts.userId,
         fingerprint,
         accountId: opts.accountId,
         label: opts.filename,
@@ -108,7 +112,7 @@ export async function importPdf(opts: {
 }
 
 async function parkDraft(
-  opts: { accountId: number; buffer: Buffer },
+  opts: { accountId: number; userId: number; buffer: Buffer },
   pages: PdfPageText[],
   fingerprint: string,
   suggestedZones: TemplateZones | null,
@@ -117,6 +121,7 @@ async function parkDraft(
   const rendered = await renderPagesToPng(opts.buffer);
   const textItems = flattenItems(pages);
   const [draft] = await db.insert(pdfImportDrafts).values({
+    userId: opts.userId,
     accountId: opts.accountId,
     pdfBytes: opts.buffer.toString('base64'),
     textItems,
@@ -185,10 +190,12 @@ export async function applyTemplateAndImport(opts: {
   const result = await runImport({
     filename: opts.label,
     accountId: draft.accountId,
+    userId: draft.userId!,
     format: 'pdf',
     prepared: rows,
   });
   await db.insert(pdfStatementTemplates).values({
+    userId: draft.userId,
     fingerprint: draft.fingerprint,
     accountId: draft.accountId,
     label: opts.label,

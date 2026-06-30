@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accounts, transactions } from '../../db/schema.js';
+import { userId } from '../plugins/auth.js';
 
 const decimal = z
   .string()
@@ -55,7 +56,8 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   // — the inner WHERE never matched, and the counts came back as 0 despite
   // matching transactions existing in the DB. Explicit aliases (`a`, `t`)
   // guarantee the correlation lines up.
-  app.get('/api/accounts', async () => {
+  app.get('/api/accounts', async (req) => {
+    const uid = userId(req);
     const result = await db.execute<{
       id: number;
       name: string;
@@ -91,6 +93,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
           WHERE t.account_id = a.id AND t.date >= a.opening_date)
                                                                AS counted_transaction_count
       FROM accounts a
+      WHERE a.user_id = ${uid}
       ORDER BY a.display_order ASC, a.name ASC
     `);
 
@@ -126,27 +129,29 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
     if (new Set(ids).size !== ids.length) {
       return reply.code(400).send({ error: 'duplicate ids in order list' });
     }
+    const uid = userId(req);
     await db.transaction(async (tx) => {
       for (let i = 0; i < ids.length; i++) {
         await tx
           .update(accounts)
           .set({ displayOrder: i })
-          .where(eq(accounts.id, ids[i]!));
+          .where(and(eq(accounts.id, ids[i]!), eq(accounts.userId, uid)));
       }
     });
     return { ok: true };
   });
 
   app.post('/api/accounts', async (req, reply) => {
+    const uid = userId(req);
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     try {
-      const [created] = await db.insert(accounts).values(parsed.data).returning();
+      const [created] = await db.insert(accounts).values({ ...parsed.data, userId: uid }).returning();
       return reply.code(201).send({ account: created });
     } catch (err) {
-      // unique_violation on `name`
+      // unique_violation on (user_id, name)
       if (isPgError(err) && err.code === '23505') {
         return reply.code(409).send({ error: 'account name already exists' });
       }
@@ -155,14 +160,19 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/api/accounts/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
-    const [row] = await db.select().from(accounts).where(eq(accounts.id, id));
+    const [row] = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, id), eq(accounts.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
     return { account: row };
   });
 
   app.put('/api/accounts/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const parsed = UpdateBody.safeParse(req.body);
@@ -176,7 +186,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       const [updated] = await db
         .update(accounts)
         .set(parsed.data)
-        .where(eq(accounts.id, id))
+        .where(and(eq(accounts.id, id), eq(accounts.userId, uid)))
         .returning();
       if (!updated) return reply.code(404).send({ error: 'not found' });
       return { account: updated };
@@ -189,12 +199,13 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/api/accounts/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     try {
       const [deleted] = await db
         .delete(accounts)
-        .where(eq(accounts.id, id))
+        .where(and(eq(accounts.id, id), eq(accounts.userId, uid)))
         .returning({ id: accounts.id });
       if (!deleted) return reply.code(404).send({ error: 'not found' });
       return { ok: true };
