@@ -11,6 +11,7 @@ import { Categories } from './pages/Categories';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
 import { Imports } from './pages/Imports';
+import { Profile } from './pages/Profile';
 
 export default function App() {
   const location = useLocation();
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/rules" element={<Rules />} />
         <Route path="/accounts" element={<Accounts />} />
         <Route path="/imports" element={<Imports />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

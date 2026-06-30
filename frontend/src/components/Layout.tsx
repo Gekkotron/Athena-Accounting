@@ -142,7 +142,17 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60 mt-8">
       <div className="label mb-1">Connecté</div>
-      <div className="text-sm text-ink-100 mb-3 truncate font-medium">{user.username}</div>
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          `block text-sm mb-3 truncate font-medium underline-offset-2 hover:underline ${
+            isActive ? 'text-sage-300' : 'text-ink-100 hover:text-ink-50'
+          }`
+        }
+        title="Modifier mon profil"
+      >
+        {user.username}
+      </NavLink>
       <button
         className="btn-ghost w-full justify-start text-xs mb-1"
         onClick={privacy.toggle}
