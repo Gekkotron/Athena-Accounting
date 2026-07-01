@@ -6,6 +6,7 @@ interface Props {
   points: BalancePoint[];
   currency: string;
   height?: number;
+  checkpoints?: { date: string; expectedAmount: number; note?: string }[];
 }
 
 interface HoverState {
@@ -17,7 +18,7 @@ interface HoverState {
   y: number;
 }
 
-export function BalanceChart({ points, currency, height = 240 }: Props) {
+export function BalanceChart({ points, currency, height = 240, checkpoints }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
@@ -95,6 +96,35 @@ export function BalanceChart({ points, currency, height = 240 }: Props) {
   const xScale = (i: number) => pad.left + (i / (data.length - 1)) * innerW;
   const yScale = (v: number) => pad.top + innerH - ((v - minY) / range) * innerH;
 
+  // Attach each in-range checkpoint to its "actual" cumulative on that date,
+  // using the same forward-fill semantics as the main series (latest bucket
+  // with bucket_date <= checkpointDate). Anything outside the plotted range
+  // is silently dropped — no orphan dots hanging off the edges.
+  const CHECKPOINT_TOLERANCE = 0.01;
+  const firstDate = data[0]!.date;
+  const lastDate = data[data.length - 1]!.date;
+  const marks = (checkpoints ?? [])
+    .filter(
+      (c) =>
+        c.date >= firstDate &&
+        c.date <= lastDate &&
+        Number.isFinite(c.expectedAmount),
+    )
+    .map((c) => {
+      // Binary search for the latest bucket <= c.date.
+      let lo = 0;
+      let hi = data.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >>> 1;
+        if (data[mid]!.date <= c.date) lo = mid;
+        else hi = mid - 1;
+      }
+      const actual = data[lo]!.value;
+      const delta = c.expectedAmount - actual;
+      const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
+      return { ...c, actual, delta, drift };
+    });
+
   const path = data
     .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i).toFixed(1)} ${yScale(d.value).toFixed(1)}`)
     .join(' ');
@@ -147,6 +177,29 @@ export function BalanceChart({ points, currency, height = 240 }: Props) {
   const onLeave = () => setHover(null);
 
   const hovered = hover !== null ? data[hover.idx] : null;
+
+  // If the hovered X is within ~12 viewBox units of a checkpoint's X, show
+  // the expected/actual/delta line in the tooltip.
+  const HOVER_PROXIMITY_VB = 12;
+  const hoveredCheckpoint = (() => {
+    if (hover === null) return null;
+    const hoveredX = xScale(hover.idx);
+    let closest: (typeof marks)[number] | null = null;
+    let closestDist = Infinity;
+    for (const m of marks) {
+      const cx = xScale(
+        ((new Date(m.date).getTime() - new Date(firstDate).getTime()) /
+          (new Date(lastDate).getTime() - new Date(firstDate).getTime())) *
+          (data.length - 1),
+      );
+      const d = Math.abs(cx - hoveredX);
+      if (d < closestDist && d <= HOVER_PROXIMITY_VB) {
+        closest = m;
+        closestDist = d;
+      }
+    }
+    return closest;
+  })();
 
   return (
     <div ref={containerRef} className="w-full relative">
@@ -218,6 +271,47 @@ export function BalanceChart({ points, currency, height = 240 }: Props) {
         <path d={areaPath} fill="url(#g-balance)" />
         <path d={path} fill="none" stroke="#7dd3c0" strokeWidth="1.75" filter="url(#glow)" />
 
+        {/* Balance checkpoints — diamond markers + optional drift guide */}
+        {marks.map((m) => {
+          const cx = xScale(
+            // Use the checkpoint's own X, not the bucket's. Solve for i such that
+            // xScale(i) reflects the day fraction between firstDate and lastDate.
+            ((new Date(m.date).getTime() - new Date(firstDate).getTime()) /
+              (new Date(lastDate).getTime() - new Date(firstDate).getTime())) *
+              (data.length - 1),
+          );
+          const cyExpected = yScale(m.expectedAmount);
+          const cyActual = yScale(m.actual);
+          const color = m.drift ? '#f6c177' : '#7dd3c0'; // amber vs. sage
+          const fill = m.drift ? color : 'none';
+          return (
+            <g key={`cp-${m.date}`} pointerEvents="none">
+              {m.drift && (
+                <line
+                  x1={cx}
+                  y1={cyExpected}
+                  x2={cx}
+                  y2={cyActual}
+                  stroke={color}
+                  strokeDasharray="3 3"
+                  strokeWidth="1"
+                  opacity="0.8"
+                />
+              )}
+              {/* Diamond = rotated 4-sided path centered on (cx, cyExpected) */}
+              <path
+                d={`M ${cx} ${cyExpected - 5} L ${cx + 5} ${cyExpected} L ${cx} ${cyExpected + 5} L ${cx - 5} ${cyExpected} Z`}
+                fill={fill}
+                stroke={color}
+                strokeWidth="2"
+              />
+              {m.drift && (
+                <circle cx={cx} cy={cyActual} r="2" fill={color} />
+              )}
+            </g>
+          );
+        })}
+
         {/* end marker */}
         <circle cx={xScale(data.length - 1)} cy={yScale(last.value)} r="3.5" fill="#7dd3c0" />
         <circle cx={xScale(data.length - 1)} cy={yScale(last.value)} r="7" fill="#7dd3c0" opacity="0.18" />
@@ -271,6 +365,19 @@ export function BalanceChart({ points, currency, height = 240 }: Props) {
           <div className={`font-mono text-sm tabular-nums ${hovered.value < 0 ? 'text-clay-300' : hovered.value > 0 ? 'text-sage-300' : 'text-ink-300'}`}>
             {formatAmount(hovered.value, currency)}
           </div>
+          {hoveredCheckpoint && (
+            <div className="mt-1 pt-1 border-t border-ink-800/60 font-mono text-[10px] text-ink-500">
+              {hoveredCheckpoint.drift ? (
+                <>
+                  <div>attendu · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
+                  <div>réel · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.actual, currency)}</span></div>
+                  <div className="text-amber-300">écart · {formatAmount(hoveredCheckpoint.delta, currency)}</div>
+                </>
+              ) : (
+                <div className="text-sage-300">attendu ✓ {formatAmount(hoveredCheckpoint.expectedAmount, currency)}</div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
