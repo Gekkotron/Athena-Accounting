@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import type { Category, MatchMode, SignConstraint } from '../../api/types';
 import { NormalizationHint } from './NormalizationHint';
 
@@ -28,6 +28,16 @@ export function RuleCreateForm({
   const [matchMode, setMatchMode] = useState<MatchMode>('word');
   const [priority, setPriority] = useState(0);
 
+  // Preserve the pre-extraction "clear only on success" semantic:
+  // setKeyword('') originally lived in createBatch.onSuccess (index.tsx).
+  // After extraction, watch the parent's successCount prop (which only
+  // increments on success) and reset the keyword when it changes.
+  useEffect(() => {
+    if (successCount != null && successCount > 0) {
+      setKeyword('');
+    }
+  }, [successCount]);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!categoryId || !keyword.trim()) return;
@@ -36,7 +46,6 @@ export function RuleCreateForm({
     );
     if (keywords.length === 0) return;
     onSubmit({ keywords, categoryId, signConstraint, matchMode, priority });
-    setKeyword('');
   };
 
   return (
