@@ -2,19 +2,10 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
-import { normalizeLabel } from '../../lib/normalize';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { Chip } from './Chip';
+import { NormalizationHint } from './NormalizationHint';
 
-const SIGN_LABEL: Record<SignConstraint, string> = {
-  positive: 'Positif',
-  negative: 'Négatif',
-  any: 'Tous',
-};
-const MATCH_LABEL: Record<MatchMode, string> = {
-  word: 'Mot entier',
-  substring: 'Sous-chaîne',
-  regex: 'Regex',
-};
 
 type View = 'grouped' | 'flat';
 
@@ -507,110 +498,12 @@ function CategoryRow({
   );
 }
 
-// Shows what the matcher will *actually* search for, given the normalisation
-// applied to both rule keywords and transaction labels. Helps users avoid
-// the trap of typing prefixes like "VIR " or "CB " that get stripped.
-function NormalizationHint({
-  input,
-  matchMode,
-}: {
-  input: string;
-  matchMode: MatchMode;
-}) {
-  // Regex mode is a deliberate pattern — we don't pre-normalize it.
-  if (matchMode === 'regex' || !input.trim()) return null;
-
-  const parts = input
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const transformed = parts.map((p) => ({ raw: p, norm: normalizeLabel(p) }));
-  const anyChange = transformed.some(
-    (t) => t.norm !== t.raw.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''),
-  );
-  const anyEmpty = transformed.some((t) => !t.norm);
-
-  if (!anyChange && !anyEmpty) return null;
-
-  return (
-    <div className="text-[11px] mt-1.5 leading-relaxed">
-      {anyEmpty && (
-        <div className="text-clay-300">
-          ⚠️ Au moins un mot-clé devient vide après normalisation (préfixe ou date pur) — il ne matchera rien.
-        </div>
-      )}
-      {anyChange && (
-        <div className="text-ink-500">
-          Sera matché comme :{' '}
-          {transformed.map((t, i) => (
-            <span key={i}>
-              <span className={`font-mono ${t.norm ? 'text-sage-300' : 'text-clay-300 line-through'}`}>
-                {t.norm || t.raw}
-              </span>
-              {i < transformed.length - 1 ? ', ' : ''}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 const KIND_FR: Record<Category['kind'], string> = {
   expense: 'Dépense',
   income: 'Revenu',
   transfer: 'Virement',
   neutral: 'Neutre',
 };
-
-function Chip({
-  rule,
-  onToggle,
-  onAdvanced,
-  onDelete,
-}: {
-  rule: Rule;
-  onToggle: () => void;
-  onAdvanced: () => void;
-  onDelete: () => void;
-}) {
-  const tooltip = `Priorité ${rule.priority} · ${SIGN_LABEL[rule.signConstraint]} · ${MATCH_LABEL[rule.matchMode]}${rule.enabled ? '' : ' · désactivée'}`;
-  return (
-    <span
-      className={`group inline-flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-0.5 text-xs font-mono transition ${
-        rule.enabled
-          ? 'border-sage-800/40 bg-sage-900/20 text-sage-200 hover:border-sage-700/60'
-          : 'border-ink-800 bg-ink-900 text-ink-500 line-through hover:text-ink-300'
-      }`}
-      title={tooltip}
-    >
-      <button onClick={onToggle} className="py-0.5">
-        {rule.keyword}
-      </button>
-      <button
-        onClick={onAdvanced}
-        className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-ink-400 hover:text-ink-100 transition px-0.5"
-        aria-label="Modifier"
-        title="Modifier (priorité, signe, mode)"
-      >
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-          <path d="M2 7.5l5-5 1.5 1.5-5 5L2 9.5V7.5z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round" />
-        </svg>
-      </button>
-      <button
-        onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-ink-400 hover:text-clay-300 transition px-0.5 mr-0.5"
-        aria-label="Supprimer"
-        title="Supprimer"
-      >
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-          <path d="M2 2l7 7M9 2L2 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      </button>
-    </span>
-  );
-}
 
 function AddChipInput({ onAdd }: { onAdd: (keywords: string[]) => void }) {
   const [open, setOpen] = useState(false);
