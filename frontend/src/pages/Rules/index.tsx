@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import { api, ApiError } from '../api/client';
-import type { Category, MatchMode, Rule, SignConstraint } from '../api/types';
-import { normalizeLabel } from '../lib/normalize';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { api, ApiError } from '../../api/client';
+import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
+import { normalizeLabel } from '../../lib/normalize';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 const SIGN_LABEL: Record<SignConstraint, string> = {
   positive: 'Positif',
