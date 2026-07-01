@@ -242,4 +242,20 @@ describe('Rules page (characterization)', () => {
 
     expect(await screen.findByText(/aucune catégorie/i)).toBeInTheDocument();
   });
+
+  it('renders the flat-view empty state when rules is empty', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/categories') return { categories: [cat(10, 'Courses')] };
+      if (path === '/api/rules') return { rules: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+
+    const user = userEvent.setup();
+    renderRules();
+
+    // Switch to flat view.
+    await user.click(await screen.findByRole('button', { name: /détaillé/i }));
+
+    expect(await screen.findByText(/aucune règle/i)).toBeInTheDocument();
+  });
 });
