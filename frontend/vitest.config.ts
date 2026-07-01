@@ -12,6 +12,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
+      // Include every source file in the report, even those no test touches,
+      // so the number reflects the whole codebase (not just executed files).
+      all: true,
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/**/*.d.ts',
