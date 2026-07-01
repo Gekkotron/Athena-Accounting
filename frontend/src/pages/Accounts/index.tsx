@@ -2,10 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, AccountFilenamePattern } from '../../api/types';
-import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PatternsSection } from './PatternsSection';
-import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
+import { AccountCard } from './AccountCard';
 
 export function Accounts() {
   const qc = useQueryClient();
@@ -351,69 +350,18 @@ export function Accounts() {
               }
 
               return (
-                <div key={a.id} className="surface p-5 relative group">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
-                    <span className="badge">{a.currency}</span>
-                  </div>
-                  <div className="label mt-0.5">{a.type}</div>
-                  <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
-                    {formatAmount(a.currentBalance ?? '0', a.currency)}
-                  </div>
-                  <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
-                    ouvert {formatDate(a.openingDate)} ·{' '}
-                    <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>
-                  </div>
-                  {/* Top-right cluster: reorder up/down + modify */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1">
-                    <button
-                      className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition disabled:opacity-30 disabled:hover:text-ink-600 disabled:hover:bg-transparent"
-                      onClick={() => move(a.id, -1)}
-                      disabled={idx === 0 || reorder.isPending}
-                      title="Monter"
-                      aria-label="Déplacer vers le haut"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                        <path d="M3 7l3-3 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                    <button
-                      className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition disabled:opacity-30 disabled:hover:text-ink-600 disabled:hover:bg-transparent"
-                      onClick={() => move(a.id, 1)}
-                      disabled={idx === arr.length - 1 || reorder.isPending}
-                      title="Descendre"
-                      aria-label="Déplacer vers le bas"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                        <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                    <button
-                      className="ml-1 inline-flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
-                      onClick={() => startEdit(a)}
-                      title="Modifier"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-                        <path d="M2 7.5l5-5 1.5 1.5-5 5L2 9.5V7.5z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round" />
-                      </svg>
-                      modifier
-                    </button>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-ink-800/60">
-                    <button
-                      type="button"
-                      className="flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
-                      onClick={() => toggleCheckpoints(a.id)}
-                      aria-expanded={checkpointsOpen.has(a.id)}
-                    >
-                      <span className={`inline-block transition-transform ${checkpointsOpen.has(a.id) ? 'rotate-90' : ''}`}>▸</span>
-                      Points de contrôle
-                    </button>
-                    {checkpointsOpen.has(a.id) && (
-                      <BalanceCheckpointsDrawer accountId={a.id} currency={a.currency} />
-                    )}
-                  </div>
-                </div>
+                <AccountCard
+                  key={a.id}
+                  account={a}
+                  onEdit={(acc) => startEdit(acc)}
+                  onExpand={(id) => toggleCheckpoints(id)}
+                  expanded={checkpointsOpen.has(a.id)}
+                  onMoveUp={() => move(a.id, -1)}
+                  onMoveDown={() => move(a.id, 1)}
+                  canMoveUp={idx > 0}
+                  canMoveDown={idx < arr.length - 1}
+                  moving={reorder.isPending}
+                />
               );
             })}
           </div>
