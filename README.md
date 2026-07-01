@@ -101,6 +101,15 @@ the mirror leg in the counterpart account within ±7 days. Found legs
 share a `transfer_group_id` and are excluded from income/expense
 aggregates.
 
+## Points de contrôle
+
+Sur chaque compte (onglet **Comptes** → `▸ Points de contrôle`), vous
+pouvez enregistrer un solde attendu à une date donnée (typiquement lu
+sur un relevé bancaire). Le graphique du dashboard affiche un losange à
+cette date; s'il dérive de plus d'un centime du cumul calculé, le
+losange devient ambre et une ligne pointillée relie l'attendu au réel —
+un signal purement visuel pour repérer une erreur d'import ou de saisie.
+
 ## Project layout
 
 ```
@@ -193,6 +202,7 @@ journal file Drizzle creates alongside.
 - [x] Étape 9 — "Tri des catégories" tab
 - [x] Étape 10 — Categories/rules UI + README polish
 - [x] Étape 11 — PDF bank statement import (heuristic + interactive template)
+- [x] Étape 12 — Points de contrôle (réconciliation visuelle par compte)
 
 ## Possible next steps (v2)
 

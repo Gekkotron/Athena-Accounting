@@ -9,7 +9,25 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 
 <!-- Tout ce qui passe par la tête, même à demi-formé. Pas obligé que ce soit clair. -->
 
--
+- Can displayed available money on each account or blocked money. By exemple my PEA is blocked for 5 years,
+My natixis is blocked for 5 years from starting date, so at date + 5 years the amount and the only amount of this transaction will be available.
+So I can displayed the total amount available in dashboard and the amount blocked. Maybe a configuration in dashboard settings or widget.
+
+- Add a selection feature on all list of transaction even doublon section. To delete/No double in bulk
+
+- Dashboard configuration displayed --> account by default in graph list of all account + all account)
+
+- Traduire l'app (fr, en) avec detection de la langue du navigateur
+
+- Color for type of category (light color, but different to 3 category type) revove transfert type. The sum of accounts is enough
+
+- Split code to be more readable
+
+- Add units tests on this project
+
+- Add codecov (I already add CODECOV_TOKEN inside github env)
+
+
 
 ## 📌 Pour plus tard (committed)
 
@@ -29,7 +47,7 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 <!-- Pour mémoire ou pour s'auto-féliciter. Les vieux items peuvent être archivés
      en bas du fichier ou supprimés. -->
 
--
+- Points de contrôle par compte affichés sur le graphique Dashboard (drift vs. cumul calculé, tolérance 1 centime).
 
 ---
 
