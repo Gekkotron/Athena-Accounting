@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../api/client';
-import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../api/checkpoints';
-import type { Account, AccountFilenamePattern, BalanceCheckpoint } from '../api/types';
-import { formatAmount, formatDate, amountSignClass } from '../lib/format';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { api, ApiError } from '../../api/client';
+import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
+import type { Account, AccountFilenamePattern, BalanceCheckpoint } from '../../api/types';
+import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function Accounts() {
   const qc = useQueryClient();
