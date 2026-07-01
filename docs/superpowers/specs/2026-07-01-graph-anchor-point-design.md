@@ -23,21 +23,24 @@ One new table; nothing else in the schema is touched.
 ```sql
 create table balance_checkpoints (
   id                serial primary key,
+  user_id           integer not null references users(id) on delete cascade,
   account_id        integer not null references accounts(id) on delete cascade,
   checkpoint_date   date not null,
-  expected_amount   numeric(18, 2) not null,
+  expected_amount   numeric(14, 2) not null,
   note              text,
   created_at        timestamptz not null default now(),
   unique (account_id, checkpoint_date)
 );
 
 create index balance_checkpoints_account_idx on balance_checkpoints (account_id);
+create index balance_checkpoints_user_idx on balance_checkpoints (user_id);
 ```
 
 Notes:
 - `unique (account_id, checkpoint_date)` prevents duplicate checkpoints on the same day for the same account and gives a natural upsert key.
-- `on delete cascade` — deleting an account clears its checkpoints. Same policy as `account_filename_patterns`.
-- `expected_amount` uses the same `numeric(18, 2)` shape as `accounts.opening_balance`, so no new casting rules on the frontend.
+- `on delete cascade` on both FKs — deleting an account or a user clears its checkpoints. Same policy every other child table follows since migration 0007.
+- `user_id` is denormalized alongside `account_id` (matching `account_filename_patterns`, `pdf_import_drafts`, `pdf_statement_templates` since migration 0007) so every query filters directly by `user_id` for defense-in-depth without a join.
+- `expected_amount` uses the same `numeric(14, 2)` precision as `accounts.opening_balance` and `transactions.amount`, so no new casting rules on the frontend.
 - `note` is a short free-form label (max 200 chars, enforced in the route, not the DB) — e.g. `"relevé BNP nov"`.
 
 Migration file: `backend/src/db/migrations/NNNN_balance_checkpoints.sql`, applied at server boot by the existing migration runner. Drizzle's `schema.ts` gets a matching entry in the same PR.
