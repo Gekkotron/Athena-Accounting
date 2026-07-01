@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, AccountFilenamePattern } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PatternsSection } from './PatternsSection';
 import { AccountCard } from './AccountCard';
+import { AccountForm, type AccountFormValues } from './AccountForm';
 
 export function Accounts() {
   const qc = useQueryClient();
@@ -18,27 +19,15 @@ export function Accounts() {
   });
 
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [type, setType] = useState('checking');
-  const [currency, setCurrency] = useState('EUR');
-  const [openingBalance, setOpeningBalance] = useState('0.00');
-  const [openingDate, setOpeningDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
-    mutationFn: (input: {
-      name: string;
-      type: string;
-      currency: string;
-      openingBalance: string;
-      openingDate: string;
-    }) => api<{ account: Account }>('/api/accounts', { method: 'POST', json: input }),
+    mutationFn: (input: AccountFormValues) =>
+      api<{ account: Account }>('/api/accounts', { method: 'POST', json: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['accounts'] });
       qc.invalidateQueries({ queryKey: ['reports'] });
       setShowForm(false);
-      setName('');
-      setOpeningBalance('0.00');
     },
     onError: (err: ApiError) => setError(err.message),
   });
@@ -151,26 +140,20 @@ export function Accounts() {
     setEditError(null);
   };
 
-  const saveEdit = (a: Account) => {
-    if (!editDraft) return;
+  const saveEdit = (a: Account, draft: typeof editDraft) => {
+    if (!draft) return;
     const patch: Partial<Account> = {};
-    if (editDraft.name !== a.name) patch.name = editDraft.name.trim();
-    if (editDraft.type !== a.type) patch.type = editDraft.type;
-    if (editDraft.currency !== a.currency) patch.currency = editDraft.currency.toUpperCase();
-    if (editDraft.openingBalance !== a.openingBalance) patch.openingBalance = editDraft.openingBalance;
-    if (editDraft.openingDate !== a.openingDate) patch.openingDate = editDraft.openingDate;
+    if (draft.name !== a.name) patch.name = draft.name.trim();
+    if (draft.type !== a.type) patch.type = draft.type;
+    if (draft.currency !== a.currency) patch.currency = draft.currency.toUpperCase();
+    if (draft.openingBalance !== a.openingBalance) patch.openingBalance = draft.openingBalance;
+    if (draft.openingDate !== a.openingDate) patch.openingDate = draft.openingDate;
     if (Object.keys(patch).length === 0) {
       cancelEdit();
       return;
     }
     setEditError(null);
     updateAccount.mutate({ id: a.id, patch });
-  };
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    create.mutate({ name, type, currency, openingBalance, openingDate });
   };
 
   return (
@@ -188,60 +171,15 @@ export function Accounts() {
       </div>
 
       {showForm && (
-        <form onSubmit={submit} className="surface p-5 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-          <div className="lg:col-span-2">
-            <label className="label mb-1.5 block">Nom</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
-          </div>
-          <div>
-            <label className="label mb-1.5 block">Type</label>
-            <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-              <option value="checking">Courant</option>
-              <option value="savings">Épargne</option>
-              <option value="credit">Crédit</option>
-              <option value="other">Autre</option>
-            </select>
-          </div>
-          <div>
-            <label className="label mb-1.5 block">Devise</label>
-            <input
-              className="input"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-              maxLength={3}
-              required
-            />
-          </div>
-          <div>
-            <label className="label mb-1.5 block">Solde d'ouverture</label>
-            <input
-              className="input font-mono"
-              value={openingBalance}
-              onChange={(e) => setOpeningBalance(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="label mb-1.5 block">Date d'ouverture</label>
-            <input
-              type="date"
-              className="input"
-              value={openingDate}
-              onChange={(e) => setOpeningDate(e.target.value)}
-              required
-            />
-          </div>
-          {error && (
-            <div className="sm:col-span-2 lg:col-span-6 rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
-              {error}
-            </div>
-          )}
-          <div className="sm:col-span-2 lg:col-span-6">
-            <button className="btn-primary" disabled={create.isPending}>
-              {create.isPending ? 'Création…' : 'Créer le compte'}
-            </button>
-          </div>
-        </form>
+        <AccountForm
+          mode="create"
+          error={error}
+          submitting={create.isPending}
+          onSubmit={(values) => {
+            setError(null);
+            create.mutate(values);
+          }}
+        />
       )}
 
       <section>
@@ -257,94 +195,21 @@ export function Accounts() {
                 return (
                   <div key={a.id} className="surface p-5 relative">
                     <div className="label mb-3">Éditer le compte</div>
-                    <div className="flex flex-col gap-3">
-                      <div>
-                        <label className="label mb-1 block">Nom</label>
-                        <input
-                          className="input"
-                          value={editDraft.name}
-                          onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="label mb-1 block">Type</label>
-                          <select
-                            className="input"
-                            value={editDraft.type}
-                            onChange={(e) => setEditDraft({ ...editDraft, type: e.target.value })}
-                          >
-                            <option value="checking">Courant</option>
-                            <option value="savings">Épargne</option>
-                            <option value="credit">Crédit</option>
-                            <option value="other">Autre</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="label mb-1 block">Devise</label>
-                          <input
-                            className="input"
-                            value={editDraft.currency}
-                            onChange={(e) =>
-                              setEditDraft({ ...editDraft, currency: e.target.value.toUpperCase() })
-                            }
-                            maxLength={3}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="label mb-1 block">Solde d'ouverture</label>
-                        <input
-                          className="input font-mono"
-                          value={editDraft.openingBalance}
-                          onChange={(e) =>
-                            setEditDraft({ ...editDraft, openingBalance: e.target.value })
-                          }
-                        />
-                        <div className="text-[11px] text-ink-500 mt-1">
-                          Modifier ce montant ajustera automatiquement le solde courant.
-                        </div>
-                      </div>
-                      <div>
-                        <label className="label mb-1 block">Date d'ouverture</label>
-                        <input
-                          type="date"
-                          className="input"
-                          value={editDraft.openingDate}
-                          onChange={(e) =>
-                            setEditDraft({ ...editDraft, openingDate: e.target.value })
-                          }
-                        />
-                      </div>
-                      {editError && (
-                        <div className="rounded-md border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-xs text-clay-200">
-                          {editError}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        <button
-                          className="text-[11px] text-clay-300 hover:text-clay-200 transition"
-                          onClick={() => {
-                            setDeleteError(null);
-                            setConfirmDelete(a);
-                          }}
-                        >
-                          supprimer
-                        </button>
-                        <div className="flex gap-2">
-                          <button className="btn-ghost" onClick={cancelEdit}>
-                            Annuler
-                          </button>
-                          <button
-                            className="btn-primary"
-                            onClick={() => saveEdit(a)}
-                            disabled={updateAccount.isPending}
-                          >
-                            {updateAccount.isPending ? 'Enregistrement…' : 'Enregistrer'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <AccountForm
+                      mode="edit"
+                      initial={editDraft}
+                      error={editError}
+                      submitting={updateAccount.isPending}
+                      onSubmit={(values) => {
+                        setEditDraft(values);
+                        saveEdit(a, values);
+                      }}
+                      onCancel={cancelEdit}
+                      onDelete={() => {
+                        setDeleteError(null);
+                        setConfirmDelete(a);
+                      }}
+                    />
                   </div>
                 );
               }
