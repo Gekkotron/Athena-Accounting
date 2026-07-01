@@ -6,14 +6,9 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AdvancedEditor } from './AdvancedEditor';
 import { GroupedView } from './GroupedView';
 import { NormalizationHint } from './NormalizationHint';
-
+import type { GroupedEntry } from './types';
 
 type View = 'grouped' | 'flat';
-
-interface GroupedEntry {
-  category: Category;
-  rules: Rule[];
-}
 
 export function Rules() {
   const qc = useQueryClient();

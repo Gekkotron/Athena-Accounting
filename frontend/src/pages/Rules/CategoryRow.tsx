@@ -2,11 +2,7 @@ import { useState } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { Chip } from './Chip';
-
-interface GroupedEntry {
-  category: Category;
-  rules: Rule[];
-}
+import type { GroupedEntry } from './types';
 
 export function CategoryRow({
   group,
