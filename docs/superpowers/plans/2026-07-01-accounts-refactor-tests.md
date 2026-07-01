@@ -827,34 +827,54 @@ EOF
 - Modify: `frontend/src/pages/Accounts/index.tsx`
 
 **Interfaces:**
-- Consumes: `Account` from `../../api/types`; `formatAmount`, `amountSignClass`, `formatDate` from `../../lib/format`; `BalanceCheckpointsDrawer` from `./BalanceCheckpointsDrawer`; React Router's `Link` from `react-router-dom`.
+- Consumes: `Account` from `../../api/types`; `formatAmount`, `amountSignClass`, `formatDate` from `../../lib/format`; `BalanceCheckpointsDrawer` from `./BalanceCheckpointsDrawer`.
 - Produces:
   ```ts
   export function AccountCard({
     account,
     onEdit,
-    onDelete,
     onExpand,
     expanded,
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+    moving,
   }: {
     account: Account;
-    onEdit: (id: number) => void;
-    onDelete: (account: Account) => void;
+    onEdit: (account: Account) => void;
     onExpand: (id: number) => void;
     expanded: boolean;
+    onMoveUp: () => void;
+    onMoveDown: () => void;
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    moving: boolean;
   }): JSX.Element;
   ```
 
+**IMPORTANT — what today's display-mode card actually renders** (read `index.tsx` around lines 353–417 to confirm before editing):
+- Header row: account name (`a.name`) + currency badge.
+- Type label (`a.type`).
+- Current-balance display (`formatAmount(a.currentBalance ?? '0', a.currency)` with `amountSignClass`).
+- Line: `ouvert {formatDate(a.openingDate)} · {formatAmount(a.openingBalance, a.currency)}`.
+- **Absolute top-right cluster**: reorder-up button (SVG chevron-up) + reorder-down button (SVG chevron-down) + `modifier` button (SVG pencil + label). The reorder buttons are `disabled` when `!canMoveUp` / `!canMoveDown` / `moving`.
+- Bottom section (border-top): `▸ Points de contrôle` toggle + `<BalanceCheckpointsDrawer />` when `expanded`.
+
+**What today's display-mode card does NOT contain** (do not add these):
+- No transaction counter, no `<Link to="/transactions?...">`, no delta / `hasMovement` display, no "N transactions" line, no `supprimer` button. The `supprimer` button lives in EDIT mode (not touched by this task).
+
 - [ ] **Step 1: Identify the JSX slice**
 
-Inside the `Accounts` component's render (in `index.tsx`), find the `.map((a) => { ... return <div key={a.id} className="surface p-5 ..."> ... </div> })` block that renders one account card. This is the block to lift into `AccountCard`.
+Inside the `Accounts` component's render (in `index.tsx`), locate the `.map((a, idx, arr) => { ... })` block. Each iteration branches on `editingId === a.id`:
+- **Edit-mode branch** (the `if (editingId === a.id && editDraft) { return (...); }` block) — stays inline in `index.tsx` for this task. Task 8 lifts it.
+- **Display-mode branch** (the trailing `return (<div key={a.id} className="surface p-5 relative group">...);`) — this is what you lift into `AccountCard`.
 
 - [ ] **Step 2: Create `AccountCard.tsx`**
 
-Create the new file with these imports and a component that takes the props documented above:
+Create the new file:
 
 ```tsx
-import { Link } from 'react-router-dom';
 import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
@@ -862,63 +882,76 @@ import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
 export function AccountCard({
   account: a,
   onEdit,
-  onDelete,
   onExpand,
   expanded,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+  moving,
 }: {
   account: Account;
-  onEdit: (id: number) => void;
-  onDelete: (account: Account) => void;
+  onEdit: (account: Account) => void;
   onExpand: (id: number) => void;
   expanded: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  moving: boolean;
 }) {
-  const current = Number(a.currentBalance ?? '0');
-  const opening = Number(a.openingBalance);
-  const delta = current - opening;
-  const hasMovement = Math.abs(delta) >= 0.005;
-  const total = a.transactionCount ?? 0;
-  const counted = a.countedTransactionCount ?? 0;
-  const excluded = total - counted;
-
   return (
-    <div className="surface p-5 group hover:border-ink-700 transition">
-      {/* Paste the display-mode card JSX from index.tsx here. Wire the
-          "modifier" button's onClick to onEdit(a.id); the delete icon to
-          onDelete(a); and the "▸ Points de contrôle" button to onExpand(a.id).
-          The BalanceCheckpointsDrawer only renders when `expanded` is true. */}
+    <div className="surface p-5 relative group">
+      {/* Paste the display-mode card JSX from index.tsx verbatim, then rewire:
+          - reorder-up button:  onClick={onMoveUp}    disabled={!canMoveUp   || moving}
+          - reorder-down button: onClick={onMoveDown} disabled={!canMoveDown || moving}
+          - modifier button:    onClick={() => onEdit(a)}
+          - "▸ Points de contrôle" toggle: onClick={() => onExpand(a.id)}
+          - <BalanceCheckpointsDrawer /> renders only when `expanded === true`. */}
     </div>
   );
 }
 ```
 
-The exact JSX body comes from the current inline card — copy it verbatim, then rewire the callbacks.
+The exact JSX body comes from the current inline card — copy it verbatim, then rewire the callbacks as annotated.
 
-The inline-edit mode (currently inside the same card block) does NOT move here — it's owned by the `Accounts` component and Task 8 lifts it into `AccountForm`. For this task, the card only renders the display mode; a caller switching into edit mode replaces `<AccountCard>` with `<AccountForm mode="edit" ...>` at the same JSX position.
+- [ ] **Step 3: Update `index.tsx` — replace the display-mode branch with the component**
 
-- [ ] **Step 3: Update `index.tsx` — replace the mapped JSX with the component**
-
-In `index.tsx`, replace the entire per-card JSX block inside the `.map(...)` with:
+In `index.tsx`, replace the display-mode `return (...)` inside `.map(...)` with:
 
 ```tsx
-{accounts.map((a) =>
-  editingAccountId === a.id ? (
-    // Inline-edit still expressed inline here for now — Task 8 lifts it into
-    // <AccountForm mode="edit" initial={a} onSubmit={...} onCancel={...} />.
-    <div key={a.id}>{/* existing inline-edit JSX unchanged */}</div>
-  ) : (
+{(accountsQ.data?.accounts ?? []).map((a, idx, arr) => {
+  if (editingId === a.id && editDraft) {
+    // Inline-edit unchanged — Task 8 lifts this into <AccountForm mode="edit">.
+    return (
+      <div key={a.id} className="surface p-5 relative">
+        {/* existing edit-mode JSX unchanged */}
+      </div>
+    );
+  }
+  return (
     <AccountCard
       key={a.id}
       account={a}
-      onEdit={(id) => setEditingAccountId(id)}
-      onDelete={(acc) => setConfirmDelete(acc)}
+      onEdit={(acc) => startEdit(acc)}
       onExpand={(id) => toggleCheckpoints(id)}
       expanded={checkpointsOpen.has(a.id)}
+      onMoveUp={() => move(a.id, -1)}
+      onMoveDown={() => move(a.id, 1)}
+      canMoveUp={idx > 0}
+      canMoveDown={idx < arr.length - 1}
+      moving={reorder.isPending}
     />
-  )
-)}
+  );
+})}
 ```
 
-The state-holder names (`editingAccountId`, `setEditingAccountId`, `confirmDelete`, `setConfirmDelete`, `toggleCheckpoints`, `checkpointsOpen`) all already exist in `Accounts`. Match whatever the current file uses.
+Actual state-holder / helper names in the current code (confirm by reading the file): `editingId`, `editDraft`, `startEdit(a)`, `move(id, dir)`, `reorder.isPending`, `toggleCheckpoints(id)`, `checkpointsOpen.has(id)`. Match whatever exists.
+
+Add the import at the top of `index.tsx`:
+```ts
+import { AccountCard } from './AccountCard';
+```
 
 Add the import at the top of `index.tsx`:
 ```ts
@@ -1094,66 +1127,75 @@ Create `frontend/src/pages/Accounts/__tests__/AccountCard.test.tsx`:
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import { AccountCard } from '../AccountCard';
 import type { Account } from '../../../api/types';
-
-function withRouter(node: React.ReactNode) {
-  return <MemoryRouter>{node}</MemoryRouter>;
-}
 
 const acc: Account = {
   id: 1, name: 'Test', type: 'checking', currency: 'EUR',
   openingBalance: '100.00', openingDate: '2025-01-01',
-  currentBalance: '250.00', transactionCount: 5, countedTransactionCount: 5,
-  displayOrder: 0,
+  currentBalance: '250.00', displayOrder: 0,
+};
+
+const defaultProps = {
+  account: acc,
+  onEdit: () => {},
+  onExpand: () => {},
+  expanded: false,
+  onMoveUp: () => {},
+  onMoveDown: () => {},
+  canMoveUp: true,
+  canMoveDown: true,
+  moving: false,
 };
 
 describe('AccountCard', () => {
   it('renders name, type, currency, and balance', () => {
-    render(withRouter(
-      <AccountCard account={acc} onEdit={() => {}} onDelete={() => {}} onExpand={() => {}} expanded={false} />
-    ));
+    render(<AccountCard {...defaultProps} />);
     expect(screen.getByText('Test')).toBeInTheDocument();
     expect(screen.getByText(/checking/i)).toBeInTheDocument();
     expect(screen.getByText(/EUR/)).toBeInTheDocument();
     expect(screen.getByText(/250/)).toBeInTheDocument();
   });
 
-  it('fires onEdit when modifier is clicked', async () => {
+  it('fires onEdit(account) when modifier is clicked', async () => {
     const onEdit = vi.fn();
     const user = userEvent.setup();
-    render(withRouter(
-      <AccountCard account={acc} onEdit={onEdit} onDelete={() => {}} onExpand={() => {}} expanded={false} />
-    ));
+    render(<AccountCard {...defaultProps} onEdit={onEdit} />);
     await user.click(screen.getByRole('button', { name: /modifier/i }));
-    expect(onEdit).toHaveBeenCalledWith(1);
+    expect(onEdit).toHaveBeenCalledWith(acc);
   });
 
-  it('fires onDelete with the account when supprimer is clicked', async () => {
-    const onDelete = vi.fn();
+  it('fires onMoveUp / onMoveDown when the reorder buttons are clicked', async () => {
+    const onMoveUp = vi.fn();
+    const onMoveDown = vi.fn();
     const user = userEvent.setup();
-    render(withRouter(
-      <AccountCard account={acc} onEdit={() => {}} onDelete={onDelete} onExpand={() => {}} expanded={false} />
-    ));
-    await user.click(screen.getByRole('button', { name: /supprimer/i }));
-    expect(onDelete).toHaveBeenCalledWith(acc);
+    render(<AccountCard {...defaultProps} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />);
+    await user.click(screen.getByRole('button', { name: /déplacer vers le haut/i }));
+    await user.click(screen.getByRole('button', { name: /déplacer vers le bas/i }));
+    expect(onMoveUp).toHaveBeenCalledTimes(1);
+    expect(onMoveDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the reorder buttons when at the edges or moving', () => {
+    const { rerender } = render(<AccountCard {...defaultProps} canMoveUp={false} />);
+    expect(screen.getByRole('button', { name: /déplacer vers le haut/i })).toBeDisabled();
+    rerender(<AccountCard {...defaultProps} canMoveDown={false} />);
+    expect(screen.getByRole('button', { name: /déplacer vers le bas/i })).toBeDisabled();
+    rerender(<AccountCard {...defaultProps} moving={true} />);
+    expect(screen.getByRole('button', { name: /déplacer vers le haut/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /déplacer vers le bas/i })).toBeDisabled();
   });
 
   it('fires onExpand when the checkpoints toggle is clicked', async () => {
     const onExpand = vi.fn();
     const user = userEvent.setup();
-    render(withRouter(
-      <AccountCard account={acc} onEdit={() => {}} onDelete={() => {}} onExpand={onExpand} expanded={false} />
-    ));
+    render(<AccountCard {...defaultProps} onExpand={onExpand} />);
     await user.click(screen.getByRole('button', { name: /points de contrôle/i }));
     expect(onExpand).toHaveBeenCalledWith(1);
   });
 
   it('does not render the drawer when expanded is false', () => {
-    render(withRouter(
-      <AccountCard account={acc} onEdit={() => {}} onDelete={() => {}} onExpand={() => {}} expanded={false} />
-    ));
+    render(<AccountCard {...defaultProps} />);
     // Drawer's empty-state text should be absent when collapsed. This is a
     // negative assertion — testing the positive case (drawer mounts on
     // expanded=true) is covered by the drawer's own unit tests in Task 10,
