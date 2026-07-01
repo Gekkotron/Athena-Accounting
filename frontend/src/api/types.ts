@@ -125,3 +125,12 @@ export interface CategoryReportRow {
   total: string;
   transaction_count: number;
 }
+
+export interface BalanceCheckpoint {
+  id: number;
+  accountId: number;
+  checkpointDate: string;   // YYYY-MM-DD
+  expectedAmount: string;   // fixed-point string, per project convention
+  note: string | null;
+  createdAt: string;
+}
