@@ -21,9 +21,7 @@ So I can displayed the total amount available in dashboard and the amount blocke
 
 - Color for type of category (light color, but different to 3 category type) revove transfert type. The sum of accounts is enough
 
-- Split code to be more readable
-
-- Add units tests on this project
+- check if nuextract will be useful https://about.nuextract.ai
 
 
 
@@ -47,6 +45,7 @@ So I can displayed the total amount available in dashboard and the amount blocke
 
 - Points de contrôle par compte affichés sur le graphique Dashboard (drift vs. cumul calculé, tolérance 1 centime).
 - CI GitHub Actions + rapport de couverture Codecov (backend vitest, service Postgres 16, badges dans le README).
+- Frontend test harness (Vitest + Testing Library + jsdom) + first refactor+test iteration on Accounts.tsx (split into 6 focused files + 6 characterization + ~20 unit tests). See `STATUS.md` for the interleave progress table.
 
 ---
 
