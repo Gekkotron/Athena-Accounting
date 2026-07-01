@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import type { Account, BalancePoint } from '../api/types';
+import type { Account, BalancePoint, BalanceCheckpoint } from '../api/types';
+import { listCheckpoints } from '../api/checkpoints';
 import { formatAmount, amountSignClass, formatDate } from '../lib/format';
 import { BalanceChart } from '../components/BalanceChart';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
@@ -31,6 +32,24 @@ export function Dashboard() {
   // otherwise a specific account_id (the chart then shows that single account
   // in its own currency).
   const [chartScope, setChartScope] = useState<'all' | number>('all');
+
+  // Checkpoints for the currently scoped account. Skipped entirely when scope
+  // is 'all' — checkpoints are per-account by design.
+  const checkpointsQ = useQuery({
+    queryKey: ['balance-checkpoints', chartScope],
+    queryFn: () => listCheckpoints(chartScope as number),
+    enabled: chartScope !== 'all',
+  });
+
+  const chartCheckpoints = useMemo(() => {
+    if (chartScope === 'all') return undefined;
+    const raw = checkpointsQ.data?.checkpoints ?? [];
+    return raw.map((c: BalanceCheckpoint) => ({
+      date: c.checkpointDate,
+      expectedAmount: Number(c.expectedAmount),
+      note: c.note ?? undefined,
+    }));
+  }, [checkpointsQ.data, chartScope]);
 
   const chartCurrency = useMemo(() => {
     if (chartScope === 'all') return primary?.currency ?? 'EUR';
@@ -102,7 +121,7 @@ export function Dashboard() {
             </select>
           </div>
           {seriesQ.data && primary ? (
-            <BalanceChart points={chartPoints} currency={chartCurrency} />
+            <BalanceChart points={chartPoints} currency={chartCurrency} checkpoints={chartCheckpoints} />
           ) : (
             <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
           )}
