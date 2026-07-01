@@ -19,6 +19,7 @@ import { reportsRoutes } from './http/routes/reports.js';
 import { triRoutes } from './http/routes/tri.js';
 import { backupRoutes } from './http/routes/backup.js';
 import { pdfTemplatesRoutes } from './http/routes/pdf-templates.js';
+import { balanceCheckpointsRoutes } from './http/routes/balance-checkpoints.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
   const logger = opts?.logger === false
@@ -58,6 +59,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(triRoutes);
   await app.register(backupRoutes);
   await app.register(pdfTemplatesRoutes);
+  await app.register(balanceCheckpointsRoutes);
 
   startDraftSweeper(app);
 
