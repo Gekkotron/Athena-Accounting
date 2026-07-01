@@ -308,3 +308,34 @@ export const pdfImportDrafts = pgTable(
     idxExpires: index('pdf_import_drafts_expires_at_idx').on(t.expiresAt),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// balance_checkpoints — manual reconciliation markers per account.
+// Displayed as diamonds on the Dashboard chart when a specific account is
+// scoped; drifts against the computed cumulative render in an amber style.
+// ---------------------------------------------------------------------------
+
+export const balanceCheckpoints = pgTable(
+  'balance_checkpoints',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    accountId: integer('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    checkpointDate: date('checkpoint_date').notNull(),
+    expectedAmount: numeric('expected_amount', { precision: 14, scale: 2 }).notNull(),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqAccountDate: uniqueIndex('balance_checkpoints_account_date_uq').on(
+      t.accountId,
+      t.checkpointDate,
+    ),
+    idxAccount: index('balance_checkpoints_account_idx').on(t.accountId),
+    idxUser: index('balance_checkpoints_user_idx').on(t.userId),
+  }),
+);
