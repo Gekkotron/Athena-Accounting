@@ -48,8 +48,11 @@ describe.skipIf(!RUN)('POST /api/imports with .pdf', () => {
     cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
 
     const { db } = await import('../../src/db/client.js');
-    const { accounts } = await import('../../src/db/schema.js');
+    const { accounts, users } = await import('../../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    const [user] = await db.select().from(users).where(eq(users.username, 'pdfroutes'));
     const [acc] = await db.insert(accounts).values({
+      userId: user!.id,
       name: 'PDF Routes Test', type: 'checking', openingDate: '2025-01-01',
     }).returning();
     accountId = acc!.id;

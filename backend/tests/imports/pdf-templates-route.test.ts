@@ -43,10 +43,12 @@ describe.skipIf(!RUN)('/api/pdf-templates CRUD', () => {
 
   it('lists, renames, and deletes templates', async () => {
     const { db } = await import('../../src/db/client.js');
-    const { pdfStatementTemplates } = await import('../../src/db/schema.js');
+    const { pdfStatementTemplates, users } = await import('../../src/db/schema.js');
     const { eq } = await import('drizzle-orm');
 
+    const [user] = await db.select().from(users).where(eq(users.username, 'tplroutes'));
     const [tpl] = await db.insert(pdfStatementTemplates).values({
+      userId: user!.id,
       fingerprint: 'abc123', label: 'Initial label',
       zones: minimalZones, source: 'interactive',
     }).returning();
