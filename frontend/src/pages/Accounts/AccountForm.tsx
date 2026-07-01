@@ -8,6 +8,84 @@ export interface AccountFormValues {
   openingDate: string;
 }
 
+function FormFields({
+  name,
+  setName,
+  type,
+  setType,
+  currency,
+  setCurrency,
+  openingBalance,
+  setOpeningBalance,
+  openingDate,
+  setOpeningDate,
+  mode,
+}: {
+  name: string;
+  setName: (v: string) => void;
+  type: string;
+  setType: (v: string) => void;
+  currency: string;
+  setCurrency: (v: string) => void;
+  openingBalance: string;
+  setOpeningBalance: (v: string) => void;
+  openingDate: string;
+  setOpeningDate: (v: string) => void;
+  mode: 'create' | 'edit';
+}) {
+  return (
+    <>
+      <div className={mode === 'create' ? 'lg:col-span-2' : ''}>
+        <label className="label mb-1.5 block">Nom</label>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} required={mode === 'create'} />
+      </div>
+      <div className={mode === 'create' ? '' : ''}>
+        <label className="label mb-1.5 block">Type</label>
+        <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="checking">Courant</option>
+          <option value="savings">Épargne</option>
+          <option value="credit">Crédit</option>
+          <option value="other">Autre</option>
+        </select>
+      </div>
+      <div>
+        <label className="label mb-1.5 block">Devise</label>
+        <input
+          className="input"
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+          maxLength={3}
+          required={mode === 'create'}
+        />
+      </div>
+      <div>
+        <label className="label mb-1.5 block">Solde d'ouverture</label>
+        <input
+          className="input font-mono"
+          value={openingBalance}
+          onChange={(e) => setOpeningBalance(e.target.value)}
+          required={mode === 'create'}
+        />
+        {mode === 'edit' && (
+          <div className="text-[11px] text-ink-500 mt-1">
+            Modifier ce montant ajustera automatiquement le solde courant.
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="label mb-1.5 block">Date d'ouverture</label>
+        <input
+          type="date"
+          className="input"
+          value={openingDate}
+          onChange={(e) => setOpeningDate(e.target.value)}
+          required={mode === 'create'}
+        />
+      </div>
+    </>
+  );
+}
+
 export function AccountForm({
   mode,
   initial,
@@ -43,48 +121,19 @@ export function AccountForm({
 
     return (
       <form onSubmit={submit} className="surface p-5 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="lg:col-span-2">
-          <label className="label mb-1.5 block">Nom</label>
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Type</label>
-          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="checking">Courant</option>
-            <option value="savings">Épargne</option>
-            <option value="credit">Crédit</option>
-            <option value="other">Autre</option>
-          </select>
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Devise</label>
-          <input
-            className="input"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            maxLength={3}
-            required
-          />
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Solde d'ouverture</label>
-          <input
-            className="input font-mono"
-            value={openingBalance}
-            onChange={(e) => setOpeningBalance(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Date d'ouverture</label>
-          <input
-            type="date"
-            className="input"
-            value={openingDate}
-            onChange={(e) => setOpeningDate(e.target.value)}
-            required
-          />
-        </div>
+        <FormFields
+          name={name}
+          setName={setName}
+          type={type}
+          setType={setType}
+          currency={currency}
+          setCurrency={setCurrency}
+          openingBalance={openingBalance}
+          setOpeningBalance={setOpeningBalance}
+          openingDate={openingDate}
+          setOpeningDate={setOpeningDate}
+          mode="create"
+        />
         {error && (
           <div className="sm:col-span-2 lg:col-span-6 rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
             {error}
@@ -101,50 +150,19 @@ export function AccountForm({
 
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <label className="label mb-1 block">Nom</label>
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label mb-1 block">Type</label>
-          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="checking">Courant</option>
-            <option value="savings">Épargne</option>
-            <option value="credit">Crédit</option>
-            <option value="other">Autre</option>
-          </select>
-        </div>
-        <div>
-          <label className="label mb-1 block">Devise</label>
-          <input
-            className="input"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            maxLength={3}
-          />
-        </div>
-      </div>
-      <div>
-        <label className="label mb-1 block">Solde d'ouverture</label>
-        <input
-          className="input font-mono"
-          value={openingBalance}
-          onChange={(e) => setOpeningBalance(e.target.value)}
-        />
-        <div className="text-[11px] text-ink-500 mt-1">
-          Modifier ce montant ajustera automatiquement le solde courant.
-        </div>
-      </div>
-      <div>
-        <label className="label mb-1 block">Date d'ouverture</label>
-        <input
-          type="date"
-          className="input"
-          value={openingDate}
-          onChange={(e) => setOpeningDate(e.target.value)}
-        />
-      </div>
+      <FormFields
+        name={name}
+        setName={setName}
+        type={type}
+        setType={setType}
+        currency={currency}
+        setCurrency={setCurrency}
+        openingBalance={openingBalance}
+        setOpeningBalance={setOpeningBalance}
+        openingDate={openingDate}
+        setOpeningDate={setOpeningDate}
+        mode="edit"
+      />
       {error && (
         <div className="rounded-md border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-xs text-clay-200">
           {error}

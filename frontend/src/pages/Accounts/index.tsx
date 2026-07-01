@@ -140,6 +140,9 @@ export function Accounts() {
     setEditError(null);
   };
 
+  // `draft` is passed explicitly (not read from editDraft state) because
+  // setEditDraft(values) hasn't re-rendered yet when saveEdit runs in the
+  // same event handler tick. Characterization test #3 is the safety net.
   const saveEdit = (a: Account, draft: typeof editDraft) => {
     if (!draft) return;
     const patch: Partial<Account> = {};
