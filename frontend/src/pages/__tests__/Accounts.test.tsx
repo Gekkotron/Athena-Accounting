@@ -179,6 +179,7 @@ describe('Accounts page (characterization)', () => {
       currentBalance: '0.00', transactionCount: 0, countedTransactionCount: 0,
       displayOrder: 0 };
     let firstCreated = false;
+    const postBodies: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/accounts' && !init?.method) return { accounts: [acc] };
       if (path === '/api/account-filename-patterns') return { patterns: [] };
@@ -189,6 +190,7 @@ describe('Accounts page (characterization)', () => {
           : [] };
       }
       if (path === '/api/accounts/1/balance-checkpoints' && init?.method === 'POST') {
+        postBodies.push(init.json);
         if (!firstCreated) {
           firstCreated = true;
           return { checkpoint: { id: 100, accountId: 1, checkpointDate: '2025-06-01',
@@ -202,18 +204,22 @@ describe('Accounts page (characterization)', () => {
     const user = userEvent.setup();
     renderAccounts();
     await user.click(await screen.findByRole('button', { name: /points de contrôle/i }));
-    await user.type(screen.getByLabelText(/date du point de contrôle/i), '2025-06-01');
+    // jsdom's `type="date"` input doesn't accept a typed "YYYY-MM-DD" string
+    // via userEvent keystrokes, so set the value directly and fire the
+    // change event the component listens for (consistent with Test 2).
+    fireEvent.change(screen.getByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
     await user.type(screen.getByLabelText(/montant attendu/i), '100.00');
     await user.click(screen.getByRole('button', { name: /\+\s*ajouter/i }));
 
     await screen.findByText('2025-06-01');
+    expect(postBodies[0]).toEqual({ checkpointDate: '2025-06-01', expectedAmount: '100.00' });
 
-    await user.clear(screen.getByLabelText(/date du point de contrôle/i));
-    await user.type(screen.getByLabelText(/date du point de contrôle/i), '2025-06-01');
+    fireEvent.change(screen.getByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
     await user.type(screen.getByLabelText(/montant attendu/i), '200.00');
     await user.click(screen.getByRole('button', { name: /\+\s*ajouter/i }));
 
     expect(await screen.findByText(/existe déjà à cette date/i)).toBeInTheDocument();
+    expect(postBodies[1]).toEqual({ checkpointDate: '2025-06-01', expectedAmount: '200.00' });
   });
 
   it('adds and deletes a filename pattern', async () => {
