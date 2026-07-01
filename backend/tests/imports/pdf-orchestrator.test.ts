@@ -33,8 +33,13 @@ let accountId: number;
 describe.skipIf(!RUN)('importPdf', () => {
   beforeAll(async () => {
     const { db } = await import('../../src/db/client.js');
-    const { accounts } = await import('../../src/db/schema.js');
+    const { accounts, users } = await import('../../src/db/schema.js');
+    const [user] = await db.insert(users).values({
+      username: 'pdf-orchestrator-test',
+      passwordHash: 'not-a-real-hash',
+    }).returning();
     const [acc] = await db.insert(accounts).values({
+      userId: user!.id,
       name: 'PDF Test Account', type: 'checking', openingDate: '2025-01-01',
     }).returning();
     accountId = acc!.id;
