@@ -16,9 +16,11 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
   with characterization + unit tests. Frontend test harness introduced
   (Vitest + Testing Library + jsdom). First iteration of the split-code
   + add-tests initiative.
-- 2026-07-01 — CI + Codecov coverage on backend tests.
+- 2026-07-01 — CI + Codecov coverage on backend tests. Migration 0007
+  hardened for fresh installs; four pre-existing PDF tests fixed for
+  user_id.
 - 2026-07-01 — Balance checkpoints per account + drift markers on the
-  Dashboard chart.
+  Dashboard chart, editable inline from the Comptes drawer.
 
 ## In flight
 
