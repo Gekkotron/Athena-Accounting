@@ -1150,21 +1150,15 @@ describe('AccountCard', () => {
     expect(onExpand).toHaveBeenCalledWith(1);
   });
 
-  it('renders the drawer only when expanded is true', () => {
-    const { rerender } = render(withRouter(
+  it('does not render the drawer when expanded is false', () => {
+    render(withRouter(
       <AccountCard account={acc} onEdit={() => {}} onDelete={() => {}} onExpand={() => {}} expanded={false} />
     ));
-    // Drawer's empty-state text should NOT be present when collapsed.
+    // Drawer's empty-state text should be absent when collapsed. This is a
+    // negative assertion — testing the positive case (drawer mounts on
+    // expanded=true) is covered by the drawer's own unit tests in Task 10,
+    // where the required QueryClient wrapper is set up.
     expect(screen.queryByText(/aucun point de contrôle/i)).not.toBeInTheDocument();
-
-    // Rerender expanded — the drawer mounts. Because it will fire a fetch that
-    // no client is configured, we don't assert its content here — just that
-    // the sub-tree appears. We can look for its aria-expanded=true state on
-    // the toggle, or the presence of its known copy after the QueryClient
-    // resolves. Since we have no client wrapper here, the drawer mounts and
-    // starts a fetch; a following expect() only asserts the mount signal.
-    // TestingLibrary loses reliability without QueryClient, so this last
-    // assertion is skipped when running standalone.
   });
 });
 ```
