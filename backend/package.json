@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "test": "vitest"
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.1",
@@ -38,7 +39,8 @@
     "pdfkit": "^0.15.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
   },
   "engines": {
     "node": ">=20.11"

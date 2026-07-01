@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    name: Backend tests + coverage
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: athena
+          POSTGRES_PASSWORD: athena
+          POSTGRES_DB: athena
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U athena -d athena"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://athena:athena@localhost:5432/athena
+      SESSION_SECRET: ci-only-session-secret-not-used-anywhere-else-9f2a
+      RUN_DB_TESTS: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply database migrations
+        working-directory: backend
+        run: npx tsx -e 'import("./src/db/migrate.js").then(m => m.runMigrations())'
+
+      - name: Type-check
+        working-directory: backend
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Run tests with coverage
+        working-directory: backend
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage/lcov.info
+          flags: backend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

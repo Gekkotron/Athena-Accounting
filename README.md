@@ -1,5 +1,8 @@
 # Athena Accounting
 
+[![CI](https://github.com/Gekkotron/Athena-Accounting/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gekkotron/Athena-Accounting/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Gekkotron/Athena-Accounting/graph/badge.svg)](https://codecov.io/gh/Gekkotron/Athena-Accounting)
+
 Self-hosted personal accounting. Local-only, no cloud dependencies, your
 bank data never leaves your network.
 

@@ -25,8 +25,6 @@ So I can displayed the total amount available in dashboard and the amount blocke
 
 - Add units tests on this project
 
-- Add codecov (I already add CODECOV_TOKEN inside github env)
-
 
 
 ## 📌 Pour plus tard (committed)
@@ -48,6 +46,7 @@ So I can displayed the total amount available in dashboard and the amount blocke
      en bas du fichier ou supprimés. -->
 
 - Points de contrôle par compte affichés sur le graphique Dashboard (drift vs. cumul calculé, tolérance 1 centime).
+- CI GitHub Actions + rapport de couverture Codecov (backend vitest, service Postgres 16, badges dans le README).
 
 ---
 
