@@ -29,6 +29,7 @@ async function buildStatementPdf(): Promise<Buffer> {
 }
 
 let accountId: number;
+let userId: number;
 
 describe.skipIf(!RUN)('importPdf', () => {
   beforeAll(async () => {
@@ -38,8 +39,9 @@ describe.skipIf(!RUN)('importPdf', () => {
       username: 'pdf-orchestrator-test',
       passwordHash: 'not-a-real-hash',
     }).returning();
+    userId = user!.id;
     const [acc] = await db.insert(accounts).values({
-      userId: user!.id,
+      userId,
       name: 'PDF Test Account', type: 'checking', openingDate: '2025-01-01',
     }).returning();
     accountId = acc!.id;
@@ -57,7 +59,7 @@ describe.skipIf(!RUN)('importPdf', () => {
     const { pdfStatementTemplates } = await import('../../src/db/schema.js');
     const { importPdf } = await import('../../src/domain/imports/pdf/index.js');
     const buf = await buildStatementPdf();
-    const r = await importPdf({ filename: 'releve.pdf', accountId, buffer: buf });
+    const r = await importPdf({ filename: 'releve.pdf', accountId, userId, buffer: buf });
     expect(r.kind).toBe('imported');
     if (r.kind !== 'imported') return;
     expect(r.result.insertedCount).toBe(2);
@@ -69,8 +71,8 @@ describe.skipIf(!RUN)('importPdf', () => {
   it('reuses an existing template on a second import', async () => {
     const { importPdf } = await import('../../src/domain/imports/pdf/index.js');
     const buf = await buildStatementPdf();
-    await importPdf({ filename: 'releve.pdf', accountId, buffer: buf });
-    const r = await importPdf({ filename: 'releve.pdf', accountId, buffer: buf });
+    await importPdf({ filename: 'releve.pdf', accountId, userId, buffer: buf });
+    const r = await importPdf({ filename: 'releve.pdf', accountId, userId, buffer: buf });
     expect(r.kind).toBe('imported');
     if (r.kind !== 'imported') return;
     // Same dedup keys → 0 inserted on the second pass.
