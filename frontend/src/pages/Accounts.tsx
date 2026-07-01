@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
-import type { Account, AccountFilenamePattern } from '../api/types';
+import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../api/checkpoints';
+import type { Account, AccountFilenamePattern, BalanceCheckpoint } from '../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../lib/format';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -88,6 +89,16 @@ export function Accounts() {
     next.splice(target, 0, moved);
     reorder.mutate(next.map((a) => a.id));
   };
+
+  // One Set for expanded-drawer account ids. Rendering many cards at once, so a
+  // Set keeps toggling O(log n) and avoids per-card boolean state.
+  const [checkpointsOpen, setCheckpointsOpen] = useState<Set<number>>(new Set());
+  const toggleCheckpoints = (id: number) =>
+    setCheckpointsOpen((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const [confirmDelete, setConfirmDelete] = useState<Account | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -387,6 +398,20 @@ export function Accounts() {
                       modifier
                     </button>
                   </div>
+                  <div className="mt-3 pt-3 border-t border-ink-800/60">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
+                      onClick={() => toggleCheckpoints(a.id)}
+                      aria-expanded={checkpointsOpen.has(a.id)}
+                    >
+                      <span className={`inline-block transition-transform ${checkpointsOpen.has(a.id) ? 'rotate-90' : ''}`}>▸</span>
+                      Points de contrôle
+                    </button>
+                    {checkpointsOpen.has(a.id) && (
+                      <BalanceCheckpointsDrawer accountId={a.id} currency={a.currency} />
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -419,6 +444,208 @@ export function Accounts() {
         }}
       />
     </div>
+  );
+}
+
+function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; currency: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['balance-checkpoints', accountId],
+    queryFn: () => listCheckpoints(accountId),
+  });
+
+  const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newAmount, setNewAmount] = useState('');
+  const [newNote, setNewNote] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: () =>
+      createCheckpoint(accountId, {
+        checkpointDate: newDate,
+        expectedAmount: newAmount,
+        note: newNote || undefined,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
+      setNewAmount('');
+      setNewNote('');
+      setCreateError(null);
+    },
+    onError: (err: ApiError) => {
+      if (err.status === 409) setCreateError('Un point de contrôle existe déjà à cette date.');
+      else setCreateError(err.message);
+    },
+  });
+
+  const del = useMutation({
+    mutationFn: (cpId: number) => deleteCheckpoint(accountId, cpId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] }),
+  });
+
+  const patch = useMutation({
+    mutationFn: (args: { cpId: number; patch: { expectedAmount?: string; note?: string | null } }) =>
+      updateCheckpoint(accountId, args.cpId, args.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] }),
+  });
+
+  const rows = q.data?.checkpoints ?? [];
+
+  return (
+    <div className="mt-2">
+      {rows.length === 0 && !q.isLoading && (
+        <div className="text-[11px] text-ink-500 italic mb-2">
+          Aucun point de contrôle. Ajoutez-en un pour vérifier vos soldes contre un relevé.
+        </div>
+      )}
+      {rows.length > 0 && (
+        <table className="w-full text-[11px] font-mono mb-2">
+          <thead>
+            <tr className="text-ink-600">
+              <th className="text-left font-normal">date</th>
+              <th className="text-right font-normal">attendu</th>
+              <th className="text-left font-normal pl-3">note</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c: BalanceCheckpoint) => (
+              <CheckpointRow
+                key={c.id}
+                cp={c}
+                currency={currency}
+                onSave={(p) => patch.mutate({ cpId: c.id, patch: p })}
+                onDelete={() => del.mutate(c.id)}
+                saving={patch.isPending}
+                deleting={del.isPending}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="date"
+          className="input-sm w-36"
+          value={newDate}
+          onChange={(e) => setNewDate(e.target.value)}
+          aria-label="Date du point de contrôle"
+        />
+        <input
+          type="text"
+          inputMode="decimal"
+          className="input-sm w-28 text-right"
+          placeholder="0.00"
+          value={newAmount}
+          onChange={(e) => setNewAmount(e.target.value)}
+          aria-label="Montant attendu"
+        />
+        <input
+          type="text"
+          className="input-sm flex-1 min-w-[8rem]"
+          placeholder="note (optionnelle)"
+          maxLength={200}
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          aria-label="Note"
+        />
+        <button
+          type="button"
+          className="btn-sm"
+          disabled={!newAmount || create.isPending}
+          onClick={() => create.mutate()}
+        >
+          + ajouter
+        </button>
+      </div>
+      {createError && (
+        <div className="mt-1 text-[11px] text-clay-300">{createError}</div>
+      )}
+    </div>
+  );
+}
+
+function CheckpointRow({
+  cp,
+  currency,
+  onSave,
+  onDelete,
+  saving,
+  deleting,
+}: {
+  cp: BalanceCheckpoint;
+  currency: string;
+  onSave: (patch: { expectedAmount?: string; note?: string | null }) => void;
+  onDelete: () => void;
+  saving: boolean;
+  deleting: boolean;
+}) {
+  const [editingAmount, setEditingAmount] = useState(false);
+  const [amountDraft, setAmountDraft] = useState(cp.expectedAmount);
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(cp.note ?? '');
+
+  const commitAmount = () => {
+    if (amountDraft !== cp.expectedAmount && amountDraft.trim() !== '') {
+      onSave({ expectedAmount: amountDraft });
+    }
+    setEditingAmount(false);
+  };
+  const commitNote = () => {
+    const next = noteDraft.trim();
+    const current = cp.note ?? '';
+    if (next !== current) onSave({ note: next.length === 0 ? null : next });
+    setEditingNote(false);
+  };
+
+  return (
+    <tr className="border-t border-ink-800/60">
+      <td className="py-1 text-ink-400">{cp.checkpointDate}</td>
+      <td className="py-1 text-right text-ink-200 private">
+        {editingAmount ? (
+          <input
+            className="input-sm w-24 text-right"
+            autoFocus
+            value={amountDraft}
+            onChange={(e) => setAmountDraft(e.target.value)}
+            onBlur={commitAmount}
+            onKeyDown={(e) => e.key === 'Enter' && commitAmount()}
+          />
+        ) : (
+          <button className="hover:text-ink-100" onClick={() => setEditingAmount(true)}>
+            {formatAmount(cp.expectedAmount, currency)}
+          </button>
+        )}
+      </td>
+      <td className="py-1 pl-3 text-ink-500">
+        {editingNote ? (
+          <input
+            className="input-sm w-full"
+            autoFocus
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onBlur={commitNote}
+            onKeyDown={(e) => e.key === 'Enter' && commitNote()}
+          />
+        ) : (
+          <button className="text-left hover:text-ink-200 w-full" onClick={() => setEditingNote(true)}>
+            {cp.note ?? <span className="italic text-ink-700">ajouter…</span>}
+          </button>
+        )}
+      </td>
+      <td className="py-1 text-right">
+        <button
+          className="text-ink-600 hover:text-clay-300 transition"
+          onClick={onDelete}
+          disabled={deleting || saving}
+          aria-label="Supprimer"
+          title="Supprimer"
+        >
+          ✕
+        </button>
+      </td>
+    </tr>
   );
 }
 
