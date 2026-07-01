@@ -122,7 +122,13 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
       const actual = data[lo]!.value;
       const delta = c.expectedAmount - actual;
       const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
-      return { ...c, actual, delta, drift };
+      // Precompute the diamond's X position once, using the same day-fraction-to-cx formula.
+      const cx = xScale(
+        ((new Date(c.date).getTime() - new Date(firstDate).getTime()) /
+          (new Date(lastDate).getTime() - new Date(firstDate).getTime())) *
+          (data.length - 1),
+      );
+      return { ...c, actual, delta, drift, cx };
     });
 
   const path = data
@@ -187,12 +193,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
     let closest: (typeof marks)[number] | null = null;
     let closestDist = Infinity;
     for (const m of marks) {
-      const cx = xScale(
-        ((new Date(m.date).getTime() - new Date(firstDate).getTime()) /
-          (new Date(lastDate).getTime() - new Date(firstDate).getTime())) *
-          (data.length - 1),
-      );
-      const d = Math.abs(cx - hoveredX);
+      const d = Math.abs(m.cx - hoveredX);
       if (d < closestDist && d <= HOVER_PROXIMITY_VB) {
         closest = m;
         closestDist = d;
@@ -273,13 +274,6 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
 
         {/* Balance checkpoints — diamond markers + optional drift guide */}
         {marks.map((m) => {
-          const cx = xScale(
-            // Use the checkpoint's own X, not the bucket's. Solve for i such that
-            // xScale(i) reflects the day fraction between firstDate and lastDate.
-            ((new Date(m.date).getTime() - new Date(firstDate).getTime()) /
-              (new Date(lastDate).getTime() - new Date(firstDate).getTime())) *
-              (data.length - 1),
-          );
           const cyExpected = yScale(m.expectedAmount);
           const cyActual = yScale(m.actual);
           const color = m.drift ? '#f6c177' : '#7dd3c0'; // amber vs. sage
@@ -288,9 +282,9 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
             <g key={`cp-${m.date}`} pointerEvents="none">
               {m.drift && (
                 <line
-                  x1={cx}
+                  x1={m.cx}
                   y1={cyExpected}
-                  x2={cx}
+                  x2={m.cx}
                   y2={cyActual}
                   stroke={color}
                   strokeDasharray="3 3"
@@ -298,15 +292,15 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
                   opacity="0.8"
                 />
               )}
-              {/* Diamond = rotated 4-sided path centered on (cx, cyExpected) */}
+              {/* Diamond = rotated 4-sided path centered on (m.cx, cyExpected) */}
               <path
-                d={`M ${cx} ${cyExpected - 5} L ${cx + 5} ${cyExpected} L ${cx} ${cyExpected + 5} L ${cx - 5} ${cyExpected} Z`}
+                d={`M ${m.cx} ${cyExpected - 5} L ${m.cx + 5} ${cyExpected} L ${m.cx} ${cyExpected + 5} L ${m.cx - 5} ${cyExpected} Z`}
                 fill={fill}
                 stroke={color}
                 strokeWidth="2"
               />
               {m.drift && (
-                <circle cx={cx} cy={cyActual} r="2" fill={color} />
+                <circle cx={m.cx} cy={cyActual} r="2" fill={color} />
               )}
             </g>
           );
