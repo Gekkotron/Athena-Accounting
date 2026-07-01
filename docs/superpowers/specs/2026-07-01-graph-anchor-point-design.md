@@ -107,7 +107,7 @@ The component has **no** concept of chart scope. It renders whatever checkpoints
   ```
 - Passed to the chart: when `chartScope !== 'all'`, map each `BalanceCheckpoint` from the API into the chart's shape by parsing the fixed-point string once — `{ date: c.checkpointDate, expectedAmount: Number(c.expectedAmount), note: c.note ?? undefined }`. When `chartScope === 'all'`, pass `undefined`.
 - With `chartScope === 'all'` the query does not fire and the chart renders exactly as today.
-- A subtle caption under the chart lists totals when at least one checkpoint exists: `"{N} point(s) de contrôle · {K} drift(s)"`. Purely informational; no click action.
+- Drift is signalled purely by the chart's own coloring (sage vs. amber diamond) and hover tooltip. No separate summary caption — computing counts outside `BalanceChart` would duplicate the drift logic the chart already runs internally.
 
 ### Accounts page — CRUD UI
 

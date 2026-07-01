@@ -56,7 +56,7 @@ CREATE TABLE balance_checkpoints (
   expected_amount  NUMERIC(14, 2) NOT NULL,
   note             TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (account_id, checkpoint_date)
+  CONSTRAINT balance_checkpoints_account_date_uq UNIQUE (account_id, checkpoint_date)
 );
 
 CREATE INDEX balance_checkpoints_account_idx ON balance_checkpoints (account_id);
@@ -906,41 +906,7 @@ Change the existing `<BalanceChart>` invocation:
 <BalanceChart points={chartPoints} currency={chartCurrency} checkpoints={chartCheckpoints} />
 ```
 
-- [ ] **Step 3: Add the drift-count caption**
-
-Below the `<BalanceChart>` line but still inside its wrapping `<section>`, add:
-
-```tsx
-{chartCheckpoints && chartCheckpoints.length > 0 && (
-  <div className="mt-3 font-mono text-[11px] text-ink-500 flex items-center gap-3">
-    <span>
-      {chartCheckpoints.length} point{chartCheckpoints.length > 1 ? 's' : ''} de contrôle
-    </span>
-    {(() => {
-      // Client-side drift preview: recompute against the last known cumulative
-      // to show a "K drift(s)" tag. Cheap enough on a handful of checkpoints.
-      const points = chartPoints.filter((p) => p.currency === chartCurrency);
-      if (points.length === 0) return null;
-      const sorted = [...points].sort((a, b) => a.bucket.localeCompare(b.bucket));
-      let drifts = 0;
-      for (const cp of chartCheckpoints) {
-        // Binary search for the latest bucket <= cp.date.
-        let lo = 0;
-        let hi = sorted.length - 1;
-        while (lo < hi) {
-          const mid = (lo + hi + 1) >>> 1;
-          if (sorted[mid]!.bucket <= cp.date) lo = mid;
-          else hi = mid - 1;
-        }
-        if (Math.abs(cp.expectedAmount - Number(sorted[lo]!.cumulative)) >= 0.01) drifts++;
-      }
-      return drifts > 0 ? <span className="text-amber-300">· {drifts} drift{drifts > 1 ? 's' : ''}</span> : null;
-    })()}
-  </div>
-)}
-```
-
-- [ ] **Step 4: TypeScript check**
+- [ ] **Step 3: TypeScript check**
 
 Run:
 ```bash
@@ -948,12 +914,12 @@ cd frontend && npx tsc -p tsconfig.json --noEmit
 ```
 Expected: no errors.
 
-- [ ] **Step 5: Manual verify**
+- [ ] **Step 4: Manual verify**
 
 ```bash
 docker compose up --build
 ```
-Open <http://127.0.0.1:8000>. Login. Currently the DB has no checkpoints, so the Dashboard should render exactly as before. Switch the chart scope selector between "Tous les comptes" and a specific account — nothing should crash and the caption stays hidden (no checkpoints yet).
+Open <http://127.0.0.1:8000>. Login. Currently the DB has no checkpoints, so the Dashboard should render exactly as before. Switch the chart scope selector between "Tous les comptes" and a specific account — nothing should crash.
 
 Now seed one row from `psql`:
 ```bash
@@ -963,23 +929,23 @@ psql "$(grep '^DATABASE_URL=' .env | cut -d= -f2-)" -c \
 ```
 (Adjust the `user_id` / `account_id` to match your data — check with `psql ... -c 'select id, user_id, name from accounts;'`.)
 
-Reload the Dashboard, switch the chart scope to that account. Expect: one **amber diamond** with a dashed line down to the actual curve, and the caption reads `1 point de contrôle · 1 drift`.
+Reload the Dashboard, switch the chart scope to that account. Expect: one **amber diamond** with a dashed line down to the actual curve (drift signalled purely visually — no caption).
 
 Delete the seed row before committing:
 ```bash
 psql "$(grep '^DATABASE_URL=' .env | cut -d= -f2-)" -c "DELETE FROM balance_checkpoints;"
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add frontend/src/pages/Dashboard.tsx
 git commit -m "$(cat <<'EOF'
 feat(dashboard): wire balance checkpoints into the chart
 
-Query fires only when a specific account is scoped. Passes mapped
-array to BalanceChart and shows a subtle N-point/K-drift caption
-below the graph.
+Query fires only when a specific account is scoped and passes the
+mapped array to BalanceChart. Drift signalled visually by the chart
+itself — no duplicated computation for a caption.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1274,7 +1240,7 @@ Open <http://127.0.0.1:8000>, login, navigate to Comptes.
 4. Click the note cell → inline input, edit, Enter → note updates.
 5. Try to add a second checkpoint on the *same date* → error text appears: `"Un point de contrôle existe déjà à cette date."`
 6. Click ✕ → row disappears.
-7. Navigate to Dashboard → set the chart scope to that account → the checkpoint diamond appears on the chart with the caption `1 point de contrôle · N drift(s)` matching what you configured.
+7. Navigate to Dashboard → set the chart scope to that account → the checkpoint diamond appears on the chart (sage if matched, amber + guide line if drifted).
 8. Delete the account itself from Comptes → confirm from the dialog. Verify (psql) that `balance_checkpoints` is empty for that account.
 
 Kill the stack.
