@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AdvancedEditor } from './AdvancedEditor';
 import { FlatTable } from './FlatTable';
 import { GroupedView } from './GroupedView';
-import { NormalizationHint } from './NormalizationHint';
+import { RuleCreateForm } from './RuleCreateForm';
 import type { GroupedEntry } from './types';
 
 type View = 'grouped' | 'flat';
@@ -21,15 +21,6 @@ export function Rules() {
     queryKey: ['categories'],
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
-
-  // Quick-add form on top — defaults that work for the common case (any sign,
-  // word mode, priority 0). The "+ ajouter à la catégorie" buttons in the
-  // grouped view reuse these defaults.
-  const [keyword, setKeyword] = useState('');
-  const [categoryId, setCategoryId] = useState<number | ''>('');
-  const [signConstraint, setSignConstraint] = useState<SignConstraint>('any');
-  const [matchMode, setMatchMode] = useState<MatchMode>('word');
-  const [priority, setPriority] = useState(0);
 
   const [view, setView] = useState<View>('grouped');
   const [editing, setEditing] = useState<Rule | null>(null);
@@ -65,7 +56,6 @@ export function Rules() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rules'] });
-      setKeyword('');
     },
   });
 
@@ -100,16 +90,6 @@ export function Rules() {
       qc.invalidateQueries({ queryKey: ['tri-groups'] });
     },
   });
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!categoryId || !keyword.trim()) return;
-    const keywords = Array.from(
-      new Set(keyword.split(',').map((s) => s.trim()).filter(Boolean)),
-    );
-    if (keywords.length === 0) return;
-    createBatch.mutate({ keywords, categoryId, signConstraint, matchMode, priority });
-  };
 
   const cats = catQ.data?.categories ?? [];
   const rules = rulesQ.data?.rules ?? [];
@@ -166,72 +146,12 @@ export function Rules() {
         </div>
       )}
 
-      {/* Quick-add form */}
-      <form onSubmit={submit} className="surface p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
-        <div className="lg:col-span-2">
-          <label className="label mb-1.5 block">Mot-clé(s)</label>
-          <input
-            className="input"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="carrefour, leclerc, lidl"
-            required
-          />
-          <NormalizationHint input={keyword} matchMode={matchMode} />
-          <div className="text-[11px] text-ink-500 mt-1.5">
-            Séparez par des virgules pour créer plusieurs règles d'un coup.
-          </div>
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Catégorie</label>
-          <select
-            className="input"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
-            required
-          >
-            <option value="">—</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Signe</label>
-          <select className="input" value={signConstraint} onChange={(e) => setSignConstraint(e.target.value as SignConstraint)}>
-            <option value="any">Tous</option>
-            <option value="negative">Négatif</option>
-            <option value="positive">Positif</option>
-          </select>
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Mode</label>
-          <select className="input" value={matchMode} onChange={(e) => setMatchMode(e.target.value as MatchMode)}>
-            <option value="word">Mot entier</option>
-            <option value="substring">Sous-chaîne</option>
-            <option value="regex">Regex</option>
-          </select>
-        </div>
-        <div>
-          <label className="label mb-1.5 block">Priorité</label>
-          <input
-            type="number"
-            className="input font-mono"
-            value={priority}
-            onChange={(e) => setPriority(Number(e.target.value))}
-          />
-        </div>
-        <div className="sm:col-span-2 lg:col-span-6 flex items-center gap-3">
-          <button className="btn-primary" disabled={createBatch.isPending}>
-            {createBatch.isPending ? 'Ajout…' : 'Ajouter la règle'}
-          </button>
-          {createBatch.isSuccess && createBatch.data && (
-            <span className="text-xs text-sage-300">
-              {createBatch.data} règle{createBatch.data > 1 ? 's' : ''} ajoutée{createBatch.data > 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-      </form>
+      <RuleCreateForm
+        categories={cats}
+        onSubmit={(values) => createBatch.mutate(values)}
+        submitting={createBatch.isPending}
+        successCount={createBatch.isSuccess ? createBatch.data : undefined}
+      />
 
       {/* View toggle */}
       <div className="flex items-center justify-end gap-2">
