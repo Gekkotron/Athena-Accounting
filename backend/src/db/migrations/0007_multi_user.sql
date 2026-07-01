@@ -15,6 +15,15 @@ ALTER TABLE pdf_import_drafts           ADD COLUMN user_id INTEGER REFERENCES us
 
 -- Backfill to user id=1 (the only user that could exist before this migration
 -- because of the onboarding lockout).
+--
+-- Fresh-install guard: migration 0000 seeds a `Divers` category with
+-- user_id = NULL. On an install where no user has ever onboarded (CI, first
+-- boot from an empty volume) that seeded row would fail the FK when the
+-- UPDATE below tries to point it at a nonexistent user 1. Drop the orphan
+-- first; the onboarding endpoint reseeds `Divers` per-user on account
+-- creation, so nothing is lost.
+DELETE FROM categories WHERE user_id IS NULL AND NOT EXISTS (SELECT 1 FROM users WHERE id = 1);
+
 UPDATE accounts                  SET user_id = 1 WHERE user_id IS NULL;
 UPDATE account_filename_patterns SET user_id = 1 WHERE user_id IS NULL;
 UPDATE categories                SET user_id = 1 WHERE user_id IS NULL;
