@@ -457,7 +457,7 @@ function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; 
   const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
   const [newAmount, setNewAmount] = useState('');
   const [newNote, setNewNote] = useState('');
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const create = useMutation({
     mutationFn: () =>
@@ -470,23 +470,35 @@ function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; 
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
       setNewAmount('');
       setNewNote('');
-      setCreateError(null);
+      setMutationError(null);
     },
     onError: (err: ApiError) => {
-      if (err.status === 409) setCreateError('Un point de contrôle existe déjà à cette date.');
-      else setCreateError(err.message);
+      if (err.status === 409) setMutationError('Un point de contrôle existe déjà à cette date.');
+      else setMutationError(err.message);
     },
   });
 
   const del = useMutation({
     mutationFn: (cpId: number) => deleteCheckpoint(accountId, cpId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
+      setMutationError(null);
+    },
+    onError: (err: ApiError) => {
+      setMutationError('Suppression impossible : ' + (err.message ?? 'erreur réseau'));
+    },
   });
 
   const patch = useMutation({
     mutationFn: (args: { cpId: number; patch: { expectedAmount?: string; note?: string | null } }) =>
       updateCheckpoint(accountId, args.cpId, args.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
+      setMutationError(null);
+    },
+    onError: (err: ApiError) => {
+      setMutationError('Mise à jour impossible : ' + (err.message ?? 'erreur réseau'));
+    },
   });
 
   const rows = q.data?.checkpoints ?? [];
@@ -559,8 +571,8 @@ function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; 
           + ajouter
         </button>
       </div>
-      {createError && (
-        <div className="mt-1 text-[11px] text-clay-300">{createError}</div>
+      {mutationError && (
+        <div className="mt-1 text-[11px] text-clay-300">{mutationError}</div>
       )}
     </div>
   );
