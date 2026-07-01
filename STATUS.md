@@ -1,6 +1,6 @@
 # Status — Athena Accounting
 
-_Last updated: 2026-07-01_
+_Last updated: 2026-07-02_
 
 ## Live
 
@@ -12,6 +12,9 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
 
 ## Recently landed
 
+- 2026-07-02 — Rules.tsx split into pages/Rules/ (8 focused files) with
+  characterization + unit tests. Second interleave iteration; frontend
+  harness unchanged (Vitest + RTL + jsdom).
 - 2026-07-01 — `pages/Accounts.tsx` split into `pages/Accounts/` (6 focused files)
   with characterization + unit tests. Frontend test harness introduced
   (Vitest + Testing Library + jsdom). First iteration of the split-code
@@ -31,13 +34,16 @@ Empty. Update this section when starting a new initiative.
 | File               | Chars. tests | Split | Unit tests |
 |--------------------|:------------:|:-----:|:----------:|
 | Accounts.tsx       | ✅ (6)       | ✅    | ✅ (~20)   |
-| Rules.tsx          | ⬜           | ⬜    | ⬜         |
+| Rules.tsx          | ✅ (8)       | ✅    | ✅ (15)    |
 | Transactions.tsx   | ⬜           | ⬜    | ⬜         |
 | Imports.tsx        | ⬜           | ⬜    | ⬜         |
 | backup.ts (backend)| ⬜           | ⬜    | ⬜         |
 
 ## Known deferrals
 
+- `RuleCreateForm` `successCount` reset (Rules iteration, 2026-07-02): `useEffect`
+  dependency on `successCount` doesn't re-fire when two successive submits return
+  the same count (rare edge case). Would need a counter-signal for exact parity.
 - Duplicate `note` Zod chain in `backend/src/http/routes/balance-checkpoints.ts`
   (Task 2 review, 2026-07-01). Extract to a shared `noteField` const on the
   next touch of that file.
