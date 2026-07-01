@@ -1011,15 +1011,32 @@ EOF
     initial,
     onSubmit,
     onCancel,
+    onDelete,
     submitting,
+    error,
   }: {
     mode: 'create' | 'edit';
     initial?: Partial<AccountFormValues>;
     onSubmit: (values: AccountFormValues) => void;
-    onCancel?: () => void;         // only meaningful in edit mode
+    onCancel?: () => void;         // only used in edit mode
+    onDelete?: () => void;         // only used in edit mode — renders the "supprimer" button
     submitting?: boolean;
+    error?: string | null;         // only used in edit mode (editError display)
   }): JSX.Element;
   ```
+
+**What today's edit-mode JSX contains** (read `index.tsx` around lines 257–350 to confirm):
+- The form inputs (name / type / currency / openingBalance / openingDate).
+- An error display block (only when `editError` is truthy).
+- A button row with: `supprimer` (left, red-toned) + `Annuler` + `Enregistrer` (right).
+- The `Éditer le compte` header stays in the parent, OUTSIDE AccountForm (that stays inline in `index.tsx`).
+
+**What today's create-mode JSX contains** (read `index.tsx` around the create form near the top of the `Accounts` render):
+- The same set of inputs.
+- A submit button labeled `Créer le compte` (or `Création…` when pending).
+- No cancel, no supprimer, no error banner.
+
+**How `onDelete` is used:** in edit mode, if `onDelete` is provided, AccountForm renders a `supprimer` button on the left of the button row that fires `onDelete()` on click. The parent (`index.tsx`) supplies `onDelete={() => setConfirmDelete(a)}`. In create mode, `onDelete` is undefined and no button renders.
 
 - [ ] **Step 1: Create `AccountForm.tsx`**
 
@@ -1043,36 +1060,38 @@ Replace the create form's JSX at the top with:
 
 - [ ] **Step 3: Update `index.tsx` — inline edit**
 
-Replace the inline-edit JSX inside the `.map(...)` (the `editingAccountId === a.id` branch from Task 7's Step 3) with:
+Replace the inline-edit JSX inside the `.map(...)` (the `editingId === a.id && editDraft` branch) with a wrapping `<div>` that keeps the parent's `Éditer le compte` header + `<AccountForm mode="edit" ... />`. The `Éditer le compte` header stays in the parent; only the form body + button row moves into AccountForm.
+
+Use the ACTUAL state-holder names in `index.tsx` — `editingId`, `editDraft`, `editError`, `saveEdit(a)`, `cancelEdit()`, `updateAccount.isPending`. Read the file to confirm each name.
+
+Rough shape (adapt to what the current code actually does):
 
 ```tsx
-<AccountForm
-  key={a.id}
-  mode="edit"
-  initial={{
-    name: a.name,
-    type: a.type,
-    currency: a.currency,
-    openingBalance: a.openingBalance,
-    openingDate: a.openingDate,
-  }}
-  onSubmit={(values) => {
-    // Diff against `a` and send only changed fields.
-    const patch: Partial<AccountFormValues> = {};
-    if (values.name !== a.name) patch.name = values.name;
-    if (values.type !== a.type) patch.type = values.type;
-    if (values.currency !== a.currency) patch.currency = values.currency;
-    if (values.openingBalance !== a.openingBalance) patch.openingBalance = values.openingBalance;
-    if (values.openingDate !== a.openingDate) patch.openingDate = values.openingDate;
-    updateAccount.mutate({ id: a.id, patch });
-    setEditingAccountId(null);
-  }}
-  onCancel={() => setEditingAccountId(null)}
-  submitting={updateAccount.isPending}
-/>
+if (editingId === a.id && editDraft) {
+  return (
+    <div key={a.id} className="surface p-5 relative">
+      <div className="label mb-3">Éditer le compte</div>
+      <AccountForm
+        mode="edit"
+        initial={editDraft}
+        submitting={updateAccount.isPending}
+        error={editError}
+        onSubmit={(values) => {
+          // Preserve today's diff-only-changed-fields behavior.
+          // Today's saveEdit(a) reads from editDraft and builds a patch
+          // against `a`. Simplest preservation: setEditDraft(values); saveEdit(a);
+          // Or push the diff logic inline here — pick whichever keeps
+          // characterization test #3 (PUT body { name } only) green.
+        }}
+        onCancel={cancelEdit}
+        onDelete={() => setConfirmDelete(a)}
+      />
+    </div>
+  );
+}
 ```
 
-The exact call signature for `updateAccount.mutate` must match whatever `useMutation` in the current `index.tsx` expects — read that code, don't guess.
+**Behavior preservation guardrail:** characterization test #3 asserts the PUT body contains ONLY the changed field. That behavior lives in today's `saveEdit(a)` diffing against `editDraft` vs `a`. Whichever wiring you pick, that diff must remain intact — the test is the safety net that catches drift.
 
 Add the import at the top of `index.tsx`:
 ```ts
