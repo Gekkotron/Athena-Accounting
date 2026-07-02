@@ -79,6 +79,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   // UNIQUE(account_id, dedup_key) constraint rejects exact duplicates at the
   // DB level, which we translate to a clean 409.
   app.post('/api/transactions', async (req, reply) => {
+    const uid = userId(req);
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
@@ -98,6 +99,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       const [inserted] = await db
         .insert(transactions)
         .values({
+          userId: uid,
           accountId: v.accountId,
           date: v.date,
           amount,
