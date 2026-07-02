@@ -6,6 +6,9 @@ export interface AccountFormValues {
   currency: string;
   openingBalance: string;
   openingDate: string;
+  // Default lock period in years. null / '' input = no lock. Applies to the
+  // opening balance and any transaction without its own override.
+  lockYears: number | null;
 }
 
 function FormFields({
@@ -19,6 +22,8 @@ function FormFields({
   setOpeningBalance,
   openingDate,
   setOpeningDate,
+  lockYearsInput,
+  setLockYearsInput,
   mode,
 }: {
   name: string;
@@ -31,6 +36,8 @@ function FormFields({
   setOpeningBalance: (v: string) => void;
   openingDate: string;
   setOpeningDate: (v: string) => void;
+  lockYearsInput: string;
+  setLockYearsInput: (v: string) => void;
   mode: 'create' | 'edit';
 }) {
   return (
@@ -82,6 +89,20 @@ function FormFields({
           required={mode === 'create'}
         />
       </div>
+      <div>
+        <label className="label mb-1.5 block" title="Nombre d'années pendant lesquelles ce compte est bloqué à partir de sa date d'ouverture (PEA, dépôt à terme, etc.). Laissez vide si aucun blocage.">
+          Blocage (ans)
+        </label>
+        <input
+          type="number"
+          min={0}
+          max={99}
+          className="input font-mono"
+          value={lockYearsInput}
+          placeholder="—"
+          onChange={(e) => setLockYearsInput(e.target.value)}
+        />
+      </div>
     </>
   );
 }
@@ -110,8 +131,21 @@ export function AccountForm({
   const [openingDate, setOpeningDate] = useState(
     initial?.openingDate ?? new Date().toISOString().slice(0, 10)
   );
+  const [lockYearsInput, setLockYearsInput] = useState(
+    initial?.lockYears == null ? '' : String(initial.lockYears),
+  );
 
-  const values: AccountFormValues = { name, type, currency, openingBalance, openingDate };
+  const parsedLockYears = ((): number | null => {
+    const raw = lockYearsInput.trim();
+    if (raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 && n <= 99 ? Math.floor(n) : null;
+  })();
+
+  const values: AccountFormValues = {
+    name, type, currency, openingBalance, openingDate,
+    lockYears: parsedLockYears,
+  };
 
   if (mode === 'create') {
     const submit = (e: FormEvent) => {
@@ -132,6 +166,8 @@ export function AccountForm({
           setOpeningBalance={setOpeningBalance}
           openingDate={openingDate}
           setOpeningDate={setOpeningDate}
+          lockYearsInput={lockYearsInput}
+          setLockYearsInput={setLockYearsInput}
           mode="create"
         />
         {error && (
@@ -162,6 +198,8 @@ export function AccountForm({
           setOpeningBalance={setOpeningBalance}
           openingDate={openingDate}
           setOpeningDate={setOpeningDate}
+          lockYearsInput={lockYearsInput}
+          setLockYearsInput={setLockYearsInput}
           mode="edit"
         />
       </div>

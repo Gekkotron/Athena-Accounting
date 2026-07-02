@@ -16,7 +16,7 @@ export function Dashboard() {
   });
   const balanceQ = useQuery({
     queryKey: ['reports', 'balance'],
-    queryFn: () => api<{ perCurrency: { currency: string; total: string; account_count: number }[] }>(
+    queryFn: () => api<{ perCurrency: { currency: string; total: string; available: string; account_count: number }[] }>(
       '/api/reports/balance',
     ),
   });
@@ -73,19 +73,37 @@ export function Dashboard() {
     <div className="flex flex-col gap-10">
       {/* Hero */}
       <section>
-        <div className="label">Solde net</div>
         {primary ? (
-          <>
-            <div className={`display text-5xl md:text-7xl leading-[1.05] mt-2 tabular-nums ${amountSignClass(primary.total)}`}>
-              {formatAmount(primary.total, primary.currency)}
-            </div>
-            <div className="text-sm text-ink-500 mt-3">
-              <span className="display-italic">somme</span> de {primary.account_count} compte
-              {primary.account_count > 1 ? 's' : ''} · {primary.currency}
-            </div>
-          </>
+          (() => {
+            const total = Number(primary.total);
+            const available = Number(primary.available);
+            const blocked = total - available;
+            const hasBlocked = Math.abs(blocked) >= 0.005;
+            return (
+              <>
+                <div className="label">{hasBlocked ? 'Disponible' : 'Solde net'}</div>
+                <div className={`display text-5xl md:text-7xl leading-[1.05] mt-2 tabular-nums ${amountSignClass(available)}`}>
+                  {formatAmount(available, primary.currency)}
+                </div>
+                <div className="text-sm text-ink-500 mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                  <span>
+                    <span className="display-italic">somme</span> de {primary.account_count} compte
+                    {primary.account_count > 1 ? 's' : ''} · {primary.currency}
+                  </span>
+                  {hasBlocked && (
+                    <span className="text-amber-300/90">
+                      + <span className="font-mono">{formatAmount(blocked, primary.currency)}</span> bloqués
+                    </span>
+                  )}
+                </div>
+              </>
+            );
+          })()
         ) : (
-          <div className="display text-5xl text-ink-700 mt-2">—</div>
+          <>
+            <div className="label">Solde net</div>
+            <div className="display text-5xl text-ink-700 mt-2">—</div>
+          </>
         )}
       </section>
 
@@ -152,6 +170,9 @@ export function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {accounts.map((a) => {
               const current = Number(a.currentBalance ?? '0');
+              const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
+              const blocked = current - available;
+              const hasBlocked = Math.abs(blocked) >= 0.005;
               const opening = Number(a.openingBalance);
               const delta = current - opening;
               const hasMovement = Math.abs(delta) >= 0.005;
@@ -171,6 +192,14 @@ export function Dashboard() {
                     <div className={`display text-3xl tabular-nums ${amountSignClass(current)}`}>
                       {formatAmount(current, a.currency)}
                     </div>
+                    {hasBlocked && (
+                      <div className="text-[11px] text-amber-300/90 mt-1 font-mono">
+                        dont {formatAmount(blocked, a.currency)} bloqués
+                        {a.lockYears != null && (
+                          <span className="text-ink-500"> · {a.lockYears} an{a.lockYears > 1 ? 's' : ''}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
