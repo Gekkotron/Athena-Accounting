@@ -195,9 +195,13 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
 
   const hovered = hover !== null ? data[hover.idx] : null;
 
-  // If the hovered X is within ~12 viewBox units of a checkpoint's X, show
-  // the expected/actual/delta line in the tooltip.
-  const HOVER_PROXIMITY_VB = 12;
+  // If the hovered X is within ~6 viewBox units of a checkpoint's X, show
+  // the expected/actual/delta line in the tooltip. Kept tight (was 12) so
+  // the drift readout doesn't misleadingly appear over neighbouring buckets
+  // that have nothing to do with the checkpoint — the tooltip's date row
+  // shows the hovered bucket's date, so a loose proximity gave the false
+  // impression that the écart "belonged" to many nearby dates.
+  const HOVER_PROXIMITY_VB = 6;
   const hoveredCheckpoint = (() => {
     if (hover === null) return null;
     const hoveredX = xScale(hover.idx);
@@ -372,6 +376,11 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
           </div>
           {hoveredCheckpoint && (
             <div className="mt-1 pt-1 border-t border-ink-800/60 font-mono text-[10px] text-ink-500">
+              {/* Explicit checkpoint date so the écart is unambiguously tied
+                  to the checkpoint you set, not to the hovered bucket. */}
+              <div className="text-ink-400 mb-0.5">
+                point de contrôle · <span className="text-ink-200">{formatDate(hoveredCheckpoint.date)}</span>
+              </div>
               {hoveredCheckpoint.drift ? (
                 <>
                   <div>attendu · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
