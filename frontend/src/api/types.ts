@@ -1,4 +1,4 @@
-export type CategoryKind = 'expense' | 'income' | 'transfer' | 'neutral';
+export type CategoryKind = 'expense' | 'income' | 'neutral';
 export type SignConstraint = 'positive' | 'negative' | 'any';
 export type MatchMode = 'word' | 'substring' | 'regex';
 export type CategorySource = 'manual' | 'auto' | 'default' | 'llm';

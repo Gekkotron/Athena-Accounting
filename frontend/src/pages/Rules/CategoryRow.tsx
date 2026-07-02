@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
+import type { MatchMode, Rule, SignConstraint } from '../../api/types';
+import { KIND_LABEL, kindBadgeClass } from '../../lib/categories';
 import { Chip } from './Chip';
 import type { GroupedEntry } from './types';
 
@@ -53,9 +54,9 @@ export function CategoryRow({
           )}
           <span className="font-medium text-ink-100 truncate">{category.name}</span>
         </div>
-        <div className="text-[11px] text-ink-500 mt-0.5">
-          {KIND_FR[category.kind]} ·{' '}
-          <span className="font-mono">
+        <div className="mt-1 flex items-center gap-2">
+          <span className={kindBadgeClass(category.kind)}>{KIND_LABEL[category.kind]}</span>
+          <span className="text-[11px] text-ink-500 font-mono">
             {rules.length} mot{rules.length > 1 ? 's' : ''}-clé{rules.length > 1 ? 's' : ''}
           </span>
         </div>
@@ -111,13 +112,6 @@ export function CategoryRow({
     </div>
   );
 }
-
-const KIND_FR: Record<Category['kind'], string> = {
-  expense: 'Dépense',
-  income: 'Revenu',
-  transfer: 'Virement',
-  neutral: 'Neutre',
-};
 
 function AddChipInput({ onAdd }: { onAdd: (keywords: string[]) => void }) {
   const [open, setOpen] = useState(false);

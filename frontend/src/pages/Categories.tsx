@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../api/types';
 import { formatAmount } from '../lib/format';
+import { KIND_LABEL, kindBadgeClass } from '../lib/categories';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -98,7 +99,6 @@ export function Categories() {
           <select className="input" value={kind} onChange={(e) => setKind(e.target.value as CategoryKind)}>
             <option value="expense">Dépense</option>
             <option value="income">Revenu</option>
-            <option value="transfer">Virement</option>
             <option value="neutral">Neutre</option>
           </select>
         </div>
@@ -163,21 +163,23 @@ export function Categories() {
                     </td>
                     {/* Kind — editable */}
                     <td className="px-4 py-2.5">
-                      <select
-                        className="input-sm"
-                        value={c.kind}
-                        onChange={(e) =>
-                          updateCategory.mutate({
-                            id: c.id,
-                            patch: { kind: e.target.value as CategoryKind },
-                          })
-                        }
-                      >
-                        <option value="expense">Dépense</option>
-                        <option value="income">Revenu</option>
-                        <option value="transfer">Virement</option>
-                        <option value="neutral">Neutre</option>
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <span className={kindBadgeClass(c.kind)}>{KIND_LABEL[c.kind]}</span>
+                        <select
+                          className="input-sm"
+                          value={c.kind}
+                          onChange={(e) =>
+                            updateCategory.mutate({
+                              id: c.id,
+                              patch: { kind: e.target.value as CategoryKind },
+                            })
+                          }
+                        >
+                          <option value="expense">Dépense</option>
+                          <option value="income">Revenu</option>
+                          <option value="neutral">Neutre</option>
+                        </select>
+                      </div>
                     </td>
                     {/* Color — editable */}
                     <td className="px-4 py-2.5 hidden sm:table-cell">

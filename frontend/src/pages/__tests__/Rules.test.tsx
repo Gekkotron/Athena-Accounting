@@ -39,7 +39,7 @@ beforeEach(() => {
   apiMock.mockReset();
 });
 
-const cat = (id: number, name: string, kind: 'expense' | 'income' | 'transfer' | 'neutral' = 'expense') => ({
+const cat = (id: number, name: string, kind: 'expense' | 'income' | 'neutral' = 'expense') => ({
   id, name, kind, color: null, parentId: null, isDefault: false,
 });
 
