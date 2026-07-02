@@ -11,6 +11,10 @@ import { userId } from '../plugins/auth.js';
 const ListQuery = z.object({
   accountId: z.coerce.number().int().positive().optional(),
   categoryId: z.coerce.number().int().positive().optional(),
+  // Filter to transactions inserted from a specific file_import row. Powers
+  // the "list transactions from this PDF import" affordance in the Imports
+  // page's post-import banner.
+  sourceFileId: z.coerce.number().int().positive().optional(),
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   minAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
@@ -213,6 +217,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     const where: SQL[] = [eq(transactions.userId, uid)];
     if (q.accountId) where.push(eq(transactions.accountId, q.accountId));
     if (q.categoryId) where.push(eq(transactions.categoryId, q.categoryId));
+    if (q.sourceFileId) where.push(eq(transactions.sourceFileId, q.sourceFileId));
     if (q.fromDate) where.push(gte(transactions.date, q.fromDate));
     if (q.toDate) where.push(lte(transactions.date, q.toDate));
     if (q.minAmount) where.push(gte(transactions.amount, q.minAmount));

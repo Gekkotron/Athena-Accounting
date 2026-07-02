@@ -1,10 +1,24 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PdfTemplateWizard } from '../PdfTemplateWizard';
+
+// The lastImported banner now fetches transactions by sourceFileId to
+// display the "Transactions importées" list. Stub the api client so the
+// hook can render without a real backend.
+vi.mock('../../../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
+  return { ...actual, api: vi.fn(async () => ({ transactions: [], pagination: { total: 0, limit: 500, offset: 0 } })) };
+});
+
+function withClient(node: React.ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{node}</QueryClientProvider>;
+}
 
 describe('PdfTemplateWizard', () => {
   it('renders PdfTemplateBuilder when needsTpl is set', () => {
-    render(
+    render(withClient(
       <PdfTemplateWizard
         needsTpl={{
           kind: 'needs_template',
@@ -20,7 +34,7 @@ describe('PdfTemplateWizard', () => {
         onFinalize={() => {}}
         onCancel={() => {}}
       />,
-    );
+    ));
     // PdfTemplateBuilder starts on the "header" step; its step title is
     // split across sibling text nodes ("Étape 1/5 — " + title), so match on
     // the element's own textContent rather than an exact string.
@@ -32,7 +46,7 @@ describe('PdfTemplateWizard', () => {
   });
 
   it('renders lastImported banner when lastImported is set', () => {
-    render(
+    render(withClient(
       <PdfTemplateWizard
         needsTpl={null}
         lastImported={{
@@ -44,19 +58,21 @@ describe('PdfTemplateWizard', () => {
         onFinalize={() => {}}
         onCancel={() => {}}
       />,
-    );
+    ));
     expect(screen.getByText('Dernier import PDF')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
+    // Transactions list section header is present even before data loads.
+    expect(screen.getByText(/Transactions importées/i)).toBeInTheDocument();
   });
 
   it('renders nothing when needsTpl and lastImported are both null', () => {
-    const { container } = render(
+    const { container } = render(withClient(
       <PdfTemplateWizard
         needsTpl={null} lastImported={null}
         accountId={1} onFinalize={() => {}} onCancel={() => {}}
       />,
-    );
+    ));
     expect(container.firstChild).toBeNull();
   });
 });
