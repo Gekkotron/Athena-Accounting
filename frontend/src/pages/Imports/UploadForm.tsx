@@ -9,11 +9,13 @@ export function UploadForm({
   onPdfNeedsTemplate,
   onPdfImported,
   onOfxCsvSuccess,
+  onFileSelected,
 }: {
   accounts: Account[];
   onPdfNeedsTemplate: (payload: PdfImportNeedsTemplate) => void;
   onPdfImported: (payload: PdfImportImported) => void;
   onOfxCsvSuccess: (result: any) => void;
+  onFileSelected: () => void;
 }): JSX.Element {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,6 +66,7 @@ export function UploadForm({
         return;
       }
       setError(null);
+      onFileSelected();
       setPdfPending(true);
       try {
         const r = await submitPdf(file, accountId);
@@ -105,6 +108,7 @@ export function UploadForm({
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
                 setError(null);
+                onFileSelected();
               }}
               disabled={upload.isPending || pdfPending}
               className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"

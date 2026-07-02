@@ -73,6 +73,12 @@ export function Imports() {
         onPdfNeedsTemplate={(p) => { setNeedsTpl(p); setLastImported(null); setPdfError(null); }}
         onPdfImported={(p) => { setLastImported(p); setNeedsTpl(null); setPdfError(null); }}
         onOfxCsvSuccess={(r) => { setLastResult(r); }}
+        onFileSelected={() => {
+          setLastResult(null);
+          setLastImported(null);
+          setPdfError(null);
+          setNeedsTpl(null);
+        }}
       />
 
       <PdfTemplateWizard
