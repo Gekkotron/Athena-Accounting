@@ -1,3 +1,5 @@
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
@@ -7,24 +9,22 @@ export function AccountCard({
   onEdit,
   onExpand,
   expanded,
-  onMoveUp,
-  onMoveDown,
-  canMoveUp,
-  canMoveDown,
-  moving,
 }: {
   account: Account;
   onEdit: (account: Account) => void;
   onExpand: (id: number) => void;
   expanded: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  moving: boolean;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: a.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
   return (
-    <div className="surface p-5 relative group">
+    <div ref={setNodeRef} style={style} className="surface p-5 relative group">
       <div className="flex items-baseline justify-between gap-3">
         <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
         <span className="badge">{a.currency}</span>
@@ -37,28 +37,23 @@ export function AccountCard({
         ouvert {formatDate(a.openingDate)} ·{' '}
         <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>
       </div>
-      {/* Top-right cluster: reorder up/down + modify */}
+      {/* Top-right cluster: drag handle + modify */}
       <div className="absolute top-3 right-3 flex items-center gap-1">
         <button
-          className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition disabled:opacity-30 disabled:hover:text-ink-600 disabled:hover:bg-transparent"
-          onClick={onMoveUp}
-          disabled={!canMoveUp || moving}
-          title="Monter"
-          aria-label="Déplacer vers le haut"
+          type="button"
+          className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition cursor-grab active:cursor-grabbing touch-none"
+          title="Réorganiser (glisser-déposer)"
+          aria-label="Réorganiser ce compte"
+          {...attributes}
+          {...listeners}
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <path d="M3 7l3-3 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <button
-          className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition disabled:opacity-30 disabled:hover:text-ink-600 disabled:hover:bg-transparent"
-          onClick={onMoveDown}
-          disabled={!canMoveDown || moving}
-          title="Descendre"
-          aria-label="Déplacer vers le bas"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="4" cy="3" r="1" fill="currentColor" />
+            <circle cx="8" cy="3" r="1" fill="currentColor" />
+            <circle cx="4" cy="6" r="1" fill="currentColor" />
+            <circle cx="8" cy="6" r="1" fill="currentColor" />
+            <circle cx="4" cy="9" r="1" fill="currentColor" />
+            <circle cx="8" cy="9" r="1" fill="currentColor" />
           </svg>
         </button>
         <button

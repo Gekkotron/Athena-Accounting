@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { DndContext } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { AccountCard } from '../AccountCard';
 import type { Account } from '../../../api/types';
 
@@ -15,16 +17,21 @@ const defaultProps = {
   onEdit: () => {},
   onExpand: () => {},
   expanded: false,
-  onMoveUp: () => {},
-  onMoveDown: () => {},
-  canMoveUp: true,
-  canMoveDown: true,
-  moving: false,
 };
+
+function renderCard(props: Partial<typeof defaultProps> = {}) {
+  return render(
+    <DndContext>
+      <SortableContext items={[acc.id]} strategy={rectSortingStrategy}>
+        <AccountCard {...defaultProps} {...props} />
+      </SortableContext>
+    </DndContext>,
+  );
+}
 
 describe('AccountCard', () => {
   it('renders name, type, currency, and balance', () => {
-    render(<AccountCard {...defaultProps} />);
+    renderCard();
     expect(screen.getByText('Test')).toBeInTheDocument();
     expect(screen.getByText(/checking/i)).toBeInTheDocument();
     expect(screen.getByText(/EUR/)).toBeInTheDocument();
@@ -34,46 +41,26 @@ describe('AccountCard', () => {
   it('fires onEdit(account) when modifier is clicked', async () => {
     const onEdit = vi.fn();
     const user = userEvent.setup();
-    render(<AccountCard {...defaultProps} onEdit={onEdit} />);
+    renderCard({ onEdit });
     await user.click(screen.getByRole('button', { name: /modifier/i }));
     expect(onEdit).toHaveBeenCalledWith(acc);
   });
 
-  it('fires onMoveUp / onMoveDown when the reorder buttons are clicked', async () => {
-    const onMoveUp = vi.fn();
-    const onMoveDown = vi.fn();
-    const user = userEvent.setup();
-    render(<AccountCard {...defaultProps} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />);
-    await user.click(screen.getByRole('button', { name: /déplacer vers le haut/i }));
-    await user.click(screen.getByRole('button', { name: /déplacer vers le bas/i }));
-    expect(onMoveUp).toHaveBeenCalledTimes(1);
-    expect(onMoveDown).toHaveBeenCalledTimes(1);
-  });
-
-  it('disables the reorder buttons when at the edges or moving', () => {
-    const { rerender } = render(<AccountCard {...defaultProps} canMoveUp={false} />);
-    expect(screen.getByRole('button', { name: /déplacer vers le haut/i })).toBeDisabled();
-    rerender(<AccountCard {...defaultProps} canMoveDown={false} />);
-    expect(screen.getByRole('button', { name: /déplacer vers le bas/i })).toBeDisabled();
-    rerender(<AccountCard {...defaultProps} moving={true} />);
-    expect(screen.getByRole('button', { name: /déplacer vers le haut/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /déplacer vers le bas/i })).toBeDisabled();
+  it('renders a drag handle for reordering', () => {
+    renderCard();
+    expect(screen.getByRole('button', { name: /réorganiser/i })).toBeInTheDocument();
   });
 
   it('fires onExpand when the checkpoints toggle is clicked', async () => {
     const onExpand = vi.fn();
     const user = userEvent.setup();
-    render(<AccountCard {...defaultProps} onExpand={onExpand} />);
+    renderCard({ onExpand });
     await user.click(screen.getByRole('button', { name: /points de contrôle/i }));
     expect(onExpand).toHaveBeenCalledWith(1);
   });
 
   it('does not render the drawer when expanded is false', () => {
-    render(<AccountCard {...defaultProps} />);
-    // Drawer's empty-state text should be absent when collapsed. This is a
-    // negative assertion — testing the positive case (drawer mounts on
-    // expanded=true) is covered by the drawer's own unit tests in Task 10,
-    // where the required QueryClient wrapper is set up.
+    renderCard();
     expect(screen.queryByText(/aucun point de contrôle/i)).not.toBeInTheDocument();
   });
 });

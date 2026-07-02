@@ -1,5 +1,20 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  arrayMove,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import { api, ApiError } from '../../api/client';
 import type { Account, AccountFilenamePattern } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -66,16 +81,19 @@ export function Accounts() {
     },
   });
 
-  const move = (id: number, dir: -1 | 1) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
     const list = accountsQ.data?.accounts ?? [];
-    const idx = list.findIndex((a) => a.id === id);
-    if (idx < 0) return;
-    const target = idx + dir;
-    if (target < 0 || target >= list.length) return;
-    const next = list.slice();
-    const [moved] = next.splice(idx, 1);
-    if (!moved) return;
-    next.splice(target, 0, moved);
+    const oldIndex = list.findIndex((a) => a.id === active.id);
+    const newIndex = list.findIndex((a) => a.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(list, oldIndex, newIndex);
     reorder.mutate(next.map((a) => a.id));
   };
 
@@ -192,47 +210,46 @@ export function Accounts() {
             Aucun compte pour l'instant.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(accountsQ.data?.accounts ?? []).map((a, idx, arr) => {
-              if (editingId === a.id && editDraft) {
-                return (
-                  <div key={a.id} className="surface p-5 relative">
-                    <div className="label mb-3">Éditer le compte</div>
-                    <AccountForm
-                      mode="edit"
-                      initial={editDraft}
-                      error={editError}
-                      submitting={updateAccount.isPending}
-                      onSubmit={(values) => {
-                        setEditDraft(values);
-                        saveEdit(a, values);
-                      }}
-                      onCancel={cancelEdit}
-                      onDelete={() => {
-                        setDeleteError(null);
-                        setConfirmDelete(a);
-                      }}
-                    />
-                  </div>
-                );
-              }
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={(accountsQ.data?.accounts ?? []).map((a) => a.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(accountsQ.data?.accounts ?? []).map((a) => {
+                  if (editingId === a.id && editDraft) {
+                    return (
+                      <div key={a.id} className="surface p-5 relative">
+                        <div className="label mb-3">Éditer le compte</div>
+                        <AccountForm
+                          mode="edit"
+                          initial={editDraft}
+                          error={editError}
+                          submitting={updateAccount.isPending}
+                          onSubmit={(values) => {
+                            setEditDraft(values);
+                            saveEdit(a, values);
+                          }}
+                          onCancel={cancelEdit}
+                          onDelete={() => {
+                            setDeleteError(null);
+                            setConfirmDelete(a);
+                          }}
+                        />
+                      </div>
+                    );
+                  }
 
-              return (
-                <AccountCard
-                  key={a.id}
-                  account={a}
-                  onEdit={(acc) => startEdit(acc)}
-                  onExpand={(id) => toggleCheckpoints(id)}
-                  expanded={checkpointsOpen.has(a.id)}
-                  onMoveUp={() => move(a.id, -1)}
-                  onMoveDown={() => move(a.id, 1)}
-                  canMoveUp={idx > 0}
-                  canMoveDown={idx < arr.length - 1}
-                  moving={reorder.isPending}
-                />
-              );
-            })}
-          </div>
+                  return (
+                    <AccountCard
+                      key={a.id}
+                      account={a}
+                      onEdit={(acc) => startEdit(acc)}
+                      onExpand={(id) => toggleCheckpoints(id)}
+                      expanded={checkpointsOpen.has(a.id)}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </section>
 
