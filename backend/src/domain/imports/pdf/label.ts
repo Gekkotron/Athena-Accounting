@@ -32,6 +32,22 @@ export function isBalanceLine(s: string): boolean {
   return BALANCE_LINE_RE.test(s);
 }
 
+// Statement footer disclaimers that most French banks print at the bottom of
+// the transactions table:
+//   BNP/LCL:  "Sous réserve des extournes ou annulation ..."
+//   SG:       "Sous réserve d'encaissement"
+//   CA/generic: "Sous réserve de bonne fin", "Sauf erreur ou omission"
+// These lines have no date column value but sit inside the table zone, so
+// without this guard they get mis-appended as a wrapped continuation onto
+// the last real transaction's label (see the "PRLV SEPA BOUYGUES TELECOM →
+// Sous réserve des extournes" report).
+// `iu` — Unicode-aware case-insensitive so "À reporter" matches (JS's ASCII
+// case folding does not fold `à`/`À` without the `u` flag).
+const FOOTER_LINE_RE = /^\s*(sous\s+r[eé]serve|sauf\s+erreur|[aà]\s+reporter\b)/iu;
+export function isFooterLine(s: string): boolean {
+  return FOOTER_LINE_RE.test(s);
+}
+
 export function mergeContinuationLabel(parent: string, continuation: string): string {
   if (!parent) return truncateLabel(continuation);
   if (!continuation) return truncateLabel(parent);
