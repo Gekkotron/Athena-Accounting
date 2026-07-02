@@ -3,9 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
-import { formatAmount, formatDate, amountSignClass, parseUserDate } from '../../lib/format';
+import { formatDate, parseUserDate } from '../../lib/format';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Th } from './Th';
+import { TransactionRow } from './TransactionRow';
 
 export interface Filters {
   accountId?: number;
@@ -259,96 +260,21 @@ export function Transactions() {
                   </td>
                 </tr>
               ) : (
-                txs.map((t) => {
-                  const acct = accountById.get(t.accountId);
-                  return (
-                    <tr key={t.id} className="group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
-                      <td className="px-4 py-2.5 text-ink-300 whitespace-nowrap font-mono text-xs">{formatDate(t.date)}</td>
-                      <td className="px-4 py-2.5 text-ink-400 whitespace-nowrap hidden sm:table-cell">{acct?.name ?? '?'}</td>
-                      <td className="px-4 py-2.5 text-ink-100">
-                        <div className="truncate max-w-[18rem] md:max-w-md" title={t.rawLabel}>
-                          {t.rawLabel}
-                        </div>
-                        {t.transferGroupId && (
-                          <div className="text-[11px] text-amber-300/80 mt-0.5 flex items-center gap-1">
-                            <span aria-hidden>↹</span> virement interne
-                          </div>
-                        )}
-                        <div className="sm:hidden text-[11px] text-ink-500 mt-0.5">{acct?.name}</div>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <select
-                          className="input-sm"
-                          value={t.categoryId ?? ''}
-                          disabled={!!t.transferGroupId}
-                          onChange={(e) =>
-                            updateCategory.mutate({
-                              id: t.id,
-                              categoryId: e.target.value ? Number(e.target.value) : null,
-                            })
-                          }
-                        >
-                          <option value="">—</option>
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                        {t.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">manuel</div>}
-                      </td>
-                      <td className="px-4 py-2.5 hidden md:table-cell">
-                        <input
-                          defaultValue={t.notes ?? ''}
-                          key={`notes-${t.id}-${t.notes ?? ''}`}
-                          placeholder="…"
-                          className="input-sm w-40 placeholder:text-ink-700"
-                          onBlur={(e) => {
-                            const v = e.target.value;
-                            const current = t.notes ?? '';
-                            if (v !== current) {
-                              updateNotes.mutate({ id: t.id, notes: v || null });
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                            if (e.key === 'Escape') (e.target as HTMLInputElement).value = t.notes ?? '';
-                          }}
-                        />
-                      </td>
-                      <td className={`px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums ${amountSignClass(t.amount)}`}>
-                        {formatAmount(t.amount, acct?.currency ?? 'EUR')}
-                      </td>
-                      <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                        <div className="inline-flex gap-0.5">
-                          <button
-                            onClick={() => setModalTx(t)}
-                            className="p-1.5 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition"
-                            title="Modifier"
-                            aria-label="Modifier"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                              <path d="M2 10l6-6 2 2-6 6L2 12V10z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeleteError(null);
-                              setDeletingTx(t);
-                            }}
-                            className="p-1.5 rounded text-ink-600 hover:text-clay-300 hover:bg-ink-900 transition"
-                            title="Supprimer"
-                            aria-label="Supprimer"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                              <path d="M3 4h8M5.5 4V2.5h3V4M4 4l0.7 8h4.6L10 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                txs.map((t) => (
+                  <TransactionRow
+                    key={t.id}
+                    tx={t}
+                    account={accountById.get(t.accountId)}
+                    categories={categories}
+                    onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
+                    onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
+                    onEdit={(tx) => setModalTx(tx)}
+                    onDelete={(tx) => {
+                      setDeleteError(null);
+                      setDeletingTx(tx);
+                    }}
+                  />
+                ))
               )}
             </tbody>
           </table>
