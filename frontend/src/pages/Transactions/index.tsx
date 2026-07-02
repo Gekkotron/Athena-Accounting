@@ -5,8 +5,9 @@ import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass, parseUserDate } from '../../lib/format';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { Th } from './Th';
 
-interface Filters {
+export interface Filters {
   accountId?: number;
   categoryId?: number;
   fromDate?: string;
@@ -409,8 +410,6 @@ function truncate(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, n - 1) + '…';
 }
 
-{/* ---- Create / edit transaction modal ---- */}
-
 function TransactionModal({
   open,
   transaction,
@@ -706,41 +705,5 @@ function TransactionModal({
         </div>
       </form>
     </div>
-  );
-}
-
-function Th({
-  children,
-  sort,
-  filters,
-  setFilters,
-  setOffset,
-  align = 'left',
-}: {
-  children: React.ReactNode;
-  sort: Filters['sort'];
-  filters: Filters;
-  setFilters: (fn: (f: Filters) => Filters) => void;
-  setOffset: (n: number) => void;
-  align?: 'left' | 'right';
-}) {
-  const active = filters.sort === sort;
-  return (
-    <th
-      className={`px-4 py-3 label font-normal cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : ''}`}
-      onClick={() => {
-        setOffset(0);
-        setFilters((f) => ({
-          ...f,
-          sort,
-          order: f.sort === sort ? (f.order === 'asc' ? 'desc' : 'asc') : 'desc',
-        }));
-      }}
-    >
-      <span className={active ? 'text-ink-100' : ''}>
-        {children}
-        {active ? (filters.order === 'asc' ? ' ↑' : ' ↓') : ''}
-      </span>
-    </th>
   );
 }
