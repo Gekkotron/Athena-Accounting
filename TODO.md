@@ -15,7 +15,6 @@ So I can displayed the total amount available in dashboard and the amount blocke
 
 - Add a selection feature on all list of transaction even doublon section. To delete/No double in bulk
 
-- Dashboard configuration displayed --> account by default in graph list of all account + all account)
 
 - Traduire l'app (fr, en) avec detection de la langue du navigateur
 
@@ -41,6 +40,7 @@ So I can displayed the total amount available in dashboard and the amount blocke
 <!-- Pour mémoire ou pour s'auto-féliciter. Les vieux items peuvent être archivés
      en bas du fichier ou supprimés. -->
 
+- Dashboard balance-chart account selector persisted to localStorage — the last account you were watching stays selected across reloads. `Dashboard.tsx`, `lib/persisted-state.ts`.
 - Colored kind badges for categories (expense / income / neutral, light tones) + retired the `transfer` kind (internal transfers are already tracked via `transfer_group_id`). Migration 0010 coerces old rows. `lib/categories.ts`, `Rules/CategoryRow.tsx`, `Categories.tsx`, `backend/src/db/migrations/0010_...sql`.
 - Drag-to-reorder on the Accounts page (replaces the ↑/↓ arrow buttons; @dnd-kit, keyboard + touch accessible). `Accounts/AccountCard.tsx`, `Accounts/index.tsx`.
 - Sidebar user-profile block pinned to the bottom of the left panel on desktop. `Layout.tsx`.
