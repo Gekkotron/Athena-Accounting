@@ -25,6 +25,21 @@ const STEP_TITLE: Record<Step, string> = {
   amount: 'Sélectionnez la colonne Montant',
 };
 
+// Long-form guidance surfaced by a hover tooltip next to each step's title.
+// Kept in one place so the whole flow reads like a cohesive tutorial.
+const STEP_TOOLTIP: Record<Step, string> = {
+  header:
+    "Tracez autour du logo / titre de la banque en haut de la page. Cette zone sert d'empreinte : la prochaine fois que vous importerez un relevé de la même banque, Athena reconnaîtra le template automatiquement.",
+  table:
+    "Tracez autour de tout le tableau des transactions, en-tête de colonnes inclus. N'incluez pas les totaux ou le pied de page — juste les lignes de mouvement.",
+  date:
+    "Tracez une bande verticale fine qui couvre uniquement la colonne des dates, à l'intérieur du tableau que vous venez de délimiter. La hauteur n'a pas d'importance : Athena utilise seulement les bornes gauche/droite.",
+  description:
+    "Tracez la colonne du libellé (nom du commerçant / motif). Peut être large : les colonnes voisines seront ignorées grâce aux bornes de chaque colonne.",
+  amount:
+    "Choisissez d'abord si votre banque affiche un seul montant signé (+ / −) ou deux colonnes Débit + Crédit. Puis tracez les colonnes correspondantes. Donnez enfin un nom au template pour le retrouver plus tard.",
+};
+
 // Sage and clay map to the project's tailwind tokens.
 const PAINT_COLOR: Partial<Record<Step, string>> = {
   header: '#7dd3c0',
@@ -33,6 +48,23 @@ const PAINT_COLOR: Partial<Record<Step, string>> = {
   description: '#7dd3c0',
   amount: '#e69782',
 };
+
+// Small info-icon that reveals its `text` on hover via the native title
+// tooltip. Zero-dependency, works with keyboard focus, and matches the ink
+// palette without needing a floating-ui popper.
+function InfoTip({ text }: { text: string }) {
+  return (
+    <button
+      type="button"
+      tabIndex={0}
+      title={text}
+      aria-label={text}
+      className="inline-flex items-center justify-center h-4 w-4 rounded-full border border-ink-600 text-ink-400 text-[9px] font-bold hover:text-ink-100 hover:border-ink-400 transition cursor-help shrink-0"
+    >
+      ?
+    </button>
+  );
+}
 
 export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props) {
   const firstPage = needsTemplate.pages[0]!;
@@ -61,7 +93,10 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   const [selectedPages, setSelectedPages] = useState<number[]>(allPageIndices);
   const [dateCol, setDateCol] = useState<PageRect | null>(null);
   const [descCol, setDescCol] = useState<PageRect | null>(null);
-  const [amountMode, setAmountMode] = useState<AmountMode>('signed');
+  // Two-column Débit / Crédit is the dominant layout for French bank PDFs
+  // (BNP, LCL, Société Générale, Crédit Agricole, Banque Postale…). Default
+  // to that so most users don't have to flip the radio.
+  const [amountMode, setAmountMode] = useState<AmountMode>('pair');
   const [signedCol, setSignedCol] = useState<PageRect | null>(null);
   const [debitCol, setDebitCol] = useState<PageRect | null>(null);
   const [creditCol, setCreditCol] = useState<PageRect | null>(null);
@@ -79,6 +114,21 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   }
   const next = () => goTo(STEP_ORDER[stepIdx + 1] ?? step);
   const prev = () => goTo(STEP_ORDER[stepIdx - 1] ?? step);
+
+  // Auto-advance from a paint-column step as soon as the user finishes
+  // drawing a valid rectangle. Only fires on the "column" steps (date,
+  // description) where painting is the sole action — the header/table
+  // steps have secondary controls (page selection, "table repeats"
+  // checkbox) the user needs to interact with, so they still need to
+  // click Suivant → manually.
+  const onDateChange = (r: PageRect) => {
+    setDateCol(r);
+    if (step === 'date') goTo('description');
+  };
+  const onDescChange = (r: PageRect) => {
+    setDescCol(r);
+    if (step === 'description') goTo('amount');
+  };
 
   // The amount step is the only one with no fixed "next" — it submits instead.
   const isLast = step === 'amount';
@@ -197,11 +247,14 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'header' && (
           <>
-            <p className="mb-3 text-sm font-medium text-ink-50">
-              Étape 1/{totalSteps} — Sélectionnez l'en-tête{' '}
-              <span className="text-ink-400 font-normal">
-                (utilisé pour reconnaître cette banque la prochaine fois)
-              </span>.
+            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
+              <span>
+                Étape 1/{totalSteps} — Sélectionnez l'en-tête{' '}
+                <span className="text-ink-400 font-normal">
+                  (utilisé pour reconnaître cette banque la prochaine fois)
+                </span>.
+              </span>
+              <InfoTip text={STEP_TOOLTIP.header} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -216,9 +269,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'table' && (
           <>
-            <p className="mb-3 text-sm font-medium text-ink-50">
-              Étape 2/{totalSteps} — Sélectionnez le tableau des transactions{' '}
-              <span className="text-ink-400 font-normal">(toutes les lignes, en-tête de colonne incluse)</span>.
+            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
+              <span>
+                Étape 2/{totalSteps} — Sélectionnez le tableau des transactions{' '}
+                <span className="text-ink-400 font-normal">(toutes les lignes, en-tête de colonne incluse)</span>.
+              </span>
+              <InfoTip text={STEP_TOOLTIP.table} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -289,9 +345,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'date' && (
           <>
-            <p className="mb-3 text-sm font-medium text-ink-50">
-              Étape 3/{totalSteps} — Tracez la colonne <span className="text-sage-300">Date</span>{' '}
-              <span className="text-ink-400 font-normal">à l'intérieur du tableau</span>.
+            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
+              <span>
+                Étape 3/{totalSteps} — Tracez la colonne <span className="text-sage-300">Date</span>{' '}
+                <span className="text-ink-400 font-normal">à l'intérieur du tableau — l'étape suivante démarre automatiquement</span>.
+              </span>
+              <InfoTip text={STEP_TOOLTIP.date} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -301,16 +360,19 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               referenceRects={refsFor('date')}
               paintColor={PAINT_COLOR.date}
               paintLabel="Date"
-              onChange={setDateCol}
+              onChange={onDateChange}
             />
           </>
         )}
 
         {step === 'description' && (
           <>
-            <p className="mb-3 text-sm font-medium text-ink-50">
-              Étape 4/{totalSteps} — Tracez la colonne <span className="text-sage-300">Libellé</span>{' '}
-              <span className="text-ink-400 font-normal">(description de la transaction)</span>.
+            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
+              <span>
+                Étape 4/{totalSteps} — Tracez la colonne <span className="text-sage-300">Libellé</span>{' '}
+                <span className="text-ink-400 font-normal">(description de la transaction — l'étape suivante démarre automatiquement)</span>.
+              </span>
+              <InfoTip text={STEP_TOOLTIP.description} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -320,15 +382,18 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               referenceRects={refsFor('description')}
               paintColor={PAINT_COLOR.description}
               paintLabel="Libellé"
-              onChange={setDescCol}
+              onChange={onDescChange}
             />
           </>
         )}
 
         {step === 'amount' && (
           <>
-            <p className="mb-3 text-sm font-medium text-ink-50">
-              Étape 5/{totalSteps} — Tracez la colonne <span className="text-clay-300">Montant</span>.
+            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
+              <span>
+                Étape 5/{totalSteps} — Tracez la colonne <span className="text-clay-300">Montant</span>.
+              </span>
+              <InfoTip text={STEP_TOOLTIP.amount} />
             </p>
             <fieldset className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-200">
               <label className="flex items-center gap-2 cursor-pointer">
