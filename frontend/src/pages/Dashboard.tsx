@@ -76,7 +76,7 @@ export function Dashboard() {
         {primary ? (
           (() => {
             const total = Number(primary.total);
-            const available = Number(primary.available);
+            const available = Number(primary.available ?? primary.total);
             const blocked = total - available;
             const hasBlocked = Math.abs(blocked) >= 0.005;
             return (
