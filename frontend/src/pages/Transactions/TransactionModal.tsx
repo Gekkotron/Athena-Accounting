@@ -51,17 +51,19 @@ export function TransactionModal({
       setNotes(transaction.notes ?? '');
       setLockYearsInput(transaction.lockYears == null ? '' : String(transaction.lockYears));
     } else {
-      const defaultAcc = accounts[0];
-      setAccountId(defaultAcc?.id ?? '');
+      setAccountId(accounts[0]?.id ?? '');
       setDate(todayFr);
       setAmount('');
       setRawLabel('');
       setCategoryId('');
       setNotes('');
-      // Pre-fill lock from the default account's lockYears so a Natixis-style
-      // account (rolling 5-year lock) doesn't require the user to re-type "5"
-      // every time. The user can still blank the field to opt out.
-      setLockYearsInput(defaultAcc?.lockYears == null ? '' : String(defaultAcc.lockYears));
+      // Field stays BLANK by default. On a PEA (single-clock envelope) the
+      // user wants each deposit to inherit the account-wide unlock date
+      // (openingDate + N years), which happens automatically when
+      // tx.lockYears is null. On a term-deposit-style account (Natixis) the
+      // user types the year count per deposit — pre-filling would silently
+      // switch PEA semantics to rolling-lock, which is wrong.
+      setLockYearsInput('');
     }
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -315,9 +317,9 @@ export function TransactionModal({
           <div className="sm:col-span-2">
             <label
               className="label mb-1.5 block"
-              title="Nombre d'années pendant lesquelles ce montant est bloqué à partir de la date de la transaction. Utilisé pour les dépôts à terme / Natixis où chaque versement a sa propre échéance. Laisser vide pour hériter du blocage par défaut du compte (PEA : opening + N ans)."
+              title="Bloque UNIQUEMENT cette transaction pendant N ans à partir de sa date (dépôts à terme / Natixis). Laisser vide pour un PEA : la transaction hérite alors du verrou global du compte (date d'ouverture + N ans, une seule échéance pour tout le compte)."
             >
-              Blocage individuel (ans)
+              Blocage individuel (ans) <span className="text-ink-500 font-normal">— optionnel</span>
             </label>
             <input
               type="number"
@@ -326,12 +328,12 @@ export function TransactionModal({
               className="input font-mono"
               value={lockYearsInput}
               onChange={(e) => setLockYearsInput(e.target.value)}
-              placeholder={selectedAccount?.lockYears == null ? '—' : `hérite : ${selectedAccount.lockYears}`}
+              placeholder="—"
             />
             <div className="text-[11px] text-ink-500 mt-1">
-              {selectedAccount?.lockYears != null
-                ? `Compte réglé sur ${selectedAccount.lockYears} an${selectedAccount.lockYears > 1 ? 's' : ''} par défaut (échéance : date de la transaction + N ans). Modifiez si ce versement doit suivre une règle différente.`
-                : 'Compte sans blocage par défaut. Remplissez seulement si ce versement doit être bloqué N ans à partir de sa date.'}
+              {selectedAccount?.lockYears == null
+                ? 'Le compte n\'a pas de blocage. Remplissez seulement si cette transaction doit être bloquée N ans depuis sa date.'
+                : `PEA : laissez vide, la transaction hérite du verrou global (${selectedAccount.lockYears} ans depuis l'ouverture du compte). Dépôt à terme (Natixis) : remplissez avec ${selectedAccount.lockYears} pour que cette échéance soit calculée depuis la date de la transaction.`}
             </div>
           </div>
         </div>
