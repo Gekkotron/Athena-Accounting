@@ -16,7 +16,6 @@ describe('PdfTemplateWizard', () => {
           reason: 'low_confidence',
         }}
         lastImported={null}
-        pdfError={null}
         accountId={1}
         onFinalize={() => {}}
         onCancel={() => {}}
@@ -41,7 +40,6 @@ describe('PdfTemplateWizard', () => {
           result: { fileImportId: 50, insertedCount: 3, dedupSkipped: 0, totalLines: 8 },
           skippedRows: [],
         }}
-        pdfError={null}
         accountId={1}
         onFinalize={() => {}}
         onCancel={() => {}}
@@ -52,10 +50,10 @@ describe('PdfTemplateWizard', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('renders nothing when needsTpl, lastImported and pdfError are all null', () => {
+  it('renders nothing when needsTpl and lastImported are both null', () => {
     const { container } = render(
       <PdfTemplateWizard
-        needsTpl={null} lastImported={null} pdfError={null}
+        needsTpl={null} lastImported={null}
         accountId={1} onFinalize={() => {}} onCancel={() => {}}
       />,
     );

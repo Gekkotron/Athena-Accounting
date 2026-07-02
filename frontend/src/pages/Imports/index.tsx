@@ -23,7 +23,6 @@ export function Imports() {
   // PDF-specific state
   const [needsTpl, setNeedsTpl] = useState<PdfImportNeedsTemplate | null>(null);
   const [lastImported, setLastImported] = useState<PdfImportImported | null>(null);
-  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -70,13 +69,12 @@ export function Imports() {
 
       <UploadForm
         accounts={accountsQ.data?.accounts ?? []}
-        onPdfNeedsTemplate={(p) => { setNeedsTpl(p); setLastImported(null); setPdfError(null); }}
-        onPdfImported={(p) => { setLastImported(p); setNeedsTpl(null); setPdfError(null); }}
+        onPdfNeedsTemplate={(p) => { setNeedsTpl(p); setLastImported(null); }}
+        onPdfImported={(p) => { setLastImported(p); setNeedsTpl(null); }}
         onOfxCsvSuccess={(r) => { setLastResult(r); }}
         onFileSelected={() => {
           setLastResult(null);
           setLastImported(null);
-          setPdfError(null);
           setNeedsTpl(null);
         }}
       />
@@ -84,7 +82,6 @@ export function Imports() {
       <PdfTemplateWizard
         needsTpl={needsTpl}
         lastImported={lastImported}
-        pdfError={pdfError}
         accountId={''}
         onFinalize={(r) => {
           setNeedsTpl(null);

@@ -4,27 +4,19 @@ import { PdfTemplateBuilder } from '../../components/PdfTemplateBuilder/index';
 export function PdfTemplateWizard({
   needsTpl,
   lastImported,
-  pdfError,
   onFinalize,
   onCancel,
 }: {
   needsTpl: PdfImportNeedsTemplate | null;
   lastImported: PdfImportImported | null;
-  pdfError: string | null;
   accountId: number | '';
   onFinalize: (result: PdfImportImported) => void;
   onCancel: () => void;
-}) {
-  if (!needsTpl && !lastImported && !pdfError) return null;
+}): JSX.Element | null {
+  if (!needsTpl && !lastImported) return null;
 
   return (
     <>
-      {pdfError && (
-        <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-4 py-3 text-sm text-clay-200">
-          {pdfError}
-        </div>
-      )}
-
       {lastImported && (
         <div className="surface p-5">
           <div className="label mb-2">Dernier import PDF</div>
