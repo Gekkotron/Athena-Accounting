@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { getAccountName } from '../../lib/accounts';
+import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
+import { usePersistedState } from '../../lib/persisted-state';
 
 export function DuplicatesPanel(): JSX.Element {
   const qc = useQueryClient();
@@ -108,7 +110,28 @@ export function DuplicatesPanel(): JSX.Element {
       return next;
     });
 
-  if ((dupsQ.data?.groups ?? []).length === 0) {
+  // Label-similarity threshold (0..100). Persisted so the user's tuning
+  // survives reloads. At 0, the panel behaves as before (no filtering).
+  const [threshold, setThreshold] = usePersistedState<number>('dup.similarityThreshold', 0);
+
+  const rawGroups = dupsQ.data?.groups ?? [];
+
+  // Annotate each group with its min-pairwise similarity so we can (a)
+  // filter below the threshold and (b) display the score alongside.
+  const scoredGroups = useMemo(
+    () =>
+      rawGroups.map((g) => ({
+        group: g,
+        similarity: groupMinPairwiseSimilarity(g.transactions.map((t) => t.raw_label)),
+      })),
+    [rawGroups],
+  );
+  const visibleGroups = scoredGroups.filter(
+    ({ similarity }) => similarity * 100 >= threshold,
+  );
+  const hiddenCount = scoredGroups.length - visibleGroups.length;
+
+  if (scoredGroups.length === 0) {
     return <></>;
   }
 
@@ -121,6 +144,26 @@ export function DuplicatesPanel(): JSX.Element {
           Probable doublon entre un import OFX et un import PDF de la même transaction. Vérifiez et
           supprimez la version en trop via la page <span className="display-italic">Transactions</span>.
         </p>
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-ink-400">
+          <label className="flex items-center gap-2">
+            <span>Seuil de similarité des libellés</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={threshold}
+              onChange={(e) => setThreshold(Number(e.target.value))}
+              className="accent-sage-300 w-40"
+              aria-label="Seuil de similarité"
+            />
+            <span className="font-mono text-ink-200 w-10">{threshold}%</span>
+          </label>
+          {hiddenCount > 0 && (
+            <span className="text-ink-500 font-mono">
+              {hiddenCount} groupe{hiddenCount > 1 ? 's' : ''} masqué{hiddenCount > 1 ? 's' : ''} (labels trop différents)
+            </span>
+          )}
+        </div>
         {selectedIds.size > 0 && (
           <div className="mb-3 rounded-lg border border-sage-800/40 bg-sage-900/15 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="text-ink-100">
@@ -163,11 +206,12 @@ export function DuplicatesPanel(): JSX.Element {
                 <th className="px-4 py-3 label font-normal">Date</th>
                 <th className="px-4 py-3 label font-normal text-right">Montant</th>
                 <th className="px-4 py-3 label font-normal">Libellés en conflit</th>
+                <th className="px-4 py-3 label font-normal text-right w-20">Sim.</th>
                 <th className="px-4 py-3 label font-normal text-right w-44">Action</th>
               </tr>
             </thead>
             <tbody>
-              {(dupsQ.data?.groups ?? []).map((g, gi) => (
+              {visibleGroups.map(({ group: g, similarity }, gi) => (
                 <tr key={`${g.accountId}-${g.date}-${g.amount}-${gi}`} className="border-b border-ink-800/40 last:border-0 align-top">
                   <td className="px-4 py-2.5 text-ink-300">{getAccountName(accounts, g.accountId)}</td>
                   <td className="px-4 py-2.5 text-ink-300 font-mono text-xs whitespace-nowrap">{g.date}</td>
@@ -217,6 +261,9 @@ export function DuplicatesPanel(): JSX.Element {
                       g.transactions.some((t) => t.id === confirmDeleteTxId) && (
                         <p className="mt-2 text-xs text-clay-300">{dupDeleteError}</p>
                       )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right align-top font-mono text-xs text-ink-400" title="Similarité minimale des libellés du groupe (Jaccard sur tokens, hors mots-boilerplate).">
+                    {Math.round(similarity * 100)}%
                   </td>
                   <td className="px-4 py-2.5 text-right align-top">
                     <button
