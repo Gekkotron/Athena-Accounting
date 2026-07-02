@@ -92,7 +92,7 @@ export function Dashboard() {
                   </span>
                   {hasBlocked && (
                     <span className="text-amber-300/90">
-                      + <span className="font-mono">{formatAmount(blocked, primary.currency)}</span> bloqués
+                      + <span className="font-mono private">{formatAmount(blocked, primary.currency)}</span> bloqués
                     </span>
                   )}
                 </div>
@@ -194,7 +194,7 @@ export function Dashboard() {
                     </div>
                     {hasBlocked && (
                       <div className="text-[11px] text-amber-300/90 mt-1 font-mono">
-                        dont {formatAmount(blocked, a.currency)} bloqués
+                        dont <span className="private">{formatAmount(blocked, a.currency)}</span> bloqués
                         {a.lockYears != null && (
                           <span className="text-ink-500"> · {a.lockYears} an{a.lockYears > 1 ? 's' : ''}</span>
                         )}
