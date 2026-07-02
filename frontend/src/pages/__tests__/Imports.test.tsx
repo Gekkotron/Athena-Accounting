@@ -81,7 +81,7 @@ describe('Imports page (characterization)', () => {
     renderImports();
 
     // Upload form present (plain label, no htmlFor — matched via text).
-    expect(await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)')).toBeInTheDocument();
+    expect(await screen.findByText(/^Fichier\(s\)/)).toBeInTheDocument();
     // File-imports list contains the mocked import.
     expect(await screen.findByText('file-1.csv')).toBeInTheDocument();
   });
@@ -101,9 +101,9 @@ describe('Imports page (characterization)', () => {
 
     const user = userEvent.setup();
     renderImports();
-    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+    await screen.findByText(/^Fichier\(s\)/);
 
-    const fileInput = fieldFor('Fichier (.ofx · .qfx · .csv · .pdf)') as HTMLInputElement;
+    const fileInput = fieldFor(/^Fichier\(s\)/) as HTMLInputElement;
     const file = new File(['date;label;amount\n2026-06-15;A;-10'], 'new.csv', { type: 'text/csv' });
     await user.upload(fileInput, file);
 
@@ -145,9 +145,9 @@ describe('Imports page (characterization)', () => {
 
     const user = userEvent.setup();
     renderImports();
-    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+    await screen.findByText(/^Fichier\(s\)/);
 
-    const fileInput = fieldFor('Fichier (.ofx · .qfx · .csv · .pdf)') as HTMLInputElement;
+    const fileInput = fieldFor(/^Fichier\(s\)/) as HTMLInputElement;
     const file = new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46])], 'statement.pdf', { type: 'application/pdf' });
     await user.upload(fileInput, file);
     await user.selectOptions(fieldFor('Compte'), '1');
@@ -187,9 +187,9 @@ describe('Imports page (characterization)', () => {
 
     const user = userEvent.setup();
     renderImports();
-    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+    await screen.findByText(/^Fichier\(s\)/);
 
-    const fileInput = fieldFor('Fichier (.ofx · .qfx · .csv · .pdf)') as HTMLInputElement;
+    const fileInput = fieldFor(/^Fichier\(s\)/) as HTMLInputElement;
     const file = new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46])], 'auto.pdf', { type: 'application/pdf' });
     await user.upload(fileInput, file);
     await user.selectOptions(fieldFor('Compte'), '1');
@@ -284,7 +284,7 @@ describe('Imports page (characterization)', () => {
 
     const user = userEvent.setup();
     renderImports();
-    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+    await screen.findByText(/^Fichier\(s\)/);
 
     // Restore reads the file client-side (FileReader/text(), no upload
     // mutation) then opens a confirm dialog before firing the POST.
