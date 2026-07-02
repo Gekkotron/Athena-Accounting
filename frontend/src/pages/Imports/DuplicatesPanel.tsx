@@ -62,6 +62,52 @@ export function DuplicatesPanel(): JSX.Element {
     onError: (err: ApiError) => setDupDeleteError(err.message),
   });
 
+  // Bulk selection across groups. Distinct from the per-group "Pas un doublon"
+  // button (which acts on every row of a group) — the user picks specific rows
+  // spanning groups and applies one action to all of them.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: (ids: number[]) =>
+      api<{ deleted: number }>('/api/transactions/delete-bulk', {
+        method: 'POST',
+        json: { ids },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      setSelectedIds(new Set());
+      setBulkError(null);
+    },
+    onError: (err: ApiError) => setBulkError(err.message),
+  });
+
+  const bulkMarkNotDupMut = useMutation({
+    mutationFn: (ids: number[]) =>
+      api<{ updated: number }>('/api/transactions/mark-not-duplicate', {
+        method: 'POST',
+        json: { ids },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+      setSelectedIds(new Set());
+      setBulkError(null);
+    },
+    onError: (err: ApiError) => setBulkError(err.message),
+  });
+
+  const toggleSelect = (id: number, checked: boolean) =>
+    setSelectedIds((s) => {
+      const next = new Set(s);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
   if ((dupsQ.data?.groups ?? []).length === 0) {
     return <></>;
   }
@@ -75,6 +121,40 @@ export function DuplicatesPanel(): JSX.Element {
           Probable doublon entre un import OFX et un import PDF de la même transaction. Vérifiez et
           supprimez la version en trop via la page <span className="display-italic">Transactions</span>.
         </p>
+        {selectedIds.size > 0 && (
+          <div className="mb-3 rounded-lg border border-sage-800/40 bg-sage-900/15 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="text-ink-100">
+              <span className="font-mono">{selectedIds.size}</span> sélectionnée{selectedIds.size > 1 ? 's' : ''}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+                onClick={() => { setSelectedIds(new Set()); setBulkError(null); }}
+              >
+                Effacer la sélection
+              </button>
+              <button
+                className="text-xs text-sage-300 hover:text-sage-200 border border-sage-300/40 hover:border-sage-300 rounded-md px-2 py-1 transition disabled:opacity-40"
+                disabled={bulkMarkNotDupMut.isPending || bulkDeleteMut.isPending}
+                onClick={() => bulkMarkNotDupMut.mutate(Array.from(selectedIds))}
+              >
+                ✓ Pas un doublon
+              </button>
+              <button
+                className="text-xs text-clay-300 hover:text-clay-200 border border-clay-800/60 hover:border-clay-700 rounded-md px-2 py-1 transition disabled:opacity-40"
+                disabled={bulkDeleteMut.isPending || bulkMarkNotDupMut.isPending}
+                onClick={() => bulkDeleteMut.mutate(Array.from(selectedIds))}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        )}
+        {bulkError && (
+          <div className="mb-3 rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
+            {bulkError}
+          </div>
+        )}
         <div className="table-scroll">
           <table className="w-full text-sm">
             <thead className="text-left">
@@ -100,6 +180,13 @@ export function DuplicatesPanel(): JSX.Element {
                         const confirming = confirmDeleteTxId === t.id;
                         return (
                           <li key={t.id} className="flex items-baseline gap-2">
+                            <input
+                              type="checkbox"
+                              className="accent-sage-300"
+                              checked={selectedIds.has(t.id)}
+                              onChange={(e) => toggleSelect(t.id, e.target.checked)}
+                              aria-label={`Sélectionner la transaction #${t.id}`}
+                            />
                             <code className="text-xs text-ink-500 min-w-[3.5rem]">#{t.id}</code>
                             <span className="font-mono text-xs text-ink-100 flex-1">{t.raw_label}</span>
                             {confirming ? (

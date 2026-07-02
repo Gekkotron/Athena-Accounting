@@ -65,6 +65,41 @@ describe('DuplicatesPanel', () => {
     expect(screen.getByText('2026-06-15')).toBeInTheDocument();
   });
 
+  it('bulk-delete fires POST /api/transactions/delete-bulk with the selected ids', async () => {
+    const postCalls: Array<{ path: string; init: any }> = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [] };
+      if (path === '/api/transactions/duplicates') {
+        return {
+          groups: [
+            {
+              date: '2026-06-15', amount: '-1', accountId: 1,
+              transactions: [
+                { id: 100, raw_label: 'A', normalized_label: 'a', source_file_id: null, category_id: null },
+                { id: 101, raw_label: 'B', normalized_label: 'b', source_file_id: null, category_id: null },
+              ],
+            },
+          ],
+        };
+      }
+      if (path === '/api/transactions/delete-bulk') {
+        postCalls.push({ path, init });
+        return { deleted: 1 };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText('A');
+
+    await user.click(screen.getByRole('checkbox', { name: /sélectionner la transaction #100/i }));
+    await user.click(screen.getByRole('button', { name: /^supprimer$/i }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].init.method).toBe('POST');
+    expect(postCalls[0].init.json).toEqual({ ids: [100] });
+  });
+
   it('mark-not-duplicate fires POST /api/transactions/mark-not-duplicate with { ids }', async () => {
     const postCalls: Array<{ path: string; init: any }> = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
