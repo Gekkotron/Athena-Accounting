@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
+import { getAccountName } from '../../lib/accounts';
 
 export function DuplicatesPanel(): JSX.Element {
   const qc = useQueryClient();
@@ -11,7 +12,6 @@ export function DuplicatesPanel(): JSX.Element {
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
   });
   const accounts = accountsQ.data?.accounts ?? [];
-  const accountName = (id: number) => accounts.find((a) => a.id === id)?.name ?? `#${id}`;
 
   // Soft-dup detection: groups of transactions sharing (account, date, amount)
   // but with different dedup_keys. Surfaces after each import so the user can
@@ -89,7 +89,7 @@ export function DuplicatesPanel(): JSX.Element {
             <tbody>
               {(dupsQ.data?.groups ?? []).map((g, gi) => (
                 <tr key={`${g.accountId}-${g.date}-${g.amount}-${gi}`} className="border-b border-ink-800/40 last:border-0 align-top">
-                  <td className="px-4 py-2.5 text-ink-300">{accountName(g.accountId)}</td>
+                  <td className="px-4 py-2.5 text-ink-300">{getAccountName(accounts, g.accountId)}</td>
                   <td className="px-4 py-2.5 text-ink-300 font-mono text-xs whitespace-nowrap">{g.date}</td>
                   <td className="px-4 py-2.5 text-right font-mono text-ink-100">
                     {Number(g.amount).toFixed(2).replace('.', ',')} €

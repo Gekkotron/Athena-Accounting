@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
 import { formatDateTime } from '../../lib/format';
+import { getAccountName } from '../../lib/accounts';
 
 export function FileImportsList({
   imports, accounts, onRequestDelete,
@@ -12,8 +13,6 @@ export function FileImportsList({
   onRequestDelete: (fileImport: FileImport) => void;
 }): JSX.Element {
   const qc = useQueryClient();
-
-  const accountName = (id: number) => accounts.find((a) => a.id === id)?.name ?? `#${id}`;
 
   // Reconciliation: state + mutation to set the closing balance on an import.
   const [reconcilingId, setReconcilingId] = useState<number | null>(null);
@@ -108,7 +107,7 @@ export function FileImportsList({
                   const rows = [
                     <tr key={i.id} className="border-b border-ink-800/40 last:border-0">
                       <td className="px-4 py-2.5 text-ink-100 font-mono text-xs">{i.filename}</td>
-                      <td className="px-4 py-2.5 text-ink-300">{accountName(i.accountId)}</td>
+                      <td className="px-4 py-2.5 text-ink-300">{getAccountName(accounts, i.accountId)}</td>
                       <td className="px-4 py-2.5"><span className="badge">{i.format}</span></td>
                       <td className="px-4 py-2.5 text-right text-ink-300 font-mono">{i.totalLines}</td>
                       <td className="px-4 py-2.5 text-right text-sage-300 font-mono">{i.insertedCount}</td>
