@@ -31,6 +31,11 @@ export function TransactionModal({
   const [rawLabel, setRawLabel] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
+  // Empty string = no per-tx override; the transaction inherits the account
+  // default (which itself may be null = never locked). Any digit here means
+  // this transaction locks for N years from ITS OWN date — the Natixis-style
+  // rolling-lock semantics.
+  const [lockYearsInput, setLockYearsInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   // Re-seed defaults / draft from the target transaction whenever the modal
@@ -44,13 +49,19 @@ export function TransactionModal({
       setRawLabel(transaction.rawLabel);
       setCategoryId(transaction.categoryId ?? '');
       setNotes(transaction.notes ?? '');
+      setLockYearsInput(transaction.lockYears == null ? '' : String(transaction.lockYears));
     } else {
-      setAccountId(accounts[0]?.id ?? '');
+      const defaultAcc = accounts[0];
+      setAccountId(defaultAcc?.id ?? '');
       setDate(todayFr);
       setAmount('');
       setRawLabel('');
       setCategoryId('');
       setNotes('');
+      // Pre-fill lock from the default account's lockYears so a Natixis-style
+      // account (rolling 5-year lock) doesn't require the user to re-type "5"
+      // every time. The user can still blank the field to opt out.
+      setLockYearsInput(defaultAcc?.lockYears == null ? '' : String(defaultAcc.lockYears));
     }
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,6 +91,7 @@ export function TransactionModal({
       rawLabel: string;
       categoryId: number | null;
       notes: string | null;
+      lockYears: number | null;
     }) =>
       api<{ transaction: Transaction }>('/api/transactions', {
         method: 'POST',
@@ -102,6 +114,7 @@ export function TransactionModal({
         rawLabel: string;
         categoryId: number | null;
         notes: string | null;
+        lockYears: number | null;
       }>;
     }) =>
       api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
@@ -138,6 +151,16 @@ export function TransactionModal({
       setError('Le libellé est obligatoire.');
       return;
     }
+    const lockRaw = lockYearsInput.trim();
+    let lockYears: number | null = null;
+    if (lockRaw !== '') {
+      const n = Number(lockRaw);
+      if (!Number.isInteger(n) || n < 0 || n > 99) {
+        setError('Blocage : entier entre 0 et 99, ou laisser vide.');
+        return;
+      }
+      lockYears = n;
+    }
 
     if (isEdit && transaction) {
       // Diff against the original so the PATCH only sends fields that changed.
@@ -148,6 +171,7 @@ export function TransactionModal({
         rawLabel: string;
         categoryId: number | null;
         notes: string | null;
+        lockYears: number | null;
       }> = {};
       if (accountId !== transaction.accountId) patch.accountId = accountId;
       if (isoDate !== transaction.date.slice(0, 10)) patch.date = isoDate;
@@ -158,6 +182,9 @@ export function TransactionModal({
       }
       const cleanedNotes = notes.trim() || null;
       if (cleanedNotes !== transaction.notes) patch.notes = cleanedNotes;
+      if (lockYears !== (transaction.lockYears ?? null)) {
+        patch.lockYears = lockYears;
+      }
 
       if (Object.keys(patch).length === 0) {
         onClose();
@@ -172,9 +199,15 @@ export function TransactionModal({
         rawLabel: rawLabel.trim(),
         categoryId: categoryId || null,
         notes: notes.trim() || null,
+        lockYears,
       });
     }
   };
+
+  // Pre-fill lock years when the user switches account mid-modal to a
+  // different one — but only in create mode, and only if they haven't
+  // already typed a custom value.
+  const selectedAccount = accountId ? accounts.find((a) => a.id === accountId) : undefined;
 
   const pending = create.isPending || update.isPending;
 
@@ -278,6 +311,28 @@ export function TransactionModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="…"
             />
+          </div>
+          <div className="sm:col-span-2">
+            <label
+              className="label mb-1.5 block"
+              title="Nombre d'années pendant lesquelles ce montant est bloqué à partir de la date de la transaction. Utilisé pour les dépôts à terme / Natixis où chaque versement a sa propre échéance. Laisser vide pour hériter du blocage par défaut du compte (PEA : opening + N ans)."
+            >
+              Blocage individuel (ans)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={99}
+              className="input font-mono"
+              value={lockYearsInput}
+              onChange={(e) => setLockYearsInput(e.target.value)}
+              placeholder={selectedAccount?.lockYears == null ? '—' : `hérite : ${selectedAccount.lockYears}`}
+            />
+            <div className="text-[11px] text-ink-500 mt-1">
+              {selectedAccount?.lockYears != null
+                ? `Compte réglé sur ${selectedAccount.lockYears} an${selectedAccount.lockYears > 1 ? 's' : ''} par défaut (échéance : date de la transaction + N ans). Modifiez si ce versement doit suivre une règle différente.`
+                : 'Compte sans blocage par défaut. Remplissez seulement si ce versement doit être bloqué N ans à partir de sa date.'}
+            </div>
           </div>
         </div>
 

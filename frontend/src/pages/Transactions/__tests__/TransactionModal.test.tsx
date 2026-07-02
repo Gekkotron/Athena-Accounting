@@ -85,6 +85,7 @@ describe('TransactionModal', () => {
           rawLabel: 'CB CARREFOUR',
           categoryId: null,
           notes: null,
+          lockYears: null,
         },
       }),
     );
