@@ -122,12 +122,23 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
       const actual = data[lo]!.value;
       const delta = c.expectedAmount - actual;
       const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
-      // Precompute the diamond's X position once, using the same day-fraction-to-cx formula.
-      const cx = xScale(
-        ((new Date(c.date).getTime() - new Date(firstDate).getTime()) /
-          (new Date(lastDate).getTime() - new Date(firstDate).getTime())) *
-          (data.length - 1),
-      );
+      // Precompute the diamond's X position once. xScale spaces points by
+      // ARRAY INDEX (bucket position), not by elapsed calendar time — buckets
+      // are irregularly spaced (one per date with activity), so positioning
+      // by a whole-range time-fraction would put the checkpoint at the wrong
+      // index whenever bucket spacing is uneven. Instead, reuse the bucket
+      // `lo` already found above and interpolate only within that single
+      // bucket-to-next-bucket gap, by time, then map through xScale.
+      let cx: number;
+      if (lo >= data.length - 1) {
+        cx = xScale(lo);
+      } else {
+        const loTime = new Date(data[lo]!.date).getTime();
+        const nextTime = new Date(data[lo + 1]!.date).getTime();
+        const span = nextTime - loTime;
+        const frac = span > 0 ? (new Date(c.date).getTime() - loTime) / span : 0;
+        cx = xScale(lo + frac);
+      }
       return { ...c, actual, delta, drift, cx };
     });
 
