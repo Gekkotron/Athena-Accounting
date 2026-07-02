@@ -34,7 +34,7 @@ Empty. Update this section when starting a new initiative.
 | File               | Chars. tests | Split | Unit tests |
 |--------------------|:------------:|:-----:|:----------:|
 | Accounts.tsx       | ✅ (6)       | ✅    | ✅ (~20)   |
-| Rules.tsx          | ✅ (8)       | ✅    | ✅ (15)    |
+| Rules.tsx          | ✅ (8)       | ✅    | ✅ (27)    |
 | Transactions.tsx   | ⬜           | ⬜    | ⬜         |
 | Imports.tsx        | ⬜           | ⬜    | ⬜         |
 | backup.ts (backend)| ⬜           | ⬜    | ⬜         |
