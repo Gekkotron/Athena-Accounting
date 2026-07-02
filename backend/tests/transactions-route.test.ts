@@ -80,16 +80,18 @@ describe.skipIf(!RUN)('/api/transactions', () => {
     });
 
     it('applies the rule engine when categoryId is omitted', async () => {
-      // Seed a rule that catches CARREFOUR.
-      await app.inject({
+      // Seed a rule that catches a highly-specific keyword so it can't
+      // collide with any default seeded by onboarding.
+      const ruleRes = await app.inject({
         method: 'POST', url: '/api/rules',
         headers: { cookie },
-        payload: { categoryId, keyword: 'carrefour', matchMode: 'word', signConstraint: 'negative' },
+        payload: { categoryId, keyword: 'ruletestunique', matchMode: 'word', signConstraint: 'negative' },
       });
+      expect(ruleRes.statusCode).toBe(201);
       const res = await app.inject({
         method: 'POST', url: '/api/transactions',
         headers: { cookie },
-        payload: { accountId: accountAId, date: '2026-06-15', amount: '-10.00', rawLabel: 'CB CARREFOUR' },
+        payload: { accountId: accountAId, date: '2026-06-15', amount: '-10.00', rawLabel: 'CB RULETESTUNIQUE MERCHANT' },
       });
       expect(res.statusCode).toBe(201);
       const tx = res.json().transaction;
@@ -430,10 +432,14 @@ describe.skipIf(!RUN)('/api/transactions', () => {
     });
 
     it('filters to a single account when accountId is provided', async () => {
-      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'onA-1' });
-      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'onA-2' });
-      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'onB-1' });
-      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'onB-2' });
+      // Labels must normalize to different values so the dedup constraint
+      // doesn't reject the second insert on each account. "onA-1" and
+      // "onA-2" both normalize to "ona-" (the trailing digit is stripped),
+      // so use fully distinct words.
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT ALPHA' });
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT BETA' });
+      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT GAMMA' });
+      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT DELTA' });
 
       const res = await app.inject({
         method: 'GET', url: `/api/transactions/duplicates?accountId=${accountAId}`,

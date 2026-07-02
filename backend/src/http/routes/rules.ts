@@ -44,12 +44,16 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/api/rules', async (req, reply) => {
+    const uid = userId(req);
     const parsed = CreateBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     try {
-      const [created] = await db.insert(rules).values(parsed.data).returning();
+      const [created] = await db
+        .insert(rules)
+        .values({ ...parsed.data, userId: uid })
+        .returning();
       return reply.code(201).send({ rule: created });
     } catch (err) {
       if (isPgError(err) && err.code === '23503') {
