@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { FileImportsList } from '../FileImportsList';
 import type { Account, FileImport } from '../../../api/types';
 
@@ -40,7 +41,9 @@ function renderList(props: Partial<any> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <FileImportsList imports={rows} accounts={[acc]} onRequestDelete={vi.fn()} {...props} />
+      <MemoryRouter>
+        <FileImportsList imports={rows} accounts={[acc]} onRequestDelete={vi.fn()} {...props} />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }

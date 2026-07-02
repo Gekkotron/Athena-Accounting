@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
@@ -110,7 +111,19 @@ export function FileImportsList({
                       <td className="px-4 py-2.5 text-ink-300">{getAccountName(accounts, i.accountId)}</td>
                       <td className="px-4 py-2.5"><span className="badge">{i.format}</span></td>
                       <td className="px-4 py-2.5 text-right text-ink-300 font-mono">{i.totalLines}</td>
-                      <td className="px-4 py-2.5 text-right text-sage-300 font-mono">{i.insertedCount}</td>
+                      <td className="px-4 py-2.5 text-right font-mono">
+                        {i.insertedCount > 0 ? (
+                          <Link
+                            to={`/transactions?sourceFileId=${i.id}`}
+                            className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline transition"
+                            title="Voir les transactions issues de cet import"
+                          >
+                            {i.insertedCount}
+                          </Link>
+                        ) : (
+                          <span className="text-sage-300">{i.insertedCount}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 text-right text-ink-400 font-mono">{i.dedupSkipped}</td>
                       <td className="px-4 py-2.5 text-ink-400 text-xs whitespace-nowrap">{formatDateTime(i.importedAt)}</td>
                       <td className="px-4 py-2.5 text-right font-mono">

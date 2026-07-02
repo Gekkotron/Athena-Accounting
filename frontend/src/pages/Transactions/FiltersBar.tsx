@@ -102,6 +102,7 @@ export function FiltersBar({
             onFilterChange({
               accountId: undefined,
               categoryId: undefined,
+              sourceFileId: undefined,
               fromDate: undefined,
               toDate: undefined,
               search: undefined,

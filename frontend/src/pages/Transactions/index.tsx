@@ -12,6 +12,7 @@ import { parseAmountQuery } from './parseAmountQuery';
 export interface Filters {
   accountId?: number;
   categoryId?: number;
+  sourceFileId?: number;
   fromDate?: string;
   toDate?: string;
   search?: string;
@@ -22,21 +23,26 @@ export interface Filters {
 
 const PAGE = 50;
 
+// URL-param → positive-int-or-undefined, shared across the initial reads.
+function readIntParam(sp: URLSearchParams, key: string): number | undefined {
+  const v = sp.get(key);
+  if (!v) return undefined;
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
 export function Transactions() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  // Pick up an optional ?accountId=… from the URL so links from the dashboard
-  // land on the right pre-filtered view.
-  const initialAccountId = (() => {
-    const v = searchParams.get('accountId');
-    if (!v) return undefined;
-    const n = Number(v);
-    return Number.isInteger(n) && n > 0 ? n : undefined;
-  })();
+  // Pick up an optional ?accountId=… / ?sourceFileId=… from the URL so
+  // links from Dashboard or Imports land on the right pre-filtered view.
+  const initialAccountId = readIntParam(searchParams, 'accountId');
+  const initialSourceFileId = readIntParam(searchParams, 'sourceFileId');
   const [filters, setFilters] = useState<Filters>({
     sort: 'date',
     order: 'desc',
     accountId: initialAccountId,
+    sourceFileId: initialSourceFileId,
   });
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
@@ -178,6 +184,27 @@ export function Transactions() {
         }}
         onSearchInputChange={onSearchChange}
       />
+
+      {filters.sourceFileId != null && (
+        <div className="rounded-lg border border-sage-800/40 bg-sage-900/10 px-3 py-2 flex items-center justify-between gap-3 text-xs">
+          <span className="text-ink-200">
+            Filtré par import{' '}
+            <span className="font-mono text-sage-300">#{filters.sourceFileId}</span>{' '}
+            <span className="text-ink-500">
+              — seules les transactions issues de ce fichier sont affichées.
+            </span>
+          </span>
+          <button
+            className="text-ink-500 hover:text-ink-100 transition"
+            onClick={() => {
+              setOffset(0);
+              setFilters((f) => ({ ...f, sourceFileId: undefined }));
+            }}
+          >
+            Retirer ce filtre
+          </button>
+        </div>
+      )}
 
       {selectedIds.size > 0 && (
         <div className="rounded-lg border border-sage-800/40 bg-sage-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
