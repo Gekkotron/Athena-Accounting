@@ -5,6 +5,8 @@ export function TransactionRow({
   tx,
   account,
   categories,
+  selected,
+  onToggleSelect,
   onUpdateCategory,
   onUpdateNotes,
   onEdit,
@@ -13,13 +15,24 @@ export function TransactionRow({
   tx: Transaction;
   account: Account | undefined;
   categories: Category[];
+  selected: boolean;
+  onToggleSelect: (id: number, checked: boolean) => void;
   onUpdateCategory: (id: number, patch: { categoryId: number | null }) => void;
   onUpdateNotes: (id: number, patch: { notes: string | null }) => void;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
 }) {
   return (
-    <tr className="group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition">
+    <tr className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''}`}>
+      <td className="px-2 py-2.5 text-center">
+        <input
+          type="checkbox"
+          className="align-middle accent-sage-300"
+          checked={selected}
+          onChange={(e) => onToggleSelect(tx.id, e.target.checked)}
+          aria-label={`Sélectionner la transaction ${tx.rawLabel}`}
+        />
+      </td>
       <td className="px-4 py-2.5 text-ink-300 whitespace-nowrap font-mono text-xs">{formatDate(tx.date)}</td>
       <td className="px-4 py-2.5 text-ink-400 whitespace-nowrap hidden sm:table-cell">{account?.name ?? '?'}</td>
       <td className="px-4 py-2.5 text-ink-100">

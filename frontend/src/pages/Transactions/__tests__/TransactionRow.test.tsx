@@ -33,12 +33,13 @@ const t: Transaction = {
   importedAt: '2026-06-15T00:00:00Z',
 };
 
-function renderRow(overrides: Partial<{ tx: Transaction }> = {}) {
+function renderRow(overrides: Partial<{ tx: Transaction; selected: boolean }> = {}) {
   const tx = overrides.tx ?? t;
   const onUpdateCategory = vi.fn();
   const onUpdateNotes = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
+  const onToggleSelect = vi.fn();
   render(
     <table>
       <tbody>
@@ -46,6 +47,8 @@ function renderRow(overrides: Partial<{ tx: Transaction }> = {}) {
           tx={tx}
           account={acc}
           categories={cats}
+          selected={overrides.selected ?? false}
+          onToggleSelect={onToggleSelect}
           onUpdateCategory={onUpdateCategory}
           onUpdateNotes={onUpdateNotes}
           onEdit={onEdit}
@@ -54,7 +57,7 @@ function renderRow(overrides: Partial<{ tx: Transaction }> = {}) {
       </tbody>
     </table>,
   );
-  return { onUpdateCategory, onUpdateNotes, onEdit, onDelete };
+  return { onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect };
 }
 
 describe('TransactionRow', () => {
@@ -120,5 +123,21 @@ describe('TransactionRow', () => {
     await user.click(screen.getByRole('button', { name: 'Supprimer' }));
 
     expect(onDelete).toHaveBeenCalledWith(t);
+  });
+
+  it('fires onToggleSelect(id, true) when the row checkbox is checked', async () => {
+    const user = userEvent.setup();
+    const { onToggleSelect } = renderRow();
+
+    const cb = screen.getByRole('checkbox', { name: /sélectionner la transaction/i });
+    expect(cb).not.toBeChecked();
+    await user.click(cb);
+
+    expect(onToggleSelect).toHaveBeenCalledWith(t.id, true);
+  });
+
+  it('renders the row checkbox as checked when selected=true', () => {
+    renderRow({ selected: true });
+    expect(screen.getByRole('checkbox', { name: /sélectionner la transaction/i })).toBeChecked();
   });
 });

@@ -369,6 +369,55 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // Batch-delete a set of transactions by id. Applies the same transfer-leg
+  // unlink guard as the single-DELETE handler: any mirror leg still owned by
+  // the user gets its transfer_group_id set to null so aggregates don't
+  // silently hide it. Wrapped in one DB transaction so a partial failure
+  // rolls back cleanly.
+  app.post('/api/transactions/delete-bulk', async (req, reply) => {
+    const uid = userId(req);
+    const parsed = z.object({
+      ids: z.array(z.number().int().positive()).min(1).max(500),
+    }).safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'ids must be a non-empty array of positive integers (max 500)' });
+    }
+    const ids = parsed.data.ids;
+
+    const result = await db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ id: transactions.id, transferGroupId: transactions.transferGroupId })
+        .from(transactions)
+        .where(and(eq(transactions.userId, uid), inArray(transactions.id, ids)));
+
+      // Collect transfer-group ids that need mirror unlinking. Only unlink
+      // the OTHER leg of the group (not the row we're about to delete). If
+      // both legs are in the delete set, the group vanishes entirely — the
+      // unlink is a no-op but harmless.
+      const groupIds = new Set<string>();
+      for (const row of existing) {
+        if (row.transferGroupId) groupIds.add(row.transferGroupId);
+      }
+      if (groupIds.size > 0) {
+        await tx
+          .update(transactions)
+          .set({ transferGroupId: null })
+          .where(and(
+            eq(transactions.userId, uid),
+            inArray(transactions.transferGroupId, Array.from(groupIds)),
+          ));
+      }
+
+      const deleted = await tx
+        .delete(transactions)
+        .where(and(eq(transactions.userId, uid), inArray(transactions.id, ids)))
+        .returning({ id: transactions.id });
+      return { deleted: deleted.length };
+    });
+
+    return result;
+  });
+
   // Delete a single transaction. If the row is half of a linked internal
   // transfer pair, also unlink the mirror leg so it doesn't silently become
   // an "invisible" orphan (transfer_group_id IS NULL filters in the

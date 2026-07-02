@@ -45,6 +45,8 @@ function renderTable(overrides: Partial<{
   const onUpdateNotes = vi.fn();
   const onEdit = overrides.onEdit ?? vi.fn();
   const onDelete = overrides.onDelete ?? vi.fn();
+  const onToggleSelect = vi.fn();
+  const onToggleSelectAll = vi.fn();
   render(
     <TransactionsTable
       transactions={overrides.transactions ?? rows}
@@ -54,13 +56,16 @@ function renderTable(overrides: Partial<{
       filters={baseFilters}
       setFilters={setFilters}
       setOffset={setOffset}
+      selectedIds={new Set()}
+      onToggleSelect={onToggleSelect}
+      onToggleSelectAll={onToggleSelectAll}
       onUpdateCategory={onUpdateCategory}
       onUpdateNotes={onUpdateNotes}
       onEdit={onEdit}
       onDelete={onDelete}
     />,
   );
-  return { setFilters, setOffset, onUpdateCategory, onUpdateNotes, onEdit, onDelete };
+  return { setFilters, setOffset, onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, onToggleSelectAll };
 }
 
 describe('TransactionsTable', () => {

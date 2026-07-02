@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
@@ -45,6 +45,16 @@ export function Transactions() {
   const [modalTx, setModalTx] = useState<Transaction | null | undefined>(undefined);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+
+  // Reset the selection whenever the visible set changes (filter or page).
+  // Otherwise selectedIds may contain rows the user can no longer see, and
+  // acting on them would feel like surprise-deletion.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filters, offset]);
 
   // Whenever the search input changes, route it to either `amount` or
   // `search`. We never send both at once.
@@ -110,6 +120,24 @@ export function Transactions() {
     onError: (err: ApiError) => setDeleteError(err.message),
   });
 
+  const bulkDelete = useMutation({
+    mutationFn: (ids: number[]) =>
+      api<{ deleted: number }>('/api/transactions/delete-bulk', {
+        method: 'POST',
+        json: { ids },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      setConfirmBulkDelete(false);
+      setBulkDeleteError(null);
+      setSelectedIds(new Set());
+    },
+    onError: (err: ApiError) => setBulkDeleteError(err.message),
+  });
+
   const accounts = accountsQ.data?.accounts ?? [];
   const categories = categoriesQ.data?.categories ?? [];
   const txs = txQ.data?.transactions ?? [];
@@ -151,6 +179,28 @@ export function Transactions() {
         onSearchInputChange={onSearchChange}
       />
 
+      {selectedIds.size > 0 && (
+        <div className="rounded-lg border border-sage-800/40 bg-sage-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-ink-100">
+            <span className="font-mono">{selectedIds.size}</span> sélectionnée{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Effacer la sélection
+            </button>
+            <button
+              className="btn-secondary !py-1.5 !px-3 text-clay-300 hover:text-clay-200 border-clay-800/60 hover:border-clay-700"
+              onClick={() => { setBulkDeleteError(null); setConfirmBulkDelete(true); }}
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      )}
+
       <TransactionsTable
         transactions={txs}
         categories={categories}
@@ -159,6 +209,23 @@ export function Transactions() {
         filters={filters}
         setFilters={setFilters}
         setOffset={setOffset}
+        selectedIds={selectedIds}
+        onToggleSelect={(id, checked) => {
+          setSelectedIds((s) => {
+            const next = new Set(s);
+            if (checked) next.add(id); else next.delete(id);
+            return next;
+          });
+        }}
+        onToggleSelectAll={(checked) => {
+          setSelectedIds((s) => {
+            const next = new Set(s);
+            for (const t of txs) {
+              if (checked) next.add(t.id); else next.delete(t.id);
+            }
+            return next;
+          });
+        }}
         onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
         onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
         onEdit={(tx) => setModalTx(tx)}
@@ -214,6 +281,23 @@ export function Transactions() {
           setDeletingTx(null);
           setDeleteError(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Supprimer ${selectedIds.size} transaction${selectedIds.size > 1 ? 's' : ''} ?`}
+        description={
+          <>
+            Cette action est <span className="display-italic">irréversible</span>. Toute
+            jambe miroir de virement interne est délinkée avant la suppression.
+          </>
+        }
+        confirmLabel="Supprimer"
+        destructive
+        busy={bulkDelete.isPending}
+        error={bulkDeleteError}
+        onConfirm={() => bulkDelete.mutate(Array.from(selectedIds))}
+        onCancel={() => { setConfirmBulkDelete(false); setBulkDeleteError(null); }}
       />
     </div>
   );
