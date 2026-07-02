@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Account, BalancePoint, BalanceCheckpoint } from '../api/types';
 import { listCheckpoints } from '../api/checkpoints';
 import { formatAmount, amountSignClass, formatDate } from '../lib/format';
+import { usePersistedState } from '../lib/persisted-state';
 import { BalanceChart } from '../components/BalanceChart';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
 
@@ -30,8 +31,11 @@ export function Dashboard() {
 
   // Chart scope: 'all' = sum across all accounts of the primary currency,
   // otherwise a specific account_id (the chart then shows that single account
-  // in its own currency).
-  const [chartScope, setChartScope] = useState<'all' | number>('all');
+  // in its own currency). Persisted so the last-picked scope survives reloads.
+  const [chartScope, setChartScope] = usePersistedState<'all' | number>(
+    'dashboard.chartScope',
+    'all',
+  );
 
   // Checkpoints for the currently scoped account. Skipped entirely when scope
   // is 'all' — checkpoints are per-account by design.
