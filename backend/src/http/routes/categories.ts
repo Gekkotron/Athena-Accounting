@@ -5,7 +5,7 @@ import { db } from '../../db/client.js';
 import { categories } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
 
-const kindEnum = z.enum(['expense', 'income', 'transfer', 'neutral']);
+const kindEnum = z.enum(['expense', 'income', 'neutral']);
 
 const CreateBody = z.object({
   name: z.string().trim().min(1).max(64),

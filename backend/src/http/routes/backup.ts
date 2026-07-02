@@ -283,7 +283,9 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           .values({
             userId: uid,
             name: c.name,
-            kind: c.kind,
+            // Old backups may carry kind='transfer'; the app dropped that
+            // value (migration 0010) — coerce to 'neutral' on restore.
+            kind: c.kind === 'transfer' ? 'neutral' : c.kind,
             color: c.color ?? null,
             parentId: null,
             isDefault: c.isDefault,
