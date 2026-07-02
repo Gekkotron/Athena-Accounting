@@ -204,6 +204,7 @@ describe('Imports page (characterization)', () => {
 
   it('marks a duplicate group as not-a-duplicate via bulk POST', async () => {
     let marked = false;
+    const postedBodies: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: [] };
@@ -221,7 +222,7 @@ describe('Imports page (characterization)', () => {
         };
       }
       if (path === '/api/transactions/mark-not-duplicate' && init?.method === 'POST') {
-        expect(init.json).toEqual({ ids: [100, 101] });
+        postedBodies.push(init.json);
         marked = true;
         return { updated: 2 };
       }
@@ -234,7 +235,8 @@ describe('Imports page (characterization)', () => {
 
     await user.click(screen.getByRole('button', { name: '✓ Pas un doublon' }));
 
-    await waitFor(() => expect(screen.queryByText('CB CARREFOUR A')).not.toBeInTheDocument());
+    await waitFor(() => expect(postedBodies).toHaveLength(1));
+    expect(postedBodies[0]).toEqual({ ids: [100, 101] });
   });
 
   it('deletes a file-import after confirmation', async () => {
@@ -263,12 +265,13 @@ describe('Imports page (characterization)', () => {
   });
 
   it('restores a backup after confirming, and shows the restored-counts banner', async () => {
+    const postedBodies: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: [] };
       if (path === '/api/transactions/duplicates') return { groups: [] };
       if (path === '/api/backup/import' && init?.method === 'POST') {
-        expect(init.json).toEqual({ ok: true });
+        postedBodies.push(init.json);
         return {
           imported: {
             accounts: 1, categories: 2, accountFilenamePatterns: 0,
@@ -291,6 +294,9 @@ describe('Imports page (characterization)', () => {
     await user.upload(restoreInput, backupFile);
 
     await user.click(await screen.findByRole('button', { name: 'Effacer et restaurer' }));
+
+    await waitFor(() => expect(postedBodies).toHaveLength(1));
+    expect(postedBodies[0]).toEqual({ ok: true });
 
     const banner = (await screen.findByText('Sauvegarde restaurée')).closest('div')!.parentElement!;
     expect(banner.textContent).toContain('5 transaction(s)');
