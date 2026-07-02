@@ -12,6 +12,8 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
 
 ## Recently landed
 
+- 2026-07-02 — Imports.tsx split into pages/Imports/ (6 focused files)
+  with characterization + unit tests. Fourth interleave iteration.
 - 2026-07-02 — Transactions.tsx split into pages/Transactions/ (6 focused
   files) with characterization + unit tests. Third interleave iteration.
 - 2026-07-02 — Rules.tsx split into pages/Rules/ (8 focused files) with
@@ -38,11 +40,19 @@ Empty. Update this section when starting a new initiative.
 | Accounts.tsx       | ✅ (6)       | ✅    | ✅ (~20)   |
 | Rules.tsx          | ✅ (8)       | ✅    | ✅ (27)    |
 | Transactions.tsx   | ✅ (8)       | ✅    | ✅ (27)    |
-| Imports.tsx        | ⬜           | ⬜    | ⬜         |
+| Imports.tsx        | ✅ (7)       | ✅    | ✅ (15)    |
 | backup.ts (backend)| ⬜           | ⬜    | ⬜         |
 
 ## Known deferrals
 
+- `accountId` dead prop in `pages/Imports/PdfTemplateWizard.tsx`
+  (Imports iteration, 2026-07-02): declared in prop type but never read
+  by the component or `PdfTemplateBuilder`. Passed as `''` from
+  `index.tsx`. Drop from both sides on next touch.
+- `Blob.prototype.text` polyfill in
+  `pages/Imports/__tests__/BackupPanel.test.tsx` (Imports iteration,
+  2026-07-02): guarded, scoped to that file. Promote to
+  `src/test/setup.ts` if a second test file needs `File#text()`.
 - `onToggleAdvanced` dead prop in `pages/Transactions/FiltersBar.tsx`
   (Transactions iteration, 2026-07-02): introduced by plan; trivial cleanup
   on next touch.
