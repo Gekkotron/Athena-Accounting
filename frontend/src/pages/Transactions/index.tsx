@@ -6,6 +6,7 @@ import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseUserDate } from '../../lib/format';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { TransactionsTable } from './TransactionsTable';
+import { FiltersBar } from './FiltersBar';
 
 export interface Filters {
   accountId?: number;
@@ -70,7 +71,6 @@ export function Transactions() {
       setFilters((f) => ({ ...f, amount: undefined, search: value || undefined }));
     }
   };
-  const searchIsAmount = parseAmountQuery(searchInput) !== null && searchInput.trim() !== '';
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -130,11 +130,6 @@ export function Transactions() {
 
   const accountById = new Map(accounts.map((a) => [a.id, a] as const));
 
-  const set = <K extends keyof Filters>(key: K, value: Filters[K]) => {
-    setOffset(0);
-    setFilters((f) => ({ ...f, [key]: value }));
-  };
-
   return (
     <div className="flex flex-col gap-6">
       <div className="page-header">
@@ -155,87 +150,19 @@ export function Transactions() {
         </div>
       </div>
 
-      <div className={`surface p-4 md:p-5 ${showFilters ? '' : 'hidden md:block'}`}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-            <label className="label">Recherche</label>
-            <div className="relative">
-              <input
-                className="input pr-20"
-                placeholder="libellé ou montant (ex. 338)"
-                value={searchInput}
-                onChange={(e) => onSearchChange(e.target.value)}
-              />
-              {searchIsAmount && (
-                <span
-                  className="absolute inset-y-0 right-2 my-auto h-5 inline-flex items-center rounded-md border border-sage-800/40 bg-sage-900/30 px-1.5 text-[10px] tracking-wide text-sage-200 font-mono"
-                  title="Filtré par montant (signe ignoré)"
-                >
-                  MONTANT
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5 w-full sm:w-44">
-            <label className="label">Compte</label>
-            <select
-              className="input"
-              value={filters.accountId ?? ''}
-              onChange={(e) => set('accountId', e.target.value ? Number(e.target.value) : undefined)}
-            >
-              <option value="">Tous</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5 w-full sm:w-44">
-            <label className="label">Catégorie</label>
-            <select
-              className="input"
-              value={filters.categoryId ?? ''}
-              onChange={(e) => set('categoryId', e.target.value ? Number(e.target.value) : undefined)}
-            >
-              <option value="">Toutes</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5 w-[48%] sm:w-36">
-            <label className="label">Du</label>
-            <input
-              type="date"
-              className="input"
-              value={filters.fromDate ?? ''}
-              onChange={(e) => set('fromDate', e.target.value || undefined)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5 w-[48%] sm:w-36">
-            <label className="label">Au</label>
-            <input
-              type="date"
-              className="input"
-              value={filters.toDate ?? ''}
-              onChange={(e) => set('toDate', e.target.value || undefined)}
-            />
-          </div>
-          <button
-            className="btn-ghost"
-            onClick={() => {
-              setFilters({ sort: 'date', order: 'desc' });
-              setSearchInput('');
-              setOffset(0);
-            }}
-          >
-            Effacer
-          </button>
-        </div>
-      </div>
+      <FiltersBar
+        filters={filters}
+        searchInput={searchInput}
+        accounts={accounts}
+        categories={categories}
+        showAdvanced={showFilters}
+        onToggleAdvanced={() => setShowFilters((s) => !s)}
+        onFilterChange={(patch) => {
+          setOffset(0);
+          setFilters((f) => ({ ...f, ...patch }));
+        }}
+        onSearchInputChange={onSearchChange}
+      />
 
       <TransactionsTable
         transactions={txs}
