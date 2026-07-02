@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, apiUpload, ApiError } from '../api/client';
-import type { Account, FileImport } from '../api/types';
-import { formatDateTime } from '../lib/format';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { submitPdf, type PdfImportNeedsTemplate, type PdfImportImported } from '../api/pdf-templates';
-import { PdfTemplateBuilder } from '../components/PdfTemplateBuilder/index';
+import { api, apiUpload, ApiError } from '../../api/client';
+import type { Account, FileImport } from '../../api/types';
+import { formatDateTime } from '../../lib/format';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { submitPdf, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
+import { PdfTemplateBuilder } from '../../components/PdfTemplateBuilder/index';
 
 interface BackupResult {
   imported: {
