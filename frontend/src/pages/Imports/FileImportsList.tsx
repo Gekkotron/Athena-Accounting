@@ -10,7 +10,7 @@ export function FileImportsList({
   imports: FileImport[];
   accounts: Account[];
   onRequestDelete: (fileImport: FileImport) => void;
-}) {
+}): JSX.Element {
   const qc = useQueryClient();
 
   const accountName = (id: number) => accounts.find((a) => a.id === id)?.name ?? `#${id}`;
