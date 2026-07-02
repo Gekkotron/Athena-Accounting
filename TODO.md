@@ -34,6 +34,7 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
      en bas du fichier ou supprimés. -->
 
 - Bulk-select + bulk-delete on the Transactions list (row checkboxes, indeterminate header checkbox, action bar + confirm dialog, backend `POST /api/transactions/delete-bulk` with the transfer-leg unlink guard). `Transactions/*`, `transactions.ts`.
+- Folder / multi-file upload — the import form accepts a folder pick or a Cmd/Ctrl multi-select and processes files sequentially, with a progress card and a summary of inserted / skipped / needs-template / errored. Single-file behavior unchanged. `Imports/UploadForm.tsx`.
 - Bulk-select on the Possibles doublons panel — per-row checkboxes + action bar with "Pas un doublon" and "Supprimer". `Imports/DuplicatesPanel.tsx`.
 - Available vs blocked money on locked accounts (PEA / dépôt à terme). Accounts and transactions carry a `lock_years` column; the Dashboard hero switches to "Disponible" with a "+ X€ bloqués" tag when a lock is unmatured, and each account card shows the split. Migration 0011. `backend/src/db/migrations/0011_lock_years.sql`, `accounts.ts`, `reports.ts`, `Dashboard.tsx`, `Accounts/AccountForm.tsx`.
 - Dashboard balance-chart account selector persisted to localStorage — the last account you were watching stays selected across reloads. `Dashboard.tsx`, `lib/persisted-state.ts`.
