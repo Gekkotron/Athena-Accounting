@@ -150,19 +150,21 @@ export function AccountForm({
 
   return (
     <div className="flex flex-col gap-3">
-      <FormFields
-        name={name}
-        setName={setName}
-        type={type}
-        setType={setType}
-        currency={currency}
-        setCurrency={setCurrency}
-        openingBalance={openingBalance}
-        setOpeningBalance={setOpeningBalance}
-        openingDate={openingDate}
-        setOpeningDate={setOpeningDate}
-        mode="edit"
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <FormFields
+          name={name}
+          setName={setName}
+          type={type}
+          setType={setType}
+          currency={currency}
+          setCurrency={setCurrency}
+          openingBalance={openingBalance}
+          setOpeningBalance={setOpeningBalance}
+          openingDate={openingDate}
+          setOpeningDate={setOpeningDate}
+          mode="edit"
+        />
+      </div>
       {error && (
         <div className="rounded-md border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-xs text-clay-200">
           {error}
