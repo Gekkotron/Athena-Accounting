@@ -70,6 +70,16 @@ Empty. Update this section when starting a new initiative.
 - CI runs Node 20 in `setup-node@v4`, and GitHub is deprecating the Node 20
   runner. Bump `node-version: '22'` in `.github/workflows/ci.yml` at the
   next CI touch.
+- Error-banner `<div>` markup duplicated across `pages/Imports/UploadForm.tsx`
+  and `pages/Imports/BackupPanel.tsx` (whole-branch review, 2026-07-02, Finding 4):
+  only 2 sites remain after the `pdfError` branch was removed from
+  `PdfTemplateWizard.tsx` — not enough duplication yet to justify an
+  `<ErrorBanner>` extraction. Revisit on the next touch of the Imports layer.
+- `DuplicatesPanel.accountsQ` (whole-branch review, 2026-07-02, Finding 6):
+  panel fetches its own `accounts` query rather than receiving it as a prop
+  like `FileImportsList` does. Deliberately self-contained — TanStack Query
+  dedupes the cache, so there's no extra network cost — not treated as a
+  defect. Left as-is.
 
 ## Environment
 
