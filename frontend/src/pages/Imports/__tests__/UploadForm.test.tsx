@@ -116,4 +116,93 @@ describe('UploadForm', () => {
     renderForm();
     expect(screen.getByRole('button', { name: 'Importer' })).toBeDisabled();
   });
+
+  it('rejects a PDF submit when no account is selected', async () => {
+    const user = userEvent.setup();
+    const { props } = renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    const file = new File(['%PDF'], 'a.pdf', { type: 'application/pdf' });
+    await user.upload(fileInput, file);
+    // Leave account = "Auto (via nom du fichier)" (empty).
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    // Neither submitPdf nor apiUpload should fire.
+    expect(submitPdfMock).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    // Error banner surfaces the account-required message.
+    expect(await screen.findByText(/veuillez sélectionner un compte/i)).toBeInTheDocument();
+    // Callbacks that indicate success mustn't have fired.
+    expect(props.onPdfNeedsTemplate).not.toHaveBeenCalled();
+    expect(props.onPdfImported).not.toHaveBeenCalled();
+  });
+
+  it('PDF imported response fires onPdfImported', async () => {
+    const response = {
+      kind: 'imported' as const,
+      result: { fileImportId: 7, insertedCount: 4, dedupSkipped: 1, totalLines: 5 },
+      skippedRows: [],
+    };
+    submitPdfMock.mockResolvedValue(response);
+    const user = userEvent.setup();
+    const { props } = renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    const file = new File(['%PDF'], 'b.pdf', { type: 'application/pdf' });
+    await user.upload(fileInput, file);
+    await user.selectOptions(fieldFor(/^Compte$/), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    await waitFor(() => expect(props.onPdfImported).toHaveBeenCalledWith(response));
+  });
+
+  it('OFX/CSV error surfaces the ApiError message in the banner', async () => {
+    const { ApiError } = await import('../../../api/client');
+    uploadMock.mockRejectedValue(new ApiError('doublon détecté', 409, null));
+    const user = userEvent.setup();
+    const { props } = renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    const file = new File(['x'], 'x.csv', { type: 'text/csv' });
+    await user.upload(fileInput, file);
+    await user.selectOptions(fieldFor(/^Compte$/), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    expect(await screen.findByText(/doublon détecté/i)).toBeInTheDocument();
+    expect(props.onOfxCsvSuccess).not.toHaveBeenCalled();
+  });
+
+  it('picking a file calls onFileSelected so the parent can clear stale banners', async () => {
+    const user = userEvent.setup();
+    const { props } = renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, new File(['x'], 'x.csv', { type: 'text/csv' }));
+    expect(props.onFileSelected).toHaveBeenCalled();
+  });
+
+  it('multi-file batch: label reads "Importer N fichiers" and drives sequential apiUpload calls', async () => {
+    uploadMock.mockResolvedValue({ filename: 'x', insertedCount: 1, dedupSkipped: 0, totalLines: 1 });
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    const f1 = new File(['a'], 'a.csv', { type: 'text/csv' });
+    const f2 = new File(['b'], 'b.csv', { type: 'text/csv' });
+    await user.upload(fileInput, [f1, f2]);
+    // Label now advertises the count.
+    expect(await screen.findByRole('button', { name: /importer 2 fichiers/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /importer 2 fichiers/i }));
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(2));
+    // Batch summary card shows up with a "Fermer" button — its presence
+    // proves the batch.done state rendered.
+    expect(await screen.findByRole('button', { name: /^fermer$/i })).toBeInTheDocument();
+  });
+
+  it('drops files with unsupported extensions from the batch (e.g. .DS_Store)', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    const junk = new File([''], '.DS_Store', { type: 'application/octet-stream' });
+    const good = new File(['x'], 'x.csv', { type: 'text/csv' });
+    await user.upload(fileInput, [junk, good]);
+    // Only 1 file survives → single-file mode → submit label stays "Importer".
+    expect(screen.getByRole('button', { name: 'Importer' })).toBeInTheDocument();
+  });
 });
