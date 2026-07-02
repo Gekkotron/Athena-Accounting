@@ -9,10 +9,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 
 <!-- Tout ce qui passe par la tête, même à demi-formé. Pas obligé que ce soit clair. -->
 
-- Can displayed available money on each account or blocked money. By exemple my PEA is blocked for 5 years,
-My natixis is blocked for 5 years from starting date, so at date + 5 years the amount and the only amount of this transaction will be available.
-So I can displayed the total amount available in dashboard and the amount blocked. Maybe a configuration in dashboard settings or widget.
-
 - Add a selection feature on all list of transaction even doublon section. To delete/No double in bulk
 
 
@@ -40,6 +36,7 @@ So I can displayed the total amount available in dashboard and the amount blocke
 <!-- Pour mémoire ou pour s'auto-féliciter. Les vieux items peuvent être archivés
      en bas du fichier ou supprimés. -->
 
+- Available vs blocked money on locked accounts (PEA / dépôt à terme). Accounts and transactions carry a `lock_years` column; the Dashboard hero switches to "Disponible" with a "+ X€ bloqués" tag when a lock is unmatured, and each account card shows the split. Migration 0011. `backend/src/db/migrations/0011_lock_years.sql`, `accounts.ts`, `reports.ts`, `Dashboard.tsx`, `Accounts/AccountForm.tsx`.
 - Dashboard balance-chart account selector persisted to localStorage — the last account you were watching stays selected across reloads. `Dashboard.tsx`, `lib/persisted-state.ts`.
 - Colored kind badges for categories (expense / income / neutral, light tones) + retired the `transfer` kind (internal transfers are already tracked via `transfer_group_id`). Migration 0010 coerces old rows. `lib/categories.ts`, `Rules/CategoryRow.tsx`, `Categories.tsx`, `backend/src/db/migrations/0010_...sql`.
 - Drag-to-reorder on the Accounts page (replaces the ↑/↓ arrow buttons; @dnd-kit, keyboard + touch accessible). `Accounts/AccountCard.tsx`, `Accounts/index.tsx`.
