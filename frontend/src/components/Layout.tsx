@@ -92,12 +92,15 @@ export function Layout({ user }: { user: User }) {
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 border-r border-ink-800/70 bg-ink-950/60 px-4 py-6 flex-col">
+      {/* Desktop sidebar — sticky to the viewport so the nav + the user card
+          stay in place while the main content scrolls. self-start so the
+          sidebar doesn't stretch to match the (potentially very tall)
+          transactions/reports page height. */}
+      <aside className="hidden md:flex w-60 shrink-0 border-r border-ink-800/70 bg-ink-950/60 px-4 py-6 flex-col sticky top-0 self-start h-screen">
         <div className="mb-10 px-2">
           <Brand />
         </div>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
           {nav.map((n) => {
             const Icon = navIcons[n.icon];
             return (
@@ -140,7 +143,7 @@ function Brand() {
 function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const privacy = usePrivacy();
   return (
-    <div className="mt-auto pt-6 border-t border-ink-800/60 mt-8">
+    <div className="mt-auto pt-6 border-t border-ink-800/60">
       <div className="label mb-1">Connecté</div>
       <NavLink
         to="/profile"
