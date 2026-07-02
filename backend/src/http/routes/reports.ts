@@ -20,6 +20,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
     const rows = await db.execute<{
       currency: string;
       total: string;
+      available: string;
       account_count: number;
     }>(sql`
       SELECT
@@ -31,6 +32,27 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
             0
           )
         )::text AS total,
+        SUM(
+          (CASE
+             WHEN a.lock_years IS NULL
+               OR (a.opening_date + (INTERVAL '1 year' * a.lock_years))::date <= CURRENT_DATE
+             THEN a.opening_balance
+             ELSE 0
+           END)
+          + COALESCE(
+              (SELECT SUM(t.amount) FROM transactions t
+                WHERE t.account_id = a.id AND t.date >= a.opening_date
+                  AND (
+                    CASE
+                      WHEN t.lock_years IS NOT NULL
+                        THEN (t.date + (INTERVAL '1 year' * t.lock_years))::date <= CURRENT_DATE
+                      WHEN a.lock_years IS NOT NULL
+                        THEN (a.opening_date + (INTERVAL '1 year' * a.lock_years))::date <= CURRENT_DATE
+                      ELSE TRUE
+                    END
+                  )),
+              0)
+        )::text AS available,
         COUNT(*)::int AS account_count
       FROM accounts a
       WHERE a.user_id = ${uid}

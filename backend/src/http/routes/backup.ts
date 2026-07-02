@@ -35,6 +35,8 @@ const BackupBody = z.object({
       // Added later; optional so older backups that omit it still validate.
       // Missing displayOrder defaults to 0 on import.
       displayOrder: z.number().int().optional(),
+      // Lock-period default (migration 0011). Optional for backward compat.
+      lockYears: z.number().int().min(0).max(99).nullable().optional(),
     }),
   ),
   categories: z.array(
@@ -91,6 +93,9 @@ const BackupBody = z.object({
       // Validated as "not a duplicate" via the Possibles doublons panel.
       // Optional for backward compatibility with pre-fix exports.
       notDuplicate: z.boolean().optional(),
+      // Per-transaction lock override (migration 0011). Optional for
+      // backward compatibility.
+      lockYears: z.number().int().min(0).max(99).nullable().optional(),
     }),
   ),
   // Audit trail of past imports — the rows that power the Imports → Historique
@@ -157,6 +162,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         openingBalance: a.openingBalance,
         openingDate: a.openingDate,
         displayOrder: a.displayOrder,
+        lockYears: a.lockYears,
       })),
       categories: cats.map((c) => ({
         name: c.name,
@@ -203,6 +209,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           transferGroupId: t.transferGroupId,
           sourceFileKey: src ? fileImportKey(src.filename, src.importedAt.toISOString()) : null,
           notDuplicate: t.notDuplicate,
+          lockYears: t.lockYears,
         };
       }),
       fileImports: fimps.map((f) => ({
@@ -270,6 +277,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
             openingBalance: a.openingBalance,
             openingDate: a.openingDate,
             displayOrder: a.displayOrder ?? 0,
+            lockYears: a.lockYears ?? null,
           })
           .returning({ id: accounts.id });
         if (inserted) accountIdByName.set(a.name, inserted.id);
@@ -414,6 +422,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
           // Possibles doublons panel starts empty after restore. Fresh imports
           // (PDF / OFX / CSV) made later will still surface new suspect groups.
           notDuplicate: true,
+          lockYears: t.lockYears ?? null,
         });
         txCount++;
       }

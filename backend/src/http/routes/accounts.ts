@@ -17,12 +17,17 @@ const isoCurrency = z
   .string()
   .regex(/^[A-Z]{3}$/, 'must be ISO 4217 3-letter code');
 
+// lockYears: 0..99. null means "no lock" — never blocked. 0 is *not* the same
+// as null (0 = unlocked immediately on opening; null = no lock rule at all).
+const lockYears = z.number().int().min(0).max(99).nullable();
+
 const CreateBody = z.object({
   name: z.string().trim().min(1).max(128),
   type: z.string().trim().min(1).max(64),
   currency: isoCurrency.default('EUR'),
   openingBalance: decimal.default('0'),
   openingDate: isoDate,
+  lockYears: lockYears.optional(),
 });
 
 const UpdateBody = z
@@ -32,6 +37,7 @@ const UpdateBody = z
     currency: isoCurrency,
     openingBalance: decimal,
     openingDate: isoDate,
+    lockYears: lockYears,
   })
   .partial();
 
@@ -58,6 +64,13 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   // guarantee the correlation lines up.
   app.get('/api/accounts', async (req) => {
     const uid = userId(req);
+    // "available" vs "blocked" decomposition:
+    //   opening_balance is available iff account.lock_years is null OR
+    //     opening_date + lock_years years <= today.
+    //   each transaction is available iff:
+    //     - t.lock_years IS NOT NULL AND t.date + t.lock_years years <= today, OR
+    //     - t.lock_years IS NULL AND (a.lock_years IS NULL OR a.opening_date + a.lock_years years <= today).
+    //   blocked_balance = current_balance - available_balance.
     const result = await db.execute<{
       id: number;
       name: string;
@@ -67,7 +80,9 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       opening_date: string;
       display_order: number;
       created_at: Date;
+      lock_years: number | null;
       current_balance: string;
+      available_balance: string;
       transaction_count: number;
       counted_transaction_count: number;
     }>(sql`
@@ -80,6 +95,7 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
         to_char(a.opening_date, 'YYYY-MM-DD')                  AS opening_date,
         a.display_order,
         a.created_at,
+        a.lock_years                                           AS lock_years,
         (
           a.opening_balance + COALESCE(
             (SELECT SUM(t.amount) FROM transactions t
@@ -87,6 +103,27 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
             0
           )
         )::text                                                AS current_balance,
+        (
+          (CASE
+            WHEN a.lock_years IS NULL
+              OR (a.opening_date + (INTERVAL '1 year' * a.lock_years))::date <= CURRENT_DATE
+            THEN a.opening_balance
+            ELSE 0
+          END)
+          + COALESCE(
+              (SELECT SUM(t.amount) FROM transactions t
+                WHERE t.account_id = a.id AND t.date >= a.opening_date
+                  AND (
+                    CASE
+                      WHEN t.lock_years IS NOT NULL
+                        THEN (t.date + (INTERVAL '1 year' * t.lock_years))::date <= CURRENT_DATE
+                      WHEN a.lock_years IS NOT NULL
+                        THEN (a.opening_date + (INTERVAL '1 year' * a.lock_years))::date <= CURRENT_DATE
+                      ELSE TRUE
+                    END
+                  )),
+              0)
+        )::text                                                AS available_balance,
         (SELECT COUNT(*)::int FROM transactions t
           WHERE t.account_id = a.id)                           AS transaction_count,
         (SELECT COUNT(*)::int FROM transactions t
@@ -106,7 +143,9 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       openingDate: r.opening_date,
       displayOrder: r.display_order,
       createdAt: r.created_at,
+      lockYears: r.lock_years,
       currentBalance: r.current_balance,
+      availableBalance: r.available_balance,
       transactionCount: r.transaction_count,
       countedTransactionCount: r.counted_transaction_count,
     }));

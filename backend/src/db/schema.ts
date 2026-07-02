@@ -88,6 +88,11 @@ export const accounts = pgTable(
     // User-controlled display order. Lower values appear first; name is the
     // tie-breaker when several rows share the same display_order.
     displayOrder: integer('display_order').notNull().default(0),
+    // Optional lock period in years. If set, opening_balance and any
+    // transaction without its own lock_years are considered "blocked" until
+    // opening_date + lock_years — Dashboard uses this to split "available"
+    // vs "blocked" totals. Purely a reporting hint; no hard constraint.
+    lockYears: integer('lock_years'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
@@ -243,6 +248,10 @@ export const transactions = pgTable(
     // True when the user has reviewed the row in the "Possibles doublons" panel
     // and confirmed it is NOT a duplicate of its same-date/same-amount neighbours.
     notDuplicate: boolean('not_duplicate').notNull().default(false),
+    // Per-transaction lock override. Clocked from the transaction date (unlike
+    // the account default which is clocked from opening_date). Null falls back
+    // to the account's lock_years, and null there means no lock at all.
+    lockYears: integer('lock_years'),
   },
   (t) => ({
     uqDedup: uniqueIndex('transactions_account_dedup_uq').on(t.accountId, t.dedupKey),

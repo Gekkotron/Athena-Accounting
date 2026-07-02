@@ -39,6 +39,9 @@ const PatchBody = z.object({
   rawLabel: z.string().trim().min(1).max(512).optional(),
   categoryId: z.number().int().positive().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  // Per-transaction lock override in years. Null clears the override
+  // (falls back to the account's default lock).
+  lockYears: z.number().int().min(0).max(99).nullable().optional(),
 });
 
 // Body for manual creation. raw_label is required; the server derives the
@@ -51,6 +54,7 @@ const CreateBody = z.object({
   rawLabel: z.string().trim().min(1).max(512),
   categoryId: z.number().int().positive().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  lockYears: z.number().int().min(0).max(99).nullable().optional(),
 });
 
 function isPgError(err: unknown): err is { code: string } {
@@ -106,6 +110,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
           categoryId: v.categoryId ?? null,
           categorySource: v.categoryId ? 'manual' : 'auto',
           sourceFileId: null,
+          lockYears: v.lockYears ?? null,
         })
         .returning();
       if (!inserted) {
@@ -318,6 +323,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       categoryId?: number | null;
       categorySource?: 'manual';
       notes?: string | null;
+      lockYears?: number | null;
     } = {};
     if ('accountId' in parsed.data && parsed.data.accountId !== undefined) {
       updates.accountId = parsed.data.accountId;
@@ -339,6 +345,9 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     if ('notes' in parsed.data) {
       const raw = parsed.data.notes;
       updates.notes = raw && raw.trim() ? raw : null;
+    }
+    if ('lockYears' in parsed.data) {
+      updates.lockYears = parsed.data.lockYears ?? null;
     }
     if (Object.keys(updates).length === 0) {
       return reply.code(400).send({ error: 'no fields to update' });

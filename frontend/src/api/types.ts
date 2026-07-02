@@ -25,6 +25,12 @@ export interface Account {
   // User-controlled position in the accounts grid / dashboard. Lower first.
   displayOrder?: number;
   createdAt?: string;
+  // Default lock period in years. Applies to the opening balance and to
+  // any transaction whose own lockYears is null. Clocked from openingDate.
+  lockYears?: number | null;
+  // Sum of amounts (including opening balance) that are unlocked as of
+  // today. `blocked = currentBalance - availableBalance`.
+  availableBalance?: string;
 }
 
 export interface Category {
@@ -71,6 +77,9 @@ export interface Transaction {
   transferGroupId: string | null;
   sourceFileId: number | null;
   importedAt: string;
+  // Per-transaction lock override in years. Null falls back to the account's
+  // lockYears; null on both means no lock. Clocked from the transaction date.
+  lockYears?: number | null;
 }
 
 export interface AccountFilenamePattern {
