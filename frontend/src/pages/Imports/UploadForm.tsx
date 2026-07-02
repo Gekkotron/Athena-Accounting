@@ -53,6 +53,7 @@ export function UploadForm({
     },
     onError: (err: ApiError) => {
       setError(err.message);
+      onFileSelected();
     },
   });
 
