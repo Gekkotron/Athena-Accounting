@@ -9,9 +9,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 
 <!-- Tout ce qui passe par la tête, même à demi-formé. Pas obligé que ce soit clair. -->
 
-- Extend bulk-select to the Possibles doublons panel (currently only on the Transactions list — the panel still has per-row and per-group affordances).
-
-
 - Traduire l'app (fr, en) avec detection de la langue du navigateur
 
 - check if nuextract will be useful https://about.nuextract.ai (self-hosted)
@@ -37,6 +34,7 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
      en bas du fichier ou supprimés. -->
 
 - Bulk-select + bulk-delete on the Transactions list (row checkboxes, indeterminate header checkbox, action bar + confirm dialog, backend `POST /api/transactions/delete-bulk` with the transfer-leg unlink guard). `Transactions/*`, `transactions.ts`.
+- Bulk-select on the Possibles doublons panel — per-row checkboxes + action bar with "Pas un doublon" and "Supprimer". `Imports/DuplicatesPanel.tsx`.
 - Available vs blocked money on locked accounts (PEA / dépôt à terme). Accounts and transactions carry a `lock_years` column; the Dashboard hero switches to "Disponible" with a "+ X€ bloqués" tag when a lock is unmatured, and each account card shows the split. Migration 0011. `backend/src/db/migrations/0011_lock_years.sql`, `accounts.ts`, `reports.ts`, `Dashboard.tsx`, `Accounts/AccountForm.tsx`.
 - Dashboard balance-chart account selector persisted to localStorage — the last account you were watching stays selected across reloads. `Dashboard.tsx`, `lib/persisted-state.ts`.
 - Colored kind badges for categories (expense / income / neutral, light tones) + retired the `transfer` kind (internal transfers are already tracked via `transfer_group_id`). Migration 0010 coerces old rows. `lib/categories.ts`, `Rules/CategoryRow.tsx`, `Categories.tsx`, `backend/src/db/migrations/0010_...sql`.
