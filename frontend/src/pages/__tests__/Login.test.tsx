@@ -61,7 +61,7 @@ describe('Login', () => {
   });
 
   it('shows the error message when login fails', async () => {
-    apiMock.mockImplementation(async (path: string, init?: any) => {
+    apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/onboarding/status') return { needsOnboarding: false };
       if (path === '/api/auth/login') {
         const err = Object.assign(new Error('identifiant ou mot de passe invalide'), {

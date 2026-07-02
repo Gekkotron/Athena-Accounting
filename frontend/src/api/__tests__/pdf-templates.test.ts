@@ -8,20 +8,20 @@ import {
   type TemplateZones,
 } from '../pdf-templates';
 
-const originalFetch = global.fetch;
+const originalFetch = globalThis.fetch;
 
 function mockFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
   const fn = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
     handler(typeof input === 'string' ? input : input.toString(), init),
   );
-  global.fetch = fn as unknown as typeof global.fetch;
+  globalThis.fetch = fn as unknown as typeof globalThis.fetch;
   return fn;
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 beforeEach(() => {});
-afterEach(() => { global.fetch = originalFetch; });
+afterEach(() => { globalThis.fetch = originalFetch; });
 
 const sampleZones: TemplateZones = {
   headerZone: { page: 0, x: 0, y: 0, w: 100, h: 20 },

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { api, apiUpload, ApiError } from '../client';
 
-const originalFetch = global.fetch;
+const originalFetch = globalThis.fetch;
 
 function mockFetch(handler: (input: RequestInfo | URL, init?: RequestInit) => Response | Promise<Response>) {
   const fn = vi.fn(handler);
-  global.fetch = fn as unknown as typeof global.fetch;
+  globalThis.fetch = fn as unknown as typeof globalThis.fetch;
   return fn;
 }
 
@@ -14,7 +14,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  global.fetch = originalFetch;
+  globalThis.fetch = originalFetch;
 });
 
 function jsonRes(body: unknown, status = 200): Response {
