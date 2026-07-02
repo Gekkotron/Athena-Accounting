@@ -1,0 +1,298 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { Imports } from '../Imports';
+
+vi.mock('../../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
+  return {
+    ...actual,
+    api: vi.fn(),
+    apiUpload: vi.fn(),
+  };
+});
+import { api, apiUpload } from '../../api/client';
+const apiMock = vi.mocked(api);
+const uploadMock = vi.mocked(apiUpload);
+
+function renderImports() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <Imports />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+// Field-by-label helper: the file input and account select have plain
+// <label> siblings with no htmlFor/id association, so getByLabelText
+// cannot find them.
+function fieldFor(labelText: string | RegExp): HTMLElement {
+  const label = screen.getByText(labelText, { selector: 'label' });
+  const control = label.parentElement?.querySelector('input, select, textarea');
+  if (!control) throw new Error(`no control near label ${String(labelText)}`);
+  return control as HTMLElement;
+}
+
+beforeEach(() => {
+  apiMock.mockReset();
+  uploadMock.mockReset();
+});
+
+// jsdom's File has no .text() method; Imports.tsx's backup-restore handler
+// reads the chosen file via f.text() before JSON.parse-ing it.
+if (!File.prototype.text) {
+  File.prototype.text = function () {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsText(this);
+    });
+  };
+}
+
+const acc = (id: number, name: string) => ({
+  id, name, type: 'checking', currency: 'EUR',
+  openingBalance: '0.00', openingDate: '2025-01-01',
+});
+
+const fileImport = (id: number, overrides: Partial<any> = {}) => ({
+  id, filename: `file-${id}.csv`, accountId: 1, format: 'csv',
+  importedAt: '2026-06-15T00:00:00Z', totalLines: 10, insertedCount: 8,
+  dedupSkipped: 2, statedBalance: null, statedBalanceDate: null,
+  computedBalance: null, delta: null,
+  ...overrides,
+});
+
+describe('Imports page (characterization)', () => {
+  it('renders the upload form and the file-imports list', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: [fileImport(1)] };
+      if (path === '/api/transactions/duplicates') return { groups: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+
+    renderImports();
+
+    // Upload form present (plain label, no htmlFor — matched via text).
+    expect(await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)')).toBeInTheDocument();
+    // File-imports list contains the mocked import.
+    expect(await screen.findByText('file-1.csv')).toBeInTheDocument();
+  });
+
+  it('uploads a CSV file and shows the "Dernier import" success banner', async () => {
+    let uploaded = false;
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: uploaded ? [fileImport(99, { filename: 'new.csv' })] : [] };
+      if (path === '/api/transactions/duplicates') return { groups: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    uploadMock.mockImplementation(async () => {
+      uploaded = true;
+      return { filename: 'new.csv', insertedCount: 5, dedupSkipped: 1, totalLines: 6 };
+    });
+
+    const user = userEvent.setup();
+    renderImports();
+    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+
+    const fileInput = fieldFor('Fichier (.ofx · .qfx · .csv · .pdf)') as HTMLInputElement;
+    const file = new File(['date;label;amount\n2026-06-15;A;-10'], 'new.csv', { type: 'text/csv' });
+    await user.upload(fileInput, file);
+
+    await user.selectOptions(fieldFor('Compte'), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    await waitFor(() => expect(uploadMock).toHaveBeenCalled());
+    // "Dernier import" banner shows the uploaded filename and inserted count.
+    // The filename appears twice (banner + refreshed history row), so assert
+    // on the "insérée(s)" stat directly under the banner heading.
+    await screen.findByText('Dernier import');
+    expect(await screen.findAllByText('new.csv')).toHaveLength(2);
+    expect(screen.getByText('5')).toBeInTheDocument();
+  });
+
+  it('shows the PDF template wizard when the upload returns needs_template', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: [] };
+      if (path === '/api/transactions/duplicates') return { groups: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+
+    // Imports.tsx calls submitPdf() (a raw-fetch helper), not apiUpload, for
+    // .pdf files. Stub the global fetch it wraps instead of apiMock/uploadMock.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        kind: 'needs_template',
+        draftId: 42,
+        fingerprint: 'fp-xyz',
+        pages: [{ pageIndex: 0, widthPt: 595, heightPt: 842, pngBase64: 'AAAA' }],
+        textItems: [],
+        suggestedZones: null,
+        reason: 'low_confidence',
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const user = userEvent.setup();
+    renderImports();
+    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+
+    const fileInput = fieldFor('Fichier (.ofx · .qfx · .csv · .pdf)') as HTMLInputElement;
+    const file = new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46])], 'statement.pdf', { type: 'application/pdf' });
+    await user.upload(fileInput, file);
+    await user.selectOptions(fieldFor('Compte'), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    // PdfTemplateBuilder renders its step wizard, starting on the "header"
+    // step. The step title text is split across sibling text nodes
+    // ("Étape 1/5 — " + title), so match on the <p> element's own
+    // textContent (the step-progress <li> repeats the same title, so an
+    // ancestor-agnostic matcher hits both).
+    expect(
+      await screen.findByText(
+        (_, el) => el?.tagName === 'P' && !!el.textContent?.includes("Sélectionnez l'en-tête"),
+      ),
+    ).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it('shows the "Dernier import PDF" banner when the PDF auto-imports', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: [] };
+      if (path === '/api/transactions/duplicates') return { groups: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        kind: 'imported',
+        result: { fileImportId: 50, insertedCount: 5, dedupSkipped: 0, totalLines: 8 },
+        skippedRows: [],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const user = userEvent.setup();
+    renderImports();
+    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+
+    const fileInput = fieldFor('Fichier (.ofx · .qfx · .csv · .pdf)') as HTMLInputElement;
+    const file = new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46])], 'auto.pdf', { type: 'application/pdf' });
+    await user.upload(fileInput, file);
+    await user.selectOptions(fieldFor('Compte'), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    expect(await screen.findByText('Dernier import PDF')).toBeInTheDocument();
+    expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it('marks a duplicate group as not-a-duplicate via bulk POST', async () => {
+    let marked = false;
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: [] };
+      if (path === '/api/transactions/duplicates') {
+        return {
+          groups: marked ? [] : [
+            {
+              accountId: 1, date: '2026-06-15', amount: '-42.30',
+              transactions: [
+                { id: 100, raw_label: 'CB CARREFOUR A', normalized_label: 'carrefour a', source_file_id: null, category_id: null },
+                { id: 101, raw_label: 'CB CARREFOUR B', normalized_label: 'carrefour b', source_file_id: null, category_id: null },
+              ],
+            },
+          ],
+        };
+      }
+      if (path === '/api/transactions/mark-not-duplicate' && init?.method === 'POST') {
+        expect(init.json).toEqual({ ids: [100, 101] });
+        marked = true;
+        return { updated: 2 };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+
+    const user = userEvent.setup();
+    renderImports();
+    await screen.findByText('CB CARREFOUR A');
+
+    await user.click(screen.getByRole('button', { name: '✓ Pas un doublon' }));
+
+    await waitFor(() => expect(screen.queryByText('CB CARREFOUR A')).not.toBeInTheDocument());
+  });
+
+  it('deletes a file-import after confirmation', async () => {
+    let deleted = false;
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: deleted ? [] : [fileImport(7)] };
+      if (path === '/api/transactions/duplicates') return { groups: [] };
+      if (path === '/api/imports/7' && init?.method === 'DELETE') {
+        deleted = true;
+        return { deleted: { transactions: 8, fileImport: 1 } };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+
+    const user = userEvent.setup();
+    renderImports();
+    await screen.findByText('file-7.csv');
+
+    // Icon-only delete affordance, identified via aria-label.
+    await user.click(screen.getByRole('button', { name: "Supprimer l'import" }));
+    // ConfirmDialog appears with confirmLabel="Supprimer".
+    await user.click(await screen.findByRole('button', { name: 'Supprimer' }));
+
+    await waitFor(() => expect(screen.queryByText('file-7.csv')).not.toBeInTheDocument());
+  });
+
+  it('restores a backup after confirming, and shows the restored-counts banner', async () => {
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/imports') return { imports: [] };
+      if (path === '/api/transactions/duplicates') return { groups: [] };
+      if (path === '/api/backup/import' && init?.method === 'POST') {
+        expect(init.json).toEqual({ ok: true });
+        return {
+          imported: {
+            accounts: 1, categories: 2, accountFilenamePatterns: 0,
+            rules: 0, transferRules: 0, transactions: 5, fileImports: 1,
+          },
+        };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+
+    const user = userEvent.setup();
+    renderImports();
+    await screen.findByText('Fichier (.ofx · .qfx · .csv · .pdf)');
+
+    // Restore reads the file client-side (FileReader/text(), no upload
+    // mutation) then opens a confirm dialog before firing the POST.
+    const restoreInput = screen.getByText('Importer une sauvegarde…').parentElement!
+      .querySelector('input[type="file"]') as HTMLInputElement;
+    const backupFile = new File(['{"ok":true}'], 'backup.json', { type: 'application/json' });
+    await user.upload(restoreInput, backupFile);
+
+    await user.click(await screen.findByRole('button', { name: 'Effacer et restaurer' }));
+
+    const banner = (await screen.findByText('Sauvegarde restaurée')).closest('div')!.parentElement!;
+    expect(banner.textContent).toContain('5 transaction(s)');
+  });
+});
