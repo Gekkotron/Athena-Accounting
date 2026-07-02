@@ -56,6 +56,11 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
+        # Upload even when the test step failed — a partial coverage report
+        # is better than a skipped baseline. If we skip, the NEXT healthy
+        # commit posts a fake "coverage dropped" status against the last
+        # frontend-only baseline.
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           files: backend/coverage/lcov.info
@@ -89,6 +94,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           files: frontend/coverage/lcov.info
