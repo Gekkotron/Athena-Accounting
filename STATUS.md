@@ -12,6 +12,8 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
 
 ## Recently landed
 
+- 2026-07-02 — Transactions.tsx split into pages/Transactions/ (6 focused
+  files) with characterization + unit tests. Third interleave iteration.
 - 2026-07-02 — Rules.tsx split into pages/Rules/ (8 focused files) with
   characterization + unit tests. Second interleave iteration; frontend
   harness unchanged (Vitest + RTL + jsdom).
@@ -35,12 +37,15 @@ Empty. Update this section when starting a new initiative.
 |--------------------|:------------:|:-----:|:----------:|
 | Accounts.tsx       | ✅ (6)       | ✅    | ✅ (~20)   |
 | Rules.tsx          | ✅ (8)       | ✅    | ✅ (27)    |
-| Transactions.tsx   | ⬜           | ⬜    | ⬜         |
+| Transactions.tsx   | ✅ (8)       | ✅    | ✅ (27)    |
 | Imports.tsx        | ⬜           | ⬜    | ⬜         |
 | backup.ts (backend)| ⬜           | ⬜    | ⬜         |
 
 ## Known deferrals
 
+- `onToggleAdvanced` dead prop in `pages/Transactions/FiltersBar.tsx`
+  (Transactions iteration, 2026-07-02): introduced by plan; trivial cleanup
+  on next touch.
 - `RuleCreateForm` `successCount` reset (Rules iteration, 2026-07-02): `useEffect`
   dependency on `successCount` doesn't re-fire when two successive submits return
   the same count (rare edge case). Would need a counter-signal for exact parity.
