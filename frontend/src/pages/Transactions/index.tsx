@@ -5,8 +5,7 @@ import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseUserDate } from '../../lib/format';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { Th } from './Th';
-import { TransactionRow } from './TransactionRow';
+import { TransactionsTable } from './TransactionsTable';
 
 export interface Filters {
   accountId?: number;
@@ -238,48 +237,22 @@ export function Transactions() {
         </div>
       </div>
 
-      <div className="surface overflow-hidden">
-        <div className="table-scroll">
-          <table className="w-full text-sm">
-            <thead className="text-left">
-              <tr className="border-b border-ink-800/70">
-                <Th sort="date" filters={filters} setFilters={setFilters} setOffset={setOffset}>Date</Th>
-                <th className="px-4 py-3 label font-normal hidden sm:table-cell">Compte</th>
-                <Th sort="label" filters={filters} setFilters={setFilters} setOffset={setOffset}>Libellé</Th>
-                <th className="px-4 py-3 label font-normal">Catégorie</th>
-                <th className="px-4 py-3 label font-normal hidden md:table-cell">Notes</th>
-                <Th sort="amount" filters={filters} setFilters={setFilters} setOffset={setOffset} align="right">Montant</Th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {txs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-ink-500 display-italic">
-                    {txQ.isLoading ? 'Chargement…' : 'Aucune transaction.'}
-                  </td>
-                </tr>
-              ) : (
-                txs.map((t) => (
-                  <TransactionRow
-                    key={t.id}
-                    tx={t}
-                    account={accountById.get(t.accountId)}
-                    categories={categories}
-                    onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
-                    onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
-                    onEdit={(tx) => setModalTx(tx)}
-                    onDelete={(tx) => {
-                      setDeleteError(null);
-                      setDeletingTx(tx);
-                    }}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TransactionsTable
+        transactions={txs}
+        categories={categories}
+        accountById={accountById}
+        isLoading={txQ.isLoading}
+        filters={filters}
+        setFilters={setFilters}
+        setOffset={setOffset}
+        onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
+        onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
+        onEdit={(tx) => setModalTx(tx)}
+        onDelete={(tx) => {
+          setDeleteError(null);
+          setDeletingTx(tx);
+        }}
+      />
 
       <div className="flex items-center justify-between text-sm text-ink-400">
         <div className="font-mono text-xs">
