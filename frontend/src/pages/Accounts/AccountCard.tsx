@@ -25,7 +25,10 @@ export function AccountCard({
 
   return (
     <div ref={setNodeRef} style={style} className="surface p-5 relative group">
-      <div className="flex items-baseline justify-between gap-3">
+      {/* Reserve room on the right for the absolute-positioned drag handle
+          + modifier cluster (top-3 right-3) so the currency badge doesn't
+          drift underneath it. */}
+      <div className="flex items-baseline justify-between gap-3 pr-24">
         <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
         <span className="badge">{a.currency}</span>
       </div>
