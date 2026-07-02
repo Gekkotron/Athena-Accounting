@@ -112,4 +112,91 @@ describe('CategoryRow', () => {
 
     expect(screen.getByText('aucun mot-clé')).toBeInTheDocument();
   });
+
+  it('renders a colored kind badge next to the category name', () => {
+    const group: GroupedEntry = { category: { ...category, kind: 'income' }, rules: [] };
+    renderRow(group);
+    // KIND_LABEL['income'] = 'Revenu'.
+    expect(screen.getByText('Revenu')).toBeInTheDocument();
+  });
+
+  it('"tout activer" fires updateRule for every disabled rule only', async () => {
+    const group: GroupedEntry = {
+      category,
+      rules: [
+        rule(1, 'carrefour', { enabled: false }),
+        rule(2, 'monoprix', { enabled: false }),
+        rule(3, 'lidl', { enabled: true }),
+      ],
+    };
+    const user = userEvent.setup();
+    const { updateRule } = renderRow(group);
+    await user.click(screen.getByRole('button', { name: /tout activer/i }));
+    // Two disabled → two mutations. The enabled one is skipped.
+    expect(updateRule.mutate).toHaveBeenCalledTimes(2);
+    expect(updateRule.mutate).toHaveBeenCalledWith({ id: 1, patch: { enabled: true } });
+    expect(updateRule.mutate).toHaveBeenCalledWith({ id: 2, patch: { enabled: true } });
+  });
+
+  it('"désactiver tout" fires updateRule for every enabled rule only', async () => {
+    const group: GroupedEntry = {
+      category,
+      rules: [
+        rule(1, 'carrefour', { enabled: true }),
+        rule(2, 'monoprix', { enabled: false }),
+      ],
+    };
+    const user = userEvent.setup();
+    const { updateRule } = renderRow(group);
+    await user.click(screen.getByRole('button', { name: /désactiver tout/i }));
+    expect(updateRule.mutate).toHaveBeenCalledTimes(1);
+    expect(updateRule.mutate).toHaveBeenCalledWith({ id: 1, patch: { enabled: false } });
+  });
+
+  it('opens the AddChipInput and submits a comma-separated list of keywords', async () => {
+    const group: GroupedEntry = { category, rules: [] };
+    const user = userEvent.setup();
+    const { createBatch } = renderRow(group);
+
+    await user.click(screen.getByRole('button', { name: /\+ ajouter/i }));
+    const input = screen.getByPlaceholderText(/dentiste/i);
+    await user.type(input, 'dentiste, pharma, medecin{Enter}');
+
+    expect(createBatch.mutate).toHaveBeenCalledWith({
+      keywords: ['dentiste', 'pharma', 'medecin'],
+      categoryId: category.id,
+      signConstraint: 'negative', // expense → default sign is negative
+      matchMode: 'word',
+      priority: 0,
+    });
+  });
+
+  it('picks the correct default sign for income categories', async () => {
+    const group: GroupedEntry = {
+      category: { ...category, id: 20, name: 'Salaire', kind: 'income' },
+      rules: [],
+    };
+    const user = userEvent.setup();
+    const { createBatch } = renderRow(group);
+
+    await user.click(screen.getByRole('button', { name: /\+ ajouter/i }));
+    const input = screen.getByPlaceholderText(/dentiste/i);
+    await user.type(input, 'employeur{Enter}');
+
+    expect(createBatch.mutate).toHaveBeenCalledWith(expect.objectContaining({ signConstraint: 'positive' }));
+  });
+
+  it('Escape in the AddChipInput cancels without firing', async () => {
+    const group: GroupedEntry = { category, rules: [] };
+    const user = userEvent.setup();
+    const { createBatch } = renderRow(group);
+
+    await user.click(screen.getByRole('button', { name: /\+ ajouter/i }));
+    const input = screen.getByPlaceholderText(/dentiste/i);
+    await user.type(input, 'ignore me{Escape}');
+
+    expect(createBatch.mutate).not.toHaveBeenCalled();
+    // The input closes; the "+ ajouter" button is back.
+    expect(await screen.findByRole('button', { name: /\+ ajouter/i })).toBeInTheDocument();
+  });
 });
