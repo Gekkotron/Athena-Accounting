@@ -131,33 +131,37 @@ export function Dashboard(): JSX.Element {
 
       {primary && <MoyennesMensuellesSection currency={primary.currency} />}
 
+      {/* Dashboard filters — account scope drives the balance chart; range
+          drives the balance chart, the donut, and the per-account "sur X"
+          delta below. Local changes stay in this session only; the persistent
+          defaults live in Réglages. */}
+      {currencies.length > 0 && (
+        <section className="surface p-4 md:p-5 flex flex-col gap-3">
+          <select
+            className="input-sm w-full"
+            value={chartScope === 'all' ? 'all' : String(chartScope)}
+            onChange={(e) =>
+              setChartScope(e.target.value === 'all' ? 'all' : Number(e.target.value))
+            }
+            aria-label="Compte affiché"
+          >
+            <option value="all">Tous les comptes ({primary?.currency})</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.currency})
+              </option>
+            ))}
+          </select>
+          <div className="flex">
+            <RangePicker value={range} onChange={setRange} />
+          </div>
+        </section>
+      )}
+
       {/* Time series */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
-          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
-            <div className="section-rule flex-1">Évolution · {chartCurrency}</div>
-            <select
-              className="input-sm w-full sm:w-56"
-              value={chartScope === 'all' ? 'all' : String(chartScope)}
-              onChange={(e) =>
-                setChartScope(e.target.value === 'all' ? 'all' : Number(e.target.value))
-              }
-              aria-label="Compte affiché"
-            >
-              <option value="all">Tous les comptes ({primary?.currency})</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Page-wide range picker — drives the balance chart, the donut, and
-              the per-account "sur X" delta below. Local changes stay in this
-              session only; the persistent default lives in Réglages. */}
-          <div className="flex justify-end mb-3">
-            <RangePicker value={range} onChange={setRange} />
-          </div>
+          <div className="section-rule mb-4">Évolution · {chartCurrency}</div>
           {seriesQ.data && primary ? (
             <BalanceChart
               points={chartPoints}
