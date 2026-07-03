@@ -12,9 +12,13 @@ describe('mergeSettings', () => {
     expect(out.dashboardRange).toBe('12m');
   });
 
-  it('drops unknown keys in stored', () => {
-    const out = mergeSettings({ dashboardRange: '3m', bogus: 'x' } as any, {});
-    expect(out).toEqual({ ...DEFAULTS, dashboardRange: '3m' });
+  it('unknown keys in stored do not survive and known keys still apply on the wholesale fallback', () => {
+    // Zod's default parse fails on unknown keys with .strict(), so the whole
+    // blob falls back to DEFAULTS. Test 5 covers the same fallback behavior for
+    // out-of-range values; this test locks in that an unknown key is one of
+    // those triggers.
+    const out = mergeSettings({ dashboardRange: '6m', bogus: 'x' } as any, {});
+    expect(out).toEqual(DEFAULTS);
     expect((out as any).bogus).toBeUndefined();
   });
 

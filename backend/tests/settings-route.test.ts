@@ -6,7 +6,6 @@ const RUN = !!process.env.RUN_DB_TESTS;
 
 let app: FastifyInstance;
 let cookie: string;
-let accountAId: number;
 
 describe.skipIf(!RUN)('/api/settings', () => {
   beforeAll(async () => {
@@ -22,13 +21,6 @@ describe.skipIf(!RUN)('/api/settings', () => {
       payload: { username: 'settings', password: 'settings-1234' },
     });
     cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
-
-    const a = await app.inject({
-      method: 'POST', url: '/api/accounts',
-      headers: { cookie },
-      payload: { name: 'Main', type: 'current', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },
-    });
-    accountAId = a.json().account.id;
   });
 
   afterEach(async () => {

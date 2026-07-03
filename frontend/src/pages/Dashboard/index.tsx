@@ -153,8 +153,8 @@ export function Dashboard(): JSX.Element {
             </select>
           </div>
           {/* Page-wide range picker — drives the balance chart, the donut, and
-              the per-account "sur X" delta below. Persisted so the last-picked
-              period survives reloads. */}
+              the per-account "sur X" delta below. Local changes stay in this
+              session only; the persistent default lives in Réglages. */}
           <div className="flex justify-end mb-3">
             <RangePicker value={range} onChange={setRange} />
           </div>
