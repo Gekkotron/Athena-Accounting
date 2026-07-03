@@ -165,6 +165,41 @@ describe('deriveOtherAccountAnchors', () => {
     expect(deriveOtherAccountAnchors(pages, [0])).toEqual([]);
   });
 
+  it('discovers a mid-page transition even when EVERY page is selected (no unchecked pages)', () => {
+    // Livret A section fits entirely on the tail of page 1. The user
+    // (rightly) checks every page — there are no unchecked pages for the
+    // original derivation path to scan. Path B (below-anchor keyword
+    // scan on the SELECTED pages) picks up the "livret a n° 98765" line.
+    const pages = [
+      page(0, [
+        item(0, 'COMPTE COURANT n° 12345', 40, 50),
+        item(0, '15/01/2026 tx', 40, 200),
+      ]),
+      page(1, [
+        item(1, 'COMPTE COURANT n° 12345', 40, 50),
+        item(1, '20/01/2026 tx', 40, 200),
+        item(1, 'LIVRET A n° 98765', 40, 500),
+        item(1, '01/01/2026 intérêts', 40, 550),
+      ]),
+    ];
+    const others = deriveOtherAccountAnchors(pages, [0, 1], 'compte courant n° 12345');
+    expect(others).toEqual(['livret a n° 98765']);
+  });
+
+  it('skips keyword lines that sit ABOVE the account anchor on the same page (cover-page filler)', () => {
+    const pages = [
+      page(0, [
+        // A cover-page keyword header ABOVE our anchor. Should NOT be picked.
+        item(0, 'COMPTE À TERME résumé', 40, 20),
+        item(0, 'COMPTE COURANT n° 12345', 40, 100), // <-- our anchor
+        item(0, '15/01/2026 tx', 40, 200),
+      ]),
+    ];
+    expect(
+      deriveOtherAccountAnchors(pages, [0], 'compte courant n° 12345'),
+    ).toEqual([]);
+  });
+
   it('keeps a keyword header even when it ALSO appears on a selected page (mid-page transition)', () => {
     // The typical bug: page 2 carries our anchor at the top AND the start of
     // Livret A halfway down. Page 3 is a pure Livret A page. Because Livret

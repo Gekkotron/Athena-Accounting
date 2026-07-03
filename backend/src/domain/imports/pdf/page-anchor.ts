@@ -164,42 +164,68 @@ export function deriveAccountAnchor(
 export function deriveOtherAccountAnchors(
   pages: PdfPageText[],
   selectedIndices: number[],
+  pageAnchor: string | null = null,
 ): string[] {
   if (pages.length === 0 || selectedIndices.length === 0) return [];
   const selectedSet = new Set(selectedIndices);
   const otherPages = pages.filter((p) => !selectedSet.has(p.pageIndex));
-  if (otherPages.length === 0) return [];
-
-  // Lines present anywhere in the selected set — used only to gate the
-  // NON-keyword candidate path below.
-  const selectedLines = new Set<string>();
-  for (const p of pages) {
-    if (!selectedSet.has(p.pageIndex)) continue;
-    for (const line of pageLines(p)) selectedLines.add(line);
-  }
-
   const collected = new Set<string>();
-  for (const page of otherPages) {
-    const linesOnPage = Array.from(pageLines(page));
-    // Priority 1: keyword headers, no selected-lines filter — the
-    // mid-page transition would otherwise be filtered out.
-    const headerLike = linesOnPage.filter(isAccountHeaderLike);
-    if (headerLike.length > 0) {
-      const chosen = headerLike
-        .sort((a, b) => b.length - a.length || a.localeCompare(b))[0]!;
-      collected.add(chosen);
-      continue;
+
+  // --- Path A: from UNCHECKED pages ----------------------------------------
+  // Catches other accounts that have their own dedicated pages.
+  if (otherPages.length > 0) {
+    // Lines present anywhere in the selected set — used only to gate the
+    // NON-keyword candidate path below.
+    const selectedLines = new Set<string>();
+    for (const p of pages) {
+      if (!selectedSet.has(p.pageIndex)) continue;
+      for (const line of pageLines(p)) selectedLines.add(line);
     }
-    // Priority 2: long, non-keyword lines. Keep the selected-lines filter
-    // so a repeating footer / page number doesn't become a false anchor.
-    const uniqueLong = linesOnPage.filter(
-      (l) => !selectedLines.has(l) && l.length >= OTHER_ANCHOR_MIN_LEN,
-    );
-    if (uniqueLong.length > 0) {
-      const chosen = uniqueLong
-        .sort((a, b) => b.length - a.length || a.localeCompare(b))[0]!;
-      collected.add(chosen);
+    for (const page of otherPages) {
+      const linesOnPage = Array.from(pageLines(page));
+      // Priority 1: keyword headers, no selected-lines filter — the
+      // mid-page transition would otherwise be filtered out.
+      const headerLike = linesOnPage.filter(isAccountHeaderLike);
+      if (headerLike.length > 0) {
+        const chosen = headerLike
+          .sort((a, b) => b.length - a.length || a.localeCompare(b))[0]!;
+        collected.add(chosen);
+        continue;
+      }
+      // Priority 2: long, non-keyword lines. Keep the selected-lines
+      // filter so a repeating footer / page number doesn't become a
+      // false anchor.
+      const uniqueLong = linesOnPage.filter(
+        (l) => !selectedLines.has(l) && l.length >= OTHER_ANCHOR_MIN_LEN,
+      );
+      if (uniqueLong.length > 0) {
+        const chosen = uniqueLong
+          .sort((a, b) => b.length - a.length || a.localeCompare(b))[0]!;
+        collected.add(chosen);
+      }
     }
   }
+
+  // --- Path B: from SELECTED pages, below the account's own anchor ---------
+  // Catches mid-page transitions where the "other" account fits entirely
+  // on a page that also carries our own account (so the whole statement
+  // has no unchecked pages to scan from Path A). We only look for lines
+  // BELOW the anchor's yTop to avoid catching cover-page headers that
+  // sit above the anchor on the first page.
+  const own = (pageAnchor ?? '').trim().toLowerCase();
+  if (own.length > 0) {
+    for (const p of pages) {
+      if (!selectedSet.has(p.pageIndex)) continue;
+      const lines = pageLinesWithY(p);
+      const anchorLine = lines.find((l) => l.text === own);
+      if (!anchorLine) continue;
+      for (const line of lines) {
+        if (line.yTop <= anchorLine.yTop) continue;
+        if (line.text === own) continue;
+        if (isAccountHeaderLike(line.text)) collected.add(line.text);
+      }
+    }
+  }
+
   return Array.from(collected).sort();
 }

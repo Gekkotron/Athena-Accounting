@@ -203,7 +203,11 @@ export async function applyTemplateAndImport(opts: {
     opts.zones.selectedPages &&
     opts.zones.selectedPages.length > 0
   ) {
-    const others = deriveOtherAccountAnchors(pages, opts.zones.selectedPages);
+    const others = deriveOtherAccountAnchors(
+      pages,
+      opts.zones.selectedPages,
+      opts.zones.pageAnchor ?? null,
+    );
     if (others.length > 0) opts.zones.otherAnchors = others;
   }
 
