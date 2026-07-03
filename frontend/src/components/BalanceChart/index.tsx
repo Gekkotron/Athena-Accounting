@@ -1,12 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
-import type { BalancePoint } from '../api/types';
-import { formatAmount, formatAmountCompact, formatDate, formatDateShort } from '../lib/format';
+import type { BalancePoint } from '../../api/types';
+import { formatAmountCompact, formatDateShort } from '../../lib/format';
+import { buildAggregatedSeries } from './series';
+import { buildCheckpointMarks, type Checkpoint } from './checkpoints';
+import { BalanceTooltip } from './BalanceTooltip';
 
 interface Props {
   points: BalancePoint[];
   currency: string;
   height?: number;
-  checkpoints?: { date: string; expectedAmount: number; note?: string }[];
+  checkpoints?: Checkpoint[];
 }
 
 interface HoverState {
@@ -18,61 +21,12 @@ interface HoverState {
   y: number;
 }
 
-export function BalanceChart({ points, currency, height = 240, checkpoints }: Props) {
+export function BalanceChart({ points, currency, height = 240, checkpoints }: Props): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
 
-  const data = useMemo(() => {
-    // /api/reports/timeseries returns one row per (account, date-bucket) only
-    // when that account had activity on that bucket. Naively summing per date
-    // skips accounts that didn't move on that day, dragging the multi-account
-    // total artificially toward zero. We forward-fill each account's last
-    // known `cumulative` so the sum at any date includes every account.
-
-    const filtered = points.filter(
-      (p) => p.currency === currency && Number.isFinite(Number(p.cumulative)),
-    );
-    if (filtered.length === 0) return [];
-
-    const allDates = Array.from(new Set(filtered.map((p) => p.bucket))).sort();
-    const accountIds = Array.from(new Set(filtered.map((p) => p.account_id)));
-
-    // Per-account, chronologically sorted points.
-    const seriesByAccount = new Map<number, { bucket: string; cumulative: number }[]>();
-    for (const accId of accountIds) {
-      const rows = filtered
-        .filter((p) => p.account_id === accId)
-        .map((p) => ({ bucket: p.bucket, cumulative: Number(p.cumulative) }))
-        .sort((a, b) => a.bucket.localeCompare(b.bucket));
-      seriesByAccount.set(accId, rows);
-    }
-
-    // Walk the union of dates in order, advancing each account's pointer
-    // through its own series and carrying its last seen cumulative forward.
-    const pointers = new Map<number, number>(accountIds.map((id) => [id, 0]));
-    const carries = new Map<number, number>(accountIds.map((id) => [id, 0]));
-
-    const out: { date: string; value: number }[] = [];
-    for (const date of allDates) {
-      let total = 0;
-      for (const accId of accountIds) {
-        const series = seriesByAccount.get(accId)!;
-        let ptr = pointers.get(accId)!;
-        let carry = carries.get(accId)!;
-        while (ptr < series.length && series[ptr]!.bucket <= date) {
-          carry = series[ptr]!.cumulative;
-          ptr++;
-        }
-        pointers.set(accId, ptr);
-        carries.set(accId, carry);
-        total += carry;
-      }
-      out.push({ date, value: total });
-    }
-
-    return out;
-  }, [points, currency]);
+  const data = useMemo(() => buildAggregatedSeries(points, currency), [points, currency]);
 
   if (data.length < 2) {
     return (
@@ -96,51 +50,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
   const xScale = (i: number) => pad.left + (i / (data.length - 1)) * innerW;
   const yScale = (v: number) => pad.top + innerH - ((v - minY) / range) * innerH;
 
-  // Attach each in-range checkpoint to its "actual" cumulative on that date,
-  // using the same forward-fill semantics as the main series (latest bucket
-  // with bucket_date <= checkpointDate). Anything outside the plotted range
-  // is silently dropped — no orphan dots hanging off the edges.
-  const CHECKPOINT_TOLERANCE = 0.01;
-  const firstDate = data[0]!.date;
-  const lastDate = data[data.length - 1]!.date;
-  const marks = (checkpoints ?? [])
-    .filter(
-      (c) =>
-        c.date >= firstDate &&
-        c.date <= lastDate &&
-        Number.isFinite(c.expectedAmount),
-    )
-    .map((c) => {
-      // Binary search for the latest bucket <= c.date.
-      let lo = 0;
-      let hi = data.length - 1;
-      while (lo < hi) {
-        const mid = (lo + hi + 1) >>> 1;
-        if (data[mid]!.date <= c.date) lo = mid;
-        else hi = mid - 1;
-      }
-      const actual = data[lo]!.value;
-      const delta = c.expectedAmount - actual;
-      const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
-      // Precompute the diamond's X position once. xScale spaces points by
-      // ARRAY INDEX (bucket position), not by elapsed calendar time — buckets
-      // are irregularly spaced (one per date with activity), so positioning
-      // by a whole-range time-fraction would put the checkpoint at the wrong
-      // index whenever bucket spacing is uneven. Instead, reuse the bucket
-      // `lo` already found above and interpolate only within that single
-      // bucket-to-next-bucket gap, by time, then map through xScale.
-      let cx: number;
-      if (lo >= data.length - 1) {
-        cx = xScale(lo);
-      } else {
-        const loTime = new Date(data[lo]!.date).getTime();
-        const nextTime = new Date(data[lo + 1]!.date).getTime();
-        const span = nextTime - loTime;
-        const frac = span > 0 ? (new Date(c.date).getTime() - loTime) / span : 0;
-        cx = xScale(lo + frac);
-      }
-      return { ...c, actual, delta, drift, cx };
-    });
+  const marks = buildCheckpointMarks(data, checkpoints, xScale);
 
   const path = data
     .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i).toFixed(1)} ${yScale(d.value).toFixed(1)}`)
@@ -355,49 +265,16 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
         )}
       </svg>
 
-      {/* HTML tooltip — position absolute relative to the container, snapped
-          to the data point. -translate-x-1/2 + -translate-y-full + -mt-3 puts
-          it just above the dot, centered horizontally. The container also
-          clamps the X so the tooltip never overflows on the sides. */}
       {hover !== null && hovered && (
-        <div
-          className="absolute pointer-events-none surface px-3 py-2 shadow-card min-w-[140px]"
-          style={{
-            left: clamp(hover.x, 80, (containerRef.current?.clientWidth ?? 1000) - 80),
-            top: hover.y,
-            transform: 'translate(-50%, calc(-100% - 14px))',
-          }}
-        >
-          <div className="font-mono text-[10px] text-ink-500 mb-0.5">
-            {formatDate(hovered.date)}
-          </div>
-          <div className={`font-mono text-sm tabular-nums ${hovered.value < 0 ? 'text-clay-300' : hovered.value > 0 ? 'text-sage-300' : 'text-ink-300'}`}>
-            {formatAmount(hovered.value, currency)}
-          </div>
-          {hoveredCheckpoint && (
-            <div className="mt-1 pt-1 border-t border-ink-800/60 font-mono text-[10px] text-ink-500">
-              {/* Explicit checkpoint date so the écart is unambiguously tied
-                  to the checkpoint you set, not to the hovered bucket. */}
-              <div className="text-ink-400 mb-0.5">
-                point de contrôle · <span className="text-ink-200">{formatDate(hoveredCheckpoint.date)}</span>
-              </div>
-              {hoveredCheckpoint.drift ? (
-                <>
-                  <div>attendu · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
-                  <div>réel · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.actual, currency)}</span></div>
-                  <div className="text-amber-300">écart · {formatAmount(hoveredCheckpoint.delta, currency)}</div>
-                </>
-              ) : (
-                <div className="text-sage-300">attendu ✓ {formatAmount(hoveredCheckpoint.expectedAmount, currency)}</div>
-              )}
-            </div>
-          )}
-        </div>
+        <BalanceTooltip
+          hovered={hovered}
+          hoveredCheckpoint={hoveredCheckpoint}
+          currency={currency}
+          x={hover.x}
+          y={hover.y}
+          containerWidth={containerRef.current?.clientWidth ?? 1000}
+        />
       )}
     </div>
   );
-}
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
 }
