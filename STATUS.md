@@ -1,6 +1,6 @@
 # Status — Athena Accounting
 
-_Last updated: 2026-07-02_
+_Last updated: 2026-07-03_
 
 ## Live
 
@@ -12,6 +12,13 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
 
 ## Recently landed
 
+- 2026-07-03 — User-configurable settings surface: new `user_settings`
+  table (migration 0013), `GET`/`PATCH /api/settings`, `useSettings`
+  hook, Réglages page at `/settings` reached from a gear icon in the
+  sidebar UserCard. Dashboard range + chart scope + `BalanceChart`
+  gap threshold + Duplicates panel similarity threshold now seeded
+  from settings; the old `dashboard.*` / `dup.*` localStorage keys
+  are dead.
 - 2026-07-02 — Imports.tsx split into pages/Imports/ (6 focused files)
   with characterization + unit tests. Fourth interleave iteration.
 - 2026-07-02 — Transactions.tsx split into pages/Transactions/ (6 focused
@@ -80,6 +87,11 @@ Empty. Update this section when starting a new initiative.
   like `FileImportsList` does. Deliberately self-contained — TanStack Query
   dedupes the cache, so there's no extra network cost — not treated as a
   defect. Left as-is.
+- Dead localStorage keys after 2026-07-03 settings landing:
+  `dashboard.range`, `dashboard.chartScope`, `dup.similarityThreshold`.
+  Nothing reads them anymore, and wiping them from each user's browser
+  is not worth the ceremony. Delete `frontend/src/lib/persisted-state.ts`
+  and its tests when no other code paths reference the hook.
 
 ## Environment
 
