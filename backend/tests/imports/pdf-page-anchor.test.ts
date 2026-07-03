@@ -165,6 +165,34 @@ describe('deriveOtherAccountAnchors', () => {
     expect(deriveOtherAccountAnchors(pages, [0])).toEqual([]);
   });
 
+  it('keeps a keyword header even when it ALSO appears on a selected page (mid-page transition)', () => {
+    // The typical bug: page 2 carries our anchor at the top AND the start of
+    // Livret A halfway down. Page 3 is a pure Livret A page. Because Livret
+    // A's header line appears on page 2 too, the earlier filter dropped it
+    // from candidates. Now the keyword-headers path ignores selectedLines,
+    // so the marker survives.
+    const pages = [
+      page(0, [
+        item(0, 'COMPTE COURANT n° 12345', 40, 50),
+        item(0, '15/01/2026 tx', 40, 200),
+      ]),
+      page(1, [
+        item(1, 'COMPTE COURANT n° 12345', 40, 50),
+        item(1, '20/01/2026 tx', 40, 200),
+        item(1, 'LIVRET A n° 98765', 40, 500), // <-- also here (mid-page)
+        item(1, 'a first livret A row', 40, 550),
+      ]),
+      page(2, [
+        item(2, 'LIVRET A n° 98765', 40, 50), // <-- header on unchecked page
+        item(2, '10/01/2026 intérêts', 40, 200),
+      ]),
+    ];
+    // User checks pages 0 and 1 (both Compte Courant, plus page 1's tail
+    // that spills into Livret A). Page 2 unchecked.
+    const others = deriveOtherAccountAnchors(pages, [0, 1]);
+    expect(others).toEqual(['livret a n° 98765']);
+  });
+
   it('falls back to the longest non-keyword line when no keyword header is present', () => {
     const pages = [
       page(0, [item(0, 'ACC OWN HEADER', 40, 50)]),

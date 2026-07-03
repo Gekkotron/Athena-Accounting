@@ -148,8 +148,16 @@ export function deriveAccountAnchor(
 //
 // Preference order for each unchecked page's candidate:
 //   1. Lines that BEGIN with a French account-type keyword (compte,
-//      livret, pea, pel, cel, lep, epargne, plan) — most reliable.
-//   2. Otherwise, the longest candidate of length >= OTHER_ANCHOR_MIN_LEN.
+//      livret, pea, pel, cel, lep, epargne, plan). These are picked
+//      REGARDLESS of whether they also appear on a selected page — the
+//      whole point of otherAnchors is to detect a mid-page transition,
+//      which by definition places the OTHER account's header ON a
+//      selected page too. Filtering those out defeats the mechanism.
+//   2. Otherwise, the longest candidate of length >= OTHER_ANCHOR_MIN_LEN
+//      that does NOT appear on any selected page. The selected-lines
+//      filter still applies here to guard against picking up a repeating
+//      footer or page-number that would then falsely cut off future
+//      imports.
 //
 // Returns [] when no distinguishing signal exists — the caller keeps the
 // permissive whole-page inclusion path.
@@ -162,8 +170,8 @@ export function deriveOtherAccountAnchors(
   const otherPages = pages.filter((p) => !selectedSet.has(p.pageIndex));
   if (otherPages.length === 0) return [];
 
-  // Lines present anywhere in the selected set — any candidate that appears
-  // there is not a distinguishing marker for an unchecked page.
+  // Lines present anywhere in the selected set — used only to gate the
+  // NON-keyword candidate path below.
   const selectedLines = new Set<string>();
   for (const p of pages) {
     if (!selectedSet.has(p.pageIndex)) continue;
@@ -172,20 +180,26 @@ export function deriveOtherAccountAnchors(
 
   const collected = new Set<string>();
   for (const page of otherPages) {
-    const candidates: string[] = [];
-    for (const line of pageLines(page)) {
-      if (selectedLines.has(line)) continue;
-      candidates.push(line);
+    const linesOnPage = Array.from(pageLines(page));
+    // Priority 1: keyword headers, no selected-lines filter — the
+    // mid-page transition would otherwise be filtered out.
+    const headerLike = linesOnPage.filter(isAccountHeaderLike);
+    if (headerLike.length > 0) {
+      const chosen = headerLike
+        .sort((a, b) => b.length - a.length || a.localeCompare(b))[0]!;
+      collected.add(chosen);
+      continue;
     }
-    if (candidates.length === 0) continue;
-    // Split by header-like / not, then pick the strongest.
-    const headerLike = candidates.filter(isAccountHeaderLike);
-    const chosen = headerLike.length > 0
-      ? headerLike.sort((a, b) => b.length - a.length || a.localeCompare(b))[0]
-      : candidates
-          .filter((c) => c.length >= OTHER_ANCHOR_MIN_LEN)
-          .sort((a, b) => b.length - a.length || a.localeCompare(b))[0];
-    if (chosen) collected.add(chosen);
+    // Priority 2: long, non-keyword lines. Keep the selected-lines filter
+    // so a repeating footer / page number doesn't become a false anchor.
+    const uniqueLong = linesOnPage.filter(
+      (l) => !selectedLines.has(l) && l.length >= OTHER_ANCHOR_MIN_LEN,
+    );
+    if (uniqueLong.length > 0) {
+      const chosen = uniqueLong
+        .sort((a, b) => b.length - a.length || a.localeCompare(b))[0]!;
+      collected.add(chosen);
+    }
   }
   return Array.from(collected).sort();
 }

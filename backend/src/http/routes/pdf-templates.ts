@@ -31,9 +31,15 @@ export async function pdfTemplatesRoutes(app: FastifyInstance): Promise<void> {
     return {
       templates: rows.map(({ zones, ...rest }) => {
         const z = zones as TemplateZones | null;
+        const anchor = z && typeof z.pageAnchor === 'string' ? z.pageAnchor.trim() : '';
         return {
           ...rest,
-          hasPageAnchor: !!(z && typeof z.pageAnchor === 'string' && z.pageAnchor.trim().length > 0),
+          hasPageAnchor: anchor.length > 0,
+          // Also surface the anchor strings so the UI can show what a
+          // template will match against — a quick diagnostic when a user
+          // suspects the wrong pages are being processed.
+          pageAnchor: anchor.length > 0 ? anchor : null,
+          otherAnchors: Array.isArray(z?.otherAnchors) ? z!.otherAnchors : [],
         };
       }),
     };

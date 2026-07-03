@@ -100,9 +100,25 @@ export function PdfTemplatesPanel(): JSX.Element {
             </thead>
             <tbody>
               {templates.map((t) => (
-                <tr key={t.id} className="border-b border-ink-800/40 last:border-0">
-                  <td className="px-3 py-2 text-ink-100 truncate max-w-[18rem]" title={t.label}>
-                    {t.label}
+                <tr key={t.id} className="border-b border-ink-800/40 last:border-0 align-top">
+                  <td className="px-3 py-2 text-ink-100 max-w-[18rem]">
+                    <div className="truncate" title={t.label}>{t.label}</div>
+                    {(t.pageAnchor || t.otherAnchors.length > 0) && (
+                      <div className="mt-1 text-[10px] text-ink-500 font-mono leading-relaxed">
+                        {t.pageAnchor && (
+                          <div title="Ligne exigée sur chaque page appartenant à ce compte">
+                            <span className="text-ink-600">match&nbsp;: </span>
+                            <span className="text-ink-300">{t.pageAnchor}</span>
+                          </div>
+                        )}
+                        {t.otherAnchors.length > 0 && (
+                          <div title="Marqueurs d'autres comptes — les lignes en dessous sont ignorées">
+                            <span className="text-ink-600">coupe&nbsp;: </span>
+                            <span className="text-ink-300">{t.otherAnchors.join(' · ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-ink-300">
                     {t.accountId !== null ? getAccountName(accounts, t.accountId) : '—'}

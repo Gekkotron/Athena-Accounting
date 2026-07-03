@@ -53,11 +53,13 @@ describe('PdfTemplatesPanel', () => {
       {
         id: 10, fingerprint: 'abc', accountId: 1, label: 'BNP relevé mensuel',
         source: 'interactive', hasPageAnchor: true,
+        pageAnchor: 'compte courant n° 12345', otherAnchors: [],
         createdAt: '2026-06-01T09:00:00Z', updatedAt: '2026-06-15T09:00:00Z',
       },
       {
         id: 11, fingerprint: 'def', accountId: 2, label: 'Livret A relevé annuel',
         source: 'heuristic', hasPageAnchor: false,
+        pageAnchor: null, otherAnchors: [],
         createdAt: '2026-01-01T09:00:00Z', updatedAt: '2026-01-01T09:00:00Z',
       },
     ]);
@@ -78,6 +80,7 @@ describe('PdfTemplatesPanel', () => {
       {
         id: 11, fingerprint: 'def', accountId: 2, label: 'legacy',
         source: 'heuristic', hasPageAnchor: false,
+        pageAnchor: null, otherAnchors: [],
         createdAt: '2026-01-01T09:00:00Z', updatedAt: '2026-01-01T09:00:00Z',
       },
     ]);
@@ -90,6 +93,7 @@ describe('PdfTemplatesPanel', () => {
       {
         id: 10, fingerprint: 'abc', accountId: 1, label: 'BNP',
         source: 'interactive', hasPageAnchor: true,
+        pageAnchor: 'compte courant n° 12345', otherAnchors: [],
         createdAt: '2026-06-01T09:00:00Z', updatedAt: '2026-06-15T09:00:00Z',
       },
     ]);

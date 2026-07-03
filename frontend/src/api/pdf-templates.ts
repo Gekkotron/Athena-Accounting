@@ -71,6 +71,10 @@ export interface PdfTemplateRow {
   // multi-account filter). False = legacy absolute-index filter, which may
   // silently drop pages when a future statement grows.
   hasPageAnchor: boolean;
+  // The stored anchor + other-account markers, surfaced for diagnostics
+  // ("does the template match the right pages?"). Empty when unavailable.
+  pageAnchor: string | null;
+  otherAnchors: string[];
   createdAt: string;
   updatedAt: string;
 }
