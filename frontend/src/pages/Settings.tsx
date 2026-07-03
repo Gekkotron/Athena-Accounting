@@ -11,12 +11,16 @@ export function Settings(): JSX.Element {
   const { settings, isReady, patch, mutation } = useSettings();
   const [confirmReset, setConfirmReset] = useState(false);
   // "Enregistré" flash next to the field that just accepted a PATCH.
-  const [flashKey, setFlashKey] = useState<keyof SettingsShape | 'all' | null>(null);
+  const [flashKey, setFlashKey] = useState<keyof SettingsShape | null>(null);
   useEffect(() => {
-    if (!mutation.isSuccess) return;
-    const t = setTimeout(() => setFlashKey(null), 1500);
-    return () => clearTimeout(t);
-  }, [mutation.isSuccess, mutation.data]);
+    if (mutation.isSuccess) {
+      const t = setTimeout(() => setFlashKey(null), 1500);
+      return () => clearTimeout(t);
+    }
+    if (mutation.isError) {
+      setFlashKey(null);
+    }
+  }, [mutation.isSuccess, mutation.isError, mutation.data]);
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -33,6 +37,7 @@ export function Settings(): JSX.Element {
   }
 
   const send = <K extends keyof SettingsShape>(key: K, value: SettingsShape[K]) => {
+    if (settings[key] === value) return;
     setFlashKey(key);
     patch({ [key]: value } as Partial<SettingsShape>);
   };
@@ -126,7 +131,6 @@ export function Settings(): JSX.Element {
         title="Réinitialiser les réglages ?"
         description="Tous vos réglages retrouveront leurs valeurs par défaut. Cette action ne peut pas être annulée."
         onConfirm={() => {
-          setFlashKey('all');
           patch(DEFAULTS);
           setConfirmReset(false);
         }}

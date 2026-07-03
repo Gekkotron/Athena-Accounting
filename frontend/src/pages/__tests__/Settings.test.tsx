@@ -102,4 +102,23 @@ describe('Settings page', () => {
     await waitFor(() => expect(patchCalls).toHaveLength(1));
     expect(patchCalls[0]).toEqual(DEFAULTS);
   });
+
+  it('does not leave the "Enregistré" chip visible when the PATCH fails', async () => {
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [] };
+      if (path === '/api/settings' && init?.method === 'PATCH') {
+        throw new Error('boom');
+      }
+      if (path === '/api/settings') return { settings: DEFAULTS };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
+    await u.click(screen.getByRole('button', { name: /^6 m$/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/impossible d'enregistrer les réglages/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/enregistré/i)).toBeNull();
+  });
 });
