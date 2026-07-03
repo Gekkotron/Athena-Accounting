@@ -200,6 +200,23 @@ describe('deriveOtherAccountAnchors', () => {
     ).toEqual([]);
   });
 
+  it('skips keyword lines that sit below the anchor but ABOVE rowsStartY (page-header decoration)', () => {
+    // "COMPTE Détails" is a decorative label between the anchor (top of the
+    // account section) and the transaction table. It's below the anchor's Y
+    // (so the below-anchor guard doesn't catch it) but above rowsStartY (so
+    // treating it as a cutoff would shrink the row window to zero).
+    const pages = [
+      page(0, [
+        item(0, 'COMPTE COURANT n° 12345', 40, 50),
+        item(0, 'COMPTE Détails', 40, 100), // decoration between anchor and table
+        item(0, '15/01/2026 tx', 40, 220), // first real row
+      ]),
+    ];
+    expect(
+      deriveOtherAccountAnchors(pages, [0], 'compte courant n° 12345', /*rowsStartY*/ 200),
+    ).toEqual([]);
+  });
+
   it('keeps a keyword header even when it ALSO appears on a selected page (mid-page transition)', () => {
     // The typical bug: page 2 carries our anchor at the top AND the start of
     // Livret A halfway down. Page 3 is a pure Livret A page. Because Livret

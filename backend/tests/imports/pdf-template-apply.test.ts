@@ -96,6 +96,36 @@ describe('applyTemplate', () => {
     expect(r.rows.map((row) => row.rawLabel)).toEqual(['A', 'C']);
   });
 
+  it('ignores an otherAnchor whose yTop is at or above rowsStartY (bogus cutoff safeguard)', () => {
+    // A legacy template carries an otherAnchor line that happens to appear
+    // ABOVE rowsStartY on the imported PDF (e.g. a "COMPTE Détails"
+    // decoration in the page header). If applyTemplate honored it, the
+    // yUpperBound would sit above the first row's Y and drop every
+    // transaction. The runtime guard treats such a cutoff as "no cutoff"
+    // and imports all rows.
+    const withPageIndex = (idx: number, items: PdfTextItem[]): PdfPageText => ({
+      pageIndex: idx, widthPt: 595, heightPt: 842,
+      items: items.map((it) => ({ ...it, pageIndex: idx })),
+    });
+    const pages = [
+      withPageIndex(0, [
+        item('COMPTE COURANT n° 12345', 40, 50),
+        item('COMPTE Détails', 40, 100), // above rowsStartY (210)
+        item('15/01/2026', 40, 220), item('OUR-A', 120, 220), item('-1,00', 480, 220),
+      ]),
+    ];
+    const anchored: TemplateZones = {
+      ...zones,
+      tableRepeatsPerPage: true,
+      pageAnchor: 'compte courant n° 12345',
+      // rowsStartY is inherited from `zones` above (210).
+      otherAnchors: ['compte détails'], // bogus — above rowsStartY on the page
+    };
+    const r = applyTemplate(pages, anchored);
+    // The row lands despite the bogus otherAnchor.
+    expect(r.rows.map((row) => row.rawLabel)).toEqual(['OUR-A']);
+  });
+
   it('with otherAnchors set, cuts off row processing at a mid-page account boundary', () => {
     // Page 0 belongs to us (COMPTE COURANT). Page 2 = pure other account
     // (LIVRET A) — filtered out entirely by the pageAnchor path. The

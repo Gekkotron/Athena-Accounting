@@ -85,9 +85,14 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
     // carries a marker for another account further down, cut off row
     // processing at that marker's Y. Rows on this page above the marker
     // are ours; everything from there down belongs to a different account.
-    const cutoffY = zones.otherAnchors && zones.otherAnchors.length > 0
+    // Guard against a bogus otherAnchor whose yTop sits at or above the
+    // transaction table's start Y — that would shrink the row window to
+    // zero. Fall back to "no cutoff" in that case, so a mis-derivation
+    // never zero-rows the import.
+    const rawCutoffY = zones.otherAnchors && zones.otherAnchors.length > 0
       ? firstOtherAnchorY(page, zones.otherAnchors)
       : null;
+    const cutoffY = rawCutoffY !== null && rawCutoffY > zones.rowsStartY ? rawCutoffY : null;
     const yUpperBound = cutoffY !== null ? Math.min(cutoffY, page.heightPt) : page.heightPt;
     const tableItems = page.items.filter((i) =>
       i.xLeft >= zones.tableZone.x - 1 &&

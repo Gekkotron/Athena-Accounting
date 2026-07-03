@@ -207,6 +207,7 @@ export async function applyTemplateAndImport(opts: {
       pages,
       opts.zones.selectedPages,
       opts.zones.pageAnchor ?? null,
+      opts.zones.rowsStartY,
     );
     if (others.length > 0) opts.zones.otherAnchors = others;
   }

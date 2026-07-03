@@ -165,6 +165,7 @@ export function deriveOtherAccountAnchors(
   pages: PdfPageText[],
   selectedIndices: number[],
   pageAnchor: string | null = null,
+  rowsStartY: number = 0,
 ): string[] {
   if (pages.length === 0 || selectedIndices.length === 0) return [];
   const selectedSet = new Set(selectedIndices);
@@ -209,9 +210,12 @@ export function deriveOtherAccountAnchors(
   // --- Path B: from SELECTED pages, below the account's own anchor ---------
   // Catches mid-page transitions where the "other" account fits entirely
   // on a page that also carries our own account (so the whole statement
-  // has no unchecked pages to scan from Path A). We only look for lines
-  // BELOW the anchor's yTop to avoid catching cover-page headers that
-  // sit above the anchor on the first page.
+  // has no unchecked pages to scan from Path A). Only lines BELOW the
+  // anchor's yTop AND at-or-below the transaction table's start Y are
+  // considered — anything above rowsStartY would be page-header
+  // decoration (e.g. a "COMPTE Détails" label sitting between our
+  // anchor and the first row), and using it as a cutoff would shrink
+  // the row window to zero.
   const own = (pageAnchor ?? '').trim().toLowerCase();
   if (own.length > 0) {
     for (const p of pages) {
@@ -221,6 +225,7 @@ export function deriveOtherAccountAnchors(
       if (!anchorLine) continue;
       for (const line of lines) {
         if (line.yTop <= anchorLine.yTop) continue;
+        if (line.yTop <= rowsStartY) continue;
         if (line.text === own) continue;
         if (isAccountHeaderLike(line.text)) collected.add(line.text);
       }
