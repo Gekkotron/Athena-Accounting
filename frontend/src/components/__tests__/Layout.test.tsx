@@ -79,4 +79,10 @@ describe('Layout', () => {
       expect(screen.queryByRole('button', { name: /fermer/i })).not.toBeInTheDocument(),
     );
   });
+
+  it('exposes a Réglages link to /settings from the sidebar user card', () => {
+    renderLayout();
+    const link = screen.getByRole('link', { name: /réglages/i });
+    expect(link).toHaveAttribute('href', '/settings');
+  });
 });

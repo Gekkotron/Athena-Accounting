@@ -145,17 +145,31 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60">
       <div className="label mb-1">Connecté</div>
-      <NavLink
-        to="/profile"
-        className={({ isActive }) =>
-          `block text-sm mb-3 truncate font-medium underline-offset-2 hover:underline ${
-            isActive ? 'text-sage-300' : 'text-ink-100 hover:text-ink-50'
-          }`
-        }
-        title="Modifier mon profil"
-      >
-        {user.username}
-      </NavLink>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `block text-sm truncate font-medium underline-offset-2 hover:underline flex-1 min-w-0 ${
+              isActive ? 'text-sage-300' : 'text-ink-100 hover:text-ink-50'
+            }`
+          }
+          title="Modifier mon profil"
+        >
+          {user.username}
+        </NavLink>
+        <NavLink
+          to="/settings"
+          title="Réglages"
+          aria-label="Réglages"
+          className={({ isActive }) =>
+            `btn-ghost !min-h-0 !py-1 !px-1.5 shrink-0 ${
+              isActive ? 'text-sage-300' : 'text-ink-400 hover:text-ink-100'
+            }`
+          }
+        >
+          <GearIcon />
+        </NavLink>
+      </div>
       <button
         className="btn-ghost w-full justify-start text-xs mb-1"
         onClick={privacy.toggle}
@@ -188,6 +202,20 @@ function EyeClosedIcon() {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
       <path d="M1.5 7C2.7 4.5 4.7 3 7 3s4.3 1.5 5.5 4c-1.2 2.5-3.2 4-5.5 4S2.7 9.5 1.5 7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
       <path d="M1.5 1.5l11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2" />
+      <path
+        d="M7 1v1.5M7 11.5V13M13 7h-1.5M2.5 7H1M11.24 2.76l-1.06 1.06M3.82 10.18l-1.06 1.06M11.24 11.24l-1.06-1.06M3.82 3.82L2.76 2.76"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
