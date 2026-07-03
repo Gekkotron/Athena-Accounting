@@ -51,6 +51,12 @@ beforeEach(() => {
 describe('Dashboard', () => {
   it('renders the "Solde net" hero when nothing is blocked', async () => {
     apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/reports/balance') return {
         perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', account_count: 1 }],
@@ -67,6 +73,12 @@ describe('Dashboard', () => {
 
   it('switches the hero label to "Disponible" + adds a "bloqués" tag when a lock is active', async () => {
     apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return { accounts: [acc(1, 'PEA', { lockYears: 5, availableBalance: '0' })] };
       if (path === '/api/reports/balance') return {
         perCurrency: [{ currency: 'EUR', total: '10000.00', available: '4000.00', account_count: 1 }],
@@ -81,11 +93,38 @@ describe('Dashboard', () => {
     expect(screen.getAllByText(/bloqués/i).length).toBeGreaterThan(0);
   });
 
-  it('persists the chart account selector to localStorage', async () => {
+  it('reads dashboardChartScope from /api/settings on mount', async () => {
     apiMock.mockImplementation(async (path: string) => {
-      if (path === '/api/accounts') return {
-        accounts: [acc(1, 'A'), acc(2, 'B')],
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 2,
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
       };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'A'), acc(2, 'B')] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', account_count: 2 }],
+      };
+      if (path === '/api/reports/timeseries') return { points: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    const select = await screen.findByLabelText(/compte affiché/i);
+    // Wait for settings to hydrate.
+    await waitFor(() => expect((select as HTMLSelectElement).value).toBe('2'));
+  });
+
+  it('local changes to the chart selector do NOT PATCH /api/settings', async () => {
+    const patchCalls: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (init?.method === 'PATCH') { patchCalls.push({ path, init }); return { settings: {} }; }
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'A'), acc(2, 'B')] };
       if (path === '/api/reports/balance') return {
         perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', account_count: 2 }],
       };
@@ -96,11 +135,19 @@ describe('Dashboard', () => {
     renderDashboard();
     const select = await screen.findByLabelText(/compte affiché/i);
     await u.selectOptions(select, '2');
-    await waitFor(() => expect(localStorage.getItem('dashboard.chartScope')).toBe('2'));
+    // Give any accidental PATCH time to fire.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(patchCalls).toHaveLength(0);
   });
 
   it('lists each account card with its current balance', async () => {
     apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return {
         accounts: [
           acc(1, 'CheckingA', { currentBalance: '250.00', availableBalance: '250.00' }),
@@ -120,6 +167,12 @@ describe('Dashboard', () => {
 
   it('shows a "dont X€ bloqués · N ans" line on locked account cards', async () => {
     apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return {
         accounts: [
           acc(1, 'PEA', { lockYears: 5, currentBalance: '10000.00', availableBalance: '3000.00' }),

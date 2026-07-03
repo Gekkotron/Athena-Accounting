@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { formatAmount, amountSignClass } from '../../lib/format';
-import { usePersistedState } from '../../lib/persisted-state';
+import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { RangePicker, fromDateFor, rangeSuffixLabel, type RangeKey } from '../../components/RangePicker';
@@ -32,20 +32,24 @@ export function Dashboard(): JSX.Element {
   const accounts = accountsQ.data?.accounts ?? [];
   const primary = currencies[0];
 
-  // Page-wide period. Drives the balance chart, the donut, and the per-
-  // account "sur X" delta. The Moyennes mensuelles widgets keep their own
-  // fixed 12-month window (monthly averages over 30 j don't make sense).
-  const [range, setRange] = usePersistedState<RangeKey>('dashboard.range', '3m');
+  // Page-wide period and chart scope. Both seeded from user settings on
+  // mount; in-session changes are ephemeral (no writeback). To make a
+  // change stick, edit Réglages.
+  const { settings, isReady } = useSettings();
+  const [range, setRange] = useState<RangeKey>(settings.dashboardRange);
+  const [chartScope, setChartScope] = useState<'all' | number>(settings.dashboardChartScope);
+  // If settings arrive after the initial render (first paint used DEFAULTS),
+  // hydrate the local state once — gated on isReady so we don't latch onto
+  // the DEFAULTS fallback while the settings query is still loading.
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (hydrated.current || !isReady) return;
+    hydrated.current = true;
+    setRange(settings.dashboardRange);
+    setChartScope(settings.dashboardChartScope);
+  }, [isReady, settings.dashboardRange, settings.dashboardChartScope]);
   const rangeFromDate = fromDateFor(range);
   const rangeSuffix = rangeSuffixLabel(range);
-
-  // Chart scope: 'all' = sum across all accounts of the primary currency,
-  // otherwise a specific account_id (the chart then shows that single account
-  // in its own currency). Persisted so the last-picked scope survives reloads.
-  const [chartScope, setChartScope] = usePersistedState<'all' | number>(
-    'dashboard.chartScope',
-    'all',
-  );
 
   // Checkpoints for the currently scoped account. Skipped entirely when scope
   // is 'all' — checkpoints are per-account by design.
