@@ -3,6 +3,18 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BalanceChart } from '../BalanceChart';
 import type { BalancePoint } from '../../api/types';
 
+// jsdom returns a 0-size DOMRect for SVG by default, which breaks any
+// coordinate-based hit-testing. Stub getBoundingClientRect on the SVG so
+// clientX values map onto the viewBox at a 1:1 ratio (w=1000).
+function stubSvgRect(container: HTMLElement) {
+  const svg = container.querySelector('svg');
+  if (!svg) return;
+  Object.defineProperty(svg, 'getBoundingClientRect', {
+    value: () => ({ left: 0, top: 0, right: 1000, bottom: 240, width: 1000, height: 240, x: 0, y: 0, toJSON: () => ({}) }),
+    configurable: true,
+  });
+}
+
 function point(bucket: string, cumulative: string, accountId = 1): BalancePoint {
   return { account_id: accountId, currency: 'EUR', bucket, delta: '0', cumulative };
 }
@@ -204,6 +216,85 @@ describe('BalanceChart render paths', () => {
     const solid = strokePaths.filter((p) => !p.getAttribute('stroke-dasharray'));
     expect(dashed).toHaveLength(1);
     expect(solid.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('brushing across the plot area commits a zoom window and reveals the reset button', () => {
+    const points = [
+      point('2026-01-01', '100'),
+      point('2026-02-01', '150'),
+      point('2026-03-01', '200'),
+      point('2026-04-01', '250'),
+      point('2026-05-01', '300'),
+    ];
+    const { container } = render(<BalanceChart points={points} currency="EUR" />);
+    stubSvgRect(container);
+    const svg = container.querySelector('svg')!;
+
+    // Before any zoom, the reset button is absent.
+    expect(screen.queryByRole('button', { name: /réinitialiser le zoom/i })).toBeNull();
+
+    // Drag from x=200 to x=600 in viewBox = pixel coords under the 1000-wide stub.
+    fireEvent.pointerDown(svg, { clientX: 200, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: 600, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+    fireEvent.pointerUp(svg, { clientX: 600, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+
+    // Reset button appears after commit.
+    expect(screen.getByRole('button', { name: /réinitialiser le zoom/i })).toBeInTheDocument();
+  });
+
+  it('a stray click (drag width below the threshold) does not commit a zoom', () => {
+    const points = [
+      point('2026-01-01', '100'),
+      point('2026-02-01', '150'),
+      point('2026-03-01', '200'),
+    ];
+    const { container } = render(<BalanceChart points={points} currency="EUR" />);
+    stubSvgRect(container);
+    const svg = container.querySelector('svg')!;
+
+    // 3-unit drag (< MIN_ZOOM_WIDTH_VB=10) — should be ignored.
+    fireEvent.pointerDown(svg, { clientX: 300, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: 303, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+    fireEvent.pointerUp(svg, { clientX: 303, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+
+    expect(screen.queryByRole('button', { name: /réinitialiser le zoom/i })).toBeNull();
+  });
+
+  it('touch drags are ignored — the OS scroll gesture keeps priority', () => {
+    const points = [
+      point('2026-01-01', '100'),
+      point('2026-02-01', '150'),
+      point('2026-03-01', '200'),
+    ];
+    const { container } = render(<BalanceChart points={points} currency="EUR" />);
+    stubSvgRect(container);
+    const svg = container.querySelector('svg')!;
+
+    fireEvent.pointerDown(svg, { clientX: 200, clientY: 100, pointerType: 'touch', pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: 600, clientY: 100, pointerType: 'touch', pointerId: 1 });
+    fireEvent.pointerUp(svg, { clientX: 600, clientY: 100, pointerType: 'touch', pointerId: 1 });
+
+    expect(screen.queryByRole('button', { name: /réinitialiser le zoom/i })).toBeNull();
+  });
+
+  it('the reset button clears the zoom', () => {
+    const points = [
+      point('2026-01-01', '100'),
+      point('2026-02-01', '150'),
+      point('2026-03-01', '200'),
+      point('2026-04-01', '250'),
+    ];
+    const { container } = render(<BalanceChart points={points} currency="EUR" />);
+    stubSvgRect(container);
+    const svg = container.querySelector('svg')!;
+
+    fireEvent.pointerDown(svg, { clientX: 200, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+    fireEvent.pointerMove(svg, { clientX: 500, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+    fireEvent.pointerUp(svg, { clientX: 500, clientY: 100, pointerType: 'mouse', pointerId: 1 });
+
+    const resetBtn = screen.getByRole('button', { name: /réinitialiser le zoom/i });
+    fireEvent.click(resetBtn);
+    expect(screen.queryByRole('button', { name: /réinitialiser le zoom/i })).toBeNull();
   });
 
   it('leaves the line fully solid when every gap is <= 6 days (weekends + a quiet week stay solid)', () => {

@@ -20,6 +20,34 @@ import { afterEach } from 'vitest';
   Object.defineProperty(window, 'localStorage', { value: impl, configurable: true, writable: true });
 }
 
+// jsdom 25 does not implement PointerEvent, so `fireEvent.pointerDown` from
+// Testing Library silently degrades and never actually fires the DOM event.
+// Provide a minimal ctor that extends MouseEvent and carries `pointerType`
+// + `pointerId` — enough for React's onPointerDown/onPointerMove/onPointerUp
+// handlers to see the fields they need.
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerType: string;
+    pointerId: number;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerType = init.pointerType ?? 'mouse';
+      this.pointerId = init.pointerId ?? 1;
+    }
+  }
+  Object.defineProperty(window, 'PointerEvent', { value: PointerEventPolyfill, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'PointerEvent', { value: PointerEventPolyfill, configurable: true, writable: true });
+}
+
+// jsdom Elements have no setPointerCapture / releasePointerCapture — stub them
+// out as noops so components that call them don't throw in tests.
+if (typeof Element.prototype.setPointerCapture !== 'function') {
+  Element.prototype.setPointerCapture = function () {};
+}
+if (typeof Element.prototype.releasePointerCapture !== 'function') {
+  Element.prototype.releasePointerCapture = function () {};
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();

@@ -30,6 +30,19 @@ interface HoverState {
   y: number;
 }
 
+// Active brush drag in viewBox coordinates. The rectangle is drawn between
+// `startVb` and `endVb`; on release, the range is committed as a zoom
+// window (or discarded if too narrow to be intentional).
+interface DragState {
+  startVb: number;
+  endVb: number;
+}
+
+interface ZoomState {
+  startMs: number;
+  endMs: number;
+}
+
 function isoDate(ms: number): string {
   const d = new Date(ms);
   const yyyy = d.getFullYear();
@@ -38,10 +51,16 @@ function isoDate(ms: number): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// A drag narrower than this (in viewBox units, out of 1000) is treated as
+// a stray click, not a zoom request.
+const MIN_ZOOM_WIDTH_VB = 10;
+
 export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6 }: Props): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [zoom, setZoom] = useState<ZoomState | null>(null);
 
   const data = useMemo(() => buildAggregatedSeries(points, currency), [points, currency]);
 
@@ -64,17 +83,21 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   const maxY = Math.max(...ys, 0);
   const range = maxY - minY || 1;
 
-  // Time-based X scale — maps a calendar date to a viewBox X so calendar
-  // dates map linearly to horizontal position, regardless of how many
-  // buckets sit in between. This makes the axis honest: a 30-day gap is
-  // visually 30× wider than a 1-day gap, and checkpoints sit at their
-  // exact calendar X.
-  const firstMs = Date.parse(data[0]!.date);
-  const lastMs = Date.parse(data[data.length - 1]!.date);
-  const xSpan = Math.max(1, lastMs - firstMs);
-  const xScale = (date: string) => pad.left + ((Date.parse(date) - firstMs) / xSpan) * innerW;
+  // Time-based X scale — maps a calendar date to a viewBox X. Under an
+  // active zoom, the scale narrows to just the zoom window so that window
+  // spans the full plot width; out-of-window buckets fall outside
+  // [pad.left, w - pad.right] and get clipped by <clipPath id="chart-clip">.
+  const dataFirstMs = Date.parse(data[0]!.date);
+  const dataLastMs = Date.parse(data[data.length - 1]!.date);
+  const activeFirstMs = zoom?.startMs ?? dataFirstMs;
+  const activeLastMs = zoom?.endMs ?? dataLastMs;
+  const xSpan = Math.max(1, activeLastMs - activeFirstMs);
+  const xScale = (date: string) => pad.left + ((Date.parse(date) - activeFirstMs) / xSpan) * innerW;
   const xScaleAt = (i: number) => xScale(data[i]!.date);
   const yScale = (v: number) => pad.top + innerH - ((v - minY) / range) * innerH;
+  // Inverse of xScale: viewBox X → ms. Used to convert a drag range back to
+  // a calendar zoom window.
+  const vbToMs = (vb: number) => activeFirstMs + ((vb - pad.left) / innerW) * (activeLastMs - activeFirstMs);
 
   const marks = buildCheckpointMarks(data, checkpoints, xScale);
 
@@ -125,21 +148,37 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
 
   const ticks = 4;
   const tickValues = Array.from({ length: ticks + 1 }, (_, i) => minY + (range * i) / ticks);
-  // Evenly-spaced calendar ticks — computed by time, not by bucket index, so
-  // the axis reads naturally regardless of bucket density. `formatDateShort`
-  // accepts arbitrary YYYY-MM-DD strings, so ticks need not fall on existing
-  // buckets.
+  // Evenly-spaced calendar ticks — computed by time on the ACTIVE window,
+  // so a zoomed-in view relabels the axis for that window.
   const xTickCount = Math.min(6, Math.max(2, data.length));
   const xTicks: string[] = Array.from({ length: xTickCount }, (_, i) =>
-    isoDate(firstMs + (i * xSpan) / (xTickCount - 1)),
+    isoDate(activeFirstMs + (i * xSpan) / (xTickCount - 1)),
   );
 
   const zeroY = yScale(0);
   const last = data[data.length - 1]!;
 
-  // Mousemove handler — pin to the closest data point in viewBox space (by
-  // X distance), then convert that snap-back point into container-relative
-  // screen coords so the HTML tooltip lands exactly on it.
+  const getViewBoxX = (clientX: number): number => {
+    const svg = svgRef.current;
+    if (!svg) return 0;
+    const rect = svg.getBoundingClientRect();
+    return ((clientX - rect.left) / rect.width) * w;
+  };
+
+  const inPlotArea = (vbX: number): boolean => vbX >= pad.left && vbX <= w - pad.right;
+
+  // Pointer down starts a brush drag when inside the plot area. Skipped on
+  // touch so the OS scroll gesture wins on mobile.
+  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === 'touch') return;
+    const vbX = getViewBoxX(e.clientX);
+    if (!inPlotArea(vbX)) return;
+    setDrag({ startVb: vbX, endVb: vbX });
+    (e.currentTarget as SVGSVGElement).setPointerCapture?.(e.pointerId);
+  };
+
+  // Pointer move handler — updates the drag rect if a brush is active, and
+  // always keeps the hover tooltip anchored to the nearest data point.
   const onMove = (e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
     const container = containerRef.current;
@@ -147,13 +186,36 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     const svgRect = svg.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
 
-    const xInSvg = e.clientX - svgRect.left;
-    const xInViewBox = (xInSvg / svgRect.width) * w;
+    const xInViewBox = ((e.clientX - svgRect.left) / svgRect.width) * w;
 
-    let closest = 0;
-    let minDist = Infinity;
+    if (drag !== null) {
+      // Clamp the drag endpoint to the plot area so a fling into the
+      // padding doesn't produce a useless zoom window.
+      const clamped = Math.max(pad.left, Math.min(w - pad.right, xInViewBox));
+      setDrag({ startVb: drag.startVb, endVb: clamped });
+      return; // suppress hover updates while dragging — tooltip would flicker
+    }
+
+    // Snap only to buckets currently in the active window (their X sits in
+    // the plot area). Under zoom, out-of-window buckets have X far outside
+    // and are visually clipped — tooltiping them would be surprising.
+    // Seed `closest` with the first in-plot bucket so a degenerate mouse
+    // coord (e.g. NaN from jsdom's zero-size layout in tests) still lands
+    // on something visible instead of dropping the tooltip.
+    let closest = -1;
     for (let i = 0; i < data.length; i++) {
-      const dist = Math.abs(xScaleAt(i) - xInViewBox);
+      const cx = xScaleAt(i);
+      if (cx >= pad.left - 1 && cx <= w - pad.right + 1) { closest = i; break; }
+    }
+    if (closest < 0) {
+      setHover(null);
+      return;
+    }
+    let minDist = Math.abs(xScaleAt(closest) - xInViewBox);
+    for (let i = closest + 1; i < data.length; i++) {
+      const cx = xScaleAt(i);
+      if (cx < pad.left - 1 || cx > w - pad.right + 1) continue;
+      const dist = Math.abs(cx - xInViewBox);
       if (dist < minDist) {
         minDist = dist;
         closest = i;
@@ -171,7 +233,30 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     });
   };
 
-  const onLeave = () => setHover(null);
+  const commitZoomFromDrag = (d: DragState) => {
+    const width = Math.abs(d.endVb - d.startVb);
+    if (width < MIN_ZOOM_WIDTH_VB) return; // stray click — ignore
+    const a = vbToMs(d.startVb);
+    const b = vbToMs(d.endVb);
+    setZoom({ startMs: Math.min(a, b), endMs: Math.max(a, b) });
+  };
+
+  const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (drag !== null) {
+      commitZoomFromDrag(drag);
+      setDrag(null);
+    }
+    (e.currentTarget as SVGSVGElement).releasePointerCapture?.(e.pointerId);
+  };
+
+  const onPointerLeave = () => {
+    setHover(null);
+    // Keep `drag` active if the pointer is captured — the user can drag out
+    // and back in. Pointer capture ensures we still receive the eventual
+    // pointerup even when the pointer leaves the SVG bounds.
+  };
+
+  const onDoubleClick = () => setZoom(null);
 
   const hovered = hover !== null ? data[hover.idx] : null;
 
@@ -197,6 +282,10 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     return closest;
   })();
 
+  const dragRect = drag !== null && Math.abs(drag.endVb - drag.startVb) >= MIN_ZOOM_WIDTH_VB
+    ? { x: Math.min(drag.startVb, drag.endVb), width: Math.abs(drag.endVb - drag.startVb) }
+    : null;
+
   return (
     <div ref={containerRef} className="w-full relative">
       <svg
@@ -204,11 +293,14 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="xMidYMid meet"
         className="w-full"
-        style={{ height }}
+        style={{ height, cursor: drag !== null ? 'ew-resize' : (zoom ? 'zoom-out' : 'crosshair') }}
         onMouseMove={onMove}
-        onMouseLeave={onLeave}
+        onMouseLeave={onPointerLeave}
+        onPointerDown={onPointerDown}
         onPointerMove={onMove}
-        onPointerLeave={onLeave}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerLeave}
+        onDoubleClick={onDoubleClick}
       >
         <defs>
           <linearGradient id="g-balance" x1="0" y1="0" x2="0" y2="1">
@@ -222,6 +314,9 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <clipPath id="chart-clip">
+            <rect x={pad.left} y={pad.top} width={innerW} height={innerH} />
+          </clipPath>
         </defs>
 
         {/* horizontal grid */}
@@ -249,7 +344,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           </g>
         ))}
 
-        {/* x-axis labels — evenly spaced by calendar time. */}
+        {/* x-axis labels — evenly spaced by calendar time on the active window. */}
         {xTicks.map((date, i) => (
           <text
             key={i}
@@ -264,89 +359,117 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           </text>
         ))}
 
-        <path d={areaPath} fill="url(#g-balance)" />
-        {segments.map((s, i) => (
-          <path
-            key={i}
-            d={s.d}
-            fill="none"
-            stroke="#7dd3c0"
-            strokeWidth="1.75"
-            strokeDasharray={s.dashed ? '4 5' : undefined}
-            strokeLinecap={s.dashed ? 'round' : undefined}
-            filter={s.dashed ? undefined : 'url(#glow)'}
-          />
-        ))}
+        {/* All chart content is clipped to the plot rect so zoomed-out data
+            doesn't spill into the axis padding. */}
+        <g clipPath="url(#chart-clip)">
+          <path d={areaPath} fill="url(#g-balance)" />
+          {segments.map((s, i) => (
+            <path
+              key={i}
+              d={s.d}
+              fill="none"
+              stroke="#7dd3c0"
+              strokeWidth="1.75"
+              strokeDasharray={s.dashed ? '4 5' : undefined}
+              strokeLinecap={s.dashed ? 'round' : undefined}
+              filter={s.dashed ? undefined : 'url(#glow)'}
+            />
+          ))}
 
-        {/* Balance checkpoints — diamond markers + optional drift guide */}
-        {marks.map((m) => {
-          const cyExpected = yScale(m.expectedAmount);
-          const cyActual = yScale(m.actual);
-          const color = m.drift ? '#f6c177' : '#7dd3c0'; // amber vs. sage
-          const fill = m.drift ? color : 'none';
-          return (
-            <g key={`cp-${m.date}`} pointerEvents="none">
-              {m.drift && (
-                <line
-                  x1={m.cx}
-                  y1={cyExpected}
-                  x2={m.cx}
-                  y2={cyActual}
+          {/* Balance checkpoints — diamond markers + optional drift guide */}
+          {marks.map((m) => {
+            const cyExpected = yScale(m.expectedAmount);
+            const cyActual = yScale(m.actual);
+            const color = m.drift ? '#f6c177' : '#7dd3c0'; // amber vs. sage
+            const fill = m.drift ? color : 'none';
+            return (
+              <g key={`cp-${m.date}`} pointerEvents="none">
+                {m.drift && (
+                  <line
+                    x1={m.cx}
+                    y1={cyExpected}
+                    x2={m.cx}
+                    y2={cyActual}
+                    stroke={color}
+                    strokeDasharray="3 3"
+                    strokeWidth="1"
+                    opacity="0.8"
+                  />
+                )}
+                {/* Diamond = rotated 4-sided path centered on (m.cx, cyExpected) */}
+                <path
+                  d={`M ${m.cx} ${cyExpected - 5} L ${m.cx + 5} ${cyExpected} L ${m.cx} ${cyExpected + 5} L ${m.cx - 5} ${cyExpected} Z`}
+                  fill={fill}
                   stroke={color}
-                  strokeDasharray="3 3"
-                  strokeWidth="1"
-                  opacity="0.8"
+                  strokeWidth="2"
                 />
-              )}
-              {/* Diamond = rotated 4-sided path centered on (m.cx, cyExpected) */}
-              <path
-                d={`M ${m.cx} ${cyExpected - 5} L ${m.cx + 5} ${cyExpected} L ${m.cx} ${cyExpected + 5} L ${m.cx - 5} ${cyExpected} Z`}
-                fill={fill}
-                stroke={color}
+                {m.drift && (
+                  <circle cx={m.cx} cy={cyActual} r="2" fill={color} />
+                )}
+              </g>
+            );
+          })}
+
+          {/* end marker */}
+          <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="3.5" fill="#7dd3c0" />
+          <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="7" fill="#7dd3c0" opacity="0.18" />
+
+          {/* hover guide + highlighted dot */}
+          {hover !== null && drag === null && (
+            <g pointerEvents="none">
+              <line
+                x1={xScaleAt(hover.idx)}
+                y1={pad.top}
+                x2={xScaleAt(hover.idx)}
+                y2={pad.top + innerH}
+                stroke="#5b6478"
+                strokeDasharray="3 4"
+                strokeWidth="1"
+              />
+              <circle
+                cx={xScaleAt(hover.idx)}
+                cy={yScale(data[hover.idx]!.value)}
+                r="5"
+                fill="#0b0d11"
+                stroke="#7dd3c0"
                 strokeWidth="2"
               />
-              {m.drift && (
-                <circle cx={m.cx} cy={cyActual} r="2" fill={color} />
-              )}
             </g>
-          );
-        })}
+          )}
 
-        {/* end marker */}
-        <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="3.5" fill="#7dd3c0" />
-        <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="7" fill="#7dd3c0" opacity="0.18" />
+          {/* Live brush selection */}
+          {dragRect && (
+            <rect
+              x={dragRect.x}
+              y={pad.top}
+              width={dragRect.width}
+              height={innerH}
+              fill="#7dd3c0"
+              opacity="0.14"
+              pointerEvents="none"
+            />
+          )}
+        </g>
 
         {minY < 0 && maxY > 0 && (
           <text x={w - pad.right + 4} y={zeroY + 4} fill="#3a4252" fontSize="10" fontFamily="Fraunces Variable, serif" fontStyle="italic">
             0
           </text>
         )}
-
-        {/* hover guide + highlighted dot */}
-        {hover !== null && (
-          <g pointerEvents="none">
-            <line
-              x1={xScaleAt(hover.idx)}
-              y1={pad.top}
-              x2={xScaleAt(hover.idx)}
-              y2={pad.top + innerH}
-              stroke="#5b6478"
-              strokeDasharray="3 4"
-              strokeWidth="1"
-            />
-            <circle
-              cx={xScaleAt(hover.idx)}
-              cy={yScale(data[hover.idx]!.value)}
-              r="5"
-              fill="#0b0d11"
-              stroke="#7dd3c0"
-              strokeWidth="2"
-            />
-          </g>
-        )}
       </svg>
 
-      {hover !== null && hovered && (
+      {zoom !== null && (
+        <button
+          type="button"
+          onClick={() => setZoom(null)}
+          className="absolute top-2 right-2 text-[11px] text-ink-300 hover:text-ink-50 bg-ink-900/85 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition"
+          title="Double-cliquez sur le graphique pour la même action"
+        >
+          Réinitialiser le zoom
+        </button>
+      )}
+
+      {hover !== null && drag === null && hovered && (
         <BalanceTooltip
           hovered={hovered}
           hoveredCheckpoint={hoveredCheckpoint}
