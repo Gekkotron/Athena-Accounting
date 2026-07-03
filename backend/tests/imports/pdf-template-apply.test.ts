@@ -143,4 +143,42 @@ describe('applyTemplate', () => {
     const r = applyTemplate(pages, dcZones);
     expect(r.rows.map((row) => row.amount)).toEqual(['-42.30', '1200.00']);
   });
+
+  it('skips a debit/credit row when both columns are empty (no throw)', () => {
+    // Regression: previously this hit the else-continue branch silently. The
+    // test locks in that behaviour (no row emitted, no skipped-record noise).
+    const dcZones: TemplateZones = {
+      ...zones,
+      columns: [
+        { xStart: 30, xEnd: 110, role: 'date' },
+        { xStart: 110, xEnd: 380, role: 'description' },
+        { xStart: 380, xEnd: 470, role: 'debit' },
+        { xStart: 470, xEnd: 570, role: 'credit' },
+      ],
+    };
+    const pages = [page([
+      // Real row → should be captured
+      item('15/01/2026', 40, 220), item('CB', 120, 220), item('42,30', 400, 220),
+      // Row with date + label but no amounts in either debit or credit column
+      item('16/01/2026', 40, 240), item('EMPTY', 120, 240),
+    ])];
+    const r = applyTemplate(pages, dcZones);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]!.rawLabel).toBe('CB');
+  });
+
+  it('throws when the template has no amountSigned and no debit/credit pair', () => {
+    // Malformed template — description alone can't carry the amount.
+    const bad: TemplateZones = {
+      ...zones,
+      columns: [
+        { xStart: 30, xEnd: 110, role: 'date' },
+        { xStart: 110, xEnd: 570, role: 'description' },
+      ],
+    };
+    const pages = [page([
+      item('15/01/2026', 40, 220), item('CB', 120, 220),
+    ])];
+    expect(() => applyTemplate(pages, bad)).toThrow(/invalid amount column configuration/);
+  });
 });

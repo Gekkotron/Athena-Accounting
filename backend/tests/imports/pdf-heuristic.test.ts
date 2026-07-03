@@ -51,6 +51,36 @@ describe('runHeuristic', () => {
     expect(result.rows).toHaveLength(0);
   });
 
+  it('returns zones=null when there are no pages at all', () => {
+    const result = runHeuristic([]);
+    expect(result).toEqual({ zones: null, rows: [], confidence: 0, skippedRows: [] });
+  });
+
+  it('returns zones=null when the first page has no items', () => {
+    const result = runHeuristic([page([])]);
+    expect(result).toEqual({ zones: null, rows: [], confidence: 0, skippedRows: [] });
+  });
+
+  it('returns zones=null when the first page has only one row', () => {
+    // clusterRows collapses everything to one row → below the 2-row minimum
+    const result = runHeuristic([page([
+      item('lone line of text at one y', 40, 200),
+    ])]);
+    expect(result.zones).toBeNull();
+    expect(result.confidence).toBe(0);
+  });
+
+  it('returns zones=null when the column layout has no identifiable date column', () => {
+    // Three rows, but no cell parses as a date → inferColumnRoles gives up.
+    const result = runHeuristic([page([
+      item('foo', 40, 200), item('bar', 200, 200), item('baz', 400, 200),
+      item('one', 40, 220), item('two', 200, 220), item('three', 400, 220),
+      item('four', 40, 240), item('five', 200, 240), item('six', 400, 240),
+    ])]);
+    expect(result.zones).toBeNull();
+    expect(result.confidence).toBe(0);
+  });
+
   it('returns suggestedZones for medium-confidence input', () => {
     // 3 well-formed rows + 2 garbage rows mixed in → confidence ~ 0.6
     const items: PdfTextItem[] = [

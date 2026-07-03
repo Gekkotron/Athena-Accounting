@@ -30,6 +30,28 @@ describe('decodeOfxBuffer', () => {
     ]);
     expect(decodeOfxBuffer(buf)).toContain('café');
   });
+
+  it('defaults to UTF-8 when the CHARSET header is missing entirely', () => {
+    // No CHARSET line → detectCharset returns 'utf-8'.
+    const buf = Buffer.from('<OFX>hello</OFX>', 'utf-8');
+    expect(decodeOfxBuffer(buf)).toContain('hello');
+  });
+
+  it('falls back to UTF-8 for an unrecognized CHARSET value', () => {
+    // Unknown charset ("KOI8-R") — the parser silently defaults to UTF-8
+    // rather than throwing, so imports of exotic exports keep working.
+    const buf = Buffer.from('OFXHEADER:100\r\nCHARSET:KOI8-R\r\n\r\n<OFX>hi</OFX>', 'utf-8');
+    expect(decodeOfxBuffer(buf)).toContain('hi');
+  });
+
+  it('accepts ISO-8859-1 as an alias for latin-1', () => {
+    const buf = Buffer.concat([
+      Buffer.from('OFXHEADER:100\r\nCHARSET:ISO-8859-1\r\n\r\n<OFX>', 'latin1'),
+      Buffer.from([0xe9]), // é in latin-1
+      Buffer.from('</OFX>', 'latin1'),
+    ]);
+    expect(decodeOfxBuffer(buf)).toContain('é');
+  });
 });
 
 describe('parseOfx', () => {
@@ -96,6 +118,17 @@ describe('parseOfx', () => {
     const rows = parseOfx(buf);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.rawLabel).toBe('OK');
+  });
+
+  it('throws when DTPOSTED has fewer than 8 digits', () => {
+    const buf = ofxBody('UTF-8', `
+      <STMTTRN>
+        <DTPOSTED>2026061
+        <TRNAMT>1.00
+        <NAME>X
+      </STMTTRN>
+    `);
+    expect(() => parseOfx(buf)).toThrow(/invalid OFX date/);
   });
 
   it('throws when TRNAMT is not a valid decimal', () => {

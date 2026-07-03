@@ -2,28 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { and, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import { transactions, transferRules } from '../../db/schema.js';
+import { fold, addDays, negate } from './matching.js';
 
 // How wide is the time window when looking for the mirror leg of a transfer?
 // 7 calendar days is generous enough for slow inter-bank wires while still
 // avoiding false matches between unrelated transactions of the same amount.
 const MIRROR_WINDOW_DAYS = 7;
-
-const ACCENT_RE = /[̀-ͯ]/g;
-function fold(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(ACCENT_RE, '');
-}
-
-function addDays(iso: string, days: number): string {
-  // iso is YYYY-MM-DD. Plain date math via the Date constructor in UTC.
-  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
-  const t = Date.UTC(y, m - 1, d) + days * 86_400_000;
-  const dt = new Date(t);
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
-}
-
-function negate(amount: string): string {
-  return amount.startsWith('-') ? amount.slice(1) : `-${amount}`;
-}
 
 export interface TransferDetectionResult {
   linked: number;

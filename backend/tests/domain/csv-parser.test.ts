@@ -99,4 +99,19 @@ describe('parseFrenchCsv', () => {
     const csv = utf8('Date;Libellé;Montant\n');
     expect(parseFrenchCsv(csv)).toEqual([]);
   });
+
+  it('skips a Débit/Crédit row with empty values in both columns', () => {
+    // Regression: previously fell through to the else-continue branch without
+    // being covered. Locks in "no row emitted" (as opposed to silently
+    // producing amount=NaN or throwing).
+    const csv = utf8([
+      'Date;Libellé;Débit;Crédit',
+      '15/06/2026;CB;42,30;',
+      '16/06/2026;EMPTY;;',
+      '17/06/2026;OK;;500,00',
+    ].join('\n'));
+    const rows = parseFrenchCsv(csv);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.rawLabel)).toEqual(['CB', 'OK']);
+  });
 });
