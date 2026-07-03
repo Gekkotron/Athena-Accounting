@@ -19,6 +19,7 @@ const category: Category = {
   color: null,
   parentId: null,
   isDefault: false,
+  isInternalTransfer: false,
 };
 
 const rule = (id: number, keyword: string, extras: Partial<Rule> = {}): Rule => ({

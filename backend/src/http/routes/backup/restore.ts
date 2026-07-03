@@ -72,6 +72,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
             color: c.color ?? null,
             parentId: null,
             isDefault: c.isDefault,
+            isInternalTransfer: c.isInternalTransfer ?? false,
           })
           .returning({ id: categories.id });
         if (inserted) {

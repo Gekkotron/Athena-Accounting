@@ -10,7 +10,7 @@ const accs: Account[] = [
   { id: 2, name: 'B', type: 'savings', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },
 ];
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 
 const defaultFilters: Filters = { sort: 'date', order: 'desc' };

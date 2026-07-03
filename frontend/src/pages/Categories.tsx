@@ -122,6 +122,12 @@ export function Categories() {
               <tr className="border-b border-ink-800/70">
                 <th className="px-4 py-3 label font-normal">Nom</th>
                 <th className="px-4 py-3 label font-normal">Type</th>
+                <th
+                  className="px-4 py-3 label font-normal hidden md:table-cell text-center"
+                  title="Exclut la catégorie des moyennes mensuelles (dépenses/revenus). Utile pour marquer un mouvement interne — épargne, transfert entre comptes — sans passer par la détection automatique."
+                >
+                  Interne
+                </th>
                 <th className="px-4 py-3 label font-normal hidden sm:table-cell">Couleur</th>
                 <th className="px-4 py-3 label font-normal text-right">Total (période chargée)</th>
                 <th className="px-4 py-3"></th>
@@ -180,6 +186,22 @@ export function Categories() {
                           <option value="neutral">Neutre</option>
                         </select>
                       </div>
+                    </td>
+                    {/* Internal-movement toggle — excludes this category from
+                        the "Moyennes mensuelles" spend/income aggregates. */}
+                    <td className="px-4 py-2.5 hidden md:table-cell text-center">
+                      <input
+                        type="checkbox"
+                        className="accent-sage-300 align-middle"
+                        checked={c.isInternalTransfer}
+                        aria-label={`Marquer « ${c.name} » comme mouvement interne`}
+                        onChange={(e) =>
+                          updateCategory.mutate({
+                            id: c.id,
+                            patch: { isInternalTransfer: e.target.checked },
+                          })
+                        }
+                      />
                     </td>
                     {/* Color — editable */}
                     <td className="px-4 py-2.5 hidden sm:table-cell">

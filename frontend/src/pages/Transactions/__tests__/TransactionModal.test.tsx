@@ -25,7 +25,7 @@ const accs: Account[] = [
   { id: 1, name: 'Compte', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },
 ];
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 
 function renderModal(overrides: Partial<{

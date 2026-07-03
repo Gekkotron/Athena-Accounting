@@ -15,7 +15,7 @@ const originalRule: Rule = {
   createdAt: '2026-01-01T00:00:00Z',
 };
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 
 describe('AdvancedEditor', () => {

@@ -23,13 +23,15 @@ export function MoyennesMensuellesSection({ currency }: Props): JSX.Element | nu
   const monthlyStats = useMemo(() => {
     const rows = statsQ.data?.rows ?? [];
     // Aggregate signed totals per month using the SIGN of the amount
-    // (backend already excludes internal-transfer rows via
-    //  `t.transfer_group_id IS NULL`). This way categories flagged
-    // `neutral` — or not categorized at all — still land in the right
-    // bucket instead of being silently dropped, which was the previous
-    // failure mode for "why do all three widgets show 0€?".
+    // (backend already excludes rows where transfer_group_id IS NOT NULL).
+    // We also skip rows whose category is flagged `is_internal_transfer` so
+    // users who don't rely on the auto mirror-leg detector — and instead tag
+    // one side of a self-transfer with a dedicated category (e.g. "Épargne")
+    // — get honest averages. Skipped from BOTH buckets so avgSavings stays
+    // consistent (revenue − expenses cancels out on both legs).
     const monthly = new Map<string, { spend: number; income: number }>();
     for (const r of rows) {
+      if (r.category_is_internal_transfer) continue;
       const cur = monthly.get(r.month) ?? { spend: 0, income: 0 };
       const amount = Number(r.total);
       if (!Number.isFinite(amount)) continue;

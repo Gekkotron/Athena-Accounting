@@ -40,6 +40,7 @@ export interface Category {
   color: string | null;
   parentId: number | null;
   isDefault: boolean;
+  isInternalTransfer: boolean;
 }
 
 export interface Rule {
@@ -130,6 +131,7 @@ export interface CategoryReportRow {
   category_id: number | null;
   category_name: string | null;
   category_kind: CategoryKind | null;
+  category_is_internal_transfer: boolean | null;
   month: string;
   total: string;
   transaction_count: number;

@@ -13,7 +13,7 @@ const acc: Account = {
   openingDate: '2025-01-01',
 };
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 const t: Transaction = {
   id: 1,

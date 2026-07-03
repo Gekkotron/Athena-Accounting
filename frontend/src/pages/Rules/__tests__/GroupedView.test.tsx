@@ -26,6 +26,7 @@ const cat = (id: number, name: string): Category => ({
   color: null,
   parentId: null,
   isDefault: false,
+  isInternalTransfer: false,
 });
 
 const rule = (id: number, categoryId: number, keyword: string): Rule => ({

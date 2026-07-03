@@ -133,6 +133,11 @@ export const categories = pgTable(
       onDelete: 'set null',
     }),
     isDefault: boolean('is_default').notNull().default(false),
+    // Flags the category as "internal movement" (self-transfer). Aggregates
+    // that already skip transactions.transfer_group_id IS NOT NULL now also
+    // skip rows tagged with a flagged category — covers users who don't rely
+    // on the auto mirror-leg detector and instead tag one side manually.
+    isInternalTransfer: boolean('is_internal_transfer').notNull().default(false),
   },
   (t) => ({
     uqUserName: uniqueIndex('categories_user_name_idx').on(t.userId, t.name),

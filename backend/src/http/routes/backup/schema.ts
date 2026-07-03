@@ -33,6 +33,9 @@ export const BackupBody = z.object({
       color: z.string().nullable().optional(),
       parent: z.string().nullable().optional(),
       isDefault: z.boolean(),
+      // Added in migration 0012. Optional so pre-0012 backups still validate;
+      // missing means "false" (existing behaviour).
+      isInternalTransfer: z.boolean().optional(),
     }),
   ),
   accountFilenamePatterns: z.array(

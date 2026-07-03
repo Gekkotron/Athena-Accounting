@@ -142,6 +142,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       category_id: number | null;
       category_name: string | null;
       category_kind: string | null;
+      category_is_internal_transfer: boolean | null;
       month: string;
       total: string;
       transaction_count: number;
@@ -150,6 +151,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         c.id AS category_id,
         c.name AS category_name,
         c.kind AS category_kind,
+        c.is_internal_transfer AS category_is_internal_transfer,
         to_char(date_trunc('month', t.date::timestamp), 'YYYY-MM') AS month,
         SUM(t.amount)::text AS total,
         COUNT(*)::int AS transaction_count

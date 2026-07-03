@@ -60,6 +60,7 @@ export function registerExportRoute(app: FastifyInstance): void {
         color: c.color,
         parent: c.parentId ? categoryById.get(c.parentId)?.name ?? null : null,
         isDefault: c.isDefault,
+        isInternalTransfer: c.isInternalTransfer,
       })),
       accountFilenamePatterns: patterns.map((p) => ({
         pattern: p.pattern,

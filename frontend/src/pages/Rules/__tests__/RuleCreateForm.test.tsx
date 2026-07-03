@@ -5,7 +5,7 @@ import { RuleCreateForm } from '../RuleCreateForm';
 import type { Category } from '../../../api/types';
 
 const categories: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 
 // The quick-add form renders plain `<label>` siblings next to the

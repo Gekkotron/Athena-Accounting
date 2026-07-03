@@ -16,6 +16,7 @@ const CreateBody = z.object({
     .optional()
     .nullable(),
   parentId: z.number().int().positive().optional().nullable(),
+  isInternalTransfer: z.boolean().optional(),
 });
 
 const UpdateBody = CreateBody.partial();

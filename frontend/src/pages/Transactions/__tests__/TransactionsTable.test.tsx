@@ -15,7 +15,7 @@ const acc: Account = {
 };
 const accountById = new Map([[acc.id, acc]]);
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 const rows: Transaction[] = [
   {

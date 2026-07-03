@@ -12,8 +12,8 @@ function makeMutation<TVars>(): UseMutationResult<unknown, Error, TVars> {
 }
 
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false },
-  { id: 20, name: 'Salaire', kind: 'income', color: null, parentId: null, isDefault: false },
+  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+  { id: 20, name: 'Salaire', kind: 'income', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 
 const rule = (id: number, categoryId: number, keyword: string, extras: Partial<Rule> = {}): Rule => ({
