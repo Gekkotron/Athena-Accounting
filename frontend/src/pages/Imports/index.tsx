@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { PdfImportNeedsTemplate, PdfImportImported } from '../../api/pdf-templates';
 import { BackupPanel } from './BackupPanel';
 import { PdfTemplateWizard } from './PdfTemplateWizard';
+import { PdfTemplatesPanel } from './PdfTemplatesPanel';
 import { DuplicatesPanel } from './DuplicatesPanel';
 import { FileImportsList } from './FileImportsList';
 import { UploadForm } from './UploadForm';
@@ -149,6 +150,8 @@ export function Imports() {
         accounts={accountsQ.data?.accounts ?? []}
         onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
       />
+
+      <PdfTemplatesPanel />
     </div>
   );
 }

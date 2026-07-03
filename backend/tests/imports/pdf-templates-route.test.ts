@@ -56,6 +56,12 @@ describe.skipIf(!RUN)('/api/pdf-templates CRUD', () => {
     const list = await app.inject({ method: 'GET', url: '/api/pdf-templates', headers: { cookie } });
     expect(list.statusCode).toBe(200);
     expect(list.json().templates).toHaveLength(1);
+    // hasPageAnchor is derived from zones.pageAnchor. minimalZones has none
+    // → legacy filtering, false.
+    expect(list.json().templates[0].hasPageAnchor).toBe(false);
+    // zones themselves are not included in the list payload (bulky, only
+    // useful to the wizard).
+    expect(list.json().templates[0].zones).toBeUndefined();
 
     const rename = await app.inject({
       method: 'PUT', url: `/api/pdf-templates/${tpl!.id}`,
@@ -82,5 +88,25 @@ describe.skipIf(!RUN)('/api/pdf-templates CRUD', () => {
       headers: { cookie }, payload: {},
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('exposes hasPageAnchor=true when the stored zones carry a pageAnchor', async () => {
+    const { db } = await import('../../src/db/client.js');
+    const { pdfStatementTemplates, users } = await import('../../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    const [user] = await db.select().from(users).where(eq(users.username, 'tplroutes'));
+    await db.insert(pdfStatementTemplates).values({
+      userId: user!.id,
+      fingerprint: 'anchored',
+      label: 'With anchor',
+      zones: { ...minimalZones, pageAnchor: 'compte courant n° 12345' },
+      source: 'interactive',
+    });
+
+    const list = await app.inject({ method: 'GET', url: '/api/pdf-templates', headers: { cookie } });
+    expect(list.statusCode).toBe(200);
+    const anchored = list.json().templates.find((t: { label: string }) => t.label === 'With anchor');
+    expect(anchored.hasPageAnchor).toBe(true);
   });
 });

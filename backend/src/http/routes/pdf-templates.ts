@@ -17,13 +17,26 @@ export async function pdfTemplatesRoutes(app: FastifyInstance): Promise<void> {
         accountId: pdfStatementTemplates.accountId,
         label: pdfStatementTemplates.label,
         source: pdfStatementTemplates.source,
+        zones: pdfStatementTemplates.zones,
         createdAt: pdfStatementTemplates.createdAt,
         updatedAt: pdfStatementTemplates.updatedAt,
       })
       .from(pdfStatementTemplates)
       .where(eq(pdfStatementTemplates.userId, uid))
       .orderBy(desc(pdfStatementTemplates.updatedAt));
-    return { templates: rows };
+    // Surface `hasPageAnchor` so the UI can flag legacy templates that still
+    // use absolute page indices — those silently drop transactions when a
+    // future statement has more pages than the sample. Keep zones out of the
+    // response payload (they're bulky and only useful to the wizard).
+    return {
+      templates: rows.map(({ zones, ...rest }) => {
+        const z = zones as TemplateZones | null;
+        return {
+          ...rest,
+          hasPageAnchor: !!(z && typeof z.pageAnchor === 'string' && z.pageAnchor.trim().length > 0),
+        };
+      }),
+    };
   });
 
   app.put('/api/pdf-templates/:id', async (req, reply) => {

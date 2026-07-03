@@ -62,8 +62,17 @@ export async function submitZones(draftId: number, label: string, zones: Templat
 }
 
 export interface PdfTemplateRow {
-  id: number; fingerprint: string; label: string;
-  source: 'heuristic' | 'interactive'; createdAt: string; updatedAt: string;
+  id: number;
+  fingerprint: string;
+  accountId: number | null;
+  label: string;
+  source: 'heuristic' | 'interactive';
+  // True when the template stores a content-based page anchor (new
+  // multi-account filter). False = legacy absolute-index filter, which may
+  // silently drop pages when a future statement grows.
+  hasPageAnchor: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 async function failure(r: Response, fallback: string): Promise<never> {
