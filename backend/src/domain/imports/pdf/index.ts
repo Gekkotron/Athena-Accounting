@@ -5,6 +5,7 @@ import { extractText, type PdfTextItem, type PdfPageText } from './text-extract.
 import { fingerprintHeader } from './fingerprint.js';
 import { runHeuristic } from './heuristic.js';
 import { applyTemplate } from './template-apply.js';
+import { deriveAccountAnchor } from './page-anchor.js';
 import { renderPagesToPng, type RenderedPage } from './render.js';
 import { validateZones, type TemplateZones } from './zones.js';
 import { runImport, type ImportResult } from '../import-service.js';
@@ -178,6 +179,20 @@ export async function applyTemplateAndImport(opts: {
     throw err;
   }
   const pages = await extractText(buf);
+
+  // Stamp a content-based anchor onto the template so subsequent statements
+  // with a different page count still pick the right pages. Falls back to
+  // legacy `selectedPages` when the sample can't yield a unique marker
+  // (e.g. all pages selected, or no line unique to the selected set).
+  if (
+    (!opts.zones.pageAnchor || opts.zones.pageAnchor.trim().length === 0) &&
+    opts.zones.selectedPages &&
+    opts.zones.selectedPages.length > 0
+  ) {
+    const anchor = deriveAccountAnchor(pages, opts.zones.selectedPages);
+    if (anchor) opts.zones.pageAnchor = anchor;
+  }
+
   const { rows, skippedRows } = applyTemplate(pages, opts.zones);
   if (rows.length === 0) {
     const err = new Error('template_yielded_no_rows');

@@ -65,6 +65,65 @@ describe('applyTemplate', () => {
     expect(r.rows).toHaveLength(2);
   });
 
+  it('with pageAnchor set, only processes pages carrying the anchor line', () => {
+    // Two-account statement: pages carrying "COMPTE COURANT n° 12345" belong
+    // to this template's account; pages carrying "LIVRET A n° 98765" don't.
+    const withPageIndex = (idx: number, items: PdfTextItem[]): PdfPageText => ({
+      pageIndex: idx, widthPt: 595, heightPt: 842,
+      items: items.map((it) => ({ ...it, pageIndex: idx })),
+    });
+    const pages = [
+      withPageIndex(0, [
+        item('COMPTE COURANT n° 12345', 40, 50),
+        item('15/01/2026', 40, 220), item('A', 120, 220), item('-1,00', 480, 220),
+      ]),
+      withPageIndex(1, [
+        item('LIVRET A n° 98765', 40, 50),
+        item('15/02/2026', 40, 220), item('B', 120, 220), item('99,00', 480, 220),
+      ]),
+      withPageIndex(2, [
+        item('COMPTE COURANT n° 12345', 40, 50),
+        item('20/01/2026', 40, 220), item('C', 120, 220), item('-2,00', 480, 220),
+      ]),
+    ];
+    const anchored: TemplateZones = {
+      ...zones,
+      tableRepeatsPerPage: true,
+      pageAnchor: 'compte courant n° 12345',
+    };
+    const r = applyTemplate(pages, anchored);
+    // A and C are on anchor-bearing pages; B is on the Livret A page and is skipped.
+    expect(r.rows.map((row) => row.rawLabel)).toEqual(['A', 'C']);
+  });
+
+  it('legacy selectedPages emits a warning when the imported PDF has more pages than the sample', () => {
+    // Template was created on a 2-page sample (selectedPages = [0, 1]); this
+    // statement grew to 4 pages. Legacy indexing silently drops pages 3, 4 —
+    // surface a heads-up row so the user notices.
+    const withPageIndex = (idx: number, items: PdfTextItem[]): PdfPageText => ({
+      pageIndex: idx, widthPt: 595, heightPt: 842,
+      items: items.map((it) => ({ ...it, pageIndex: idx })),
+    });
+    const pages = [
+      withPageIndex(0, [item('15/01/2026', 40, 220), item('A', 120, 220), item('-1,00', 480, 220)]),
+      withPageIndex(1, [item('15/02/2026', 40, 220), item('B', 120, 220), item('-2,00', 480, 220)]),
+      withPageIndex(2, [item('15/03/2026', 40, 220), item('C', 120, 220), item('-3,00', 480, 220)]),
+      withPageIndex(3, [item('15/04/2026', 40, 220), item('D', 120, 220), item('-4,00', 480, 220)]),
+    ];
+    const legacy: TemplateZones = {
+      ...zones,
+      tableRepeatsPerPage: true,
+      selectedPages: [0, 1],
+    };
+    const r = applyTemplate(pages, legacy);
+    // Only pages 0 and 1 are processed (rows A, B).
+    expect(r.rows.map((row) => row.rawLabel)).toEqual(['A', 'B']);
+    // A warning row exists mentioning the untreated pages.
+    const warning = r.skippedRows.find((s) => /non traitée/i.test(s.rowText));
+    expect(warning).toBeTruthy();
+    expect(warning!.rowText).toMatch(/3, 4/);
+  });
+
   it('appends continuation rows (no date, has description) to the previous transaction', () => {
     const pages = [page([
       item('15/01/2026', 40, 220), item('MAGASIN U',     120, 220), item('-42,30', 480, 220),

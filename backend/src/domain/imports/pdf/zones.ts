@@ -12,11 +12,19 @@ export interface ZoneRect {
 export interface TemplateZones {
   headerZone: ZoneRect;
   tableZone: ZoneRect;
-  // Page indices (0-based) that the import should process. When the PDF holds
-  // multiple accounts, the user picks which pages belong to *this* account.
-  // Undefined falls back to the legacy tableRepeatsPerPage semantics:
-  //   - true  → all pages
-  //   - false → only page 0
+  // Content-based page filter. When set, applyTemplate scans every page of
+  // the imported PDF and includes those containing this exact line (matched
+  // with the same lineification as deriveAccountAnchor). Derived server-side
+  // at template save time from `selectedPages` + the sample PDF's text, so
+  // future statements with a different page count still filter the right
+  // pages (e.g. "COMPTE COURANT n° 12345" pins the account by header text
+  // rather than by absolute page index).
+  pageAnchor?: string | null;
+  // Page indices (0-based) that the import should process. Legacy — kept as
+  // a fallback for templates saved before pageAnchor existed, and used as
+  // the source signal when deriving pageAnchor.
+  //   - undefined + tableRepeatsPerPage=true  → all pages
+  //   - undefined + tableRepeatsPerPage=false → only page 0
   selectedPages?: number[];
   tableRepeatsPerPage: boolean;
   columns: Array<{ xStart: number; xEnd: number; role: ColumnRole }>;

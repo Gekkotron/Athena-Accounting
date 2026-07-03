@@ -3,6 +3,7 @@ import type { TemplateZones } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
 import { isBalanceLine, isFooterLine, mergeContinuationLabel, truncateLabel } from './label.js';
+import { pageContainsAnchor } from './page-anchor.js';
 
 export interface ApplyResult {
   rows: ParsedTransaction[];
@@ -43,17 +44,39 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
   const rows: ParsedTransaction[] = [];
   const skipped: Array<{ rowText: string; reason: string }> = [];
 
-  // Page set:
-  //   - explicit `selectedPages` wins (multi-account flow)
-  //   - else legacy `tableRepeatsPerPage`: true = all pages, false = [0]
+  // Page selection precedence:
+  //   1. `pageAnchor` (content-based) — scan every page, keep those carrying
+  //      the anchor line. Resilient to statements with a different total
+  //      page count than the template's sample.
+  //   2. `selectedPages` (absolute indices) — legacy fallback for templates
+  //      saved before pageAnchor existed. Also emits a heads-up when the
+  //      imported PDF is larger than the sample so silent drops surface.
+  //   3. `tableRepeatsPerPage`: true → all pages, false → only page 0.
   const allPageIndices = pages.map((_, i) => i);
-  const pageSet = new Set(
-    zones.selectedPages && zones.selectedPages.length > 0
-      ? zones.selectedPages
-      : zones.tableRepeatsPerPage
-      ? allPageIndices
-      : [0],
-  );
+  let pageSet: Set<number>;
+  if (zones.pageAnchor && zones.pageAnchor.trim().length > 0) {
+    pageSet = new Set(
+      pages.filter((p) => pageContainsAnchor(p, zones.pageAnchor!)).map((p) => p.pageIndex),
+    );
+  } else if (zones.selectedPages && zones.selectedPages.length > 0) {
+    pageSet = new Set(zones.selectedPages);
+    const maxSelected = Math.max(...zones.selectedPages);
+    if (pages.length > maxSelected + 1) {
+      const excess = allPageIndices.filter((i) => i > maxSelected);
+      const pretty = excess.map((i) => i + 1).join(', ');
+      skipped.push({
+        rowText: `Page(s) ${pretty} non traitée(s)`,
+        reason:
+          'Ce template a été créé sur un PDF plus court ; il utilise des numéros de page absolus. ' +
+          'Recréez-le pour un filtrage par contenu (marqueur automatique).',
+      });
+    }
+  } else if (zones.tableRepeatsPerPage) {
+    pageSet = new Set(allPageIndices);
+  } else {
+    pageSet = new Set([0]);
+  }
+  if (pageSet.size === 0) return { rows, skippedRows: skipped };
 
   for (let p = 0; p < pages.length; p++) {
     if (!pageSet.has(p)) continue;

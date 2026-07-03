@@ -1,0 +1,133 @@
+import { describe, it, expect } from 'vitest';
+import {
+  deriveAccountAnchor,
+  pageContainsAnchor,
+  pageLines,
+} from '../../src/domain/imports/pdf/page-anchor.js';
+import type { PdfPageText, PdfTextItem } from '../../src/domain/imports/pdf/text-extract.js';
+
+function item(pageIndex: number, str: string, xLeft: number, yTop: number): PdfTextItem {
+  return { pageIndex, str, xLeft, yTop, width: str.length * 5, height: 10 };
+}
+function page(pageIndex: number, items: PdfTextItem[]): PdfPageText {
+  return { pageIndex, widthPt: 595, heightPt: 842, items };
+}
+
+describe('pageLines', () => {
+  it('clusters items on the same yTop into a single line and lowercases the result', () => {
+    const p = page(0, [
+      item(0, 'COMPTE', 40, 100),
+      item(0, 'COURANT', 100, 100),
+      item(0, 'n° 12345', 160, 100),
+      item(0, 'Autre ligne', 40, 200),
+    ]);
+    const lines = pageLines(p);
+    expect(lines.has('compte courant n° 12345')).toBe(true);
+    expect(lines.has('autre ligne')).toBe(true);
+  });
+
+  it('drops lines shorter than the minimum anchor length', () => {
+    const p = page(0, [item(0, 'ab', 40, 100), item(0, 'longer line', 40, 200)]);
+    const lines = pageLines(p);
+    expect(lines.has('ab')).toBe(false);
+    expect(lines.has('longer line')).toBe(true);
+  });
+});
+
+describe('deriveAccountAnchor', () => {
+  it('returns the header line that appears on every selected page and no other page', () => {
+    // Two-account statement: pages 0..1 = Compte Courant, pages 2..3 = Livret A.
+    const pages = [
+      page(0, [
+        item(0, 'COMPTE COURANT n° 12345', 40, 50),
+        item(0, '15/01/2026', 40, 200), item(0, 'CB CARREFOUR', 120, 200), item(0, '-42,30', 480, 200),
+      ]),
+      page(1, [
+        item(1, 'COMPTE COURANT n° 12345', 40, 50),
+        item(1, '20/01/2026', 40, 200), item(1, 'VIR SALAIRE', 120, 200), item(1, '2500,00', 480, 200),
+      ]),
+      page(2, [
+        item(2, 'LIVRET A n° 98765', 40, 50),
+        item(2, '01/01/2026', 40, 200), item(2, 'INTÉRÊTS', 120, 200), item(2, '12,34', 480, 200),
+      ]),
+      page(3, [
+        item(3, 'LIVRET A n° 98765', 40, 50),
+        item(3, '15/01/2026', 40, 200), item(3, 'VERSEMENT', 120, 200), item(3, '100,00', 480, 200),
+      ]),
+    ];
+    // User building the "Compte Courant" template checks pages 0 and 1.
+    const anchor = deriveAccountAnchor(pages, [0, 1]);
+    expect(anchor).toBe('compte courant n° 12345');
+  });
+
+  it('returns null when every page is selected (nothing to distinguish)', () => {
+    const pages = [
+      page(0, [item(0, 'HEADER', 40, 50)]),
+      page(1, [item(1, 'HEADER', 40, 50)]),
+    ];
+    expect(deriveAccountAnchor(pages, [0, 1])).toBeNull();
+  });
+
+  it('returns null when no line uniquely identifies the selected set', () => {
+    // All pages carry the same header — no way to tell them apart by content.
+    const pages = [
+      page(0, [item(0, 'GENERIC HEADER', 40, 50), item(0, 'unique to page 0 abcde', 40, 100)]),
+      page(1, [item(1, 'GENERIC HEADER', 40, 50), item(1, 'unique to page 1 wxyz', 40, 100)]),
+    ];
+    // No line appears in both selected pages but not in unselected — every
+    // shared line ("generic header") also lives in the "other" page.
+    // Note: with only ONE selected page here, the intersection-of-shared-
+    // lines rule reduces to "lines of that one selected page" — but the
+    // unique-to-that-page line "unique to page 0 abcde" doesn't appear on
+    // the other selected pages (there are none), so it should be a valid
+    // candidate. Let's test the properly ambiguous case:
+    const withTwoSelected = [
+      page(0, [item(0, 'GENERIC HEADER', 40, 50), item(0, 'unique to A abcdef', 40, 100)]),
+      page(1, [item(1, 'GENERIC HEADER', 40, 50), item(1, 'unique to B ghijkl', 40, 100)]),
+      page(2, [item(2, 'GENERIC HEADER', 40, 50), item(2, 'unique to C mnopqr', 40, 100)]),
+    ];
+    // Select pages 0 and 1 — the only line they share is "generic header",
+    // which also appears on the unselected page 2. Should return null.
+    expect(deriveAccountAnchor(withTwoSelected, [0, 1])).toBeNull();
+    // Silence the unused-variable lint in the pre-context case.
+    void pages;
+  });
+
+  it('picks the LONGEST surviving anchor when multiple candidates qualify', () => {
+    const pages = [
+      page(0, [item(0, 'COMPTE COURANT n° 12345', 40, 50), item(0, 'ANCRE', 40, 80)]),
+      page(1, [item(1, 'COMPTE COURANT n° 12345', 40, 50), item(1, 'ANCRE', 40, 80)]),
+      page(2, [item(2, 'LIVRET A n° 98765', 40, 50)]),
+    ];
+    // Both "compte courant n° 12345" and "ancre" qualify; the longer one wins.
+    expect(deriveAccountAnchor(pages, [0, 1])).toBe('compte courant n° 12345');
+  });
+
+  it('handles a single selected page as long as it has a line no other page carries', () => {
+    const pages = [
+      page(0, [item(0, 'COMPTE COURANT n° 12345', 40, 50)]),
+      page(1, [item(1, 'LIVRET A n° 98765', 40, 50)]),
+    ];
+    expect(deriveAccountAnchor(pages, [0])).toBe('compte courant n° 12345');
+  });
+
+  it('returns null when the selected list is empty', () => {
+    const pages = [page(0, [item(0, 'HEADER', 40, 50)])];
+    expect(deriveAccountAnchor(pages, [])).toBeNull();
+  });
+});
+
+describe('pageContainsAnchor', () => {
+  it('matches on lineified page text', () => {
+    const p = page(0, [item(0, 'COMPTE', 40, 50), item(0, 'COURANT', 100, 50)]);
+    expect(pageContainsAnchor(p, 'COMPTE COURANT')).toBe(true);
+    expect(pageContainsAnchor(p, 'compte courant')).toBe(true);
+    expect(pageContainsAnchor(p, 'livret a')).toBe(false);
+  });
+
+  it('returns false for an empty anchor', () => {
+    const p = page(0, [item(0, 'HEADER', 40, 50)]);
+    expect(pageContainsAnchor(p, '')).toBe(false);
+    expect(pageContainsAnchor(p, '   ')).toBe(false);
+  });
+});
