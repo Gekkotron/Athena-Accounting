@@ -15,14 +15,15 @@ export interface CheckpointMark extends Checkpoint {
 
 const CHECKPOINT_TOLERANCE = 0.01;
 
-// Attach each in-range checkpoint to its "actual" cumulative on that date,
-// using the same forward-fill semantics as the main series (latest bucket
-// with bucket_date <= checkpointDate). Anything outside the plotted range
-// is silently dropped — no orphan dots hanging off the edges.
+// Attach each in-range checkpoint to its "actual" cumulative on that date
+// (latest bucket with bucket_date <= checkpointDate — same forward-fill as
+// the main series aggregation). The diamond's X is a direct query of the
+// caller-provided time-based scale, so the marker sits at the exact
+// calendar X regardless of how densely surrounding buckets are spaced.
 export function buildCheckpointMarks(
   data: SeriesPoint[],
   checkpoints: Checkpoint[] | undefined,
-  xScale: (i: number) => number,
+  xScale: (date: string) => number,
 ): CheckpointMark[] {
   if (!checkpoints?.length || data.length === 0) return [];
   const firstDate = data[0]!.date;
@@ -35,7 +36,7 @@ export function buildCheckpointMarks(
         Number.isFinite(c.expectedAmount),
     )
     .map((c) => {
-      // Binary search for the latest bucket <= c.date.
+      // Binary search for the latest bucket <= c.date (used for "actual").
       let lo = 0;
       let hi = data.length - 1;
       while (lo < hi) {
@@ -46,23 +47,7 @@ export function buildCheckpointMarks(
       const actual = data[lo]!.value;
       const delta = c.expectedAmount - actual;
       const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
-      // Precompute the diamond's X position once. xScale spaces points by
-      // ARRAY INDEX (bucket position), not by elapsed calendar time — buckets
-      // are irregularly spaced (one per date with activity), so positioning
-      // by a whole-range time-fraction would put the checkpoint at the wrong
-      // index whenever bucket spacing is uneven. Instead, reuse the bucket
-      // `lo` already found above and interpolate only within that single
-      // bucket-to-next-bucket gap, by time, then map through xScale.
-      let cx: number;
-      if (lo >= data.length - 1) {
-        cx = xScale(lo);
-      } else {
-        const loTime = new Date(data[lo]!.date).getTime();
-        const nextTime = new Date(data[lo + 1]!.date).getTime();
-        const span = nextTime - loTime;
-        const frac = span > 0 ? (new Date(c.date).getTime() - loTime) / span : 0;
-        cx = xScale(lo + frac);
-      }
+      const cx = xScale(c.date);
       return { ...c, actual, delta, drift, cx };
     });
 }

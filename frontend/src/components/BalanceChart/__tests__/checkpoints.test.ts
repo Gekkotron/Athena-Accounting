@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { buildCheckpointMarks } from '../checkpoints';
 
-const identityScale = (i: number) => i;
-
 const seriesRange = [
   { date: '2024-01-01', value: 100 },
   { date: '2024-02-01', value: 110 },
   { date: '2024-03-01', value: 120 },
 ];
+
+// Time-based identity-in-days scale: `xScale(date)` returns the number of
+// days between `date` and the first bucket's date. This lets the tests
+// assert exact calendar positions without dragging in the viewBox constants.
+const daysSince = (start: string) => (date: string) =>
+  (Date.parse(date) - Date.parse(start)) / 86_400_000;
+const identityScale = daysSince(seriesRange[0]!.date);
 
 describe('buildCheckpointMarks', () => {
   it('returns [] when there are no checkpoints', () => {
@@ -78,27 +83,33 @@ describe('buildCheckpointMarks', () => {
     expect(marks[0]!.actual).toBe(110); // = value at 2024-02-01
   });
 
-  it('interpolates cx between adjacent buckets by elapsed time', () => {
-    // 2024-02-15 sits ~half-way between 2024-02-01 (idx 1) and 2024-03-01
-    // (idx 2). With identity xScale, cx should be roughly 1.5.
+  it('places cx at the checkpoint\'s exact calendar date (not interpolated between buckets)', () => {
+    // 2024-02-15 is 45 days after 2024-01-01. With the daysSince scale the
+    // exact cx is 45 — no dependency on bucket density around the checkpoint.
     const marks = buildCheckpointMarks(
       seriesRange,
       [{ date: '2024-02-15', expectedAmount: 200 }],
       identityScale,
     );
-    expect(marks[0]!.cx).toBeGreaterThan(1);
-    expect(marks[0]!.cx).toBeLessThan(2);
-    // Feb 15 is 14 days past Feb 1, out of a 29-day Feb (2024 leap year) →
-    // fraction ≈ 14/29 ≈ 0.483.
-    expect(marks[0]!.cx).toBeCloseTo(1 + 14 / 29, 2);
+    expect(marks[0]!.cx).toBe(45);
   });
 
-  it('clamps cx to the last bucket index when checkpoint equals the last date', () => {
+  it('places cx on the first bucket when the checkpoint equals the first date', () => {
+    const marks = buildCheckpointMarks(
+      seriesRange,
+      [{ date: '2024-01-01', expectedAmount: 100 }],
+      identityScale,
+    );
+    expect(marks[0]!.cx).toBe(0);
+  });
+
+  it('places cx on the last bucket when the checkpoint equals the last date', () => {
     const marks = buildCheckpointMarks(
       seriesRange,
       [{ date: '2024-03-01', expectedAmount: 120 }],
       identityScale,
     );
-    expect(marks[0]!.cx).toBe(2);
+    // Jan 1 → Mar 1 = 31 (Jan) + 29 (Feb 2024, leap) = 60 days.
+    expect(marks[0]!.cx).toBe(60);
   });
 });

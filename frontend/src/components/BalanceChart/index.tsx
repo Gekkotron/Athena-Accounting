@@ -18,11 +18,24 @@ interface Props {
 
 interface HoverState {
   idx: number;
-  // Container-relative coordinates of the data point, used to absolutely
-  // position the HTML tooltip so it tracks the point even when the SVG is
-  // scaled to fit different container widths.
+  // viewBox X of the mouse itself (not the snapped bucket). Used to decide
+  // whether the mouse is close enough to a checkpoint to show its drift in
+  // the tooltip — under a time-based X, buckets near a checkpoint can still
+  // be far in pixels if the surrounding data is sparse.
+  mouseViewBoxX: number;
+  // Container-relative coordinates of the snapped data point, used to
+  // absolutely position the HTML tooltip so it tracks the point even when
+  // the SVG is scaled to fit different container widths.
   x: number;
   y: number;
+}
+
+function isoDate(ms: number): string {
+  const d = new Date(ms);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6 }: Props): JSX.Element {
@@ -51,16 +64,25 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   const maxY = Math.max(...ys, 0);
   const range = maxY - minY || 1;
 
-  const xScale = (i: number) => pad.left + (i / (data.length - 1)) * innerW;
+  // Time-based X scale — maps a calendar date to a viewBox X so calendar
+  // dates map linearly to horizontal position, regardless of how many
+  // buckets sit in between. This makes the axis honest: a 30-day gap is
+  // visually 30× wider than a 1-day gap, and checkpoints sit at their
+  // exact calendar X.
+  const firstMs = Date.parse(data[0]!.date);
+  const lastMs = Date.parse(data[data.length - 1]!.date);
+  const xSpan = Math.max(1, lastMs - firstMs);
+  const xScale = (date: string) => pad.left + ((Date.parse(date) - firstMs) / xSpan) * innerW;
+  const xScaleAt = (i: number) => xScale(data[i]!.date);
   const yScale = (v: number) => pad.top + innerH - ((v - minY) / range) * innerH;
 
   const marks = buildCheckpointMarks(data, checkpoints, xScale);
 
   const path = data
-    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i).toFixed(1)} ${yScale(d.value).toFixed(1)}`)
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScaleAt(i).toFixed(1)} ${yScale(d.value).toFixed(1)}`)
     .join(' ');
 
-  const areaPath = `${path} L ${xScale(data.length - 1).toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xScale(0).toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`;
+  const areaPath = `${path} L ${xScaleAt(data.length - 1).toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xScaleAt(0).toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`;
 
   // Split the stroked line into runs of consecutive segments sharing the same
   // "dashed" verdict. A segment is dashed when the two data points bracket a
@@ -84,7 +106,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         segments.push({
           d: data
             .slice(runStart, i)
-            .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScale(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
+            .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScaleAt(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
             .join(' '),
           dashed: runDashed,
         });
@@ -95,7 +117,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     segments.push({
       d: data
         .slice(runStart)
-        .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScale(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
+        .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScaleAt(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
         .join(' '),
       dashed: runDashed ?? false,
     });
@@ -103,17 +125,21 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
 
   const ticks = 4;
   const tickValues = Array.from({ length: ticks + 1 }, (_, i) => minY + (range * i) / ticks);
-  const xTickCount = Math.min(6, data.length);
-  const xTickIdx = Array.from({ length: xTickCount }, (_, i) =>
-    Math.round((i * (data.length - 1)) / Math.max(1, xTickCount - 1)),
+  // Evenly-spaced calendar ticks — computed by time, not by bucket index, so
+  // the axis reads naturally regardless of bucket density. `formatDateShort`
+  // accepts arbitrary YYYY-MM-DD strings, so ticks need not fall on existing
+  // buckets.
+  const xTickCount = Math.min(6, Math.max(2, data.length));
+  const xTicks: string[] = Array.from({ length: xTickCount }, (_, i) =>
+    isoDate(firstMs + (i * xSpan) / (xTickCount - 1)),
   );
 
   const zeroY = yScale(0);
   const last = data[data.length - 1]!;
 
-  // Mousemove handler — pin to the closest data point in viewBox space, then
-  // convert that snap-back point into container-relative screen coords so the
-  // HTML tooltip lands exactly on it.
+  // Mousemove handler — pin to the closest data point in viewBox space (by
+  // X distance), then convert that snap-back point into container-relative
+  // screen coords so the HTML tooltip lands exactly on it.
   const onMove = (e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
     const container = containerRef.current;
@@ -127,18 +153,19 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     let closest = 0;
     let minDist = Infinity;
     for (let i = 0; i < data.length; i++) {
-      const dist = Math.abs(xScale(i) - xInViewBox);
+      const dist = Math.abs(xScaleAt(i) - xInViewBox);
       if (dist < minDist) {
         minDist = dist;
         closest = i;
       }
     }
 
-    const px = (xScale(closest) / w) * svgRect.width;
+    const px = (xScaleAt(closest) / w) * svgRect.width;
     const py = (yScale(data[closest]!.value) / h) * svgRect.height;
 
     setHover({
       idx: closest,
+      mouseViewBoxX: xInViewBox,
       x: svgRect.left - containerRect.left + px,
       y: svgRect.top - containerRect.top + py,
     });
@@ -148,20 +175,20 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
 
   const hovered = hover !== null ? data[hover.idx] : null;
 
-  // If the hovered X is within ~6 viewBox units of a checkpoint's X, show
-  // the expected/actual/delta line in the tooltip. Kept tight (was 12) so
-  // the drift readout doesn't misleadingly appear over neighbouring buckets
-  // that have nothing to do with the checkpoint — the tooltip's date row
-  // shows the hovered bucket's date, so a loose proximity gave the false
-  // impression that the écart "belonged" to many nearby dates.
-  const HOVER_PROXIMITY_VB = 6;
+  // Show the checkpoint's expected/actual/delta line in the tooltip when the
+  // MOUSE (not the snapped bucket) is within ~10 viewBox units of a
+  // checkpoint's X. Uses mouseViewBoxX rather than the snapped bucket X: on
+  // a time-based axis a bucket close in date to the checkpoint can still be
+  // far in pixels if surrounding data is sparse, so the old "hovered bucket
+  // ≈ checkpoint" heuristic would miss real matches. 10 (was 6) also gives
+  // a slightly more forgiving landing zone on the diamond itself.
+  const HOVER_PROXIMITY_VB = 10;
   const hoveredCheckpoint = (() => {
     if (hover === null) return null;
-    const hoveredX = xScale(hover.idx);
     let closest: (typeof marks)[number] | null = null;
     let closestDist = Infinity;
     for (const m of marks) {
-      const d = Math.abs(m.cx - hoveredX);
+      const d = Math.abs(m.cx - hover.mouseViewBoxX);
       if (d < closestDist && d <= HOVER_PROXIMITY_VB) {
         closest = m;
         closestDist = d;
@@ -222,18 +249,18 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           </g>
         ))}
 
-        {/* x-axis labels */}
-        {xTickIdx.map((idx, i) => (
+        {/* x-axis labels — evenly spaced by calendar time. */}
+        {xTicks.map((date, i) => (
           <text
             key={i}
-            x={xScale(idx)}
+            x={xScale(date)}
             y={h - 10}
             fill="#5b6478"
             fontSize="10"
             textAnchor="middle"
             fontFamily="JetBrains Mono Variable, monospace"
           >
-            {formatDateShort(data[idx]!.date)}
+            {formatDateShort(date)}
           </text>
         ))}
 
@@ -286,8 +313,8 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         })}
 
         {/* end marker */}
-        <circle cx={xScale(data.length - 1)} cy={yScale(last.value)} r="3.5" fill="#7dd3c0" />
-        <circle cx={xScale(data.length - 1)} cy={yScale(last.value)} r="7" fill="#7dd3c0" opacity="0.18" />
+        <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="3.5" fill="#7dd3c0" />
+        <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="7" fill="#7dd3c0" opacity="0.18" />
 
         {minY < 0 && maxY > 0 && (
           <text x={w - pad.right + 4} y={zeroY + 4} fill="#3a4252" fontSize="10" fontFamily="Fraunces Variable, serif" fontStyle="italic">
@@ -299,16 +326,16 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         {hover !== null && (
           <g pointerEvents="none">
             <line
-              x1={xScale(hover.idx)}
+              x1={xScaleAt(hover.idx)}
               y1={pad.top}
-              x2={xScale(hover.idx)}
+              x2={xScaleAt(hover.idx)}
               y2={pad.top + innerH}
               stroke="#5b6478"
               strokeDasharray="3 4"
               strokeWidth="1"
             />
             <circle
-              cx={xScale(hover.idx)}
+              cx={xScaleAt(hover.idx)}
               cy={yScale(data[hover.idx]!.value)}
               r="5"
               fill="#0b0d11"

@@ -8,13 +8,13 @@ function point(bucket: string, cumulative: string, accountId = 1): BalancePoint 
 }
 
 describe('BalanceChart checkpoint positioning', () => {
-  it('positions a checkpoint by its bucket INDEX, not by a whole-range time fraction', () => {
-    // Regression test: a dense cluster of daily buckets in 2023 followed by
-    // two sparse, far-apart buckets in 2026. Before the fix, cx was computed
-    // from (checkpointTime - firstTime) / (lastTime - firstTime) fed into an
-    // INDEX-based xScale — since buckets are irregularly spaced in time, a
-    // checkpoint dated 2026-01-30 (near the 2023-11 index by time-fraction)
-    // would render far from its own bucket's visual position.
+  it('places a checkpoint at its exact calendar X on a time-based axis', () => {
+    // 20 daily buckets clustered in Jan 2023, then two sparse buckets in
+    // 2026 (Jan 15 and Jun 15). Under a time-based X-axis, the 2023 cluster
+    // squishes into a narrow strip near the left edge, the 2026 buckets
+    // sit near the right edge, and a checkpoint dated 2026-01-30 must land
+    // between the two 2026 buckets at exactly its calendar position —
+    // 15 days past 2026-01-15 in a 152-day segment (2026-01-15 → 2026-06-15).
     const points: BalancePoint[] = [];
     for (let d = 1; d <= 20; d++) {
       const day = String(d).padStart(2, '0');
@@ -29,39 +29,36 @@ describe('BalanceChart checkpoint positioning', () => {
       <BalanceChart points={points} currency="EUR" checkpoints={checkpoints} />,
     );
 
-    // data buckets sorted: 20 daily 2023 entries (idx 0..19), then
-    // 2026-01-15 (idx 20), then 2026-06-15 (idx 21). The checkpoint
-    // (2026-01-30) falls between idx 20 and idx 21 — its cx must be
-    // computed within that single index gap, not from the full-range time
-    // fraction (which would place it far earlier, near the dense 2023
-    // cluster).
+    // Reproduce the component's own time-based xScale so the test locks in
+    // the exact expected position, not just an approximate range.
     const w = 1000;
     const pad = { left: 64, right: 24 };
     const innerW = w - pad.left - pad.right;
-    const xScale = (i: number) => pad.left + (i / 21) * innerW; // data.length - 1 = 21
+    const firstMs = Date.parse('2023-01-01');
+    const lastMs = Date.parse('2026-06-15');
+    const xSpan = lastMs - firstMs;
+    const xScale = (date: string) => pad.left + ((Date.parse(date) - firstMs) / xSpan) * innerW;
 
-    // The diamond marker is the only <path> whose "d" starts with
-    // "M {cx} {cy-5}" and is drawn inside a <g> — select via its stroke
-    // color set which distinguishes it from the line/area paths (those use
-    // fill="url(...)" or fill="none" with a fixed stroke, but neither draws
-    // a diamond). Simplest robust hook: query all <path> elements and find
-    // the one whose "d" attribute has exactly 4 "L"/"M" segments forming a
-    // diamond (5 coordinate commands: M,L,L,L,Z).
     const diamond = Array.from(container.querySelectorAll('path')).find((p) => {
       const d = p.getAttribute('d') ?? '';
       return /^M [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ Z$/.test(d);
     });
     expect(diamond).toBeTruthy();
-    const d = diamond!.getAttribute('d')!;
-    const cxMatch = d.match(/^M ([\d.]+)/);
-    expect(cxMatch).toBeTruthy();
-    const cx = Number(cxMatch![1]);
+    const cx = Number(diamond!.getAttribute('d')!.match(/^M ([\d.]+)/)![1]);
 
-    // cx must land strictly between idx 20 and idx 21's x position — i.e.
-    // in the same visual neighborhood as the two 2026 buckets it sits
-    // between, and NOT anywhere near the dense 2023 cluster (idx 0..19).
-    expect(cx).toBeGreaterThan(xScale(20) - 1);
-    expect(cx).toBeLessThanOrEqual(xScale(21) + 1);
+    // cx equals xScale('2026-01-30') to within rounding (component uses
+    // toFixed(1) on path coords).
+    const expectedCx = xScale('2026-01-30');
+    expect(cx).toBeCloseTo(expectedCx, 0);
+
+    // Sanity: the checkpoint sits between bucket 21 (Jan 15) and bucket 22
+    // (Jun 15), and much closer to the former (15 days past) than the
+    // latter (137 days away) — matching the calendar-time reality.
+    expect(cx).toBeGreaterThan(xScale('2026-01-15'));
+    expect(cx).toBeLessThan(xScale('2026-06-15'));
+    const distToJan15 = cx - xScale('2026-01-15');
+    const distToJun15 = xScale('2026-06-15') - cx;
+    expect(distToJan15).toBeLessThan(distToJun15);
   });
 });
 
