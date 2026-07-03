@@ -2,12 +2,27 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import type { Account, BalancePoint, BalanceCheckpoint } from '../api/types';
+import type { Account, BalancePoint, BalanceCheckpoint, CategoryReportRow } from '../api/types';
 import { listCheckpoints } from '../api/checkpoints';
 import { formatAmount, amountSignClass, formatDate } from '../lib/format';
 import { usePersistedState } from '../lib/persisted-state';
 import { BalanceChart } from '../components/BalanceChart';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
+import { StatWidget } from '../components/StatWidget';
+
+// Look back N complete months (excludes the current month, since a
+// half-finished month drags the average toward zero).
+const AVG_WINDOW_MONTHS = 12;
+
+function monthAgoISODate(monthsBack: number): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+}
+function firstOfCurrentMonthISODate(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
+}
 
 export function Dashboard() {
   const accountsQ = useQuery({
@@ -69,6 +84,56 @@ export function Dashboard() {
     return all.filter((p) => p.account_id === chartScope);
   }, [seriesQ.data, chartScope]);
 
+  // Monthly aggregate window for the stat widgets. Skips the current
+  // half-month so a mid-month view isn't dragged down.
+  const statsFromDate = monthAgoISODate(AVG_WINDOW_MONTHS);
+  const statsToDate = firstOfCurrentMonthISODate();
+  const statsQ = useQuery({
+    queryKey: ['reports', 'categories', { fromDate: statsFromDate, toDate: statsToDate }],
+    queryFn: () =>
+      api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
+        query: { fromDate: statsFromDate, toDate: statsToDate },
+      }),
+  });
+
+  const monthlyStats = useMemo(() => {
+    const rows = statsQ.data?.rows ?? [];
+    // Aggregate signed totals per month.
+    // - Expenses accumulate as negative amounts (their `total` is < 0).
+    // - Incomes accumulate as positive amounts.
+    // We split by category_kind so a transfer/uncategorized row with a
+    // negative amount doesn't get double-counted.
+    const monthly = new Map<string, { spend: number; income: number }>();
+    for (const r of rows) {
+      const cur = monthly.get(r.month) ?? { spend: 0, income: 0 };
+      const amount = Number(r.total);
+      if (!Number.isFinite(amount)) continue;
+      if (r.category_kind === 'expense' || (r.category_kind == null && amount < 0)) {
+        cur.spend += amount;
+      } else if (r.category_kind === 'income' || (r.category_kind == null && amount > 0)) {
+        cur.income += amount;
+      }
+      monthly.set(r.month, cur);
+    }
+    // If the user has no months of history yet, avoid dividing by zero.
+    const monthCount = monthly.size || 1;
+    let totalSpend = 0;
+    let totalIncome = 0;
+    for (const v of monthly.values()) {
+      totalSpend += v.spend;
+      totalIncome += v.income;
+    }
+    return {
+      monthCount: monthly.size,
+      avgSpend: totalSpend / monthCount,   // negative or zero
+      avgIncome: totalIncome / monthCount, // positive or zero
+      avgSavings: (totalIncome + totalSpend) / monthCount, // income - |spend|
+    };
+  }, [statsQ.data]);
+
+  const showStats =
+    !statsQ.isLoading && monthlyStats.monthCount > 0 && !!primary;
+
   return (
     <div className="flex flex-col gap-10">
       {/* Hero */}
@@ -118,6 +183,45 @@ export function Dashboard() {
               </div>
             </div>
           ))}
+        </section>
+      )}
+
+      {/* Monthly stat widgets — reusable StatWidget primitive. Add more
+          instances here as new stats come up. */}
+      {showStats && (
+        <section>
+          <div className="section-rule mb-4">
+            Moyennes mensuelles{' '}
+            <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
+              — sur {monthlyStats.monthCount} mois glissant{monthlyStats.monthCount > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <StatWidget
+              icon="💸"
+              label="Dépense moyenne mensuelle"
+              value={monthlyStats.avgSpend}
+              currency={primary!.currency}
+              tone="clay"
+              hint="Moyenne des dépenses catégorisées « expense » (hors virements internes)."
+            />
+            <StatWidget
+              icon="💰"
+              label="Revenu moyen mensuel"
+              value={monthlyStats.avgIncome}
+              currency={primary!.currency}
+              tone="sage"
+              hint="Moyenne des transactions catégorisées « income »."
+            />
+            <StatWidget
+              icon="📈"
+              label="Épargne moyenne mensuelle"
+              value={monthlyStats.avgSavings}
+              currency={primary!.currency}
+              tone="auto"
+              hint="Revenus − dépenses, moyenne mensuelle."
+            />
+          </div>
         </section>
       )}
 
