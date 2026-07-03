@@ -109,13 +109,6 @@ export function Dashboard(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-10">
-      {/* Page-wide range picker — drives the balance chart, the donut, and
-          the per-account "sur X" delta below. Persisted so the last-picked
-          period survives reloads. */}
-      <div className="flex justify-end">
-        <RangePicker value={range} onChange={setRange} />
-      </div>
-
       <DashboardHero primary={primary} />
 
       {/* Other currencies */}
@@ -154,6 +147,12 @@ export function Dashboard(): JSX.Element {
                 </option>
               ))}
             </select>
+          </div>
+          {/* Page-wide range picker — drives the balance chart, the donut, and
+              the per-account "sur X" delta below. Persisted so the last-picked
+              period survives reloads. */}
+          <div className="flex justify-end mb-3">
+            <RangePicker value={range} onChange={setRange} />
           </div>
           {seriesQ.data && primary ? (
             <BalanceChart points={chartPoints} currency={chartCurrency} checkpoints={chartCheckpoints} />
