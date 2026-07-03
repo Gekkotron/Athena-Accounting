@@ -17,6 +17,10 @@ interface Props {
       single top-of-page picker drives multiple surfaces). */
   range?: RangeKey;
   onRangeChange?: (r: RangeKey) => void;
+  /** When set to a specific account id, the report is filtered server-side
+      to that account only. 'all' or undefined aggregates across every
+      account the user owns (legacy default). */
+  accountId?: number | 'all';
 }
 
 export function CategoryBreakdown({
@@ -25,6 +29,7 @@ export function CategoryBreakdown({
   currency = 'EUR',
   range: controlledRange,
   onRangeChange,
+  accountId,
 }: Props) {
   const [internalRange, setInternalRange] = useState<RangeKey>(defaultRange);
   const [mode, setMode] = useState<DonutMode>(defaultMode);
@@ -33,12 +38,20 @@ export function CategoryBreakdown({
   const setRange = isControlled ? (onRangeChange ?? (() => {})) : setInternalRange;
 
   const fromDate = useMemo(() => fromDateFor(range), [range]);
+  const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
 
   const reportQ = useQuery({
-    queryKey: ['reports', 'categories', { fromDate: fromDate ?? 'all' }],
+    queryKey: [
+      'reports',
+      'categories',
+      { fromDate: fromDate ?? 'all', accountId: scopedAccountId ?? 'all' },
+    ],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
-        query: fromDate ? { fromDate } : undefined,
+        query: {
+          ...(fromDate ? { fromDate } : {}),
+          ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
+        },
       }),
   });
   const categoriesQ = useQuery({

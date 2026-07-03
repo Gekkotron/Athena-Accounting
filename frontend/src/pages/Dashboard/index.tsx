@@ -182,7 +182,8 @@ export function Dashboard(): JSX.Element {
           <CategoryBreakdown
             range={range}
             onRangeChange={setRange}
-            currency={primary?.currency ?? 'EUR'}
+            currency={chartCurrency}
+            accountId={chartScope}
           />
         </section>
       )}

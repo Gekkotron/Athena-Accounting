@@ -8,6 +8,11 @@ const RangeQuery = z.object({
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   granularity: z.enum(['day', 'month']).default('day'),
+  // Optional per-account filter. Applied to the categories report so the
+  // Dashboard donut can follow the currently-scoped account. Not applied to
+  // the other endpoints in this file — they aggregate across accounts by
+  // design.
+  accountId: z.coerce.number().int().positive().optional(),
 });
 
 export async function reportsRoutes(app: FastifyInstance): Promise<void> {
@@ -136,7 +141,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
     }
-    const { fromDate, toDate } = parsed.data;
+    const { fromDate, toDate, accountId } = parsed.data;
 
     const rows = await db.execute<{
       category_id: number | null;
@@ -161,6 +166,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         AND t.transfer_group_id IS NULL
         ${fromDate ? sql`AND t.date >= ${fromDate}` : sql``}
         ${toDate ? sql`AND t.date <= ${toDate}` : sql``}
+        ${accountId ? sql`AND t.account_id = ${accountId}` : sql``}
       GROUP BY c.id, c.name, c.kind, month
       ORDER BY month DESC, total ASC
     `);
