@@ -186,7 +186,7 @@ describe('BalanceChart render paths', () => {
     expect(tooltip).toBeTruthy();
   });
 
-  it('draws the segment across a >3-day gap as a dotted stroke', () => {
+  it('draws the segment across a >6-day gap as a dotted stroke', () => {
     // Points 30 days apart — the segment between them should be dashed to
     // signal missing data for that period. Points on consecutive days below
     // the threshold stay solid.
@@ -209,12 +209,12 @@ describe('BalanceChart render paths', () => {
     expect(solid.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('leaves the line fully solid when every gap is <= 3 days (weekends stay solid)', () => {
-    // Friday → Monday is a 3-day gap: no dotted segment should appear.
+  it('leaves the line fully solid when every gap is <= 6 days (weekends + a quiet week stay solid)', () => {
+    // 6-day and 3-day gaps both under the threshold — no dotted segment.
     const points = [
       point('2026-01-02', '100'), // Friday
-      point('2026-01-05', '110'), // Monday (3-day gap)
-      point('2026-01-06', '120'),
+      point('2026-01-08', '110'), // 6-day gap
+      point('2026-01-11', '120'), // 3-day gap (weekend)
     ];
     const { container } = render(<BalanceChart points={points} currency="EUR" />);
     const dashed = Array.from(container.querySelectorAll('path')).filter(

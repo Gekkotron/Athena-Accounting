@@ -61,10 +61,11 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
   // Split the stroked line into runs of consecutive segments sharing the same
   // "dashed" verdict. A segment is dashed when the two data points bracket a
   // gap of more than MAX_SOLID_GAP_DAYS — telling the user that we have no
-  // data for that stretch (missed import, ingestion gap, …). Weekends and
-  // short holidays stay solid: Friday → Monday is a 3-day gap. The area path
-  // stays continuous — the dotted stroke alone communicates the uncertainty.
-  const MAX_SOLID_GAP_DAYS = 3;
+  // data for that stretch (missed import, ingestion gap, …). Threshold is 6
+  // days so weekends, short holidays, and a quiet week don't trigger a false
+  // "missing data" signal. The area path stays continuous — the dotted stroke
+  // alone communicates the uncertainty.
+  const MAX_SOLID_GAP_DAYS = 6;
   const segments: { d: string; dashed: boolean }[] = [];
   {
     let runStart = 0;
