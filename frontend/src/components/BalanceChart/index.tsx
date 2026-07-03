@@ -10,6 +10,10 @@ interface Props {
   currency: string;
   height?: number;
   checkpoints?: Checkpoint[];
+  // Gaps greater than this many days between consecutive buckets are drawn
+  // dotted, signalling missing data. Default 6 keeps weekends + short quiet
+  // stretches solid.
+  gapThresholdDays?: number;
 }
 
 interface HoverState {
@@ -21,7 +25,7 @@ interface HoverState {
   y: number;
 }
 
-export function BalanceChart({ points, currency, height = 240, checkpoints }: Props): JSX.Element {
+export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6 }: Props): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
@@ -60,12 +64,9 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
 
   // Split the stroked line into runs of consecutive segments sharing the same
   // "dashed" verdict. A segment is dashed when the two data points bracket a
-  // gap of more than MAX_SOLID_GAP_DAYS — telling the user that we have no
-  // data for that stretch (missed import, ingestion gap, …). Threshold is 6
-  // days so weekends, short holidays, and a quiet week don't trigger a false
-  // "missing data" signal. The area path stays continuous — the dotted stroke
-  // alone communicates the uncertainty.
-  const MAX_SOLID_GAP_DAYS = 6;
+  // gap of more than `gapThresholdDays` — telling the user that we have no
+  // data for that stretch (missed import, ingestion gap, …). The area path
+  // stays continuous — the dotted stroke alone communicates the uncertainty.
   const segments: { d: string; dashed: boolean }[] = [];
   {
     let runStart = 0;
@@ -74,7 +75,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
       const gap = Math.round(
         (Date.parse(data[i]!.date) - Date.parse(data[i - 1]!.date)) / 86_400_000,
       );
-      const dashed = gap > MAX_SOLID_GAP_DAYS;
+      const dashed = gap > gapThresholdDays;
       if (runDashed === null) {
         runDashed = dashed;
         continue;

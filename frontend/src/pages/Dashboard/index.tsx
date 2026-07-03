@@ -159,7 +159,12 @@ export function Dashboard(): JSX.Element {
             <RangePicker value={range} onChange={setRange} />
           </div>
           {seriesQ.data && primary ? (
-            <BalanceChart points={chartPoints} currency={chartCurrency} checkpoints={chartCheckpoints} />
+            <BalanceChart
+              points={chartPoints}
+              currency={chartCurrency}
+              checkpoints={chartCheckpoints}
+              gapThresholdDays={settings.chartGapThresholdDays}
+            />
           ) : (
             <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
           )}
