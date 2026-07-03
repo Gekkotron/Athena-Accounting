@@ -5,6 +5,43 @@ import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint }
 import type { BalanceCheckpoint } from '../../api/types';
 import { CheckpointRow } from './CheckpointRow';
 
+// Translate a checkpoint-endpoint error into an actionable French sentence.
+// The backend returns 409 for date collisions and 400 with a Zod `issues`
+// array for validation failures (e.g. non-decimal amount, note over 200
+// chars). Without this helper, users see "invalid input" — technically
+// accurate, useless in practice.
+type ZodIssue = { path: (string | number)[]; message?: string };
+
+function friendlyCheckpointError(err: unknown, action: 'ajout' | 'mise à jour' | 'suppression'): string {
+  if (err instanceof ApiError) {
+    if (err.status === 409) {
+      // Only conflict we produce is the (account, date) unique index.
+      return 'Un point de contrôle existe déjà à cette date sur ce compte.';
+    }
+    if (err.status === 400) {
+      const issues = (err.data as { issues?: ZodIssue[] } | null | undefined)?.issues;
+      const first = issues?.[0];
+      const field = typeof first?.path?.[0] === 'string' ? (first!.path[0] as string) : undefined;
+      if (field === 'checkpointDate') return 'Date invalide (format attendu : AAAA-MM-JJ).';
+      if (field === 'expectedAmount') return 'Montant invalide (nombre à 2 décimales max, ex. 1234.56).';
+      if (field === 'note') return 'Note trop longue (200 caractères max).';
+      return 'Champs invalides — vérifiez la date, le montant et la note.';
+    }
+    if (err.status === 404) {
+      return `${capitalise(action)} impossible : le point de contrôle est introuvable (déjà supprimé ?).`;
+    }
+    if (err.status === 401) {
+      return 'Session expirée — reconnectez-vous.';
+    }
+  }
+  const message = err instanceof Error ? err.message : 'erreur réseau';
+  return `${capitalise(action)} impossible : ${message}.`;
+}
+
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; currency: string }) {
   const qc = useQueryClient();
   const q = useQuery({
@@ -30,10 +67,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
       setNewNote('');
       setMutationError(null);
     },
-    onError: (err: ApiError) => {
-      if (err.status === 409) setMutationError('Un point de contrôle existe déjà à cette date.');
-      else setMutationError(err.message);
-    },
+    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'ajout')),
   });
 
   const del = useMutation({
@@ -42,9 +76,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
       setMutationError(null);
     },
-    onError: (err: ApiError) => {
-      setMutationError('Suppression impossible : ' + (err.message ?? 'erreur réseau'));
-    },
+    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'suppression')),
   });
 
   const patch = useMutation({
@@ -54,9 +86,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
       setMutationError(null);
     },
-    onError: (err: ApiError) => {
-      setMutationError('Mise à jour impossible : ' + (err.message ?? 'erreur réseau'));
-    },
+    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'mise à jour')),
   });
 
   const rows = q.data?.checkpoints ?? [];

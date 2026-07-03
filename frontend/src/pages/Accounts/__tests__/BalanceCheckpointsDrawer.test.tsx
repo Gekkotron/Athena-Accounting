@@ -68,7 +68,53 @@ describe('BalanceCheckpointsDrawer', () => {
     await user.type(screen.getByLabelText(/montant attendu/i), '100.00');
     await user.click(screen.getByRole('button', { name: '+ ajouter' }));
 
-    expect(await screen.findByText(/existe déjà à cette date/i)).toBeInTheDocument();
+    expect(await screen.findByText(/existe déjà à cette date sur ce compte/i)).toBeInTheDocument();
+  });
+
+  it('maps a 400 with an expectedAmount issue to an actionable French message', async () => {
+    listMock.mockResolvedValue({ checkpoints: [] });
+    createMock.mockRejectedValueOnce(new ApiError('invalid input', 400, {
+      error: 'invalid input',
+      issues: [{ path: ['expectedAmount'], message: 'must be a decimal' }],
+    }));
+
+    const user = userEvent.setup();
+    renderDrawer();
+    fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
+    await user.type(screen.getByLabelText(/montant attendu/i), 'not-a-number');
+    await user.click(screen.getByRole('button', { name: '+ ajouter' }));
+
+    expect(await screen.findByText(/montant invalide/i)).toBeInTheDocument();
+  });
+
+  it('maps a 400 with a note issue to a "note too long" message', async () => {
+    listMock.mockResolvedValue({ checkpoints: [] });
+    createMock.mockRejectedValueOnce(new ApiError('invalid input', 400, {
+      error: 'invalid input',
+      issues: [{ path: ['note'], message: 'note too long (max 200)' }],
+    }));
+
+    const user = userEvent.setup();
+    renderDrawer();
+    fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
+    await user.type(screen.getByLabelText(/montant attendu/i), '100');
+    await user.type(screen.getByLabelText(/^note$/i), 'x');
+    await user.click(screen.getByRole('button', { name: '+ ajouter' }));
+
+    expect(await screen.findByText(/note trop longue/i)).toBeInTheDocument();
+  });
+
+  it('maps a delete 404 to a specific "introuvable" message', async () => {
+    listMock.mockResolvedValueOnce({ checkpoints: [{
+      id: 1, accountId: 1, checkpointDate: '2025-06-01',
+      expectedAmount: '100.00', note: null, createdAt: '2026-01-01T00:00:00Z' }] });
+    delMock.mockRejectedValueOnce(new ApiError('not found', 404, { error: 'not found' }));
+
+    const user = userEvent.setup();
+    renderDrawer();
+    await user.click(await screen.findByRole('button', { name: /supprimer/i }));
+
+    expect(await screen.findByText(/introuvable/i)).toBeInTheDocument();
   });
 
   it('clears mutationError after a subsequent successful mutation', async () => {
@@ -88,7 +134,7 @@ describe('BalanceCheckpointsDrawer', () => {
     fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
     await user.type(screen.getByLabelText(/montant attendu/i), '100.00');
     await user.click(screen.getByRole('button', { name: '+ ajouter' }));
-    await screen.findByText(/existe déjà à cette date/i);
+    await screen.findByText(/existe déjà à cette date sur ce compte/i);
 
     // Second attempt succeeds — error must clear.
     fireEvent.change(screen.getByLabelText(/date du point de contrôle/i), { target: { value: '2025-07-01' } });
@@ -96,6 +142,6 @@ describe('BalanceCheckpointsDrawer', () => {
     await user.type(screen.getByLabelText(/montant attendu/i), '200.00');
     await user.click(screen.getByRole('button', { name: '+ ajouter' }));
 
-    await waitFor(() => expect(screen.queryByText(/existe déjà à cette date/i)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/existe déjà à cette date sur ce compte/i)).not.toBeInTheDocument());
   });
 });
