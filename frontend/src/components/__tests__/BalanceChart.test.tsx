@@ -185,4 +185,44 @@ describe('BalanceChart render paths', () => {
     const tooltip = container.querySelector('.surface');
     expect(tooltip).toBeTruthy();
   });
+
+  it('draws the segment across a >3-day gap as a dotted stroke', () => {
+    // Points 30 days apart — the segment between them should be dashed to
+    // signal missing data for that period. Points on consecutive days below
+    // the threshold stay solid.
+    const points = [
+      point('2026-01-01', '100'),
+      point('2026-01-02', '110'),
+      point('2026-01-03', '120'),
+      point('2026-02-02', '200'), // 30-day gap → dashed segment before this one
+      point('2026-02-03', '210'),
+    ];
+    const { container } = render(<BalanceChart points={points} currency="EUR" />);
+    const strokePaths = Array.from(container.querySelectorAll('path')).filter(
+      (p) => p.getAttribute('stroke') === '#7dd3c0' && p.getAttribute('fill') === 'none',
+    );
+    // Exactly one of the stroke paths carries a strokeDasharray — the run
+    // covering the 30-day gap. Runs before and after stay solid (no dash).
+    const dashed = strokePaths.filter((p) => p.getAttribute('stroke-dasharray'));
+    const solid = strokePaths.filter((p) => !p.getAttribute('stroke-dasharray'));
+    expect(dashed).toHaveLength(1);
+    expect(solid.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('leaves the line fully solid when every gap is <= 3 days (weekends stay solid)', () => {
+    // Friday → Monday is a 3-day gap: no dotted segment should appear.
+    const points = [
+      point('2026-01-02', '100'), // Friday
+      point('2026-01-05', '110'), // Monday (3-day gap)
+      point('2026-01-06', '120'),
+    ];
+    const { container } = render(<BalanceChart points={points} currency="EUR" />);
+    const dashed = Array.from(container.querySelectorAll('path')).filter(
+      (p) =>
+        p.getAttribute('stroke') === '#7dd3c0' &&
+        p.getAttribute('fill') === 'none' &&
+        p.getAttribute('stroke-dasharray'),
+    );
+    expect(dashed).toHaveLength(0);
+  });
 });

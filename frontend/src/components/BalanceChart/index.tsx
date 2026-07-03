@@ -58,6 +58,47 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
 
   const areaPath = `${path} L ${xScale(data.length - 1).toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xScale(0).toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`;
 
+  // Split the stroked line into runs of consecutive segments sharing the same
+  // "dashed" verdict. A segment is dashed when the two data points bracket a
+  // gap of more than MAX_SOLID_GAP_DAYS — telling the user that we have no
+  // data for that stretch (missed import, ingestion gap, …). Weekends and
+  // short holidays stay solid: Friday → Monday is a 3-day gap. The area path
+  // stays continuous — the dotted stroke alone communicates the uncertainty.
+  const MAX_SOLID_GAP_DAYS = 3;
+  const segments: { d: string; dashed: boolean }[] = [];
+  {
+    let runStart = 0;
+    let runDashed: boolean | null = null;
+    for (let i = 1; i < data.length; i++) {
+      const gap = Math.round(
+        (Date.parse(data[i]!.date) - Date.parse(data[i - 1]!.date)) / 86_400_000,
+      );
+      const dashed = gap > MAX_SOLID_GAP_DAYS;
+      if (runDashed === null) {
+        runDashed = dashed;
+        continue;
+      }
+      if (dashed !== runDashed) {
+        segments.push({
+          d: data
+            .slice(runStart, i)
+            .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScale(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
+            .join(' '),
+          dashed: runDashed,
+        });
+        runStart = i - 1;
+        runDashed = dashed;
+      }
+    }
+    segments.push({
+      d: data
+        .slice(runStart)
+        .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScale(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
+        .join(' '),
+      dashed: runDashed ?? false,
+    });
+  }
+
   const ticks = 4;
   const tickValues = Array.from({ length: ticks + 1 }, (_, i) => minY + (range * i) / ticks);
   const xTickCount = Math.min(6, data.length);
@@ -195,7 +236,18 @@ export function BalanceChart({ points, currency, height = 240, checkpoints }: Pr
         ))}
 
         <path d={areaPath} fill="url(#g-balance)" />
-        <path d={path} fill="none" stroke="#7dd3c0" strokeWidth="1.75" filter="url(#glow)" />
+        {segments.map((s, i) => (
+          <path
+            key={i}
+            d={s.d}
+            fill="none"
+            stroke="#7dd3c0"
+            strokeWidth="1.75"
+            strokeDasharray={s.dashed ? '4 5' : undefined}
+            strokeLinecap={s.dashed ? 'round' : undefined}
+            filter={s.dashed ? undefined : 'url(#glow)'}
+          />
+        ))}
 
         {/* Balance checkpoints — diamond markers + optional drift guide */}
         {marks.map((m) => {
