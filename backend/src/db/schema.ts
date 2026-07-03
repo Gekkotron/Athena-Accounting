@@ -353,3 +353,17 @@ export const balanceCheckpoints = pgTable(
     idxUser: index('balance_checkpoints_user_idx').on(t.userId),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// user_settings — per-user configurable defaults. JSONB blob so adding
+// future keys does not require a schema migration. The Zod schema at
+// backend/src/domain/settings/schema.ts is the source of truth for shape.
+// ---------------------------------------------------------------------------
+
+export const userSettings = pgTable('user_settings', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  settings: jsonb('settings').notNull().default({}),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
