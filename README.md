@@ -6,7 +6,9 @@
 Self-hosted personal accounting. Local-only, no cloud dependencies, your
 bank data never leaves your network.
 
-- Import OFX (SGML, Latin-1 or UTF-8) and French CSV statements
+- Import OFX (SGML, Latin-1 or UTF-8), French CSV, and PDF bank
+  statements (interactive template wizard on the first PDF from a new
+  bank; automatic thereafter)
 - Database-level deduplication on re-imports
 - Configurable rule engine for automatic categorisation, with sign guards
   and accent/case-insensitive word matching
