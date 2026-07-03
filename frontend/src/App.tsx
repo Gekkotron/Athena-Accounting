@@ -12,6 +12,7 @@ import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
 import { Imports } from './pages/Imports';
 import { Profile } from './pages/Profile';
+import { Settings } from './pages/Settings';
 
 export default function App() {
   const location = useLocation();
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/accounts" element={<Accounts />} />
         <Route path="/imports" element={<Imports />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
