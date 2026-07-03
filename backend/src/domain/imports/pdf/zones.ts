@@ -20,6 +20,13 @@ export interface TemplateZones {
   // pages (e.g. "COMPTE COURANT n° 12345" pins the account by header text
   // rather than by absolute page index).
   pageAnchor?: string | null;
+  // Markers for OTHER accounts on the same statement. When a page carries
+  // pageAnchor AND also contains one of these lines further down, rows
+  // past the marker's Y are dropped — that's where a different account
+  // begins mid-page (common in French bank statements: Compte Courant
+  // ends and Livret A starts on the same physical page). Derived at
+  // template save time from the pages the user left unchecked.
+  otherAnchors?: string[];
   // Page indices (0-based) that the import should process. Legacy — kept as
   // a fallback for templates saved before pageAnchor existed, and used as
   // the source signal when deriving pageAnchor.

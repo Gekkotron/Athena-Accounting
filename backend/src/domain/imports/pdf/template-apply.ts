@@ -3,7 +3,7 @@ import type { TemplateZones } from './zones.js';
 import type { ParsedTransaction } from '../ofx-parser.js';
 import { tryParseFrenchDate, tryParseFrenchAmount } from '../french-numerics.js';
 import { isBalanceLine, isFooterLine, mergeContinuationLabel, truncateLabel } from './label.js';
-import { pageContainsAnchor } from './page-anchor.js';
+import { pageContainsAnchor, firstOtherAnchorY } from './page-anchor.js';
 
 export interface ApplyResult {
   rows: ParsedTransaction[];
@@ -81,11 +81,19 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
   for (let p = 0; p < pages.length; p++) {
     if (!pageSet.has(p)) continue;
     const page = pages[p]!;
+    // Mid-page account boundary: if this page carries our anchor AND also
+    // carries a marker for another account further down, cut off row
+    // processing at that marker's Y. Rows on this page above the marker
+    // are ours; everything from there down belongs to a different account.
+    const cutoffY = zones.otherAnchors && zones.otherAnchors.length > 0
+      ? firstOtherAnchorY(page, zones.otherAnchors)
+      : null;
+    const yUpperBound = cutoffY !== null ? Math.min(cutoffY, page.heightPt) : page.heightPt;
     const tableItems = page.items.filter((i) =>
       i.xLeft >= zones.tableZone.x - 1 &&
       i.xLeft <= zones.tableZone.x + zones.tableZone.w &&
       i.yTop >= (p === Math.min(...pageSet) ? zones.rowsStartY : 0) &&
-      i.yTop <= page.heightPt,
+      i.yTop <= yUpperBound,
     );
     const rowClusters = clusterRows(tableItems);
     // Continuation tracking lives within a single page — cross-page continuations

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   deriveAccountAnchor,
+  deriveOtherAccountAnchors,
+  firstOtherAnchorY,
   pageContainsAnchor,
   pageLines,
 } from '../../src/domain/imports/pdf/page-anchor.js';
@@ -129,5 +131,79 @@ describe('pageContainsAnchor', () => {
     const p = page(0, [item(0, 'HEADER', 40, 50)]);
     expect(pageContainsAnchor(p, '')).toBe(false);
     expect(pageContainsAnchor(p, '   ')).toBe(false);
+  });
+});
+
+describe('deriveOtherAccountAnchors', () => {
+  it('collects header lines from every unchecked page, preferring account-keyword lines', () => {
+    // Selected pages: 0 and 1 (Compte Courant). Unchecked pages: 2 (Livret A)
+    // and 3 (LEP). Each unchecked page contributes its own signature.
+    const pages = [
+      page(0, [item(0, 'COMPTE COURANT n° 12345', 40, 50), item(0, '15/01/2026 CB', 40, 200)]),
+      page(1, [item(1, 'COMPTE COURANT n° 12345', 40, 50), item(1, '16/01/2026 VIR', 40, 200)]),
+      page(2, [item(2, 'LIVRET A n° 98765', 40, 50), item(2, '01/01/2026 intérêts', 40, 200)]),
+      page(3, [item(3, 'LEP n° 55555', 40, 50), item(3, '02/01/2026 dépôt', 40, 200)]),
+    ];
+    const others = deriveOtherAccountAnchors(pages, [0, 1]);
+    expect(others).toContain('livret a n° 98765');
+    expect(others).toContain('lep n° 55555');
+    // Sorted deterministically for stable persistence.
+    expect(others).toEqual([...others].sort());
+  });
+
+  it('returns [] when there are no unchecked pages', () => {
+    const pages = [page(0, [item(0, 'HEADER', 40, 50)])];
+    expect(deriveOtherAccountAnchors(pages, [0])).toEqual([]);
+  });
+
+  it('returns [] when unchecked pages carry only lines already present on selected pages', () => {
+    // Unchecked pages have no line that's unique to them — nothing to key on.
+    const pages = [
+      page(0, [item(0, 'GENERIC HEADER', 40, 50), item(0, 'daily row', 40, 100)]),
+      page(1, [item(1, 'GENERIC HEADER', 40, 50)]),
+    ];
+    expect(deriveOtherAccountAnchors(pages, [0])).toEqual([]);
+  });
+
+  it('falls back to the longest non-keyword line when no keyword header is present', () => {
+    const pages = [
+      page(0, [item(0, 'ACC OWN HEADER', 40, 50)]),
+      page(1, [
+        item(1, 'STRUCTURED IDENTIFIER 987654321', 40, 50), // > 10 chars, no keyword
+        item(1, 'x', 40, 200), // too short — dropped
+      ]),
+    ];
+    const others = deriveOtherAccountAnchors(pages, [0]);
+    expect(others).toEqual(['structured identifier 987654321']);
+  });
+});
+
+describe('firstOtherAnchorY', () => {
+  it('returns the yTop of the earliest matching anchor on the page', () => {
+    const p = page(0, [
+      item(0, 'COMPTE COURANT n° 12345', 40, 50), // our anchor — up top
+      item(0, '15/01/2026 tx', 40, 200),
+      item(0, 'LIVRET A n° 98765', 40, 500), // other-account starts mid-page
+    ]);
+    expect(firstOtherAnchorY(p, ['livret a n° 98765'])).toBe(500);
+  });
+
+  it('returns null when no other-anchor line is present on the page', () => {
+    const p = page(0, [item(0, 'COMPTE COURANT n° 12345', 40, 50)]);
+    expect(firstOtherAnchorY(p, ['livret a n° 98765'])).toBeNull();
+  });
+
+  it('returns null on empty other-anchor lists', () => {
+    const p = page(0, [item(0, 'HEADER', 40, 50)]);
+    expect(firstOtherAnchorY(p, [])).toBeNull();
+  });
+
+  it('picks the smallest yTop when multiple other-anchors are on the same page', () => {
+    const p = page(0, [
+      item(0, 'COMPTE COURANT n° 12345', 40, 50),
+      item(0, 'LEP n° 55555', 40, 700), // farther down
+      item(0, 'LIVRET A n° 98765', 40, 400), // earlier — should win
+    ]);
+    expect(firstOtherAnchorY(p, ['livret a n° 98765', 'lep n° 55555'])).toBe(400);
   });
 });

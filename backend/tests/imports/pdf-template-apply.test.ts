@@ -96,6 +96,43 @@ describe('applyTemplate', () => {
     expect(r.rows.map((row) => row.rawLabel)).toEqual(['A', 'C']);
   });
 
+  it('with otherAnchors set, cuts off row processing at a mid-page account boundary', () => {
+    // Page 0 belongs to us (COMPTE COURANT). Page 2 = pure other account
+    // (LIVRET A) — filtered out entirely by the pageAnchor path. The
+    // interesting case is page 1, which starts with our transactions and
+    // ends with the start of another account's table — rows past that
+    // Y must be dropped.
+    const withPageIndex = (idx: number, items: PdfTextItem[]): PdfPageText => ({
+      pageIndex: idx, widthPt: 595, heightPt: 842,
+      items: items.map((it) => ({ ...it, pageIndex: idx })),
+    });
+    const pages = [
+      withPageIndex(0, [
+        item('COMPTE COURANT n° 12345', 40, 50),
+        item('15/01/2026', 40, 220), item('OUR-A', 120, 220), item('-1,00', 480, 220),
+      ]),
+      withPageIndex(1, [
+        item('COMPTE COURANT n° 12345', 40, 50),
+        // Our rows on this page:
+        item('20/01/2026', 40, 220), item('OUR-B', 120, 220), item('-2,00', 480, 220),
+        item('25/01/2026', 40, 240), item('OUR-C', 120, 240), item('-3,00', 480, 240),
+        // A new account starts here mid-page:
+        item('LIVRET A n° 98765', 40, 400),
+        // Rows below the marker belong to Livret A — must be dropped:
+        item('30/01/2026', 40, 500), item('LIVRET-X', 120, 500), item('10,00', 480, 500),
+        item('31/01/2026', 40, 520), item('LIVRET-Y', 120, 520), item('20,00', 480, 520),
+      ]),
+    ];
+    const anchored: TemplateZones = {
+      ...zones,
+      tableRepeatsPerPage: true,
+      pageAnchor: 'compte courant n° 12345',
+      otherAnchors: ['livret a n° 98765'],
+    };
+    const r = applyTemplate(pages, anchored);
+    expect(r.rows.map((row) => row.rawLabel)).toEqual(['OUR-A', 'OUR-B', 'OUR-C']);
+  });
+
   it('legacy selectedPages emits a warning when the imported PDF has more pages than the sample', () => {
     // Template was created on a 2-page sample (selectedPages = [0, 1]); this
     // statement grew to 4 pages. Legacy indexing silently drops pages 3, 4 —

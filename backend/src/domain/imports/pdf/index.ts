@@ -5,7 +5,7 @@ import { extractText, type PdfTextItem, type PdfPageText } from './text-extract.
 import { fingerprintHeader } from './fingerprint.js';
 import { runHeuristic } from './heuristic.js';
 import { applyTemplate } from './template-apply.js';
-import { deriveAccountAnchor } from './page-anchor.js';
+import { deriveAccountAnchor, deriveOtherAccountAnchors } from './page-anchor.js';
 import { renderPagesToPng, type RenderedPage } from './render.js';
 import { validateZones, type TemplateZones } from './zones.js';
 import { runImport, type ImportResult } from '../import-service.js';
@@ -191,6 +191,20 @@ export async function applyTemplateAndImport(opts: {
   ) {
     const anchor = deriveAccountAnchor(pages, opts.zones.selectedPages);
     if (anchor) opts.zones.pageAnchor = anchor;
+  }
+
+  // Also collect markers for OTHER accounts present on the sample. When a
+  // page carrying our anchor holds one of these lines below the anchor,
+  // applyTemplate cuts off row processing at that Y — fixes the mid-page
+  // account boundary (e.g. Compte Courant ends, Livret A starts, on the
+  // same physical page).
+  if (
+    (!opts.zones.otherAnchors || opts.zones.otherAnchors.length === 0) &&
+    opts.zones.selectedPages &&
+    opts.zones.selectedPages.length > 0
+  ) {
+    const others = deriveOtherAccountAnchors(pages, opts.zones.selectedPages);
+    if (others.length > 0) opts.zones.otherAnchors = others;
   }
 
   const { rows, skippedRows } = applyTemplate(pages, opts.zones);
