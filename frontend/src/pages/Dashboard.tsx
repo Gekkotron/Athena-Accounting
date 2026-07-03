@@ -9,6 +9,7 @@ import { usePersistedState } from '../lib/persisted-state';
 import { BalanceChart } from '../components/BalanceChart';
 import { CategoryBreakdown } from '../components/CategoryBreakdown';
 import { StatWidget } from '../components/StatWidget';
+import { RangePicker, fromDateFor, rangeSuffixLabel, type RangeKey } from '../components/RangePicker';
 
 // Look back N complete months (excludes the current month, since a
 // half-finished month drags the average toward zero).
@@ -48,6 +49,13 @@ export function Dashboard() {
   const accounts = accountsQ.data?.accounts ?? [];
   const primary = currencies[0];
 
+  // Page-wide period. Drives the balance chart, the donut, and the per-
+  // account "sur X" delta. The Moyennes mensuelles widgets keep their own
+  // fixed 12-month window (monthly averages over 30 j don't make sense).
+  const [range, setRange] = usePersistedState<RangeKey>('dashboard.range', '3m');
+  const rangeFromDate = fromDateFor(range);
+  const rangeSuffix = rangeSuffixLabel(range);
+
   // Chart scope: 'all' = sum across all accounts of the primary currency,
   // otherwise a specific account_id (the chart then shows that single account
   // in its own currency). Persisted so the last-picked scope survives reloads.
@@ -82,11 +90,39 @@ export function Dashboard() {
 
   // Only feed the chart points matching the chosen scope. BalanceChart already
   // filters by currency on top of this, so cross-currency rows are dropped too.
+  // Range window applied client-side (backend returns the whole series so we
+  // can use it for per-account baselines below).
   const chartPoints = useMemo<BalancePoint[]>(() => {
     const all = seriesQ.data?.points ?? [];
-    if (chartScope === 'all') return all;
-    return all.filter((p) => p.account_id === chartScope);
-  }, [seriesQ.data, chartScope]);
+    const scoped = chartScope === 'all' ? all : all.filter((p) => p.account_id === chartScope);
+    if (!rangeFromDate) return scoped;
+    return scoped.filter((p) => p.bucket >= rangeFromDate);
+  }, [seriesQ.data, chartScope, rangeFromDate]);
+
+  // Per-account "balance at the start of the current range", computed from the
+  // full timeseries. Used to render the account cards' delta "+X sur 3 mois".
+  // The baseline is the LATEST cumulative <= rangeFromDate; if the account
+  // opened after the range started (no bucket before), we fall back to its
+  // opening balance so the delta reads as "everything since opening".
+  const accountBaseline = useMemo(() => {
+    const map = new Map<number, number>();
+    if (!rangeFromDate) return map;
+    const byAccount = new Map<number, BalancePoint[]>();
+    for (const p of seriesQ.data?.points ?? []) {
+      if (!byAccount.has(p.account_id)) byAccount.set(p.account_id, []);
+      byAccount.get(p.account_id)!.push(p);
+    }
+    for (const [accId, points] of byAccount) {
+      const sorted = [...points].sort((a, b) => a.bucket.localeCompare(b.bucket));
+      let baseline: number | null = null;
+      for (const p of sorted) {
+        if (p.bucket < rangeFromDate) baseline = Number(p.cumulative);
+        else break;
+      }
+      if (baseline !== null) map.set(accId, baseline);
+    }
+    return map;
+  }, [seriesQ.data, rangeFromDate]);
 
   // Monthly aggregate window for the stat widgets. Skips the current
   // half-month so a mid-month view isn't dragged down.
@@ -142,6 +178,13 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col gap-10">
+      {/* Page-wide range picker — drives the balance chart, the donut, and
+          the per-account "sur X" delta below. Persisted so the last-picked
+          period survives reloads. */}
+      <div className="flex justify-end">
+        <RangePicker value={range} onChange={setRange} />
+      </div>
+
       {/* Hero */}
       <section>
         {primary ? (
@@ -272,7 +315,11 @@ export function Dashboard() {
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
           <div className="section-rule mb-4">Répartition par catégorie</div>
-          <CategoryBreakdown defaultRange="3m" currency={primary?.currency ?? 'EUR'} />
+          <CategoryBreakdown
+            range={range}
+            onRangeChange={setRange}
+            currency={primary?.currency ?? 'EUR'}
+          />
         </section>
       )}
 
@@ -292,7 +339,13 @@ export function Dashboard() {
               const blocked = current - available;
               const hasBlocked = Math.abs(blocked) >= 0.005;
               const opening = Number(a.openingBalance);
-              const delta = current - opening;
+              // Range-aware baseline: what the account looked like at the
+              // start of the selected period. Falls back to opening when the
+              // account opened inside the range (or when range='all').
+              const baseline = rangeFromDate
+                ? accountBaseline.get(a.id) ?? opening
+                : opening;
+              const delta = current - baseline;
               const hasMovement = Math.abs(delta) >= 0.005;
               const total = a.transactionCount ?? 0;
               const counted = a.countedTransactionCount ?? 0;
@@ -331,10 +384,10 @@ export function Dashboard() {
                           {delta > 0 ? '+' : ''}
                           {formatAmount(delta, a.currency)}
                         </span>{' '}
-                        depuis l'ouverture
+                        {rangeSuffix}
                       </div>
                     ) : (
-                      <div className="text-ink-600 mt-0.5 not-italic">aucun mouvement depuis</div>
+                      <div className="text-ink-600 mt-0.5 not-italic">aucun mouvement {rangeSuffix}</div>
                     )}
                   </div>
 

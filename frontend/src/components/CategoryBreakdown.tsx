@@ -3,40 +3,34 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Category, CategoryReportRow } from '../api/types';
 import { CategoryDonut, type CategorySegment } from './CategoryDonut';
+import { RangePicker, fromDateFor, type RangeKey } from './RangePicker';
 
-export type RangeKey = '30d' | '3m' | '6m' | '12m' | 'all';
+export type { RangeKey } from './RangePicker';
 export type DonutMode = 'expense' | 'income';
-
-const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
-  { key: '30d', label: '30 j',  days: 30  },
-  { key: '3m',  label: '3 m',   days: 90  },
-  { key: '6m',  label: '6 m',   days: 180 },
-  { key: '12m', label: '12 m',  days: 365 },
-  { key: 'all', label: 'Tout',  days: null },
-];
-
-function todayMinusDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  // Use the local date — we don't need timezone precision here, only the day.
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function fromDateFor(range: RangeKey): string | undefined {
-  const r = RANGES.find((x) => x.key === range);
-  if (!r || r.days === null) return undefined;
-  return todayMinusDays(r.days);
-}
 
 interface Props {
   defaultRange?: RangeKey;
   defaultMode?: DonutMode;
   currency?: string;
+  /** Optional controlled range. When provided, the internal range picker
+      hides — the parent supplies the range (used on the Dashboard where a
+      single top-of-page picker drives multiple surfaces). */
+  range?: RangeKey;
+  onRangeChange?: (r: RangeKey) => void;
 }
 
-export function CategoryBreakdown({ defaultRange = '3m', defaultMode = 'expense', currency = 'EUR' }: Props) {
-  const [range, setRange] = useState<RangeKey>(defaultRange);
+export function CategoryBreakdown({
+  defaultRange = '3m',
+  defaultMode = 'expense',
+  currency = 'EUR',
+  range: controlledRange,
+  onRangeChange,
+}: Props) {
+  const [internalRange, setInternalRange] = useState<RangeKey>(defaultRange);
   const [mode, setMode] = useState<DonutMode>(defaultMode);
+  const isControlled = controlledRange !== undefined;
+  const range = isControlled ? controlledRange : internalRange;
+  const setRange = isControlled ? (onRangeChange ?? (() => {})) : setInternalRange;
 
   const fromDate = useMemo(() => fromDateFor(range), [range]);
 
@@ -87,22 +81,9 @@ export function CategoryBreakdown({ defaultRange = '3m', defaultMode = 'expense'
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-5 justify-end">
-        {/* Range picker */}
-        <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className={`px-2.5 py-1.5 rounded-md transition font-mono ${
-                range === r.key
-                  ? 'bg-ink-850 text-ink-100'
-                  : 'text-ink-400 hover:text-ink-100'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+        {/* Range picker — hidden when the parent controls the range (the
+            Dashboard's page-header picker drives every surface). */}
+        {!isControlled && <RangePicker value={range} onChange={setRange} />}
         {/* Mode toggle */}
         <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
           <button
