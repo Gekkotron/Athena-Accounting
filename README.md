@@ -16,6 +16,8 @@ bank data never leaves your network.
   on-the-fly rule generation
 - Multi-currency, multi-account, with opening-balance discipline
 - Argon2id-hashed first-run onboarding; session cookie auth
+- Per-user configurable defaults (dashboard range, chart account, chart
+  gap threshold, duplicates similarity threshold) via the Réglages page
 
 ## Stack
 
@@ -113,6 +115,23 @@ cette date; s'il dérive de plus d'un centime du cumul calculé, le
 losange devient ambre et une ligne pointillée relie l'attendu au réel —
 un signal purement visuel pour repérer une erreur d'import ou de saisie.
 
+## Réglages
+
+L'icône engrenage à côté de votre nom d'utilisateur (barre latérale)
+ouvre la page **Réglages** — les valeurs par défaut chargées à chaque
+visite du tableau de bord :
+
+- Période affichée par défaut (30 j / 3 m / 6 m / 12 m / Tout)
+- Compte affiché par défaut sur le graphique d'évolution
+- Seuil (en jours) au-delà duquel un trou dans les données est tracé
+  en pointillés
+- Seuil de similarité par défaut du panneau *Possibles doublons*
+
+Les valeurs sont stockées par utilisateur (table `user_settings`, blob
+JSONB). Les changements faits en cours de session (clic sur une autre
+période, choix d'un autre compte) restent locaux ; pour changer la
+valeur *par défaut*, passez par Réglages.
+
 ## Project layout
 
 ```
@@ -171,6 +190,7 @@ un signal purement visuel pour repérer une erreur d'import ou de saisie.
 | GET    | `/api/reports/balance`                | Totals per currency.                   |
 | GET    | `/api/reports/timeseries`             | Per-account running balance.           |
 | GET    | `/api/reports/categories`             | Per-category monthly aggregates.       |
+| GET PATCH | `/api/settings`                    | Per-user defaults (JSONB blob).        |
 
 ## Migrations
 
@@ -206,6 +226,7 @@ journal file Drizzle creates alongside.
 - [x] Étape 10 — Categories/rules UI + README polish
 - [x] Étape 11 — PDF bank statement import (heuristic + interactive template)
 - [x] Étape 12 — Points de contrôle (réconciliation visuelle par compte)
+- [x] Étape 13 — Réglages utilisateur (défauts par compte pour le dashboard et les doublons)
 
 ## Possible next steps (v2)
 
