@@ -6,6 +6,17 @@ import {
   type PdfImportImported,
   type TemplateZones,
 } from '../../api/pdf-templates.js';
+import { InfoTip } from './InfoTip';
+import { StepIndicator } from './StepIndicator';
+import { TableStep } from './TableStep';
+import { AmountStep } from './AmountStep';
+import {
+  PAINT_COLOR,
+  STEP_ORDER,
+  STEP_TOOLTIP,
+  type AmountMode,
+  type Step,
+} from './constants';
 
 interface Props {
   needsTemplate: PdfImportNeedsTemplate;
@@ -13,60 +24,7 @@ interface Props {
   onImported: (r: PdfImportImported) => void;
 }
 
-type AmountMode = 'signed' | 'pair';
-type Step = 'header' | 'table' | 'date' | 'description' | 'amount';
-
-const STEP_ORDER: Step[] = ['header', 'table', 'date', 'description', 'amount'];
-const STEP_TITLE: Record<Step, string> = {
-  header: "Sélectionnez l'en-tête",
-  table: 'Sélectionnez le tableau des transactions',
-  date: 'Sélectionnez la colonne Date',
-  description: 'Sélectionnez la colonne Libellé',
-  amount: 'Sélectionnez la colonne Montant',
-};
-
-// Long-form guidance surfaced by a hover tooltip next to each step's title.
-// Kept in one place so the whole flow reads like a cohesive tutorial.
-const STEP_TOOLTIP: Record<Step, string> = {
-  header:
-    "Tracez autour du logo / titre de la banque en haut de la page. Cette zone sert d'empreinte : la prochaine fois que vous importerez un relevé de la même banque, Athena reconnaîtra le template automatiquement.",
-  table:
-    "Tracez autour de tout le tableau des transactions, en-tête de colonnes inclus. N'incluez pas les totaux ou le pied de page — juste les lignes de mouvement.",
-  date:
-    "Tracez une bande verticale fine qui couvre uniquement la colonne des dates, à l'intérieur du tableau que vous venez de délimiter. La hauteur n'a pas d'importance : Athena utilise seulement les bornes gauche/droite.",
-  description:
-    "Tracez la colonne du libellé (nom du commerçant / motif). Peut être large : les colonnes voisines seront ignorées grâce aux bornes de chaque colonne.",
-  amount:
-    "Choisissez d'abord si votre banque affiche un seul montant signé (+ / −) ou deux colonnes Débit + Crédit. Puis tracez les colonnes correspondantes. Donnez enfin un nom au template pour le retrouver plus tard.",
-};
-
-// Sage and clay map to the project's tailwind tokens.
-const PAINT_COLOR: Partial<Record<Step, string>> = {
-  header: '#7dd3c0',
-  table: '#7dd3c0',
-  date: '#7dd3c0',
-  description: '#7dd3c0',
-  amount: '#e69782',
-};
-
-// Small info-icon that reveals its `text` on hover via the native title
-// tooltip. Zero-dependency, works with keyboard focus, and matches the ink
-// palette without needing a floating-ui popper.
-function InfoTip({ text }: { text: string }) {
-  return (
-    <button
-      type="button"
-      tabIndex={0}
-      title={text}
-      aria-label={text}
-      className="inline-flex items-center justify-center h-4 w-4 rounded-full border border-ink-600 text-ink-400 text-[9px] font-bold hover:text-ink-100 hover:border-ink-400 transition cursor-help shrink-0"
-    >
-      ?
-    </button>
-  );
-}
-
-export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props) {
+export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props): JSX.Element {
   const firstPage = needsTemplate.pages[0]!;
   const [step, setStep] = useState<Step>('header');
 
@@ -213,28 +171,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           >✕</button>
         </div>
 
-        {/* step indicator strip */}
-        <ol className="flex gap-2 mb-4 text-xs">
-          {STEP_ORDER.map((s, i) => {
-            const active = s === step;
-            const done = i < stepIdx;
-            return (
-              <li
-                key={s}
-                className={
-                  'px-2.5 py-1 rounded-full border transition ' +
-                  (active
-                    ? 'bg-sage-300 text-ink-950 border-sage-300 font-semibold'
-                    : done
-                    ? 'border-sage-300/60 text-sage-300'
-                    : 'border-ink-700 text-ink-400')
-                }
-              >
-                {i + 1}. {STEP_TITLE[s]}
-              </li>
-            );
-          })}
-        </ol>
+        <StepIndicator currentStep={step} />
 
         {needsTemplate.reason === 'no_text_layer' && (
           <div className="bg-clay-900/30 border border-clay-800/60 text-clay-200 p-3 rounded-lg mb-4 text-sm">
@@ -242,8 +179,6 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             de lignes sera vide — l'OCR n'est pas encore disponible.
           </div>
         )}
-
-        {/* ───────── step body ───────── */}
 
         {step === 'header' && (
           <>
@@ -268,79 +203,16 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
         )}
 
         {step === 'table' && (
-          <>
-            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
-              <span>
-                Étape 2/{totalSteps} — Sélectionnez le tableau des transactions{' '}
-                <span className="text-ink-400 font-normal">(toutes les lignes, en-tête de colonne incluse)</span>.
-              </span>
-              <InfoTip text={STEP_TOOLTIP.table} />
-            </p>
-            <ZoneCanvas
-              pngBase64={firstPage.pngBase64}
-              widthPt={firstPage.widthPt}
-              heightPt={firstPage.heightPt}
-              initialRect={tableRect}
-              paintColor={PAINT_COLOR.table}
-              onChange={setTableRect}
-            />
-            <label className="flex items-center gap-2 mt-4 text-sm text-ink-200">
-              <input
-                type="checkbox"
-                checked={tableRepeats}
-                onChange={(e) => setTableRepeats(e.target.checked)}
-                className="accent-sage-300"
-              />
-              Le tableau se répète sur chaque page
-            </label>
-
-            {needsTemplate.pages.length > 1 && (
-              <div className="mt-5 pt-4 border-t border-ink-800/60">
-                <div className="text-sm text-ink-100 font-medium mb-1">
-                  Pages à importer pour ce compte
-                </div>
-                <p className="text-xs text-ink-400 mb-3">
-                  Si le relevé contient plusieurs comptes, ne cochez que les pages qui appartiennent au
-                  compte choisi à l'upload. Les autres pages seront ignorées pour cet import.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {needsTemplate.pages.map((p) => {
-                    const checked = selectedPages.includes(p.pageIndex);
-                    return (
-                      <label
-                        key={p.pageIndex}
-                        className={
-                          'cursor-pointer rounded-lg border px-3 py-1.5 text-sm transition ' +
-                          (checked
-                            ? 'border-sage-300 bg-sage-300/10 text-sage-300'
-                            : 'border-ink-700 text-ink-400 hover:text-ink-200')
-                        }
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={checked}
-                          onChange={(e) => {
-                            setSelectedPages((prev) =>
-                              e.target.checked
-                                ? Array.from(new Set([...prev, p.pageIndex])).sort((a, b) => a - b)
-                                : prev.filter((i) => i !== p.pageIndex),
-                            );
-                          }}
-                        />
-                        Page {p.pageIndex + 1}
-                      </label>
-                    );
-                  })}
-                </div>
-                {selectedPages.length === 0 && (
-                  <p className="mt-2 text-xs text-clay-300">
-                    Sélectionnez au moins une page.
-                  </p>
-                )}
-              </div>
-            )}
-          </>
+          <TableStep
+            needsTemplate={needsTemplate}
+            totalSteps={totalSteps}
+            tableRect={tableRect}
+            onTableChange={setTableRect}
+            tableRepeats={tableRepeats}
+            onTableRepeatsChange={setTableRepeats}
+            selectedPages={selectedPages}
+            onSelectedPagesChange={setSelectedPages}
+          />
         )}
 
         {step === 'date' && (
@@ -388,105 +260,23 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
         )}
 
         {step === 'amount' && (
-          <>
-            <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
-              <span>
-                Étape 5/{totalSteps} — Tracez la colonne <span className="text-clay-300">Montant</span>.
-              </span>
-              <InfoTip text={STEP_TOOLTIP.amount} />
-            </p>
-            <fieldset className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-200">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="amount-mode"
-                  checked={amountMode === 'signed'}
-                  onChange={() => setAmountMode('signed')}
-                  className="accent-clay-300"
-                />
-                <span>Une colonne <span className="text-ink-400">(montants positifs et négatifs)</span></span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="amount-mode"
-                  checked={amountMode === 'pair'}
-                  onChange={() => setAmountMode('pair')}
-                  className="accent-clay-300"
-                />
-                <span>Deux colonnes <span className="text-ink-400">(Débit + Crédit)</span></span>
-              </label>
-            </fieldset>
-
-            {amountMode === 'signed' ? (
-              <>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-clay-300 mb-2">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-clay-300" /> Colonne Montant
-                </h3>
-                <ZoneCanvas
-                  pngBase64={firstPage.pngBase64}
-                  widthPt={firstPage.widthPt}
-                  heightPt={firstPage.heightPt}
-                  initialRect={signedCol}
-                  referenceRects={refsFor('signed')}
-                  paintColor={PAINT_COLOR.amount}
-                  paintLabel="Montant"
-                  onChange={setSignedCol}
-                />
-              </>
-            ) : (
-              <div className="grid gap-5">
-                <div className="border-l-4 border-clay-300 pl-3">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-clay-300 mb-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-clay-300" />
-                    Canvas 1/2 — Tracez la colonne <span className="uppercase tracking-wide">Débit</span>
-                  </h3>
-                  <ZoneCanvas
-                    pngBase64={firstPage.pngBase64}
-                    widthPt={firstPage.widthPt}
-                    heightPt={firstPage.heightPt}
-                    initialRect={debitCol}
-                    referenceRects={refsFor('debit')}
-                    paintColor={PAINT_COLOR.amount}
-                    paintLabel="Débit"
-                    onChange={setDebitCol}
-                    displayMaxWidth={520}
-                  />
-                </div>
-                <div className="border-l-4 border-sage-300 pl-3">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-sage-300 mb-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm bg-sage-300" />
-                    Canvas 2/2 — Tracez la colonne <span className="uppercase tracking-wide">Crédit</span>
-                  </h3>
-                  <ZoneCanvas
-                    pngBase64={firstPage.pngBase64}
-                    widthPt={firstPage.widthPt}
-                    heightPt={firstPage.heightPt}
-                    initialRect={creditCol}
-                    referenceRects={refsFor('credit')}
-                    paintColor="#7dd3c0"
-                    paintLabel="Crédit"
-                    onChange={setCreditCol}
-                    displayMaxWidth={520}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="mt-5">
-              <label className="block text-sm text-ink-200 mb-1.5">Nom du template</label>
-              <input
-                className="w-full rounded-lg border border-ink-700 bg-ink-850 text-ink-100 placeholder-ink-500 px-3 py-2 text-sm focus:border-sage-300 focus:outline-none transition"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="ex: BNP — Compte Chèques"
-              />
-            </div>
-            {err && <p className="mt-3 text-sm text-clay-300">{err}</p>}
-          </>
+          <AmountStep
+            needsTemplate={needsTemplate}
+            totalSteps={totalSteps}
+            amountMode={amountMode}
+            onAmountModeChange={setAmountMode}
+            signedCol={signedCol}
+            onSignedChange={setSignedCol}
+            debitCol={debitCol}
+            onDebitChange={setDebitCol}
+            creditCol={creditCol}
+            onCreditChange={setCreditCol}
+            refsFor={refsFor}
+            label={label}
+            onLabelChange={setLabel}
+            err={err}
+          />
         )}
-
-        {/* ───────── nav buttons ───────── */}
 
         <div className="flex justify-between gap-2 mt-6">
           <button
