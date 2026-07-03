@@ -55,6 +55,10 @@ export const BackupBody = z.object({
       enabled: z.boolean(),
     }),
   ),
+  // Transfer rules are no longer emitted by the exporter (superseded by the
+  // `is_internal_transfer` flag on categories in migration 0012). The field
+  // stays optional so historical backups that still carry it can be
+  // restored without editing.
   transferRules: z.array(
     z.object({
       keyword: z.string(),
@@ -62,7 +66,17 @@ export const BackupBody = z.object({
       counterpartAccount: z.string().nullable().optional(),
       enabled: z.boolean(),
     }),
-  ),
+  ).optional(),
+  // Per-account balance checkpoints (migration 0009). Optional for
+  // backward compatibility with pre-fix exports that omit the field.
+  balanceCheckpoints: z.array(
+    z.object({
+      account: z.string(),
+      checkpointDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      expectedAmount: z.string(),
+      note: z.string().nullable().optional(),
+    }),
+  ).optional(),
   transactions: z.array(
     z.object({
       account: z.string(),

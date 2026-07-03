@@ -4,28 +4,33 @@ import { db } from '../../../db/client.js';
 import {
   accounts,
   accountFilenamePatterns,
+  balanceCheckpoints,
   categories,
   fileImports,
   rules,
   transactions,
-  transferRules,
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { VERSION, fileImportKey } from './schema.js';
 
 // Emits a portable JSON dump using natural keys (account / category names).
 // Multi-user safe: only the calling user's data is included.
+//
+// Transfer rules are intentionally NOT emitted — they've been superseded by
+// the `is_internal_transfer` flag on categories, and every restore of an
+// old dump still re-inserts them via the optional schema field, so historic
+// backups keep round-tripping cleanly.
 export function registerExportRoute(app: FastifyInstance): void {
   app.get('/api/backup/export', async (req, reply) => {
     const uid = userId(req);
-    const [accs, cats, patterns, rls, trls, txs, fimps] = await Promise.all([
+    const [accs, cats, patterns, rls, txs, fimps, checkpoints] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
       db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
       db.select().from(rules).where(eq(rules.userId, uid)),
-      db.select().from(transferRules).where(eq(transferRules.userId, uid)),
       db.select().from(transactions).where(eq(transactions.userId, uid)),
       db.select().from(fileImports).where(eq(fileImports.userId, uid)),
+      db.select().from(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid)),
     ]);
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
@@ -40,10 +45,10 @@ export function registerExportRoute(app: FastifyInstance): void {
         accounts: accs.length,
         categories: cats.length,
         rules: rls.length,
-        transferRules: trls.length,
         transactions: txs.length,
         accountFilenamePatterns: patterns.length,
         fileImports: fimps.length,
+        balanceCheckpoints: checkpoints.length,
       },
       accounts: accs.map((a) => ({
         name: a.name,
@@ -73,14 +78,6 @@ export function registerExportRoute(app: FastifyInstance): void {
         signConstraint: r.signConstraint,
         matchMode: r.matchMode,
         priority: r.priority,
-        enabled: r.enabled,
-      })),
-      transferRules: trls.map((r) => ({
-        keyword: r.keyword,
-        direction: r.direction,
-        counterpartAccount: r.counterpartAccountId
-          ? accountById.get(r.counterpartAccountId)?.name ?? null
-          : null,
         enabled: r.enabled,
       })),
       transactions: txs.map((t) => {
@@ -113,6 +110,12 @@ export function registerExportRoute(app: FastifyInstance): void {
         dedupSkipped: f.dedupSkipped,
         statedBalance: f.statedBalance,
         statedBalanceDate: f.statedBalanceDate,
+      })),
+      balanceCheckpoints: checkpoints.map((c) => ({
+        account: accountById.get(c.accountId)?.name ?? null,
+        checkpointDate: c.checkpointDate,
+        expectedAmount: c.expectedAmount,
+        note: c.note,
       })),
     };
 

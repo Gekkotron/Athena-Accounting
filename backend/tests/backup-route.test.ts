@@ -52,7 +52,7 @@ async function wipeUserData() {
   const { db } = await import('../src/db/client.js');
   const {
     accounts, categories, rules, transferRules, accountFilenamePatterns,
-    transactions, fileImports,
+    balanceCheckpoints, transactions, fileImports,
   } = await import('../src/db/schema.js');
   const { and, eq } = await import('drizzle-orm');
   await db.delete(transactions);
@@ -60,6 +60,7 @@ async function wipeUserData() {
   await db.delete(accountFilenamePatterns);
   await db.delete(rules);
   await db.delete(transferRules);
+  await db.delete(balanceCheckpoints);
   await db.delete(categories).where(and(eq(categories.isDefault, false)));
   await db.delete(accounts);
 }
@@ -97,7 +98,13 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(dump.counts.accounts).toBeGreaterThanOrEqual(1);
       expect(dump.counts.categories).toBeGreaterThanOrEqual(1);
       expect(dump.counts.rules).toBe(1);
-      expect(dump.counts.transferRules).toBe(1);
+      // Transfer rules are no longer emitted (see backup/export.ts). The
+      // count key is absent entirely; the transferRules payload field too.
+      expect(dump.counts.transferRules).toBeUndefined();
+      expect(dump.transferRules).toBeUndefined();
+      // Per-account balance checkpoints are part of the export shape now.
+      expect(dump.counts.balanceCheckpoints).toBeGreaterThanOrEqual(0);
+      expect(Array.isArray(dump.balanceCheckpoints)).toBe(true);
       expect(dump.counts.transactions).toBe(1);
       expect(dump.counts.accountFilenamePatterns).toBe(1);
       expect(dump.accounts[0].name).toBe('BackupA');
@@ -164,6 +171,46 @@ describe.skipIf(!RUN)('/api/backup', () => {
         payload: { version: 1 }, // missing everything else
       });
       expect(res.statusCode).toBe(400);
+    });
+
+    it('roundtrips per-account balance checkpoints', async () => {
+      await seedSomeData();
+      // Fetch the seeded account id, then create a checkpoint on it.
+      const accs = await app.inject({ method: 'GET', url: '/api/accounts', headers: { cookie } });
+      const backupA = accs.json().accounts.find((a: { name: string }) => a.name === 'BackupA')!;
+      const cpRes = await app.inject({
+        method: 'POST', url: `/api/accounts/${backupA.id}/balance-checkpoints`,
+        headers: { cookie },
+        payload: { checkpointDate: '2026-05-31', expectedAmount: '1234.56', note: 'mai' },
+      });
+      expect(cpRes.statusCode).toBe(201);
+
+      const exp = await app.inject({ method: 'GET', url: '/api/backup/export', headers: { cookie } });
+      const dump = exp.json();
+      expect(dump.counts.balanceCheckpoints).toBe(1);
+      expect(dump.balanceCheckpoints).toEqual([{
+        account: 'BackupA', checkpointDate: '2026-05-31', expectedAmount: '1234.56', note: 'mai',
+      }]);
+
+      await wipeUserData();
+
+      const imp = await app.inject({
+        method: 'POST', url: '/api/backup/import',
+        headers: { cookie }, payload: dump,
+      });
+      expect(imp.statusCode).toBe(200);
+      expect(imp.json().imported.balanceCheckpoints).toBe(1);
+
+      const roundtripped = await app.inject({ method: 'GET', url: '/api/accounts', headers: { cookie } });
+      const restoredA = roundtripped.json().accounts.find((a: { name: string }) => a.name === 'BackupA')!;
+      const cpsAfter = await app.inject({
+        method: 'GET', url: `/api/accounts/${restoredA.id}/balance-checkpoints`,
+        headers: { cookie },
+      });
+      expect(cpsAfter.json().checkpoints).toHaveLength(1);
+      expect(cpsAfter.json().checkpoints[0].checkpointDate).toBe('2026-05-31');
+      expect(cpsAfter.json().checkpoints[0].expectedAmount).toBe('1234.56');
+      expect(cpsAfter.json().checkpoints[0].note).toBe('mai');
     });
 
     it('coerces legacy kind=transfer categories to neutral', async () => {

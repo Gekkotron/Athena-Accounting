@@ -94,6 +94,44 @@ describe('backup/schema.ts', () => {
     }
   });
 
+  it('accepts a dump that omits the legacy transferRules field entirely', () => {
+    const { transferRules: _tr, ...withoutTransferRules } = minimalDump;
+    void _tr;
+    const parsed = BackupBody.safeParse(withoutTransferRules);
+    expect(parsed.success).toBe(true);
+  });
+
+  it('accepts a dump that carries balanceCheckpoints', () => {
+    const parsed = BackupBody.safeParse({
+      ...minimalDump,
+      balanceCheckpoints: [
+        {
+          account: 'Compte courant',
+          checkpointDate: '2026-06-01',
+          expectedAmount: '1234.56',
+          note: 'relevé mai',
+        },
+        {
+          account: 'Livret A',
+          checkpointDate: '2026-01-01',
+          expectedAmount: '5000.00',
+          note: null,
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects a checkpointDate that is not YYYY-MM-DD', () => {
+    const parsed = BackupBody.safeParse({
+      ...minimalDump,
+      balanceCheckpoints: [
+        { account: 'X', checkpointDate: '01-06-2026', expectedAmount: '1.00' },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it('coerces legacy categoryKind=transfer via schema.z.enum acceptance', () => {
     // The schema tolerates kind='transfer' from old exports so restore.ts can
     // remap it to 'neutral'. This test just guards that the value still

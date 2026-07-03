@@ -4,6 +4,7 @@ import { db } from '../../../db/client.js';
 import {
   accounts,
   accountFilenamePatterns,
+  balanceCheckpoints,
   categories,
   fileImports,
   rules,
@@ -36,6 +37,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       await tx.delete(fileImports).where(eq(fileImports.userId, uid));
       await tx.delete(rules).where(eq(rules.userId, uid));
       await tx.delete(transferRules).where(eq(transferRules.userId, uid));
+      await tx.delete(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid));
       await tx.delete(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid));
       await tx.delete(categories).where(eq(categories.userId, uid));
       await tx.delete(accounts).where(eq(accounts.userId, uid));
@@ -131,7 +133,10 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         rulesInserted++;
       }
 
-      for (const r of dump.transferRules) {
+      // transferRules is a legacy field — new exports don't emit it, but
+      // restoring an old dump still re-inserts them so no data is lost.
+      let transferRulesInserted = 0;
+      for (const r of dump.transferRules ?? []) {
         const counterpartId = r.counterpartAccount
           ? accountIdByName.get(r.counterpartAccount)
           : undefined;
@@ -142,6 +147,21 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           counterpartAccountId: counterpartId ?? null,
           enabled: r.enabled,
         });
+        transferRulesInserted++;
+      }
+
+      let checkpointsInserted = 0;
+      for (const c of dump.balanceCheckpoints ?? []) {
+        const accId = accountIdByName.get(c.account);
+        if (!accId) continue;
+        await tx.insert(balanceCheckpoints).values({
+          userId: uid,
+          accountId: accId,
+          checkpointDate: c.checkpointDate,
+          expectedAmount: c.expectedAmount,
+          note: c.note ?? null,
+        });
+        checkpointsInserted++;
       }
 
       // file_imports — restore the Imports → Historique audit trail. Keep a
@@ -209,7 +229,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           categories: categoryIdByName.size,
           accountFilenamePatterns: dump.accountFilenamePatterns.length,
           rules: rulesInserted,
-          transferRules: dump.transferRules.length,
+          transferRules: transferRulesInserted,
+          balanceCheckpoints: checkpointsInserted,
           transactions: txCount,
           fileImports: fileImportsInserted,
         },

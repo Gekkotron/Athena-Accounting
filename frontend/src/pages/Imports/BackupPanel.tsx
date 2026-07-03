@@ -9,7 +9,11 @@ interface BackupResult {
     categories: number;
     accountFilenamePatterns: number;
     rules: number;
+    // Legacy — kept in the response for backward compat with backups that
+    // still carry transfer rules. New exports emit 0 here.
     transferRules: number;
+    // Per-account balance checkpoints restored from the dump.
+    balanceCheckpoints?: number;
     transactions: number;
     fileImports?: number;
   };
@@ -134,11 +138,17 @@ export function BackupPanel(): JSX.Element {
               <div className="text-sage-200 font-medium mb-1">Sauvegarde restaurée</div>
               <div className="text-ink-300 font-mono text-xs leading-relaxed">
                 {backupResult.imported.accounts} compte(s) · {backupResult.imported.categories} catégorie(s) ·{' '}
-                {backupResult.imported.rules} règle(s) · {backupResult.imported.transferRules} transfer-rule(s) ·{' '}
+                {backupResult.imported.rules} règle(s) ·{' '}
                 {backupResult.imported.accountFilenamePatterns} motif(s) ·{' '}
                 {backupResult.imported.transactions} transaction(s)
                 {backupResult.imported.fileImports !== undefined && (
                   <> · {backupResult.imported.fileImports} import(s)</>
+                )}
+                {backupResult.imported.balanceCheckpoints !== undefined && (
+                  <> · {backupResult.imported.balanceCheckpoints} point(s) de contrôle</>
+                )}
+                {backupResult.imported.transferRules > 0 && (
+                  <> · {backupResult.imported.transferRules} règle(s) de transfert (héritées)</>
                 )}
               </div>
             </div>
