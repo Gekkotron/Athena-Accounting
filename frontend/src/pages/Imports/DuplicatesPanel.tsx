@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { getAccountName } from '../../lib/accounts';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
-import { usePersistedState } from '../../lib/persisted-state';
+import { useSettings } from '../../lib/useSettings';
 
 export function DuplicatesPanel(): JSX.Element {
   const qc = useQueryClient();
@@ -110,9 +110,20 @@ export function DuplicatesPanel(): JSX.Element {
       return next;
     });
 
-  // Label-similarity threshold (0..100). Persisted so the user's tuning
-  // survives reloads. At 0, the panel behaves as before (no filtering).
-  const [threshold, setThreshold] = usePersistedState<number>('dup.similarityThreshold', 0);
+  // Label-similarity threshold (0..100), seeded from user settings on mount;
+  // in-session changes are ephemeral (no writeback — edit Réglages to make a
+  // change stick). At 0, the panel behaves as before (no filtering).
+  const { settings, isReady } = useSettings();
+  const [threshold, setThreshold] = useState<number>(settings.duplicateSimilarityThreshold);
+  // If settings arrive after the initial render (first paint used DEFAULTS),
+  // hydrate the local state once — gated on isReady so we don't latch onto
+  // the DEFAULTS fallback while the settings query is still loading.
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (hydrated.current || !isReady) return;
+    hydrated.current = true;
+    setThreshold(settings.duplicateSimilarityThreshold);
+  }, [isReady, settings.duplicateSimilarityThreshold]);
 
   const rawGroups = dupsQ.data?.groups ?? [];
 

@@ -21,6 +21,12 @@ beforeEach(() => { apiMock.mockReset(); });
 describe('DuplicatesPanel', () => {
   it('renders nothing when there are no duplicate groups', async () => {
     apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return { accounts: [] };
       if (path === '/api/transactions/duplicates') return { groups: [] };
       throw new Error(`unexpected: ${path}`);
@@ -34,6 +40,12 @@ describe('DuplicatesPanel', () => {
 
   it('renders one group per cluster with its transactions', async () => {
     apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') {
         return {
           accounts: [
@@ -68,6 +80,12 @@ describe('DuplicatesPanel', () => {
   it('bulk-delete fires POST /api/transactions/delete-bulk with the selected ids', async () => {
     const postCalls: Array<{ path: string; init: any }> = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return { accounts: [] };
       if (path === '/api/transactions/duplicates') {
         return {
@@ -103,6 +121,12 @@ describe('DuplicatesPanel', () => {
   it('mark-not-duplicate fires POST /api/transactions/mark-not-duplicate with { ids }', async () => {
     const postCalls: Array<{ path: string; init: any }> = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
       if (path === '/api/accounts') return { accounts: [] };
       if (path === '/api/transactions/duplicates') {
         return {
@@ -130,5 +154,32 @@ describe('DuplicatesPanel', () => {
     expect(postCalls[0].init.method).toBe('POST');
     expect(Object.keys(postCalls[0].init.json)).toEqual(['ids']);
     expect(postCalls[0].init.json).toEqual({ ids: [100] });
+  });
+
+  it('seeds the similarity threshold from /api/settings', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 42,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [] };
+      if (path === '/api/transactions/duplicates') return {
+        groups: [
+          {
+            date: '2026-06-15', amount: '-1', accountId: 1,
+            transactions: [
+              { id: 100, raw_label: 'A', normalized_label: 'a', source_file_id: null, category_id: null },
+              { id: 101, raw_label: 'B', normalized_label: 'b', source_file_id: null, category_id: null },
+            ],
+          },
+        ],
+      };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderPanel();
+    // Threshold display "42%" appears once settings resolve.
+    expect(await screen.findByText(/42%/)).toBeInTheDocument();
   });
 });
