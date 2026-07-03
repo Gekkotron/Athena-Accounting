@@ -19,9 +19,13 @@ function monthAgoISODate(monthsBack: number): string {
   const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
 }
-function firstOfCurrentMonthISODate(): string {
+// Last day of the PREVIOUS month, so the current (half-finished) month is
+// excluded from the sliding window entirely. Prior version returned the 1st
+// of the current month and let a `<=` filter leak day-1 transactions in.
+function lastDayOfPrevMonthISODate(): string {
   const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
 export function Dashboard() {
@@ -87,7 +91,7 @@ export function Dashboard() {
   // Monthly aggregate window for the stat widgets. Skips the current
   // half-month so a mid-month view isn't dragged down.
   const statsFromDate = monthAgoISODate(AVG_WINDOW_MONTHS);
-  const statsToDate = firstOfCurrentMonthISODate();
+  const statsToDate = lastDayOfPrevMonthISODate();
   const statsQ = useQuery({
     queryKey: ['reports', 'categories', { fromDate: statsFromDate, toDate: statsToDate }],
     queryFn: () =>
@@ -98,24 +102,22 @@ export function Dashboard() {
 
   const monthlyStats = useMemo(() => {
     const rows = statsQ.data?.rows ?? [];
-    // Aggregate signed totals per month.
-    // - Expenses accumulate as negative amounts (their `total` is < 0).
-    // - Incomes accumulate as positive amounts.
-    // We split by category_kind so a transfer/uncategorized row with a
-    // negative amount doesn't get double-counted.
+    // Aggregate signed totals per month using the SIGN of the amount
+    // (backend already excludes internal-transfer rows via
+    //  `t.transfer_group_id IS NULL`). This way categories flagged
+    // `neutral` — or not categorized at all — still land in the right
+    // bucket instead of being silently dropped, which was the previous
+    // failure mode for "why do all three widgets show 0€?".
     const monthly = new Map<string, { spend: number; income: number }>();
     for (const r of rows) {
       const cur = monthly.get(r.month) ?? { spend: 0, income: 0 };
       const amount = Number(r.total);
       if (!Number.isFinite(amount)) continue;
-      if (r.category_kind === 'expense' || (r.category_kind == null && amount < 0)) {
-        cur.spend += amount;
-      } else if (r.category_kind === 'income' || (r.category_kind == null && amount > 0)) {
-        cur.income += amount;
-      }
+      if (amount < 0) cur.spend += amount;
+      else if (amount > 0) cur.income += amount;
       monthly.set(r.month, cur);
     }
-    // If the user has no months of history yet, avoid dividing by zero.
+    // Guard against /0 when there is no history yet.
     const monthCount = monthly.size || 1;
     let totalSpend = 0;
     let totalIncome = 0;
@@ -127,12 +129,16 @@ export function Dashboard() {
       monthCount: monthly.size,
       avgSpend: totalSpend / monthCount,   // negative or zero
       avgIncome: totalIncome / monthCount, // positive or zero
-      avgSavings: (totalIncome + totalSpend) / monthCount, // income - |spend|
+      avgSavings: (totalIncome + totalSpend) / monthCount,
     };
   }, [statsQ.data]);
 
-  const showStats =
-    !statsQ.isLoading && monthlyStats.monthCount > 0 && !!primary;
+  // Always render the section once the account/currency picture is loaded —
+  // the widgets render an empty state when monthCount === 0 instead of the
+  // whole section disappearing. That way "I don't see the widgets" points at
+  // a stale bundle rather than a hidden guard.
+  const showStatsSection = !statsQ.isLoading && !!primary;
+  const hasHistory = monthlyStats.monthCount > 0;
 
   return (
     <div className="flex flex-col gap-10">
@@ -188,40 +194,48 @@ export function Dashboard() {
 
       {/* Monthly stat widgets — reusable StatWidget primitive. Add more
           instances here as new stats come up. */}
-      {showStats && (
+      {showStatsSection && (
         <section>
           <div className="section-rule mb-4">
             Moyennes mensuelles{' '}
             <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
-              — sur {monthlyStats.monthCount} mois glissant{monthlyStats.monthCount > 1 ? 's' : ''}
+              {hasHistory
+                ? `— sur ${monthlyStats.monthCount} mois glissant${monthlyStats.monthCount > 1 ? 's' : ''}`
+                : '— pas encore d\'historique'}
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <StatWidget
-              icon="💸"
-              label="Dépense moyenne mensuelle"
-              value={monthlyStats.avgSpend}
-              currency={primary!.currency}
-              tone="clay"
-              hint="Moyenne des dépenses catégorisées « expense » (hors virements internes)."
-            />
-            <StatWidget
-              icon="💰"
-              label="Revenu moyen mensuel"
-              value={monthlyStats.avgIncome}
-              currency={primary!.currency}
-              tone="sage"
-              hint="Moyenne des transactions catégorisées « income »."
-            />
-            <StatWidget
-              icon="📈"
-              label="Épargne moyenne mensuelle"
-              value={monthlyStats.avgSavings}
-              currency={primary!.currency}
-              tone="auto"
-              hint="Revenus − dépenses, moyenne mensuelle."
-            />
-          </div>
+          {hasHistory ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <StatWidget
+                icon="💸"
+                label="Dépense moyenne mensuelle"
+                value={monthlyStats.avgSpend}
+                currency={primary!.currency}
+                tone="clay"
+                hint={`Moyenne des sorties (hors virements internes) sur ${monthlyStats.monthCount} mois.`}
+              />
+              <StatWidget
+                icon="💰"
+                label="Revenu moyen mensuel"
+                value={monthlyStats.avgIncome}
+                currency={primary!.currency}
+                tone="sage"
+                hint={`Moyenne des entrées sur ${monthlyStats.monthCount} mois.`}
+              />
+              <StatWidget
+                icon="📈"
+                label="Épargne moyenne mensuelle"
+                value={monthlyStats.avgSavings}
+                currency={primary!.currency}
+                tone="auto"
+                hint="Revenus − dépenses, moyenne mensuelle."
+              />
+            </div>
+          ) : (
+            <div className="surface p-5 text-sm text-ink-400 display-italic">
+              Importez au moins un mois complet de transactions pour voir les moyennes.
+            </div>
+          )}
         </section>
       )}
 
