@@ -1,80 +1,15 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
-import { db } from '../../db/client.js';
-import { transactions } from '../../db/schema.js';
-import { normalizeLabel } from '../../domain/imports/normalize.js';
-import { computeDedupKey } from '../../domain/imports/dedup.js';
-import { categorizeOne, loadRuleEngine } from '../../domain/rules/recategorize.js';
-import { userId } from '../plugins/auth.js';
-
-const ListQuery = z.object({
-  accountId: z.coerce.number().int().positive().optional(),
-  categoryId: z.coerce.number().int().positive().optional(),
-  // Filter to transactions inserted from a specific file_import row. Powers
-  // the "list transactions from this PDF import" affordance in the Imports
-  // page's post-import banner.
-  sourceFileId: z.coerce.number().int().positive().optional(),
-  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  minAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
-  maxAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
-  // Match exact amount, sign-agnostic — a search for "338" hits both -338 and
-  // +338 transactions. The frontend auto-detects numeric input and routes here
-  // instead of the text search.
-  amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
-  search: z.string().trim().max(128).optional(),
-  includeTransfers: z
-    .union([z.boolean(), z.enum(['true', 'false'])])
-    .transform((v) => v === true || v === 'true')
-    .default(false),
-  sort: z.enum(['date', 'amount', 'label']).default('date'),
-  order: z.enum(['asc', 'desc']).default('desc'),
-  limit: z.coerce.number().int().min(1).max(500).default(50),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
-// All fields optional — the PATCH applies whichever ones are present, so the
-// frontend can update any subset without sending the others.
-const PatchBody = z.object({
-  accountId: z.number().int().positive().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/).optional(),
-  rawLabel: z.string().trim().min(1).max(512).optional(),
-  categoryId: z.number().int().positive().nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-  // Per-transaction lock override in years. Null clears the override
-  // (falls back to the account's default lock).
-  lockYears: z.number().int().min(0).max(99).nullable().optional(),
-});
-
-// Body for manual creation. raw_label is required; the server derives the
-// normalized_label + dedup_key. categoryId is optional — when omitted the rule
-// engine fires the same way it does at import time.
-const CreateBody = z.object({
-  accountId: z.number().int().positive(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
-  rawLabel: z.string().trim().min(1).max(512),
-  categoryId: z.number().int().positive().nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-  lockYears: z.number().int().min(0).max(99).nullable().optional(),
-});
-
-function isPgError(err: unknown): err is { code: string } {
-  return typeof err === 'object' && err !== null && 'code' in err && typeof (err as { code: unknown }).code === 'string';
-}
-
-const IdParam = z.object({ id: z.coerce.number().int().positive() });
-
-function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
-  const r = IdParam.safeParse(req.params);
-  if (!r.success) {
-    reply.code(400).send({ error: 'invalid id' });
-    return null;
-  }
-  return r.data.id;
-}
+import { db } from '../../../db/client.js';
+import { transactions } from '../../../db/schema.js';
+import { normalizeLabel } from '../../../domain/imports/normalize.js';
+import { computeDedupKey } from '../../../domain/imports/dedup.js';
+import { categorizeOne, loadRuleEngine } from '../../../domain/rules/recategorize.js';
+import { userId } from '../../plugins/auth.js';
+import { CreateBody, ListQuery, PatchBody } from './schemas.js';
+import { isPgError, parseId } from './helpers.js';
+import { registerDuplicateRoutes } from './duplicates.js';
 
 export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -151,60 +86,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  // Soft-dedup detection: find transactions that share (account, date, amount)
-  // but have a different dedup_key — i.e. labels that differ enough to evade
-  // the strict UNIQUE constraint but match enough on identity to be plausible
-  // duplicates worth a human glance. Used by the Imports page to surface these
-  // after every import.
-  app.get('/api/transactions/duplicates', async (req, reply) => {
-    const uid = userId(req);
-    const q = req.query as { accountId?: string };
-    let accountIdFilter: number | null = null;
-    if (q.accountId) {
-      const n = Number(q.accountId);
-      if (!Number.isInteger(n) || n <= 0) {
-        return reply.code(400).send({ error: 'invalid accountId' });
-      }
-      accountIdFilter = n;
-    }
-    // Surface a group only when at least one of its rows is still unmarked.
-    // Once the user clicks "Ce n'est pas un doublon" on every row in the
-    // group, BOOL_OR(NOT not_duplicate) flips to false and the group is hidden.
-    const rows = await db.execute(sql`
-      SELECT t.*
-      FROM transactions t
-      WHERE t.user_id = ${uid}
-        AND (t.account_id, t.date, t.amount) IN (
-          SELECT account_id, date, amount
-          FROM transactions
-          WHERE user_id = ${uid}
-          ${accountIdFilter !== null ? sql`AND account_id = ${accountIdFilter}` : sql``}
-          GROUP BY account_id, date, amount
-          HAVING count(*) >= 2
-             AND count(distinct dedup_key) >= 2
-             AND BOOL_OR(NOT not_duplicate)
-        )
-      ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
-      ORDER BY t.account_id, t.date DESC, t.amount, t.id
-    `);
-    const groupsMap = new Map<string, Array<Record<string, unknown>>>();
-    for (const r of rows.rows as Array<Record<string, unknown>>) {
-      const key = `${r.account_id}|${r.date}|${r.amount}`;
-      const arr = groupsMap.get(key) ?? [];
-      arr.push(r);
-      groupsMap.set(key, arr);
-    }
-    const groups = Array.from(groupsMap.entries()).map(([k, txns]) => {
-      const [accId, date, amount] = k.split('|');
-      return {
-        accountId: Number(accId),
-        date,
-        amount,
-        transactions: txns,
-      };
-    });
-    return { groups };
-  });
+  registerDuplicateRoutes(app);
 
   app.get('/api/transactions', async (req, reply) => {
     const uid = userId(req);
@@ -264,33 +146,6 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       transactions: rows,
       pagination: { total, limit: q.limit, offset: q.offset },
     };
-  });
-
-  // Batch-mark a set of transaction ids as "not a duplicate". Used by the
-  // Possibles doublons panel — clicking the group-level "Ce n'est pas un
-  // doublon" button posts every row id in that group at once. Scoped to the
-  // calling user so a malicious id list can't flip flags on someone else's
-  // rows.
-  app.post('/api/transactions/mark-not-duplicate', async (req, reply) => {
-    const uid = userId(req);
-    const body = req.body as { ids?: unknown };
-    if (!body || !Array.isArray(body.ids) || body.ids.length === 0) {
-      return reply.code(400).send({ error: 'ids must be a non-empty array of integers' });
-    }
-    const ids: number[] = [];
-    for (const v of body.ids) {
-      const n = Number(v);
-      if (!Number.isInteger(n) || n <= 0) {
-        return reply.code(400).send({ error: 'every id must be a positive integer' });
-      }
-      ids.push(n);
-    }
-    const updated = await db
-      .update(transactions)
-      .set({ notDuplicate: true })
-      .where(and(eq(transactions.userId, uid), inArray(transactions.id, ids)))
-      .returning({ id: transactions.id });
-    return { updated: updated.length };
   });
 
   app.get('/api/transactions/:id', async (req, reply) => {

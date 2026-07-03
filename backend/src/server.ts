@@ -14,7 +14,7 @@ import { categoriesRoutes } from './http/routes/categories.js';
 import { startDraftSweeper } from './domain/imports/pdf/draft-sweeper.js';
 import { rulesRoutes } from './http/routes/rules.js';
 import { transferRulesRoutes } from './http/routes/transfer-rules.js';
-import { transactionsRoutes } from './http/routes/transactions.js';
+import { transactionsRoutes } from './http/routes/transactions/index.js';
 import { reportsRoutes } from './http/routes/reports.js';
 import { triRoutes } from './http/routes/tri.js';
 import { backupRoutes } from './http/routes/backup.js';
