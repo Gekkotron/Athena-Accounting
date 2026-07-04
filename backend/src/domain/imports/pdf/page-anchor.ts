@@ -58,30 +58,70 @@ function isAccountHeaderLike(line: string): boolean {
   return /^(compte(\s|$)|livret|plan\b|pea\b|pel\b|cel\b|lep\b|epargne|compte à terme)/i.test(line);
 }
 
-// Does this page contain the anchor line? Uses the same lineification as
-// deriveAccountAnchor so a page saved as "anchor-bearing" at template
-// creation still matches at import time.
+// Build a "flat text" view of a page: every TextItem's string concatenated
+// in reading order (yTop then xLeft), separated by single spaces, lowercased
+// and whitespace-normalized. Also returns a parallel array mapping each
+// character index in the flat text to its source item's index (so a
+// substring hit can be resolved back to a yTop). Robust to line
+// fragmentation (pdfjs sometimes splits a visual line into multiple items
+// on slightly-different baselines — that would defeat the lineified
+// matching but is invisible to the flat view).
+export interface FlatPageText {
+  flat: string;
+  charToItem: number[];
+  sorted: PdfTextItem[];
+}
+
+export function pageFlatText(page: PdfPageText): FlatPageText {
+  const sorted = [...page.items].sort((a, b) => a.yTop - b.yTop || a.xLeft - b.xLeft);
+  let flat = '';
+  const charToItem: number[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const chunk = sorted[i]!.str.trim().replace(/\s+/g, ' ').toLowerCase();
+    if (chunk.length === 0) continue;
+    if (flat.length > 0) {
+      flat += ' ';
+      charToItem.push(i); // attribute the separator to the following item
+    }
+    for (let c = 0; c < chunk.length; c++) charToItem.push(i);
+    flat += chunk;
+  }
+  return { flat, charToItem, sorted };
+}
+
+// yTop of the FIRST occurrence of `anchor` within a page's flat text, or
+// null when the anchor doesn't appear anywhere on the page. The anchor
+// itself is trimmed + lowercased + whitespace-collapsed before lookup so a
+// stored line like "livret a n° 98765" still matches when pdfjs happens
+// to split it across multiple items on the incoming PDF.
+export function anchorYInFlat(flat: FlatPageText, anchor: string): number | null {
+  const needle = anchor.trim().replace(/\s+/g, ' ').toLowerCase();
+  if (needle.length === 0) return null;
+  const idx = flat.flat.indexOf(needle);
+  if (idx < 0) return null;
+  const itemIdx = flat.charToItem[idx];
+  if (itemIdx === undefined || itemIdx < 0) return null;
+  return flat.sorted[itemIdx]!.yTop;
+}
+
+// Does this page contain the anchor line? Uses flat-text scanning so a
+// visual line fragmented into multiple TextItems on the imported PDF still
+// matches an anchor stored as a joined string.
 export function pageContainsAnchor(page: PdfPageText, anchor: string): boolean {
-  const needle = anchor.trim().toLowerCase();
-  if (needle.length === 0) return false;
-  return pageLines(page).has(needle);
+  return anchorYInFlat(pageFlatText(page), anchor) !== null;
 }
 
 // Y-position of the FIRST other-account marker on a page, or null when
 // none of the given anchors appear. Used by applyTemplate to cut off row
-// processing when a second account begins mid-page.
+// processing when a second account begins mid-page. Scans flat text so
+// fragmented headers still match.
 export function firstOtherAnchorY(page: PdfPageText, otherAnchors: readonly string[]): number | null {
   if (!otherAnchors || otherAnchors.length === 0) return null;
-  const needles = new Set(
-    otherAnchors.map((a) => a.trim().toLowerCase()).filter((a) => a.length > 0),
-  );
-  if (needles.size === 0) return null;
-  const lines = pageLinesWithY(page);
+  const flat = pageFlatText(page);
   let earliest: number | null = null;
-  for (const line of lines) {
-    if (needles.has(line.text) && (earliest === null || line.yTop < earliest)) {
-      earliest = line.yTop;
-    }
+  for (const a of otherAnchors) {
+    const y = anchorYInFlat(flat, a);
+    if (y !== null && (earliest === null || y < earliest)) earliest = y;
   }
   return earliest;
 }

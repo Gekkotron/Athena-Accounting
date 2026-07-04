@@ -132,6 +132,18 @@ describe('pageContainsAnchor', () => {
     expect(pageContainsAnchor(p, '')).toBe(false);
     expect(pageContainsAnchor(p, '   ')).toBe(false);
   });
+
+  it('matches an anchor even when the words are on slightly-different baselines (line fragmentation)', () => {
+    // pdfjs sometimes returns adjacent words with different yTop values
+    // (baseline drift, italics, small caps). The lineifier groups within
+    // a 2pt tolerance — here the gap is 4pt, so "livret a" and "sup" end
+    // up in separate lines. Flat-text scanning still finds "livret a sup".
+    const p = page(0, [
+      item(0, 'LIVRET A', 40, 100),
+      item(0, 'SUP', 100, 104), // 4pt below — different "line" for the tolerance
+    ]);
+    expect(pageContainsAnchor(p, 'livret a sup')).toBe(true);
+  });
 });
 
 describe('deriveOtherAccountAnchors', () => {
@@ -285,5 +297,18 @@ describe('firstOtherAnchorY', () => {
       item(0, 'LIVRET A n° 98765', 40, 400), // earlier — should win
     ]);
     expect(firstOtherAnchorY(p, ['livret a n° 98765', 'lep n° 55555'])).toBe(400);
+  });
+
+  it('flat-text scan finds an anchor whose words are split across baselines', () => {
+    const p = page(0, [
+      item(0, 'C/C CONTRAT PERSONNEL', 40, 50),
+      item(0, '15/01/2026 tx', 40, 200),
+      // Fragmented Livret A header: "LIVRET A SUP" split across two baselines.
+      item(0, 'LIVRET A', 40, 500),
+      item(0, 'SUP', 100, 504),
+    ]);
+    // The stored anchor is the joined string. Flat-text scan still finds it,
+    // even though the items sit on different baselines.
+    expect(firstOtherAnchorY(p, ['livret a sup'])).toBe(500);
   });
 });
