@@ -49,6 +49,11 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   // single-account statement this just stays as "all".
   const allPageIndices = needsTemplate.pages.map((p) => p.pageIndex);
   const [selectedPages, setSelectedPages] = useState<number[]>(allPageIndices);
+  // Optional manual override for the anchor derivation. When null / empty
+  // the backend runs its usual heuristics; when set, these are sent
+  // verbatim and skip the derivation entirely.
+  const [pickedAnchor, setPickedAnchor] = useState<string | null>(null);
+  const [pickedOtherAnchors, setPickedOtherAnchors] = useState<string[]>([]);
   const [dateCol, setDateCol] = useState<PageRect | null>(null);
   const [descCol, setDescCol] = useState<PageRect | null>(null);
   // Two-column Débit / Crédit is the dominant layout for French bank PDFs
@@ -115,6 +120,11 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       tableZone: { page: 0, ...tableRect },
       tableRepeatsPerPage: tableRepeats,
       selectedPages: [...selectedPages].sort((a, b) => a - b),
+      // Manual overrides — only sent when the user picked something in the
+      // anchor picker. Otherwise omitted so the backend runs its usual
+      // derivation.
+      ...(pickedAnchor ? { pageAnchor: pickedAnchor } : {}),
+      ...(pickedOtherAnchors.length > 0 ? { otherAnchors: [...pickedOtherAnchors].sort() } : {}),
       columns: cols,
       rowsStartY: tableRect.y,
     };
@@ -212,6 +222,10 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             onTableRepeatsChange={setTableRepeats}
             selectedPages={selectedPages}
             onSelectedPagesChange={setSelectedPages}
+            pageAnchor={pickedAnchor}
+            otherAnchors={pickedOtherAnchors}
+            onPageAnchorChange={setPickedAnchor}
+            onOtherAnchorsChange={setPickedOtherAnchors}
           />
         )}
 

@@ -7,6 +7,10 @@ export interface TemplateZones {
   headerZone: ZoneRect;
   tableZone: ZoneRect;
   selectedPages?: number[];
+  // Optional manual overrides for the account/other-account markers.
+  // When absent, the backend derives them from selectedPages + text.
+  pageAnchor?: string;
+  otherAnchors?: string[];
   tableRepeatsPerPage: boolean;
   columns: Array<{ xStart: number; xEnd: number; role: ColumnRole }>;
   rowsStartY: number;

@@ -1,6 +1,7 @@
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
 import { InfoTip } from './InfoTip';
 import { ExtractedTextPanel } from './ExtractedTextPanel';
+import { AnchorPickerPanel } from './AnchorPickerPanel';
 import { PAINT_COLOR, STEP_TOOLTIP } from './constants';
 import type { PdfImportNeedsTemplate } from '../../api/pdf-templates.js';
 
@@ -13,6 +14,10 @@ interface Props {
   onTableRepeatsChange: (v: boolean) => void;
   selectedPages: number[];
   onSelectedPagesChange: (updater: (prev: number[]) => number[]) => void;
+  pageAnchor: string | null;
+  otherAnchors: string[];
+  onPageAnchorChange: (a: string | null) => void;
+  onOtherAnchorsChange: (updater: (prev: string[]) => string[]) => void;
 }
 
 export function TableStep({
@@ -24,6 +29,10 @@ export function TableStep({
   onTableRepeatsChange,
   selectedPages,
   onSelectedPagesChange,
+  pageAnchor,
+  otherAnchors,
+  onPageAnchorChange,
+  onOtherAnchorsChange,
 }: Props): JSX.Element {
   const firstPage = needsTemplate.pages[0]!;
   return (
@@ -99,6 +108,14 @@ export function TableStep({
           )}
         </div>
       )}
+
+      <AnchorPickerPanel
+        needsTemplate={needsTemplate}
+        pageAnchor={pageAnchor}
+        otherAnchors={otherAnchors}
+        onPageAnchorChange={onPageAnchorChange}
+        onOtherAnchorsChange={onOtherAnchorsChange}
+      />
 
       <ExtractedTextPanel needsTemplate={needsTemplate} />
     </>
