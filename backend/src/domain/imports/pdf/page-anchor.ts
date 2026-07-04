@@ -53,9 +53,12 @@ export function pageLines(page: PdfPageText): Set<string> {
 // Heuristic: lines that begin with a French banking account-type keyword
 // are almost always account headers ("COMPTE COURANT", "LIVRET A", "PEA
 // n°…", "LEP n°…"). Used as a tie-breaker when picking `otherAnchors` so
-// header lines beat coincidental long balance strings.
+// header lines beat coincidental long balance strings. The list covers
+// the terms French banks actually print in statement headers, including
+// the "c/c" abbreviation (Compte Courant), the more specific PEA/PEP
+// variants, and the Livret family sub-types.
 function isAccountHeaderLike(line: string): boolean {
-  return /^(compte(\s|$)|livret|plan\b|pea\b|pel\b|cel\b|lep\b|epargne|compte à terme)/i.test(line);
+  return /^(compte(\s|-|$)|c\/c(\s|$)|livret|plan\b|pea(\b|-pme\b)|pel\b|cel\b|lep\b|pep\b|perp\b|epargne|ldds?\b|codevi\b)/i.test(line);
 }
 
 // Build a "flat text" view of a page: every TextItem's string concatenated

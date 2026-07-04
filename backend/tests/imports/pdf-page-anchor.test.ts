@@ -270,6 +270,49 @@ describe('deriveOtherAccountAnchors', () => {
   });
 });
 
+describe('deriveOtherAccountAnchors — expanded keyword whitelist', () => {
+  it('recognizes "C/C" (Compte Courant abbreviation) as another account header', () => {
+    const pages = [
+      page(0, [
+        item(0, 'LIVRET A n° 12345', 40, 50),
+        item(0, '10/01/2026 intérêts', 40, 200),
+        item(0, 'C/C CONTRAT PERSONNEL', 40, 500),
+        item(0, '15/01/2026 tx', 40, 550),
+      ]),
+    ];
+    expect(
+      deriveOtherAccountAnchors(pages, [0], 'livret a n° 12345'),
+    ).toEqual(['c/c contrat personnel']);
+  });
+
+  it('recognizes LDDS, PEA-PME, PEP as headers', () => {
+    for (const line of ['LDDS n° 111', 'PEA-PME 22222', 'PEP n° 3333333']) {
+      const pages = [
+        page(0, [
+          item(0, 'COMPTE COURANT n° 12345', 40, 50),
+          item(0, '15/01/2026 tx', 40, 200),
+          item(0, line, 40, 500),
+        ]),
+      ];
+      const others = deriveOtherAccountAnchors(pages, [0], 'compte courant n° 12345');
+      expect(others, `line=${line}`).toHaveLength(1);
+      expect(others[0], `line=${line}`).toBe(line.toLowerCase());
+    }
+  });
+
+  it('does NOT flag arbitrary transaction descriptions as headers', () => {
+    // Neither "peage" nor "solde" should trigger the keyword filter.
+    const pages = [
+      page(0, [
+        item(0, 'COMPTE COURANT n° 12345', 40, 50),
+        item(0, 'PEAGE A6 auto', 40, 500), // 'pea' as substring, but the regex needs word boundary
+        item(0, 'SOLDE INTERMÉDIAIRE 1234,56', 40, 550),
+      ]),
+    ];
+    expect(deriveOtherAccountAnchors(pages, [0], 'compte courant n° 12345')).toEqual([]);
+  });
+});
+
 describe('firstOtherAnchorY', () => {
   it('returns the yTop of the earliest matching anchor on the page', () => {
     const p = page(0, [
