@@ -1,5 +1,6 @@
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
 import { InfoTip } from './InfoTip';
+import { ExtractedTextPanel } from './ExtractedTextPanel';
 import { PAINT_COLOR, STEP_TOOLTIP } from './constants';
 import type { PdfImportNeedsTemplate } from '../../api/pdf-templates.js';
 
@@ -98,6 +99,8 @@ export function TableStep({
           )}
         </div>
       )}
+
+      <ExtractedTextPanel needsTemplate={needsTemplate} />
     </>
   );
 }
