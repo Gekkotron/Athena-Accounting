@@ -18,7 +18,16 @@ export interface TemplateZones {
 
 export interface PdfImportImported {
   kind: 'imported';
-  result: { fileImportId: number; insertedCount: number; dedupSkipped: number; totalLines: number };
+  result: {
+    fileImportId: number;
+    insertedCount: number;
+    dedupSkipped: number;
+    totalLines: number;
+    // Rows the parser produced but the DB deduplicated. Shown in the
+    // import summary so the user can see WHAT was skipped, not just the
+    // count. Optional for backward compatibility with a pre-fix backend.
+    dedupSkippedRows?: Array<{ date: string; amount: string; rawLabel: string }>;
+  };
   skippedRows: Array<{ rowText: string; reason: string }>;
 }
 

@@ -23,6 +23,10 @@ export interface ImportResult {
   insertedCount: number;
   dedupSkipped: number;
   insertedIds: number[];
+  // Rows the parser produced but the DB dedup-skipped (a matching
+  // (account_id, dedup_key) already existed). Surfaced in the import
+  // summary so the user can see WHAT was skipped, not just how many.
+  dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }>;
 }
 
 // Pick the destination account from the filename via the configured patterns.
@@ -83,6 +87,7 @@ export async function runImport(opts: {
     let inserted = 0;
     let skipped = 0;
     const insertedIds: number[] = [];
+    const dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }> = [];
 
     for (const p of parsed) {
       const normalizedLabel = normalizeLabel(p.rawLabel);
@@ -118,6 +123,7 @@ export async function runImport(opts: {
         insertedIds.push(result[0].id);
       } else {
         skipped++;
+        dedupSkippedRows.push({ date: p.date, amount: p.amount, rawLabel: p.rawLabel });
       }
     }
 
@@ -187,6 +193,7 @@ export async function runImport(opts: {
       insertedCount: inserted,
       dedupSkipped: skipped,
       insertedIds,
+      dedupSkippedRows,
     };
   });
 }

@@ -127,6 +127,47 @@ function ImportSummary({ lastImported }: { lastImported: PdfImportImported }) {
           </div>
         )}
       </div>
+
+      {lastImported.result.dedupSkippedRows && lastImported.result.dedupSkippedRows.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-ink-800/60">
+          <div className="text-sm text-ink-100 font-medium mb-2">
+            Transactions lues mais dédupliquées{' '}
+            <span className="text-ink-500 font-normal font-mono">
+              ({lastImported.result.dedupSkippedRows.length})
+            </span>
+          </div>
+          <p className="text-xs text-ink-500 mb-2">
+            Ces lignes existaient déjà dans la base (compte + date + montant + libellé identiques).
+            Aucune ligne n'a été insérée pour elles.
+          </p>
+          <div className="max-h-72 overflow-y-auto pr-1">
+            <table className="w-full text-xs">
+              <thead className="text-left text-ink-500">
+                <tr>
+                  <th className="py-1.5 pr-3 font-normal">Date</th>
+                  <th className="py-1.5 pr-3 font-normal">Libellé</th>
+                  <th className="py-1.5 pl-3 font-normal text-right">Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lastImported.result.dedupSkippedRows.map((r, i) => (
+                  <tr key={i} className="border-t border-ink-800/40 opacity-70">
+                    <td className="py-1.5 pr-3 font-mono text-ink-400 whitespace-nowrap">
+                      {formatDate(r.date)}
+                    </td>
+                    <td className="py-1.5 pr-3 text-ink-300">
+                      <div className="truncate max-w-[26rem]" title={r.rawLabel}>{r.rawLabel}</div>
+                    </td>
+                    <td className={`py-1.5 pl-3 text-right font-mono tabular-nums whitespace-nowrap ${amountSignClass(r.amount)}`}>
+                      {formatAmount(r.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
