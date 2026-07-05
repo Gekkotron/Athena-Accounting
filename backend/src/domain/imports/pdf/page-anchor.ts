@@ -92,16 +92,40 @@ export function pageFlatText(page: PdfPageText): FlatPageText {
   return { flat, charToItem, sorted };
 }
 
+// Extract the STABLE portion of a stored anchor — typically the "n°
+// <digits>" account-number substring. Banks tweak marketing wording
+// between statements ("C/C CONTRAT PERSONNEL" → "COMPTE COURANT PRIVE")
+// while keeping the account number. If a stored anchor's exact text
+// isn't found on the imported PDF, we fall back to searching for just
+// this stable substring so the template keeps working.
+//
+// Returns null when no account-number pattern is present in the anchor —
+// in that case there's no safe fallback and the caller reports "no match".
+export function extractStableAnchor(anchor: string): string | null {
+  // "n°" / "n˚" / "nº" / "no " prefix, then 5+ digits. The prefix is
+  // load-bearing: matching a raw digit run risks false-positives on
+  // dates, amounts, or unrelated numbers that happen to appear in the
+  // flat text.
+  const m = anchor.match(/n[°˚º]\s*\d{5,}/i);
+  return m ? m[0].toLowerCase().replace(/\s+/g, ' ') : null;
+}
+
 // yTop of the FIRST occurrence of `anchor` within a page's flat text, or
 // null when the anchor doesn't appear anywhere on the page. The anchor
 // itself is trimmed + lowercased + whitespace-collapsed before lookup so a
 // stored line like "livret a n° 98765" still matches when pdfjs happens
-// to split it across multiple items on the incoming PDF.
+// to split it across multiple items on the incoming PDF. If the exact
+// anchor isn't found, retries with the extracted stable substring (see
+// extractStableAnchor).
 export function anchorYInFlat(flat: FlatPageText, anchor: string): number | null {
   const needle = anchor.trim().replace(/\s+/g, ' ').toLowerCase();
   if (needle.length === 0) return null;
-  const idx = flat.flat.indexOf(needle);
-  if (idx < 0) return null;
+  let idx = flat.flat.indexOf(needle);
+  if (idx < 0) {
+    const stable = extractStableAnchor(anchor);
+    if (stable) idx = flat.flat.indexOf(stable);
+    if (idx < 0) return null;
+  }
   const itemIdx = flat.charToItem[idx];
   if (itemIdx === undefined || itemIdx < 0) return null;
   return flat.sorted[itemIdx]!.yTop;

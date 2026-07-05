@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   deriveAccountAnchor,
   deriveOtherAccountAnchors,
+  extractStableAnchor,
   firstOtherAnchorY,
   pageContainsAnchor,
   pageLines,
@@ -119,6 +120,23 @@ describe('deriveAccountAnchor', () => {
   });
 });
 
+describe('extractStableAnchor', () => {
+  it('extracts the "n° <digits>" account-number substring', () => {
+    expect(extractStableAnchor('C/C CONTRAT PERSONNEL GLOBAL N° 00020389601 EN EUROS (GD)'))
+      .toBe('n° 00020389601');
+    // Case + accent variants all reduce to lowercase.
+    expect(extractStableAnchor('LIVRET A n° 98765')).toBe('n° 98765');
+    expect(extractStableAnchor('LIVRET A N˚ 98765')).toBe('n˚ 98765');
+  });
+
+  it('returns null when no account-number pattern is present', () => {
+    expect(extractStableAnchor('compte courant sans numero')).toBeNull();
+    // Runs of fewer than 5 digits don't count — avoids false-positives on
+    // amounts or short numbers in headers.
+    expect(extractStableAnchor('page 1 sur 3 n° 42')).toBeNull();
+  });
+});
+
 describe('pageContainsAnchor', () => {
   it('matches on lineified page text', () => {
     const p = page(0, [item(0, 'COMPTE', 40, 50), item(0, 'COURANT', 100, 50)]);
@@ -143,6 +161,26 @@ describe('pageContainsAnchor', () => {
       item(0, 'SUP', 100, 104), // 4pt below — different "line" for the tolerance
     ]);
     expect(pageContainsAnchor(p, 'livret a sup')).toBe(true);
+  });
+
+  it('falls back to the account-number substring when the anchor\'s marketing prefix changed', () => {
+    // Sample statement stored the anchor as its full header line.
+    const storedAnchor = 'C/C CONTRAT PERSONNEL GLOBAL N° 00020389601 EN EUROS (GD)';
+    // Next month, the bank reworded the header but the account number is
+    // stable. The exact stored anchor no longer appears, but "n°
+    // 00020389601" does — the fallback kicks in.
+    const p = page(0, [
+      item(0, 'COMPTE COURANT PRIVE EUR N° 00020389601 en euros (GD)', 40, 50),
+      item(0, '15/01/2026 tx', 40, 200),
+    ]);
+    expect(pageContainsAnchor(p, storedAnchor)).toBe(true);
+  });
+
+  it('fallback does NOT hit when the account number is different', () => {
+    const p = page(0, [
+      item(0, 'COMPTE COURANT PRIVE EUR N° 99999999999 en euros (GD)', 40, 50),
+    ]);
+    expect(pageContainsAnchor(p, 'C/C CONTRAT PERSONNEL GLOBAL N° 00020389601 EN EUROS (GD)')).toBe(false);
   });
 });
 
