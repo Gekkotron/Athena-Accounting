@@ -153,6 +153,31 @@ export function firstOtherAnchorY(page: PdfPageText, otherAnchors: readonly stri
   return earliest;
 }
 
+// Frequency-based anchor pick. Counts every account-header-like line
+// (any page, checked or not) and returns the one that appears on the
+// MOST pages. On real bank statements the primary account's header
+// repeats on every one of its pages, so a most-frequent line is very
+// likely that account's marker. Ties broken by longer line first
+// (more specific), then lex order.
+//
+// Used as a fallback when the intersection-based derivation returns
+// null — most commonly when the user checked every sample page, so
+// there's no "unchecked" set to distinguish from.
+function deriveAnchorByFrequency(pages: PdfPageText[]): string | null {
+  const freq = new Map<string, number>();
+  for (const p of pages) {
+    for (const line of pageLines(p)) {
+      if (!isAccountHeaderLike(line)) continue;
+      freq.set(line, (freq.get(line) ?? 0) + 1);
+    }
+  }
+  if (freq.size === 0) return null;
+  const sorted = Array.from(freq.entries()).sort(
+    (a, b) => b[1] - a[1] || b[0].length - a[0].length || a[0].localeCompare(b[0]),
+  );
+  return sorted[0]![0];
+}
+
 // Derive a text anchor that identifies the account's pages.
 //
 // Given the extracted pages and the indices the user marked as "belonging to
@@ -161,11 +186,10 @@ export function firstOtherAnchorY(page: PdfPageText, otherAnchors: readonly stri
 // on each page of that account ("compte courant n° …", "livret a n° …"), so
 // this pins the account by content rather than by absolute page number.
 //
-// Returns null when:
-//   - no page is selected, or every page is selected (nothing to distinguish);
-//   - no line meets the shared-by-all-selected AND absent-from-all-others
-//     criteria (rare — the caller should fall back to storing selectedPages
-//     and warn the user).
+// Falls back to the most-frequent account-header line across all pages when
+// the intersection-based path yields nothing — critical when the user
+// selected every sample page (default state, no unchecked set to key on).
+// Returns null only when no candidate header can be found anywhere.
 export function deriveAccountAnchor(
   pages: PdfPageText[],
   selectedIndices: number[],
@@ -175,35 +199,42 @@ export function deriveAccountAnchor(
   const selectedPages = pages.filter((p) => selectedSet.has(p.pageIndex));
   const otherPages = pages.filter((p) => !selectedSet.has(p.pageIndex));
   if (selectedPages.length === 0) return null;
-  if (otherPages.length === 0) return null; // nothing to distinguish
 
-  // Intersection of lines shared by every selected page.
-  const perPageLines = selectedPages.map(pageLines);
-  let common = new Set<string>(perPageLines[0]!);
-  for (let i = 1; i < perPageLines.length; i++) {
-    const next = new Set<string>();
-    for (const line of common) {
-      if (perPageLines[i]!.has(line)) next.add(line);
+  // Intersection-based path only applies when there's an unchecked set
+  // to distinguish selected from. Otherwise (all pages selected) fall
+  // straight through to the frequency-based picker.
+  if (otherPages.length > 0) {
+    const perPageLines = selectedPages.map(pageLines);
+    let common = new Set<string>(perPageLines[0]!);
+    for (let i = 1; i < perPageLines.length; i++) {
+      const next = new Set<string>();
+      for (const line of common) {
+        if (perPageLines[i]!.has(line)) next.add(line);
+      }
+      common = next;
+      if (common.size === 0) break;
     }
-    common = next;
-    if (common.size === 0) return null;
+    if (common.size > 0) {
+      const otherLineSets = otherPages.map(pageLines);
+      const survivors: string[] = [];
+      outer: for (const line of common) {
+        for (const other of otherLineSets) {
+          if (other.has(line)) continue outer;
+        }
+        survivors.push(line);
+      }
+      if (survivors.length > 0) {
+        survivors.sort((a, b) => b.length - a.length || a.localeCompare(b));
+        return survivors[0]!;
+      }
+    }
   }
 
-  // Filter: drop any line that also appears on an unselected page.
-  const otherLineSets = otherPages.map(pageLines);
-  const survivors: string[] = [];
-  outer: for (const line of common) {
-    for (const other of otherLineSets) {
-      if (other.has(line)) continue outer;
-    }
-    survivors.push(line);
-  }
-  if (survivors.length === 0) return null;
-
-  // Longest surviving line is the most specific anchor; ties broken by
-  // lexicographic order for determinism.
-  survivors.sort((a, b) => b.length - a.length || a.localeCompare(b));
-  return survivors[0]!;
+  // Fallback — frequency-based across ALL pages. Works even with every
+  // page selected: on a Compte-Courant + Livret-A statement the Compte
+  // Courant header appears on 3 pages, Livret A on 1, and frequency
+  // picks Compte Courant.
+  return deriveAnchorByFrequency(selectedPages);
 }
 
 // Derive markers for OTHER accounts present on the same statement. Used

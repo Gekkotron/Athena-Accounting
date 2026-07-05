@@ -63,12 +63,36 @@ describe('deriveAccountAnchor', () => {
     expect(anchor).toBe('compte courant n° 12345');
   });
 
-  it('returns null when every page is selected (nothing to distinguish)', () => {
+  it('returns null when every page is selected AND no account-header-like line is present', () => {
     const pages = [
       page(0, [item(0, 'HEADER', 40, 50)]),
       page(1, [item(1, 'HEADER', 40, 50)]),
     ];
     expect(deriveAccountAnchor(pages, [0, 1])).toBeNull();
+  });
+
+  it('falls back to the MOST FREQUENT account-header line when every page is selected', () => {
+    // Real-user layout: Compte Courant header repeats on pages 0,1,2 and
+    // Livret A appears mid-page-2 with 1 occurrence. Intersection path
+    // has no "other" to distinguish from, but frequency picks Compte
+    // Courant (3 pages) over Livret A (1 page).
+    const pages = [
+      page(0, [
+        item(0, 'COMPTE COURANT PRIVE EUR N° 00020389601 en euros (GD)', 40, 50),
+        item(0, '15/01/2026 tx', 40, 200),
+      ]),
+      page(1, [
+        item(1, 'COMPTE COURANT PRIVE EUR N° 00020389601 en euros (GD)', 40, 50),
+        item(1, '20/01/2026 tx', 40, 200),
+      ]),
+      page(2, [
+        item(2, 'COMPTE COURANT PRIVE EUR N° 00020389601 en euros (GD)', 40, 50),
+        item(2, '25/01/2026 tx', 40, 200),
+        item(2, 'LIVRET A SUP N° 00020389603', 40, 500), // mid-page transition
+      ]),
+    ];
+    expect(deriveAccountAnchor(pages, [0, 1, 2]))
+      .toBe('compte courant prive eur n° 00020389601 en euros (gd)');
   });
 
   it('returns null when no line uniquely identifies the selected set', () => {
