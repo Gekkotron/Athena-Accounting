@@ -92,6 +92,10 @@ export function Imports() {
           qc.invalidateQueries({ queryKey: ['accounts'] });
           qc.invalidateQueries({ queryKey: ['reports'] });
           qc.invalidateQueries({ queryKey: ['tri-groups'] });
+          // Newly-imported rows can create fresh (account, date, amount)
+          // clusters — refresh the "Possibles doublons" panel so those
+          // show up without a page reload.
+          qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
         }}
         onCancel={() => setNeedsTpl(null)}
       />

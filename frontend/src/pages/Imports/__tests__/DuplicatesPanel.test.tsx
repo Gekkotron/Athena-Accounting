@@ -31,11 +31,15 @@ describe('DuplicatesPanel', () => {
       if (path === '/api/transactions/duplicates') return { groups: [] };
       throw new Error(`unexpected: ${path}`);
     });
-    const { container } = renderPanel();
+    renderPanel();
     await waitFor(() =>
       expect(apiMock).toHaveBeenCalledWith('/api/transactions/duplicates'),
     );
-    expect(container).toBeEmptyDOMElement();
+    // With no clusters, the panel still renders its header + a refresh
+    // button + a compact "Aucun doublon détecté" message — so the user
+    // has an explicit way to re-check without a page reload.
+    expect(await screen.findByText(/aucun doublon détecté/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /rafraîchir/i })).toBeInTheDocument();
   });
 
   it('renders one group per cluster with its transactions', async () => {
@@ -154,6 +158,30 @@ describe('DuplicatesPanel', () => {
     expect(postCalls[0].init.method).toBe('POST');
     expect(Object.keys(postCalls[0].init.json)).toEqual(['ids']);
     expect(postCalls[0].init.json).toEqual({ ids: [100] });
+  });
+
+  it('clicking the refresh button re-fetches /api/transactions/duplicates', async () => {
+    let dupCalls = 0;
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [] };
+      if (path === '/api/transactions/duplicates') {
+        dupCalls++;
+        return { groups: [] };
+      }
+      throw new Error(`unexpected: ${path}`);
+    });
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText(/aucun doublon détecté/i);
+    const beforeClicks = dupCalls;
+    await user.click(screen.getByRole('button', { name: /rafraîchir/i }));
+    await waitFor(() => expect(dupCalls).toBeGreaterThan(beforeClicks));
   });
 
   it('seeds the similarity threshold from /api/settings', async () => {

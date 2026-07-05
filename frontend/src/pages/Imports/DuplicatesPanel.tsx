@@ -27,7 +27,9 @@ export function DuplicatesPanel(): JSX.Element {
   const dupsQ = useQuery({
     queryKey: ['transaction-duplicates'],
     queryFn: () => api<{ groups: DupGroup[] }>('/api/transactions/duplicates'),
-    refetchOnWindowFocus: false,
+    // Refetch on tab focus so the panel picks up new clusters after the
+    // user imports elsewhere or comes back from another tab.
+    refetchOnWindowFocus: true,
   });
 
   // Mark every row in a doublons group as "not a duplicate". The group then
@@ -142,13 +144,39 @@ export function DuplicatesPanel(): JSX.Element {
   );
   const hiddenCount = scoredGroups.length - visibleGroups.length;
 
+  const refreshButton = (
+    <button
+      type="button"
+      onClick={() => dupsQ.refetch()}
+      disabled={dupsQ.isFetching}
+      title="Recharger la liste des doublons"
+      aria-label="Rafraîchir la liste des doublons"
+      className="text-[11px] text-ink-400 hover:text-ink-100 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition disabled:opacity-40"
+    >
+      {dupsQ.isFetching ? '…' : '↻ Rafraîchir'}
+    </button>
+  );
+
   if (scoredGroups.length === 0) {
-    return <></>;
+    return (
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="section-rule flex-1">Possibles doublons</div>
+          {refreshButton}
+        </div>
+        <div className="surface p-5 text-sm text-ink-500 display-italic">
+          Aucun doublon détecté.
+        </div>
+      </section>
+    );
   }
 
   return (
     <section>
-      <div className="section-rule mb-4">Possibles doublons</div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-rule flex-1">Possibles doublons</div>
+        {refreshButton}
+      </div>
       <div className="surface p-5">
         <p className="text-sm text-ink-300 mb-3">
           Ces transactions partagent compte + date + montant mais ont des libellés différents.
