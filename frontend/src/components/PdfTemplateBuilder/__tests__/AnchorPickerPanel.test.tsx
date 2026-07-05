@@ -57,23 +57,29 @@ describe('AnchorPickerPanel', () => {
     expect(screen.queryByText(/15\/01\/2026/)).toBeNull();
   });
 
-  it('clicking "Le mien" calls onPageAnchorChange with the lowercased line', async () => {
+  it('clicking "Le mien" auto-marks every OTHER candidate as an "Autre compte"', async () => {
     const nt = makeNeeds([
       item(0, 'COMPTE COURANT n° 12345', 40, 50),
       item(0, 'LIVRET A n° 98765', 40, 500),
+      item(0, 'LEP n° 55555', 40, 700),
     ]);
     const onPick = vi.fn();
+    let others: string[] = [];
+    const setOthers = (updater: (prev: string[]) => string[]) => { others = updater(others); };
     const user = userEvent.setup();
     render(
       <AnchorPickerPanel
         needsTemplate={nt}
-        pageAnchor={null} otherAnchors={[]}
-        onPageAnchorChange={onPick} onOtherAnchorsChange={() => {}}
+        pageAnchor={null} otherAnchors={others}
+        onPageAnchorChange={onPick} onOtherAnchorsChange={setOthers}
       />,
     );
     const radios = screen.getAllByRole('radio', { name: /le mien/i });
     await user.click(radios[0]!); // Compte Courant
     expect(onPick).toHaveBeenLastCalledWith('compte courant n° 12345');
+    // Every other candidate is now flagged as "Autre compte" — safe default
+    // for mid-page transitions.
+    expect(others).toEqual(['livret a n° 98765', 'lep n° 55555']);
   });
 
   it('clicking "Autre compte" appends to the otherAnchors array', async () => {
@@ -97,7 +103,10 @@ describe('AnchorPickerPanel', () => {
     expect(others).toEqual(['livret a n° 98765']);
   });
 
-  it('picking a line as "mine" removes it from otherAnchors atomically', async () => {
+  it('picking a line as "mine" excludes it from the auto-populated others', async () => {
+    // Two candidates. Picking Livret A as "mine" should reset otherAnchors
+    // to just [Compte Courant] — Livret A itself must NOT be listed as an
+    // "other" (a line can't be both).
     const nt = makeNeeds([
       item(0, 'COMPTE COURANT n° 12345', 40, 50),
       item(0, 'LIVRET A n° 98765', 40, 500),
@@ -116,6 +125,6 @@ describe('AnchorPickerPanel', () => {
     const radios = screen.getAllByRole('radio', { name: /le mien/i });
     await user.click(radios[1]!); // Livret A — was in "others"
     expect(onPick).toHaveBeenLastCalledWith('livret a n° 98765');
-    expect(others).toEqual([]);
+    expect(others).toEqual(['compte courant n° 12345']);
   });
 });

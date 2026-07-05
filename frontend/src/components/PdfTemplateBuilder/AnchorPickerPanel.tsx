@@ -90,9 +90,9 @@ export function AnchorPickerPanel({
         Identifier votre compte <span className="text-ink-500 font-normal">(optionnel)</span>
       </div>
       <p className="text-xs text-ink-400 mb-3">
-        Si la détection automatique se trompe, cochez ici quel en-tête appartient à votre compte,
-        et lesquels appartiennent à d'autres comptes du même relevé. Sans sélection, le serveur
-        essaie de deviner à partir des pages cochées ci-dessus.
+        Cochez « Le mien » sur l'en-tête de votre compte. Tous les autres en-têtes détectés seront
+        automatiquement traités comme des comptes différents (décochez-en un si ce n'est pas le
+        cas). Sans sélection, le serveur essaie de deviner à partir des pages cochées ci-dessus.
       </p>
       <div className="space-y-1.5">
         {candidates.map((c) => {
@@ -115,8 +115,15 @@ export function AnchorPickerPanel({
                   checked={mine}
                   onChange={() => {
                     onPageAnchorChange(c.text);
-                    // A line can't be both "mine" and "other".
-                    if (other) onOtherAnchorsChange((prev) => prev.filter((a) => a !== c.text));
+                    // When the user picks "mine" on a line, treat every OTHER
+                    // header candidate as "another account" by default.
+                    // Safer default than empty — mid-page transitions get
+                    // cut off automatically. User can uncheck if wrong.
+                    onOtherAnchorsChange(() =>
+                      candidates
+                        .filter((k) => k.text !== c.text)
+                        .map((k) => k.text),
+                    );
                   }}
                 />
                 <span>Le mien</span>
