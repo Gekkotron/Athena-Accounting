@@ -5,7 +5,7 @@ import { extractText, type PdfTextItem, type PdfPageText } from './text-extract.
 import { fingerprintHeader } from './fingerprint.js';
 import { runHeuristic } from './heuristic.js';
 import { applyTemplate } from './template-apply.js';
-import { deriveAccountAnchor, deriveOtherAccountAnchors } from './page-anchor.js';
+import { deriveAccountAnchor, deriveOtherAccountAnchors, pageContainsAnchor } from './page-anchor.js';
 import { renderPagesToPng, type RenderedPage } from './render.js';
 import { validateZones, type TemplateZones } from './zones.js';
 import { runImport, type ImportResult } from '../import-service.js';
@@ -26,7 +26,11 @@ export type ImportPdfResult =
       pages: RenderedPage[];
       textItems: PdfTextItem[];
       suggestedZones: TemplateZones | null;
-      reason: 'no_text_layer' | 'low_confidence';
+      reason: 'no_text_layer' | 'low_confidence' | 'template_stale';
+      // Human-readable explanation for why the saved template didn't apply
+      // (only set when reason === 'template_stale'). The UI surfaces this
+      // as a banner above the wizard so the user knows what to fix.
+      staleDiagnostic?: string;
     };
 
 function flattenItems(pages: PdfPageText[]): PdfTextItem[] {
@@ -59,11 +63,16 @@ export async function importPdf(opts: {
         ),
       );
     if (tpl) {
-      const { rows, skippedRows } = applyTemplate(pages, tpl.zones as TemplateZones);
+      const z = tpl.zones as TemplateZones;
+      const { rows, skippedRows } = applyTemplate(pages, z);
       if (rows.length === 0) {
-        const err = new Error('template_yielded_no_rows');
-        (err as any).code = 'template_yielded_no_rows';
-        throw err;
+        // The saved template doesn't produce anything on this PDF. Rather
+        // than 422 the user out with a cryptic "retrain" message, drop
+        // straight back into the wizard with a draft — same code path
+        // that a first-time import takes — and include a short diagnostic
+        // so the user knows WHY the template didn't apply.
+        const diag = diagnoseStaleTemplate(pages, z, skippedRows);
+        return await parkDraft(opts, pages, fingerprint, z, 'template_stale', diag);
       }
       const result = await runImport({
         filename: opts.filename,
@@ -117,7 +126,8 @@ async function parkDraft(
   pages: PdfPageText[],
   fingerprint: string,
   suggestedZones: TemplateZones | null,
-  reason: 'no_text_layer' | 'low_confidence',
+  reason: 'no_text_layer' | 'low_confidence' | 'template_stale',
+  staleDiagnostic?: string,
 ): Promise<ImportPdfResult> {
   const rendered = await renderPagesToPng(opts.buffer);
   const textItems = flattenItems(pages);
@@ -137,7 +147,29 @@ async function parkDraft(
     textItems,
     suggestedZones,
     reason,
+    ...(staleDiagnostic ? { staleDiagnostic } : {}),
   };
+}
+
+// Explain in one short French sentence WHY the saved template produced 0
+// rows on this PDF. Consulted only when we're about to fall back to the
+// wizard; the string ends up in a banner above it.
+function diagnoseStaleTemplate(
+  pages: PdfPageText[],
+  zones: TemplateZones,
+  skippedRows: Array<{ rowText: string; reason: string }>,
+): string {
+  if (zones.pageAnchor && zones.pageAnchor.trim().length > 0) {
+    const anchorFoundOn = pages.filter((p) => pageContainsAnchor(p, zones.pageAnchor!)).length;
+    if (anchorFoundOn === 0) {
+      return `L'ancre du compte « ${zones.pageAnchor} » n'a été trouvée sur aucune des ${pages.length} pages de ce PDF. La mise en page a peut-être changé — cochez la bonne ligne dans "Identifier votre compte" ci-dessous.`;
+    }
+  }
+  const overrunWarning = skippedRows.find((s) => /non traitée/i.test(s.rowText));
+  if (overrunWarning) {
+    return 'Le template utilise des numéros de page absolus et le PDF est plus court que prévu. Recréez-le pour passer au filtrage par contenu.';
+  }
+  return 'Le template a été appliqué mais n\'a produit aucune ligne — le tableau, ses colonnes ou les marqueurs d\'autres comptes ne correspondent plus à ce PDF.';
 }
 
 export interface ApplyTemplateImportedResult {

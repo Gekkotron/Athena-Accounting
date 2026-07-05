@@ -189,6 +189,18 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             de lignes sera vide — l'OCR n'est pas encore disponible.
           </div>
         )}
+        {needsTemplate.reason === 'template_stale' && (
+          <div className="bg-clay-900/30 border border-clay-800/60 text-clay-200 p-3 rounded-lg mb-4 text-sm">
+            <div className="font-medium mb-1">Le template précédent ne correspond plus à ce PDF</div>
+            <div className="text-clay-300/90 text-xs leading-relaxed">
+              {needsTemplate.staleDiagnostic
+                ?? 'Le template a été appliqué mais n\'a produit aucune ligne. Reconfigurez les zones ci-dessous.'}
+            </div>
+            <div className="text-clay-300/70 text-xs mt-2">
+              Le template existant sera remplacé par cette nouvelle version quand vous cliquerez sur « Importer ».
+            </div>
+          </div>
+        )}
 
         {step === 'header' && (
           <>

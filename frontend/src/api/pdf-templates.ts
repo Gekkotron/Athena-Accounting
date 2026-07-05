@@ -34,7 +34,9 @@ export interface PdfImportNeedsTemplate {
   pages: Array<{ pageIndex: number; pngBase64: string; widthPt: number; heightPt: number }>;
   textItems: PdfTextItem[];
   suggestedZones: TemplateZones | null;
-  reason: 'no_text_layer' | 'low_confidence';
+  reason: 'no_text_layer' | 'low_confidence' | 'template_stale';
+  // Human-readable explanation set only when reason === 'template_stale'.
+  staleDiagnostic?: string;
 }
 
 export type PdfImportResponse = PdfImportImported | PdfImportNeedsTemplate;
