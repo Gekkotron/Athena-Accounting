@@ -23,12 +23,14 @@ const rows: Transaction[] = [
     rawLabel: 'A', normalizedLabel: 'a', memo: null, notes: null, fitid: null,
     dedupKey: 'x', categoryId: null, categorySource: 'auto',
     transferGroupId: null, sourceFileId: null, importedAt: '2026-06-15T00:00:00Z',
+    splits: [],
   },
   {
     id: 2, accountId: 1, date: '2026-06-16', amount: '-20.00',
     rawLabel: 'B', normalizedLabel: 'b', memo: null, notes: null, fitid: null,
     dedupKey: 'y', categoryId: null, categorySource: 'auto',
     transferGroupId: null, sourceFileId: null, importedAt: '2026-06-16T00:00:00Z',
+    splits: [],
   },
 ];
 const baseFilters: Filters = { sort: 'date', order: 'desc' };

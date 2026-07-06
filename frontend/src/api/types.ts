@@ -62,6 +62,14 @@ export interface TransferRule {
   enabled: boolean;
 }
 
+export interface TransactionSplit {
+  id: number;
+  transactionId: number;
+  categoryId: number | null;
+  amount: string;
+  memo: string | null;
+}
+
 export interface Transaction {
   id: number;
   accountId: number;
@@ -81,6 +89,7 @@ export interface Transaction {
   // Per-transaction lock override in years. Null falls back to the account's
   // lockYears; null on both means no lock. Clocked from the transaction date.
   lockYears?: number | null;
+  splits: TransactionSplit[];
 }
 
 export interface AccountFilenamePattern {

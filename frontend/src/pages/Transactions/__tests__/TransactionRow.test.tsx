@@ -31,6 +31,7 @@ const t: Transaction = {
   transferGroupId: null,
   sourceFileId: null,
   importedAt: '2026-06-15T00:00:00Z',
+  splits: [],
 };
 
 function renderRow(overrides: Partial<{ tx: Transaction; selected: boolean }> = {}) {

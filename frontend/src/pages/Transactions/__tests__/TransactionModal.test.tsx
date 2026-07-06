@@ -97,6 +97,7 @@ describe('TransactionModal', () => {
       rawLabel: 'CB CARREFOUR', normalizedLabel: 'carrefour', memo: null, notes: null,
       fitid: null, dedupKey: 'dk-1', categoryId: null, categorySource: 'auto',
       transferGroupId: null, sourceFileId: null, importedAt: '2026-06-15T00:00:00Z',
+      splits: [],
     };
     apiMock.mockResolvedValue({ transaction: { ...original, rawLabel: 'CARREFOUR EVRY' } });
     const user = userEvent.setup();
