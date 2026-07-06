@@ -19,6 +19,8 @@ export function TransactionsTable({
   onUpdateNotes,
   onEdit,
   onDelete,
+  expandedIds,
+  onToggleExpanded,
 }: {
   transactions: Transaction[];
   categories: Category[];
@@ -34,6 +36,8 @@ export function TransactionsTable({
   onUpdateNotes: (id: number, patch: { notes: string | null }) => void;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
+  expandedIds: Set<number>;
+  onToggleExpanded: (id: number) => void;
 }) {
   const visibleSelected = transactions.filter((t) => selectedIds.has(t.id)).length;
   const allSelected = transactions.length > 0 && visibleSelected === transactions.length;
@@ -85,6 +89,8 @@ export function TransactionsTable({
                   account={accountById.get(t.accountId)}
                   categories={categories}
                   selected={selectedIds.has(t.id)}
+                  expanded={expandedIds.has(t.id)}
+                  onToggleExpanded={onToggleExpanded}
                   onToggleSelect={onToggleSelect}
                   onUpdateCategory={onUpdateCategory}
                   onUpdateNotes={onUpdateNotes}

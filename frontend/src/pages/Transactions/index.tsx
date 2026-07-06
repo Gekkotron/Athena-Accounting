@@ -52,6 +52,7 @@ export function Transactions() {
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
@@ -60,6 +61,7 @@ export function Transactions() {
   // acting on them would feel like surprise-deletion.
   useEffect(() => {
     setSelectedIds(new Set());
+    setExpandedIds(new Set());
   }, [filters, offset]);
 
   // Whenever the search input changes, route it to either `amount` or
@@ -255,6 +257,15 @@ export function Transactions() {
         }}
         onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
         onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
+        expandedIds={expandedIds}
+        onToggleExpanded={(id) => {
+          setExpandedIds((s) => {
+            const next = new Set(s);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        }}
         onEdit={(tx) => setModalTx(tx)}
         onDelete={(tx) => {
           setDeleteError(null);

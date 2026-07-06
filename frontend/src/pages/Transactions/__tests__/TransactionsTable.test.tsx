@@ -49,6 +49,7 @@ function renderTable(overrides: Partial<{
   const onDelete = overrides.onDelete ?? vi.fn();
   const onToggleSelect = vi.fn();
   const onToggleSelectAll = vi.fn();
+  const onToggleExpanded = vi.fn();
   render(
     <TransactionsTable
       transactions={overrides.transactions ?? rows}
@@ -65,9 +66,11 @@ function renderTable(overrides: Partial<{
       onUpdateNotes={onUpdateNotes}
       onEdit={onEdit}
       onDelete={onDelete}
+      expandedIds={new Set()}
+      onToggleExpanded={onToggleExpanded}
     />,
   );
-  return { setFilters, setOffset, onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, onToggleSelectAll };
+  return { setFilters, setOffset, onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, onToggleSelectAll, onToggleExpanded };
 }
 
 describe('TransactionsTable', () => {
