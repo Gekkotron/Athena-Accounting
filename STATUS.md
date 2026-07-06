@@ -1,6 +1,6 @@
 # Status — Athena Accounting
 
-_Last updated: 2026-07-03_
+_Last updated: 2026-07-06_
 
 ## Live
 
@@ -12,6 +12,18 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
 
 ## Recently landed
 
+- 2026-07-06 — Transaction splits (ventilation). New `transaction_splits`
+  table (migration 0014) with a deferrable checksum trigger guaranteeing
+  `SUM(splits.amount) = parent.amount` to the cent, plus an amount-lock
+  trigger returning 409 on PATCH while splits exist. `GET/PUT/DELETE
+  /api/transactions/:id/splits`, list + single-row GETs hydrate `splits:
+  []` on every transaction, `?categoryId=` filter matches splits too,
+  `/api/reports/categories` + `/api/tri/groups` now split-aware via
+  UNION-ALL CTE. Backup v2 emits and restores splits. Frontend: new
+  `SplitEditor` embedded in `TransactionModal` (submit gated on a
+  parseMagnitudeCents-derived remainder chip; chained PUT/DELETE after
+  POST/PATCH); the transactions list collapses a split row to a
+  `Ventilée (N)` badge that expands into read-only sub-rows on click.
 - 2026-07-03 — User-configurable settings surface: new `user_settings`
   table (migration 0013), `GET`/`PATCH /api/settings`, `useSettings`
   hook, Réglages page at `/settings` reached from a gear icon in the
@@ -92,6 +104,10 @@ Empty. Update this section when starting a new initiative.
   Nothing reads them anymore, and wiping them from each user's browser
   is not worth the ceremony. Delete `frontend/src/lib/persisted-state.ts`
   and its tests when no other code paths reference the hook.
+- Rule-driven auto-splits (transaction-splits iteration, 2026-07-06):
+  v1 covers manual splits only. A rule that produces N splits
+  automatically (e.g. "Amazon → 70 % Livres / 30 % Électro") is a
+  separate spec. The rules engine is untouched by this iteration.
 
 ## Environment
 
