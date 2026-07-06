@@ -374,6 +374,46 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
       expect(singlePlain.json().transaction.splits).toEqual([]);
     });
 
+    it('PATCH amount on a split transaction → 409, no changes applied', async () => {
+      const txId = await makeTx({
+        accountId, date: '2026-06-28', amount: '-100.00', rawLabel: 'Amazon',
+      });
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: categoryBooksId,  amount: '-60.00' },
+          { categoryId: categoryDiversId, amount: '-40.00' },
+        ] },
+      });
+      const bad = await app.inject({
+        method: 'PATCH', url: `/api/transactions/${txId}`, headers: { cookie },
+        payload: { amount: '-200.00' },
+      });
+      expect(bad.statusCode).toBe(409);
+      const after = await app.inject({
+        method: 'GET', url: `/api/transactions/${txId}`, headers: { cookie },
+      });
+      expect(after.json().transaction.amount).toBe('-100.00');
+    });
+
+    it('PATCH notes on a split transaction still succeeds (no trigger involvement)', async () => {
+      const txId = await makeTx({
+        accountId, date: '2026-06-29', amount: '-100.00', rawLabel: 'Amazon',
+      });
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: categoryBooksId,  amount: '-60.00' },
+          { categoryId: categoryDiversId, amount: '-40.00' },
+        ] },
+      });
+      const ok = await app.inject({
+        method: 'PATCH', url: `/api/transactions/${txId}`, headers: { cookie },
+        payload: { notes: 'kindle + livraison' },
+      });
+      expect(ok.statusCode).toBe(200);
+    });
+
     it('GET / PUT / DELETE unauthenticated → 401', async () => {
       for (const method of ['GET', 'PUT', 'DELETE'] as const) {
         const res = await app.inject({

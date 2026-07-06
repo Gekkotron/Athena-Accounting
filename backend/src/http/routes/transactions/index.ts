@@ -258,6 +258,11 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       if (isPgError(err) && err.code === '23503') {
         return reply.code(400).send({ error: 'compte ou catégorie inconnu' });
       }
+      if (isPgError(err) && err.code === '23514') {
+        return reply.code(409).send({
+          error: "supprimez d'abord la ventilation avant de modifier le montant",
+        });
+      }
       throw err;
     }
   });
