@@ -134,4 +134,35 @@ describe('PdfTemplateBuilder — preview button', () => {
     expect(screen.queryByText('CB CARREFOUR')).toBeNull();
     expect(screen.getByText(/cliquez sur/i)).toBeInTheDocument();
   });
+
+  it('ignores a preview response that resolves after a re-paint made it stale', async () => {
+    // A deferred promise the test controls by hand, so we can trigger the
+    // re-paint (and the reset effect it fires) *before* the response lands
+    // — reproducing the request-race the reset useEffect alone can't catch.
+    let resolvePreview!: (v: { rows: any[]; skippedRows: any[] }) => void;
+    previewMock.mockImplementation(
+      () => new Promise((resolve) => { resolvePreview = resolve; }),
+    );
+    render(<PdfTemplateBuilder needsTemplate={needsTemplate} onClose={vi.fn()} onImported={vi.fn()} />);
+
+    driveToAmountStep();
+    fireEvent.change(screen.getByPlaceholderText(/BNP/i), { target: { value: 'Test Template' } });
+    fireEvent.click(screen.getByRole('button', { name: /aperçu/i }));
+
+    // Re-paint the Débit column *while the request is still in flight* —
+    // this fires the reset effect and (with the fix) bumps the request id.
+    fireEvent.click(screen.getByTestId('paint-Débit'));
+
+    // Now let the stale request resolve with rows for the OLD zone config.
+    resolvePreview({
+      rows: [{ date: '2026-01-15', amount: '-42.30', rawLabel: 'CB CARREFOUR', memo: null, fitid: null }],
+      skippedRows: [],
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The stale rows must never appear — the panel should stay empty.
+    expect(screen.queryByText('CB CARREFOUR')).toBeNull();
+    expect(screen.getByText(/cliquez sur/i)).toBeInTheDocument();
+  });
 });

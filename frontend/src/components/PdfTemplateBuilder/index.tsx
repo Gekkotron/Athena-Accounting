@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
 import {
   submitZones,
@@ -75,11 +75,20 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   const [previewSkipped, setPreviewSkipped] = useState<PreviewResult['skippedRows']>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  // Guards against a stale in-flight preview response landing after the
+  // zones have changed (and thus the reset effect below already ran).
+  // Every call to handlePreview claims a new id; any setState it performs
+  // is only applied if its id is still the current one when the response
+  // arrives. The reset effect also bumps this so an in-flight request that
+  // resolves after a re-paint is ignored even if no *new* preview was
+  // requested in the meantime.
+  const previewReqIdRef = useRef<number>(0);
 
   // Whenever any painted zone or wizard-configuration input changes, wipe
   // the preview so the user never sees a stale table that no longer
   // reflects the current paint.
   useEffect(() => {
+    previewReqIdRef.current += 1;
     setPreviewRows(null);
     setPreviewSkipped([]);
     setPreviewError(null);
@@ -153,13 +162,20 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   async function handlePreview() {
     const zones = buildZones();
     if (!zones) return;
+    // Claim this request's id. If the zones change (and the reset effect
+    // bumps the ref) before the response lands, every setState below is
+    // skipped — the response belongs to a configuration that's no longer
+    // current.
+    const myReqId = ++previewReqIdRef.current;
     setPreviewLoading(true);
     setPreviewError(null);
     try {
       const r = await previewZones(needsTemplate.draftId, zones);
+      if (myReqId !== previewReqIdRef.current) return; // stale response, ignore
       setPreviewRows(r.rows);
       setPreviewSkipped(r.skippedRows);
     } catch (e: any) {
+      if (myReqId !== previewReqIdRef.current) return; // stale response, ignore
       setPreviewError(e?.message ?? 'preview failed');
       setPreviewRows(null);
       setPreviewSkipped([]);
