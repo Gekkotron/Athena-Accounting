@@ -27,9 +27,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   et le tableau commence page 2).
 - Détection de transactions récurrentes (Netflix, loyer, salaire) avec
   suggestion de catégorie et alerte "attendu ce mois-ci mais absent".
-- Splitter une transaction en plusieurs catégories (ex : facture Amazon =
-  livres + courses + électro). Table `transaction_splits` avec un check-sum
-  côté DB.
 - Prévisualisation d'une règle : avant de créer, montrer les transactions du
   passé qu'elle aurait matché (compte, montant, sens). Réduit les faux
   positifs.
@@ -79,7 +76,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   friction (chaque changement d'ancre = delete + re-import aujourd'hui).
 - Prévisualisation des N premières transactions dans le wizard PDF avant de
   cliquer "Importer" — fait bcp gagner sur les templates douteux.
-- Splitter une transaction en plusieurs catégories.
 - Prévisualisation d'une règle (transactions passées qu'elle aurait matché).
 - Recherche full-text simple sur libellés/notes.
 
@@ -94,6 +90,12 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 <!-- Pour mémoire ou pour s'auto-féliciter. Les vieux items peuvent être archivés
      en bas du fichier ou supprimés. -->
 
+- **Transaction splits (ventilation)** : nouvelle table
+  `transaction_splits` avec somme forcée = parent.amount via trigger
+  deferrable côté DB. Éditeur intégré à `TransactionModal`, badge
+  `Ventilée (N)` + sous-lignes développables sur la liste. Migration
+  `0014`. Backup v2 emporte les splits. Non fait : rules qui produisent
+  des splits automatiquement (spec séparée).
 - **Réglages utilisateur** : table `user_settings` (JSONB par utilisateur),
   `GET`/`PATCH /api/settings`, hook `useSettings`, page Réglages accessible
   depuis l'icône engrenage dans la barre latérale. Défauts persistés :
