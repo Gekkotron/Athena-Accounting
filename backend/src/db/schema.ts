@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   bigserial,
   boolean,
   date,
@@ -379,7 +380,7 @@ export const transactionSplits = pgTable(
   'transaction_splits',
   {
     id: serial('id').primaryKey(),
-    transactionId: bigserial('transaction_id', { mode: 'number' })
+    transactionId: bigint('transaction_id', { mode: 'number' })
       .notNull(),
     categoryId: integer('category_id').references(() => categories.id, {
       onDelete: 'set null',
