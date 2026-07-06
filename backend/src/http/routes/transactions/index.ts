@@ -127,7 +127,20 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
 
     const where: SQL[] = [eq(transactions.userId, uid)];
     if (q.accountId) where.push(eq(transactions.accountId, q.accountId));
-    if (q.categoryId) where.push(eq(transactions.categoryId, q.categoryId));
+    if (q.categoryId) {
+      // Match plain-category transactions OR transactions with any split
+      // targeting the wanted category. Keeps the "Livres" filter honest
+      // when a Livres split lives on an Amazon transaction whose own
+      // category_id points elsewhere (or is null).
+      where.push(sql`(
+        ${transactions.categoryId} = ${q.categoryId}
+        OR EXISTS (
+          SELECT 1 FROM ${transactionSplits} s
+           WHERE s.transaction_id = ${transactions.id}
+             AND s.category_id = ${q.categoryId}
+        )
+      )`);
+    }
     if (q.sourceFileId) where.push(eq(transactions.sourceFileId, q.sourceFileId));
     if (q.fromDate) where.push(gte(transactions.date, q.fromDate));
     if (q.toDate) where.push(lte(transactions.date, q.toDate));

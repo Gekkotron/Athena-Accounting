@@ -414,6 +414,32 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
       expect(ok.statusCode).toBe(200);
     });
 
+    it('GET /api/transactions?categoryId=X includes split-only matches', async () => {
+      const plainTx = await makeTx({
+        accountId, date: '2026-07-01', amount: '-40.00', rawLabel: 'plain Livres',
+        categoryId: categoryBooksId,
+      });
+      const splitTx = await makeTx({
+        accountId, date: '2026-07-02', amount: '-100.00', rawLabel: 'Amazon',
+      });
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${splitTx}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: categoryBooksId,   amount: '-60.00' },
+          { categoryId: categoryElectroId, amount: '-40.00' },
+        ] },
+      });
+
+      const list = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?categoryId=${categoryBooksId}`,
+        headers: { cookie },
+      });
+      expect(list.statusCode).toBe(200);
+      const ids = (list.json().transactions as Array<{ id: number }>).map((t) => t.id).sort();
+      expect(ids).toEqual([plainTx, splitTx].sort());
+    });
+
     it('GET / PUT / DELETE unauthenticated → 401', async () => {
       for (const method of ['GET', 'PUT', 'DELETE'] as const) {
         const res = await app.inject({
