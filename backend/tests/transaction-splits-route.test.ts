@@ -365,6 +365,13 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
         method: 'GET', url: `/api/transactions/${txIdSplit}`, headers: { cookie },
       });
       expect(single.json().transaction.splits).toHaveLength(2);
+
+      // Empty-splits case on the single-row endpoint too — locks the
+      // hydrateSplits([row]) empty-array branch in.
+      const singlePlain = await app.inject({
+        method: 'GET', url: `/api/transactions/${txIdPlain}`, headers: { cookie },
+      });
+      expect(singlePlain.json().transaction.splits).toEqual([]);
     });
 
     it('GET / PUT / DELETE unauthenticated → 401', async () => {
