@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseUserDate } from '../../lib/format';
+import { SplitEditor, type DraftSplit } from './SplitEditor';
 
 export function TransactionModal({
   open,
@@ -37,6 +38,7 @@ export function TransactionModal({
   // rolling-lock semantics.
   const [lockYearsInput, setLockYearsInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [splitsDraft, setSplitsDraft] = useState<DraftSplit[]>([]);
 
   // Re-seed defaults / draft from the target transaction whenever the modal
   // opens or the target changes.
@@ -50,6 +52,12 @@ export function TransactionModal({
       setCategoryId(transaction.categoryId ?? '');
       setNotes(transaction.notes ?? '');
       setLockYearsInput(transaction.lockYears == null ? '' : String(transaction.lockYears));
+      setSplitsDraft(transaction.splits.map((s) => ({
+        key: `s-${s.id}`,
+        categoryId: s.categoryId ?? '',
+        amountMagnitude: Math.abs(Number(s.amount)).toFixed(2),
+        memo: s.memo ?? '',
+      })));
     } else {
       setAccountId(accounts[0]?.id ?? '');
       setDate(todayFr);
@@ -64,6 +72,7 @@ export function TransactionModal({
       // user types the year count per deposit — pre-filling would silently
       // switch PEA semantics to rolling-lock, which is wrong.
       setLockYearsInput('');
+      setSplitsDraft([]);
     }
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,8 +94,53 @@ export function TransactionModal({
     qc.invalidateQueries({ queryKey: ['tri-groups'] });
   };
 
+  const cleanedAmountForSplit = amount.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
+  const parentCents = /^-?\d+(\.\d{1,2})?$/.test(cleanedAmountForSplit)
+    ? Math.round(Number(cleanedAmountForSplit) * 100)
+    : 0;
+  const parentAmountMagnitude = Math.abs(parentCents) / 100;
+  const parentAmountSign: -1 | 1 | 0 =
+    parentCents === 0 ? 0 : parentCents < 0 ? -1 : 1;
+  const isTransfer = transaction?.transferGroupId != null;
+
+  const splitsSumCents = splitsDraft.reduce((acc, r) => {
+    const cleaned = r.amountMagnitude.replace(',', '.');
+    if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return acc;
+    return acc + Math.round(Number(cleaned) * 100);
+  }, 0);
+  const remainderCents = Math.abs(parentCents) - splitsSumCents;
+  const splitsInvalid = splitsDraft.length > 0 && (
+    remainderCents !== 0 ||
+    splitsDraft.some((r) => {
+      if (r.categoryId === '') return true;
+      const cents = Math.round(Number(r.amountMagnitude.replace(',', '.')) * 100);
+      return !Number.isFinite(cents) || cents === 0;
+    })
+  );
+
+  async function persistSplits(txId: number): Promise<void> {
+    const sign = parentCents < 0 ? -1 : 1;
+    if (splitsDraft.length === 0) {
+      // Only DELETE when we're editing a previously-split transaction.
+      if (transaction && transaction.splits.length > 0) {
+        await api(`/api/transactions/${txId}/splits`, { method: 'DELETE' });
+      }
+      return;
+    }
+    await api(`/api/transactions/${txId}/splits`, {
+      method: 'PUT',
+      json: {
+        splits: splitsDraft.map((r) => ({
+          categoryId: r.categoryId === '' ? 0 : r.categoryId,
+          amount: (Math.round(Number(r.amountMagnitude.replace(',', '.')) * 100) * sign / 100).toFixed(2),
+          memo: r.memo.trim() ? r.memo : null,
+        })),
+      },
+    });
+  }
+
   const create = useMutation({
-    mutationFn: (input: {
+    mutationFn: async (input: {
       accountId: number;
       date: string;
       amount: string;
@@ -94,20 +148,19 @@ export function TransactionModal({
       categoryId: number | null;
       notes: string | null;
       lockYears: number | null;
-    }) =>
-      api<{ transaction: Transaction }>('/api/transactions', {
-        method: 'POST',
-        json: input,
-      }),
-    onSuccess: () => {
-      invalidate();
-      onClose();
+    }) => {
+      const { transaction: tx } = await api<{ transaction: Transaction }>('/api/transactions', {
+        method: 'POST', json: input,
+      });
+      await persistSplits(tx.id);
+      return { transaction: tx };
     },
+    onSuccess: () => { invalidate(); onClose(); },
     onError: (err: ApiError) => setError(err.message),
   });
 
   const update = useMutation({
-    mutationFn: (input: {
+    mutationFn: async (input: {
       id: number;
       patch: Partial<{
         accountId: number;
@@ -118,15 +171,14 @@ export function TransactionModal({
         notes: string | null;
         lockYears: number | null;
       }>;
-    }) =>
-      api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
-        method: 'PATCH',
-        json: input.patch,
-      }),
-    onSuccess: () => {
-      invalidate();
-      onClose();
+    }) => {
+      const res = await api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
+        method: 'PATCH', json: input.patch,
+      });
+      await persistSplits(input.id);
+      return res;
     },
+    onSuccess: () => { invalidate(); onClose(); },
     onError: (err: ApiError) => setError(err.message),
   });
 
@@ -338,6 +390,16 @@ export function TransactionModal({
           </div>
         </div>
 
+        <SplitEditor
+          parentAmountMagnitude={parentAmountMagnitude}
+          parentAmountSign={parentAmountSign}
+          disabled={isTransfer}
+          initial={transaction?.splits ?? []}
+          resetKey={transaction?.id ?? 'new'}
+          categories={categories}
+          onChange={setSplitsDraft}
+        />
+
         {error && (
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200 mt-4">
             {error}
@@ -348,7 +410,7 @@ export function TransactionModal({
           <button type="button" className="btn-ghost" onClick={onClose} disabled={pending}>
             Annuler
           </button>
-          <button type="submit" className="btn-primary" disabled={pending}>
+          <button type="submit" className="btn-primary" disabled={pending || splitsInvalid}>
             {pending
               ? isEdit ? 'Enregistrement…' : 'Création…'
               : isEdit ? 'Enregistrer' : 'Créer la transaction'}

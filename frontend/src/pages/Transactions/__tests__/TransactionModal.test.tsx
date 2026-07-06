@@ -139,4 +139,64 @@ describe('TransactionModal', () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('chains PUT /splits after POST when splits are drafted in create mode', async () => {
+    apiMock
+      .mockResolvedValueOnce({ transaction: { id: 999 } }) // POST /api/transactions
+      .mockResolvedValueOnce({ splits: [] }); // PUT /api/transactions/999/splits
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.selectOptions(fieldFor('Compte'), '1');
+    await user.clear(screen.getByPlaceholderText('JJ/MM/AAAA'));
+    await user.type(screen.getByPlaceholderText('JJ/MM/AAAA'), '15/06/2026');
+    await user.type(screen.getByPlaceholderText('-25,30'), '-100.00');
+    await user.type(screen.getByPlaceholderText('Carrefour Évry'), 'Amazon');
+
+    // Ventilate: click the trigger, then set categories on the two seeded
+    // rows. The SplitEditor's row selects are the last two comboboxes in
+    // the form — the Compte select and the top-level "Catégorie
+    // (optionnelle)" select both precede the split section in DOM order.
+    await user.click(screen.getByRole('button', { name: /Ventiler cette transaction/ }));
+    const [firstCategory, secondCategory] = screen.getAllByRole('combobox').slice(-2);
+    await user.selectOptions(firstCategory, '10');
+    await user.selectOptions(secondCategory, '10');
+
+    await user.click(screen.getByRole('button', { name: 'Créer la transaction' }));
+
+    await waitFor(() => {
+      // First call POSTs the transaction.
+      expect(apiMock).toHaveBeenNthCalledWith(1, '/api/transactions', expect.objectContaining({
+        method: 'POST',
+      }));
+      // Second call PUTs the splits.
+      expect(apiMock).toHaveBeenNthCalledWith(2, '/api/transactions/999/splits', expect.objectContaining({
+        method: 'PUT',
+        json: expect.objectContaining({
+          splits: expect.arrayContaining([
+            expect.objectContaining({ categoryId: 10, amount: expect.stringMatching(/^-?\d+\.\d{2}$/) }),
+          ]),
+        }),
+      }));
+    });
+  });
+
+  it('does not enable the submit button while remainder is non-zero', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.selectOptions(fieldFor('Compte'), '1');
+    await user.clear(screen.getByPlaceholderText('JJ/MM/AAAA'));
+    await user.type(screen.getByPlaceholderText('JJ/MM/AAAA'), '15/06/2026');
+    await user.type(screen.getByPlaceholderText('-25,30'), '-100.00');
+    await user.type(screen.getByPlaceholderText('Carrefour Évry'), 'Amazon');
+    await user.click(screen.getByRole('button', { name: /Ventiler cette transaction/ }));
+
+    // Unbalance: type over the first magnitude.
+    const firstMag = screen.getAllByPlaceholderText(/\d+,\d\d/)[0];
+    await user.clear(firstMag);
+    await user.type(firstMag, '999.00');
+    const submit = screen.getByRole('button', { name: 'Créer la transaction' });
+    expect(submit).toBeDisabled();
+  });
 });
