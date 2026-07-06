@@ -74,10 +74,7 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 - Renommer un template PDF depuis le panneau — endpoint `PUT` déjà là.
 - Édition d'un template sans re-upload — plus grand, mais résout une vraie
   friction (chaque changement d'ancre = delete + re-import aujourd'hui).
-- Prévisualisation des N premières transactions dans le wizard PDF avant de
-  cliquer "Importer" — fait bcp gagner sur les templates douteux.
 - Prévisualisation d'une règle (transactions passées qu'elle aurait matché).
-- Recherche full-text simple sur libellés/notes.
 
 ## 🚧 En cours
 
@@ -90,6 +87,18 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 <!-- Pour mémoire ou pour s'auto-féliciter. Les vieux items peuvent être archivés
      en bas du fichier ou supprimés. -->
 
+- **Preview wizard PDF** : bouton « Aperçu » à l'étape Montant qui
+  extrait les transactions via un nouvel endpoint
+  `POST /api/imports/pdf/templates/preview` (idempotent, aucun
+  side-effect) et les affiche dans un panneau scrollable. Le preview
+  se réinitialise dès qu'une zone est modifiée pour éviter d'afficher
+  un rendu stale. Guarde aussi contre les réponses arrivées après un
+  re-paint (race in-flight) via un ref de request-id.
+- **Recherche full-text** : l'endpoint `GET /api/transactions?search=`
+  matche désormais `raw_label`, `normalized_label`, `memo` et `notes`
+  (auparavant seulement `normalized_label`). Toujours accent- et
+  case-insensitive via `immutable_unaccent(lower(…))`. Pas de
+  migration — v1 basé sur OR de LIKE, adéquat au scale homelab.
 - **Transaction splits (ventilation)** : nouvelle table
   `transaction_splits` avec somme forcée = parent.amount via trigger
   deferrable côté DB. Éditeur intégré à `TransactionModal`, badge
