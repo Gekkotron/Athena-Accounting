@@ -367,3 +367,28 @@ export const userSettings = pgTable('user_settings', {
   settings: jsonb('settings').notNull().default({}),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// transaction_splits — ventilation of one transaction across N (>= 2)
+// categories. Sum-of-amounts must equal parent.amount, enforced by a
+// deferrable trigger installed in migration 0014. Ownership derived
+// transitively via transaction_id (no user_id column needed).
+// ---------------------------------------------------------------------------
+
+export const transactionSplits = pgTable(
+  'transaction_splits',
+  {
+    id: serial('id').primaryKey(),
+    transactionId: bigserial('transaction_id', { mode: 'number' })
+      .notNull(),
+    categoryId: integer('category_id').references(() => categories.id, {
+      onDelete: 'set null',
+    }),
+    amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    memo: text('memo'),
+  },
+  (t) => ({
+    idxTx:  index('transaction_splits_tx_idx').on(t.transactionId),
+    idxCat: index('transaction_splits_cat_idx').on(t.categoryId),
+  }),
+);
