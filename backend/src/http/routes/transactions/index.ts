@@ -12,6 +12,16 @@ import { isPgError, parseId } from './helpers.js';
 import { registerDuplicateRoutes } from './duplicates.js';
 import { registerSplitsRoutes } from './splits.js';
 
+/**
+ * Attach `splits: TransactionSplit[]` to each row. Batched single query on
+ * `transaction_splits.transaction_id IN (...)`; empty array when the parent
+ * has no splits.
+ *
+ * INVARIANT: callers MUST filter `rows` by the caller's `userId` before
+ * hydration. This helper does NOT re-filter by user_id — it trusts that the
+ * incoming `rows` are already scoped to the caller. Adding a new caller that
+ * passes unscoped rows would leak splits across users.
+ */
 async function hydrateSplits<T extends { id: number }>(rows: T[]): Promise<Array<T & { splits: Array<{
   id: number; transactionId: number; categoryId: number | null; amount: string; memo: string | null;
 }> }>> {
@@ -271,7 +281,13 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       if (isPgError(err) && err.code === '23503') {
         return reply.code(400).send({ error: 'compte ou catégorie inconnu' });
       }
-      if (isPgError(err) && err.code === '23514') {
+      // Pinned to migration 0014's `transactions_amount_lock_when_split_trg`.
+      // If a future migration adds another CHECK/trigger on `transactions`
+      // that raises SQLSTATE 23514, that trigger's error should not inherit
+      // this specific French message — match on the trigger's own text.
+      if (isPgError(err)
+          && err.code === '23514'
+          && (err as { message?: string }).message?.includes('cannot change transaction amount')) {
         return reply.code(409).send({
           error: "supprimez d'abord la ventilation avant de modifier le montant",
         });

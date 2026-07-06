@@ -126,8 +126,12 @@ export function TransactionModal({
       json: {
         splits: splitsDraft.map((r) => {
           const cents = parseMagnitudeCents(r.amountMagnitude) ?? 0;
+          if (r.categoryId === '') {
+            throw new Error('invariant: persistSplits reached with empty categoryId (splitsInvalid guard failed)');
+          }
+          const categoryIdForPayload = r.categoryId;
           return {
-            categoryId: r.categoryId === '' ? 0 : r.categoryId,
+            categoryId: categoryIdForPayload,
             amount: ((cents * sign) / 100).toFixed(2),
             memo: r.memo.trim() ? r.memo : null,
           };

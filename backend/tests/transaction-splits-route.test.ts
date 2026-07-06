@@ -211,6 +211,20 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
       expect(bad.statusCode).toBe(400);
     });
 
+    it('PUT with negative split on a positive parent → 400', async () => {
+      const txId = await makeTx({
+        accountId, date: '2026-07-07', amount: '100.00', rawLabel: 'refund',
+      });
+      const bad = await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: categoryBooksId,   amount: '150.00' },
+          { categoryId: categoryElectroId, amount: '-50.00' },
+        ] },
+      });
+      expect(bad.statusCode).toBe(400);
+    });
+
     it('PUT with 1 split → 400 (min 2)', async () => {
       const txId = await makeTx({
         accountId, date: '2026-06-22', amount: '-50.00', rawLabel: 'x',
@@ -218,6 +232,21 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
       const bad = await app.inject({
         method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
         payload: { splits: [{ categoryId: categoryBooksId, amount: '-50.00' }] },
+      });
+      expect(bad.statusCode).toBe(400);
+    });
+
+    it('PUT with 21 splits → 400 (max bound)', async () => {
+      const txId = await makeTx({
+        accountId, date: '2026-07-05', amount: '-105.00', rawLabel: 'many-splits',
+      });
+      const bad = await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: {
+          splits: Array.from({ length: 21 }, () => ({
+            categoryId: categoryBooksId, amount: '-5.00',
+          })),
+        },
       });
       expect(bad.statusCode).toBe(400);
     });
@@ -309,6 +338,35 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
         method: 'GET', url: `/api/transactions/${txId}/splits`, headers: { cookie },
       });
       expect(after.json().splits).toEqual([]);
+    });
+
+    it('deleting a category referenced by a split → split survives with categoryId null', async () => {
+      const txId = await makeTx({
+        accountId, date: '2026-07-06', amount: '-100.00', rawLabel: 'Amazon',
+      });
+      const ephemeralCatRes = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'EphemeralSplitCat', kind: 'expense' },
+      });
+      const ephemeralCatId = ephemeralCatRes.json().category.id;
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: ephemeralCatId,  amount: '-60.00' },
+          { categoryId: categoryDiversId, amount: '-40.00' },
+        ] },
+      });
+      const del = await app.inject({
+        method: 'DELETE', url: `/api/categories/${ephemeralCatId}`, headers: { cookie },
+      });
+      expect(del.statusCode).toBeLessThan(400);
+      const single = await app.inject({
+        method: 'GET', url: `/api/transactions/${txId}`, headers: { cookie },
+      });
+      const splits = single.json().transaction.splits as Array<{ categoryId: number | null; amount: string }>;
+      expect(splits).toHaveLength(2);
+      const survivor = splits.find((s) => s.amount === '-60.00')!;
+      expect(survivor.categoryId).toBeNull();
     });
 
     it('deleting the parent transaction cascades to splits', async () => {

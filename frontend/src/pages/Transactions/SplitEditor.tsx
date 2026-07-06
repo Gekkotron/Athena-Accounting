@@ -99,9 +99,13 @@ export function SplitEditor({
       return acc + (Number.isFinite(c) ? c : 0);
     }, 0);
     const lastCents = parentCents - sumWithoutLast;
+    // When the sibling rows overshoot parent, leave the last row's magnitude
+    // untouched — the remainder chip already flags the overflow, and clamping
+    // to zero would misdirect the user's attention to the wrong row.
+    if (lastCents < 0) return next;
     return [
       ...withoutLast,
-      { ...next[next.length - 1], amountMagnitude: centsToMag(Math.max(0, lastCents)) },
+      { ...next[next.length - 1], amountMagnitude: centsToMag(lastCents) },
     ];
   }
 
