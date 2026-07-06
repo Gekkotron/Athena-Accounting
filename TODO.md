@@ -39,9 +39,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   déjà les mois.
 - Sankey diagram sur le dashboard (revenus → dépenses par catégorie),
   D3-flavoured et intégré au design tokens du reste de l'app.
-- Recherche full-text dans les libellés + notes des transactions
-  (`pg_trgm` déjà installé, un `ILIKE '%...%'` sur `raw_label || memo || notes`
-  suffit pour la v1 ; migration vers un `tsvector` si besoin).
 - Undo (fenêtre ~5s) après une suppression de transaction ou d'import. Toast
   en bas de l'écran avec bouton "Annuler".
 - Raccourcis clavier sur la page Transactions : `j`/`k` naviguer, `e`
