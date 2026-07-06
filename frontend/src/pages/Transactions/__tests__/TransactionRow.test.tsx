@@ -13,7 +13,8 @@ const acc: Account = {
   openingDate: '2025-01-01',
 };
 const cats: Category[] = [
-  { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+  { id: 10, name: 'Livres', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+  { id: 11, name: 'Électro', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
 ];
 const t: Transaction = {
   id: 1,
@@ -34,14 +35,44 @@ const t: Transaction = {
   splits: [],
 };
 
-function renderRow(overrides: Partial<{ tx: Transaction; selected: boolean }> = {}) {
+const splitTx: Transaction = {
+  id: 42,
+  accountId: 1,
+  date: '2026-07-04',
+  amount: '-100.00',
+  rawLabel: 'Amazon FR',
+  normalizedLabel: 'amazon',
+  memo: null,
+  notes: null,
+  fitid: null,
+  dedupKey: 'dk-42',
+  categoryId: null,
+  categorySource: 'manual',
+  transferGroupId: null,
+  sourceFileId: null,
+  importedAt: '2026-07-04T00:00:00Z',
+  splits: [
+    { id: 1, transactionId: 42, categoryId: 10, amount: '-60.00', memo: 'Kindle' },
+    { id: 2, transactionId: 42, categoryId: 11, amount: '-40.00', memo: null },
+  ],
+};
+
+function renderRow(
+  overrides: Partial<{
+    tx: Transaction;
+    selected: boolean;
+    expanded: boolean;
+    onToggleExpanded: (id: number) => void;
+  }> = {},
+) {
   const tx = overrides.tx ?? t;
   const onUpdateCategory = vi.fn();
   const onUpdateNotes = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
   const onToggleSelect = vi.fn();
-  render(
+  const onToggleExpanded = overrides.onToggleExpanded ?? (() => {});
+  const result = render(
     <table>
       <tbody>
         <TransactionRow
@@ -54,11 +85,13 @@ function renderRow(overrides: Partial<{ tx: Transaction; selected: boolean }> = 
           onUpdateNotes={onUpdateNotes}
           onEdit={onEdit}
           onDelete={onDelete}
+          expanded={overrides.expanded ?? false}
+          onToggleExpanded={onToggleExpanded}
         />
       </tbody>
     </table>,
   );
-  return { onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect };
+  return { onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, container: result.container };
 }
 
 describe('TransactionRow', () => {
@@ -140,5 +173,25 @@ describe('TransactionRow', () => {
   it('renders the row checkbox as checked when selected=true', () => {
     renderRow({ selected: true });
     expect(screen.getByRole('checkbox', { name: /sélectionner la transaction/i })).toBeChecked();
+  });
+
+  it('renders a "Ventilée (N)" badge in place of the category select when split', () => {
+    const { container } = renderRow({ tx: splitTx, expanded: false });
+    expect(screen.getByRole('button', { name: /Ventilée \(2\)/ })).toBeInTheDocument();
+    expect(container.querySelector('select')).not.toBeInTheDocument();
+  });
+
+  it('emits sub-rows when expanded is true', () => {
+    renderRow({ tx: splitTx, expanded: true });
+    expect(screen.getByText(/Livres/)).toBeInTheDocument();
+    expect(screen.getByText(/Électro/)).toBeInTheDocument();
+  });
+
+  it('clicking the badge calls onToggleExpanded with the tx id', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    renderRow({ tx: splitTx, expanded: false, onToggleExpanded: onToggle });
+    await user.click(screen.getByRole('button', { name: /Ventilée \(2\)/ }));
+    expect(onToggle).toHaveBeenCalledWith(splitTx.id);
   });
 });

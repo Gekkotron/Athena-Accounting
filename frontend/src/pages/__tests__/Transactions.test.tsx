@@ -52,6 +52,7 @@ const tx = (id: number, extras: Partial<any> = {}) => ({
   dedupKey: `dk-${id}`, categoryId: null, categorySource: 'auto',
   transferGroupId: null, sourceFileId: null,
   importedAt: '2026-06-15T00:00:00Z',
+  splits: [],
   ...extras,
 });
 
