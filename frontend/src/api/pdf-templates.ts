@@ -31,6 +31,19 @@ export interface PdfImportImported {
   skippedRows: Array<{ rowText: string; reason: string }>;
 }
 
+export interface PreviewParsedRow {
+  date: string;
+  amount: string;
+  rawLabel: string;
+  memo: string | null;
+  fitid: string | null;
+}
+
+export interface PreviewResult {
+  rows: PreviewParsedRow[];
+  skippedRows: Array<{ rowText: string; reason: string }>;
+}
+
 export interface PdfTextItem {
   pageIndex: number; str: string;
   xLeft: number; yTop: number; width: number; height: number;
@@ -74,6 +87,17 @@ export async function submitZones(draftId: number, label: string, zones: Templat
   }
   const { result, skippedRows } = await r.json();
   return { kind: 'imported', result, skippedRows };
+}
+
+export async function previewZones(draftId: number, zones: TemplateZones): Promise<PreviewResult> {
+  const r = await fetch('/api/imports/pdf/templates/preview', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ draftId, zones }),
+  });
+  if (!r.ok) return failure(r, 'preview failed');
+  return await r.json();
 }
 
 export interface PdfTemplateRow {
