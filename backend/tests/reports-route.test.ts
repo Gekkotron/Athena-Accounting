@@ -157,5 +157,46 @@ describe.skipIf(!RUN)('/api/reports', () => {
       });
       expect(res.statusCode).toBe(400);
     });
+
+    it('splits contribute to their split category, parent contributes nothing', async () => {
+      // 1) Plain -50 tx tagged to categoryId (baseline).
+      await makeTx({
+        accountId: accountEURId, date: '2026-06-15', amount: '-50.00',
+        rawLabel: 'plain', categoryId,
+      });
+      // 2) -100 tx whose own category points at categoryId but whose SPLITS
+      //    ignore it — the split subtotal for categoryId must NOT count the
+      //    parent's own attribution.
+      const splitTxId = await makeTx({
+        accountId: accountEURId, date: '2026-06-15', amount: '-100.00',
+        rawLabel: 'Amazon', categoryId,
+      });
+      const otherCatRes = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'RepOther', kind: 'expense' },
+      });
+      const otherCatId = otherCatRes.json().category.id;
+
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${splitTxId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: otherCatId, amount: '-70.00' },
+          { categoryId, amount: '-30.00' },
+        ] },
+      });
+
+      const res = await app.inject({
+        method: 'GET', url: '/api/reports/categories?fromDate=2026-06-01&toDate=2026-06-30',
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().rows as Array<{ category_id: number; total: string }>;
+      const expense = rows.find((r) => r.category_id === categoryId)!;
+      const other = rows.find((r) => r.category_id === otherCatId)!;
+      // -50 (plain) + -30 (split contribution) = -80; parent's own -100 tag contributes nothing.
+      expect(Number(expense.total)).toBeCloseTo(-80.0, 2);
+      // -70 from the split.
+      expect(Number(other.total)).toBeCloseTo(-70.0, 2);
+    });
   });
 });

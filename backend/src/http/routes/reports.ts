@@ -152,21 +152,37 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       total: string;
       transaction_count: number;
     }>(sql`
+      -- transaction_count below counts virtual rows: a transaction with no
+      -- splits contributes 1, but an N-way split contributes N rows (one per
+      -- split), each attributed to its own split category.
+      WITH tx_effective AS (
+        SELECT t.id, t.user_id, t.account_id, t.date, t.transfer_group_id,
+               t.category_id, t.amount
+          FROM transactions t
+         WHERE NOT EXISTS (
+           SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id
+         )
+        UNION ALL
+        SELECT t.id, t.user_id, t.account_id, t.date, t.transfer_group_id,
+               s.category_id, s.amount
+          FROM transactions t
+          JOIN transaction_splits s ON s.transaction_id = t.id
+      )
       SELECT
         c.id AS category_id,
         c.name AS category_name,
         c.kind AS category_kind,
         c.is_internal_transfer AS category_is_internal_transfer,
-        to_char(date_trunc('month', t.date::timestamp), 'YYYY-MM') AS month,
-        SUM(t.amount)::text AS total,
+        to_char(date_trunc('month', e.date::timestamp), 'YYYY-MM') AS month,
+        SUM(e.amount)::text AS total,
         COUNT(*)::int AS transaction_count
-      FROM transactions t
-      LEFT JOIN categories c ON c.id = t.category_id
-      WHERE t.user_id = ${uid}
-        AND t.transfer_group_id IS NULL
-        ${fromDate ? sql`AND t.date >= ${fromDate}` : sql``}
-        ${toDate ? sql`AND t.date <= ${toDate}` : sql``}
-        ${accountId ? sql`AND t.account_id = ${accountId}` : sql``}
+      FROM tx_effective e
+      LEFT JOIN categories c ON c.id = e.category_id
+      WHERE e.user_id = ${uid}
+        AND e.transfer_group_id IS NULL
+        ${fromDate ? sql`AND e.date >= ${fromDate}` : sql``}
+        ${toDate ? sql`AND e.date <= ${toDate}` : sql``}
+        ${accountId ? sql`AND e.account_id = ${accountId}` : sql``}
       GROUP BY c.id, c.name, c.kind, month
       ORDER BY month DESC, total ASC
     `);
