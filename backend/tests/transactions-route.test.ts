@@ -208,6 +208,62 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       expect(res.json().transactions[0].rawLabel).toBe('CB CARREFOUR');
     });
 
+    it('search matches memo case-insensitively', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'AMZN MKTP' });
+      // memo isn't a create-body field — set it via PATCH after creation.
+      const id = await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-2.00', rawLabel: 'ORDINARY' });
+      const { db } = await import('../src/db/client.js');
+      const { transactions } = await import('../src/db/schema.js');
+      const { eq } = await import('drizzle-orm');
+      await db.update(transactions).set({ memo: 'ID: NFX-42' }).where(eq(transactions.id, id));
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?search=NFX',
+        headers: { cookie },
+      });
+      expect(res.json().transactions).toHaveLength(1);
+      expect(res.json().transactions[0].id).toBe(id);
+    });
+
+    it('search matches notes case-insensitively', async () => {
+      const id = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'VIR IBAN123' });
+      await app.inject({
+        method: 'PATCH', url: `/api/transactions/${id}`,
+        headers: { cookie },
+        payload: { notes: 'facture netflix' },
+      });
+      await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-1.00', rawLabel: 'OTHER' });
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?search=netflix',
+        headers: { cookie },
+      });
+      expect(res.json().transactions).toHaveLength(1);
+      expect(res.json().transactions[0].id).toBe(id);
+    });
+
+    it('search is accent-insensitive across notes', async () => {
+      const id = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'X' });
+      await app.inject({
+        method: 'PATCH', url: `/api/transactions/${id}`,
+        headers: { cookie },
+        payload: { notes: 'café' },
+      });
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?search=cafe',
+        headers: { cookie },
+      });
+      expect(res.json().transactions).toHaveLength(1);
+      expect(res.json().transactions[0].id).toBe(id);
+    });
+
+    it('search returns nothing when the needle matches no field', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'CB CARREFOUR' });
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?search=xyzzy',
+        headers: { cookie },
+      });
+      expect(res.json().transactions).toHaveLength(0);
+    });
+
     it('sorts by amount desc', async () => {
       await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-10.00', rawLabel: 'a' });
       await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-99.00', rawLabel: 'b' });

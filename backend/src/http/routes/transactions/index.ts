@@ -167,10 +167,17 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     if (!q.includeTransfers) where.push(isNull(transactions.transferGroupId));
 
     if (q.search) {
-      // Accent + case-insensitive substring match against the normalized label.
-      where.push(
-        sql`immutable_unaccent(lower(${transactions.normalizedLabel})) LIKE '%' || immutable_unaccent(lower(${q.search})) || '%'`,
-      );
+      // Substring match across every user-facing text field, accent- and
+      // case-insensitive. Four seq-scan LIKE branches — acceptable at
+      // homelab scale (~<10k rows). If perf hurts, promote to a generated
+      // column + GIN trigram index (see TODO.md).
+      const needle = sql`immutable_unaccent(lower(${q.search}))`;
+      where.push(sql`(
+        immutable_unaccent(lower(${transactions.rawLabel})) LIKE '%' || ${needle} || '%'
+        OR immutable_unaccent(lower(${transactions.normalizedLabel})) LIKE '%' || ${needle} || '%'
+        OR immutable_unaccent(lower(coalesce(${transactions.memo}, ''))) LIKE '%' || ${needle} || '%'
+        OR immutable_unaccent(lower(coalesce(${transactions.notes}, ''))) LIKE '%' || ${needle} || '%'
+      )`);
     }
 
     const whereExpr = where.length > 0 ? and(...where) : undefined;
