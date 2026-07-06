@@ -173,11 +173,15 @@ export function TransactionModal({
         lockYears: number | null;
       }>;
     }) => {
-      const res = await api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
-        method: 'PATCH', json: input.patch,
-      });
+      // Skip the PATCH when the parent transaction has no field changes —
+      // splits alone might be what changed, and we still want to hit
+      // persistSplits below. Without this, an empty PATCH body would 400.
+      if (Object.keys(input.patch).length > 0) {
+        await api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
+          method: 'PATCH', json: input.patch,
+        });
+      }
       await persistSplits(input.id);
-      return res;
     },
     onSuccess: () => { invalidate(); onClose(); },
     onError: (err: ApiError) => setError(err.message),
@@ -241,7 +245,25 @@ export function TransactionModal({
         patch.lockYears = lockYears;
       }
 
-      if (Object.keys(patch).length === 0) {
+      // Split changes must go through the mutation even when no parent field
+      // moved — otherwise adding a ventilation to an untouched transaction
+      // would silently close the modal without persisting.
+      const initialSplits = transaction.splits;
+      const sign = parentCents < 0 ? -1 : 1;
+      const draftMatchesInitial =
+        initialSplits.length === splitsDraft.length &&
+        splitsDraft.every((r, i) => {
+          const init = initialSplits[i];
+          if (r.categoryId === '') return false;
+          if (init.categoryId !== r.categoryId) return false;
+          const draftSignedCents = (parseMagnitudeCents(r.amountMagnitude) ?? 0) * sign;
+          const initCents = Math.round(Number(init.amount) * 100);
+          if (draftSignedCents !== initCents) return false;
+          const draftMemo = r.memo.trim() || null;
+          const initMemo = init.memo && init.memo.trim() ? init.memo : null;
+          return draftMemo === initMemo;
+        });
+      if (Object.keys(patch).length === 0 && draftMatchesInitial) {
         onClose();
         return;
       }

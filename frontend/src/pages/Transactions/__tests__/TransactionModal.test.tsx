@@ -181,6 +181,39 @@ describe('TransactionModal', () => {
     });
   });
 
+  it('persists newly-added splits in edit mode even when no parent field changes', async () => {
+    const original: Transaction = {
+      id: 1, accountId: 1, date: '2026-06-15', amount: '-100.00',
+      rawLabel: 'Amazon', normalizedLabel: 'amazon', memo: null, notes: null,
+      fitid: null, dedupKey: 'dk-1', categoryId: null, categorySource: 'auto',
+      transferGroupId: null, sourceFileId: null, importedAt: '2026-06-15T00:00:00Z',
+      splits: [],
+    };
+    apiMock.mockResolvedValueOnce({ splits: [] });
+    const user = userEvent.setup();
+    renderModal({ transaction: original });
+
+    await user.click(screen.getByRole('button', { name: /Ventiler cette transaction/ }));
+    const [firstCategory, secondCategory] = screen.getAllByRole('combobox').slice(-2);
+    await user.selectOptions(firstCategory, '10');
+    await user.selectOptions(secondCategory, '10');
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => {
+      expect(apiMock).toHaveBeenCalledWith('/api/transactions/1/splits', expect.objectContaining({
+        method: 'PUT',
+        json: expect.objectContaining({
+          splits: expect.arrayContaining([
+            expect.objectContaining({ categoryId: 10, amount: expect.stringMatching(/^-?\d+\.\d{2}$/) }),
+          ]),
+        }),
+      }));
+    });
+    // The parent transaction never had a field change, so no PATCH should fire.
+    expect(apiMock).not.toHaveBeenCalledWith('/api/transactions/1', expect.objectContaining({ method: 'PATCH' }));
+  });
+
   it('does not enable the submit button while remainder is non-zero', async () => {
     const user = userEvent.setup();
     renderModal();
