@@ -8,10 +8,19 @@ export type DraftSplit = {
   memo: string;
 };
 
+// Parses a magnitude string (unsigned, up to 2 decimal digits, dot or comma).
+// Returns null on any malformed input. Used identically by SplitEditor and
+// TransactionModal so client validation matches server acceptance.
+export function parseMagnitudeCents(raw: string): number | null {
+  const cleaned = String(raw).replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const cents = Math.round(Number(cleaned) * 100);
+  return Number.isFinite(cents) ? cents : null;
+}
+
 function toCents(mag: string): number {
-  const cleaned = mag.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return NaN;
-  return Math.round(Number(cleaned) * 100);
+  const cents = parseMagnitudeCents(mag);
+  return cents === null ? NaN : cents;
 }
 
 function centsToMag(cents: number): string {
@@ -22,7 +31,7 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function fromInitial(initial: TransactionSplit[]): DraftSplit[] {
+export function fromInitial(initial: TransactionSplit[]): DraftSplit[] {
   return initial.map((s) => ({
     key: `s-${s.id}`,
     categoryId: s.categoryId ?? '',

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseUserDate } from '../../lib/format';
-import { SplitEditor, type DraftSplit } from './SplitEditor';
+import { SplitEditor, type DraftSplit, parseMagnitudeCents, fromInitial } from './SplitEditor';
 
 export function TransactionModal({
   open,
@@ -52,12 +52,7 @@ export function TransactionModal({
       setCategoryId(transaction.categoryId ?? '');
       setNotes(transaction.notes ?? '');
       setLockYearsInput(transaction.lockYears == null ? '' : String(transaction.lockYears));
-      setSplitsDraft(transaction.splits.map((s) => ({
-        key: `s-${s.id}`,
-        categoryId: s.categoryId ?? '',
-        amountMagnitude: Math.abs(Number(s.amount)).toFixed(2),
-        memo: s.memo ?? '',
-      })));
+      setSplitsDraft(fromInitial(transaction.splits));
     } else {
       setAccountId(accounts[0]?.id ?? '');
       setDate(todayFr);
@@ -104,17 +99,16 @@ export function TransactionModal({
   const isTransfer = transaction?.transferGroupId != null;
 
   const splitsSumCents = splitsDraft.reduce((acc, r) => {
-    const cleaned = r.amountMagnitude.replace(',', '.');
-    if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return acc;
-    return acc + Math.round(Number(cleaned) * 100);
+    const cents = parseMagnitudeCents(r.amountMagnitude);
+    return acc + (cents ?? 0);
   }, 0);
   const remainderCents = Math.abs(parentCents) - splitsSumCents;
   const splitsInvalid = splitsDraft.length > 0 && (
     remainderCents !== 0 ||
     splitsDraft.some((r) => {
       if (r.categoryId === '') return true;
-      const cents = Math.round(Number(r.amountMagnitude.replace(',', '.')) * 100);
-      return !Number.isFinite(cents) || cents === 0;
+      const cents = parseMagnitudeCents(r.amountMagnitude);
+      return cents === null || cents === 0;
     })
   );
 
@@ -130,11 +124,14 @@ export function TransactionModal({
     await api(`/api/transactions/${txId}/splits`, {
       method: 'PUT',
       json: {
-        splits: splitsDraft.map((r) => ({
-          categoryId: r.categoryId === '' ? 0 : r.categoryId,
-          amount: (Math.round(Number(r.amountMagnitude.replace(',', '.')) * 100) * sign / 100).toFixed(2),
-          memo: r.memo.trim() ? r.memo : null,
-        })),
+        splits: splitsDraft.map((r) => {
+          const cents = parseMagnitudeCents(r.amountMagnitude) ?? 0;
+          return {
+            categoryId: r.categoryId === '' ? 0 : r.categoryId,
+            amount: ((cents * sign) / 100).toFixed(2),
+            memo: r.memo.trim() ? r.memo : null,
+          };
+        }),
       },
     });
   }
