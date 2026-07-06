@@ -93,7 +93,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(res.headers['content-disposition']).toContain('attachment');
       expect(res.headers['content-disposition']).toContain('athena-backup-');
       const dump = res.json();
-      expect(dump.version).toBe(1);
+      expect(dump.version).toBe(2);
       expect(dump.instance).toBe('athena-accounting');
       expect(dump.counts.accounts).toBeGreaterThanOrEqual(1);
       expect(dump.counts.categories).toBeGreaterThanOrEqual(1);
@@ -158,7 +158,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       const res = await app.inject({
         method: 'POST', url: '/api/backup/import',
         headers: { cookie },
-        payload: { version: 2, accounts: [], categories: [], accountFilenamePatterns: [], rules: [], transferRules: [], transactions: [] },
+        payload: { version: 3, accounts: [], categories: [], accountFilenamePatterns: [], rules: [], transferRules: [], transactions: [] },
       });
       expect(res.statusCode).toBe(400);
       expect(res.json().error).toMatch(/backup format/i);
@@ -249,6 +249,81 @@ describe.skipIf(!RUN)('/api/backup', () => {
         payload: { version: 1 },
       });
       expect(res.statusCode).toBe(401);
+    });
+
+    it('exports splits as v2 and re-imports them intact', async () => {
+      await seedSomeData();
+      const cat2 = await app.inject({
+        method: 'POST', url: '/api/categories',
+        headers: { cookie }, payload: { name: 'BackupSplitCat', kind: 'expense' },
+      });
+      const categoryId2 = cat2.json().category.id;
+
+      const tx = await app.inject({
+        method: 'POST', url: '/api/transactions',
+        headers: { cookie },
+        payload: { accountId, date: '2026-07-04', amount: '-100.00', rawLabel: 'Amazon FR' },
+      });
+      const txId = tx.json().transaction.id;
+
+      const put = await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId, amount: '-60.00', memo: 'Kindle' },
+          { categoryId: categoryId2, amount: '-40.00' },
+        ] },
+      });
+      expect(put.statusCode).toBe(200);
+
+      const exported = await app.inject({
+        method: 'GET', url: '/api/backup/export', headers: { cookie },
+      });
+      const dump = exported.json();
+      expect(dump.version).toBe(2);
+      const dumpedTx = (dump.transactions as Array<{ rawLabel: string; splits?: unknown[] }>)
+        .find((t) => t.rawLabel === 'Amazon FR')!;
+      expect(dumpedTx.splits).toHaveLength(2);
+
+      await wipeUserData();
+
+      const restored = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie },
+        payload: dump,
+      });
+      expect(restored.statusCode).toBe(200);
+
+      const list = await app.inject({
+        method: 'GET', url: '/api/transactions?fromDate=2026-07-04&toDate=2026-07-04',
+        headers: { cookie },
+      });
+      const roundTripped = (list.json().transactions as Array<{
+        rawLabel: string; splits: Array<{ amount: string }>;
+      }>).find((t) => t.rawLabel === 'Amazon FR')!;
+      expect(roundTripped.splits).toHaveLength(2);
+      expect(roundTripped.splits.map((s) => s.amount).sort())
+        .toEqual(['-40.00', '-60.00']);
+    });
+
+    it('imports a v1 dump without splits cleanly', async () => {
+      const v1: Record<string, unknown> = {
+        version: 1,
+        accounts: [{
+          name: 'From-v1', type: 'current', currency: 'EUR',
+          openingBalance: '0', openingDate: '2025-01-01',
+        }],
+        categories: [{ name: 'Divers', kind: 'neutral', isDefault: true }],
+        accountFilenamePatterns: [],
+        rules: [],
+        transactions: [{
+          account: 'From-v1', date: '2026-01-01', amount: '-10.00',
+          rawLabel: 'x', normalizedLabel: 'x', dedupKey: 'v1-dk',
+          categorySource: 'auto',
+        }],
+      };
+      const res = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: v1,
+      });
+      expect(res.statusCode).toBe(200);
     });
   });
 });

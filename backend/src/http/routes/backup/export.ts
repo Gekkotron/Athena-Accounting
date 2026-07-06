@@ -9,6 +9,7 @@ import {
   fileImports,
   rules,
   transactions,
+  transactionSplits,
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { VERSION, fileImportKey } from './schema.js';
@@ -23,7 +24,7 @@ import { VERSION, fileImportKey } from './schema.js';
 export function registerExportRoute(app: FastifyInstance): void {
   app.get('/api/backup/export', async (req, reply) => {
     const uid = userId(req);
-    const [accs, cats, patterns, rls, txs, fimps, checkpoints] = await Promise.all([
+    const [accs, cats, patterns, rls, txs, fimps, checkpoints, splits] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
       db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
@@ -31,11 +32,23 @@ export function registerExportRoute(app: FastifyInstance): void {
       db.select().from(transactions).where(eq(transactions.userId, uid)),
       db.select().from(fileImports).where(eq(fileImports.userId, uid)),
       db.select().from(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid)),
+      db
+        .select()
+        .from(transactionSplits)
+        .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+        .where(eq(transactions.userId, uid))
+        .then((rows) => rows.map((r) => r.transaction_splits)),
     ]);
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
     const categoryById = new Map(cats.map((c) => [c.id, c]));
     const fileImportById = new Map(fimps.map((f) => [f.id, f]));
+    const splitsByTx = new Map<number, Array<typeof splits[number]>>();
+    for (const s of splits) {
+      const arr = splitsByTx.get(s.transactionId) ?? [];
+      arr.push(s);
+      splitsByTx.set(s.transactionId, arr);
+    }
 
     const dump = {
       version: VERSION,
@@ -82,6 +95,7 @@ export function registerExportRoute(app: FastifyInstance): void {
       })),
       transactions: txs.map((t) => {
         const src = t.sourceFileId ? fileImportById.get(t.sourceFileId) : undefined;
+        const rows = splitsByTx.get(t.id) ?? [];
         return {
           account: accountById.get(t.accountId)?.name ?? null,
           date: t.date,
@@ -98,6 +112,11 @@ export function registerExportRoute(app: FastifyInstance): void {
           sourceFileKey: src ? fileImportKey(src.filename, src.importedAt.toISOString()) : null,
           notDuplicate: t.notDuplicate,
           lockYears: t.lockYears,
+          splits: rows.length === 0 ? undefined : rows.map((s) => ({
+            category: s.categoryId ? categoryById.get(s.categoryId)?.name ?? null : null,
+            amount: s.amount,
+            memo: s.memo,
+          })),
         };
       }),
       fileImports: fimps.map((f) => ({

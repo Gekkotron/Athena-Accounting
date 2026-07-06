@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Versioned envelope. Bump `version` when the shape changes in a non-additive
 // way — the importer refuses unknown versions outright.
-export const VERSION = 1;
+export const VERSION = 2;
 
 const categoryKind = z.enum(['expense', 'income', 'transfer', 'neutral']);
 const signConstraint = z.enum(['positive', 'negative', 'any']);
@@ -11,7 +11,7 @@ const categorySource = z.enum(['manual', 'auto', 'default', 'llm']);
 const transferDirection = z.enum(['outgoing', 'incoming']);
 
 export const BackupBody = z.object({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   accounts: z.array(
     z.object({
       name: z.string(),
@@ -100,6 +100,15 @@ export const BackupBody = z.object({
       // Per-transaction lock override (migration 0011). Optional for
       // backward compatibility.
       lockYears: z.number().int().min(0).max(99).nullable().optional(),
+      // Ventilation across categories (migration 0014). Optional so v1
+      // backups without splits still validate.
+      splits: z.array(
+        z.object({
+          category: z.string().nullable(),
+          amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+          memo: z.string().nullable().optional(),
+        }),
+      ).optional(),
     }),
   ),
   // Audit trail of past imports — the rows that power the Imports → Historique

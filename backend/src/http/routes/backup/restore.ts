@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import {
   accounts,
@@ -9,6 +9,7 @@ import {
   fileImports,
   rules,
   transactions,
+  transactionSplits,
   transferRules,
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
@@ -33,6 +34,10 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
     const result = await db.transaction(async (tx) => {
       // Wipe only THIS user's rows, in reverse dependency order.
+      // Splits die via CASCADE when their parent transactions get wiped
+      // below, but we drop them explicitly to keep the ordering readable.
+      await tx.delete(transactionSplits)
+        .where(sql`transaction_id IN (SELECT id FROM transactions WHERE user_id = ${uid})`);
       await tx.delete(transactions).where(eq(transactions.userId, uid));
       await tx.delete(fileImports).where(eq(fileImports.userId, uid));
       await tx.delete(rules).where(eq(rules.userId, uid));
@@ -198,7 +203,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         if (!accId) continue;
         const catId = t.category ? categoryIdByName.get(t.category) ?? null : null;
         const srcId = t.sourceFileKey ? fileImportIdByKey.get(t.sourceFileKey) ?? null : null;
-        await tx.insert(transactions).values({
+        const [insertedTx] = await tx.insert(transactions).values({
           userId: uid,
           accountId: accId,
           date: t.date,
@@ -219,8 +224,18 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           // (PDF / OFX / CSV) made later will still surface new suspect groups.
           notDuplicate: true,
           lockYears: t.lockYears ?? null,
-        });
+        }).returning({ id: transactions.id });
         txCount++;
+
+        if (insertedTx && t.splits && t.splits.length > 0) {
+          const rows = t.splits.map((s) => ({
+            transactionId: insertedTx.id,
+            categoryId: s.category ? categoryIdByName.get(s.category) ?? null : null,
+            amount: s.amount,
+            memo: s.memo ?? null,
+          }));
+          await tx.insert(transactionSplits).values(rows);
+        }
       }
 
       return {
