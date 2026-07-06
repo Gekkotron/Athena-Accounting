@@ -14,6 +14,11 @@ import {
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { BackupBody, fileImportKey } from './schema.js';
+import {
+  normalizeCategoryKind,
+  planCategoryParentLinks,
+  resolveNameToId,
+} from './helpers.js';
 
 // REPLACE semantics, scoped to the calling user only. Wipes only the caller's
 // rows (via WHERE user_id = $uid) and reinserts every row from the dump with
@@ -73,9 +78,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           .values({
             userId: uid,
             name: c.name,
-            // Old backups may carry kind='transfer'; the app dropped that
-            // value (migration 0010) — coerce to 'neutral' on restore.
-            kind: c.kind === 'transfer' ? 'neutral' : c.kind,
+            kind: normalizeCategoryKind(c.kind),
             color: c.color ?? null,
             parentId: null,
             isDefault: c.isDefault,
@@ -87,17 +90,11 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           if (c.isDefault) defaultId = inserted.id;
         }
       }
-      for (const c of dump.categories) {
-        if (c.parent) {
-          const childId = categoryIdByName.get(c.name);
-          const parentId = categoryIdByName.get(c.parent);
-          if (childId && parentId) {
-            await tx
-              .update(categories)
-              .set({ parentId })
-              .where(and(eq(categories.id, childId), eq(categories.userId, uid)));
-          }
-        }
+      for (const link of planCategoryParentLinks(dump.categories, categoryIdByName)) {
+        await tx
+          .update(categories)
+          .set({ parentId: link.parentId })
+          .where(and(eq(categories.id, link.childId), eq(categories.userId, uid)));
       }
       // Seed Divers if the dump didn't bring its own default.
       if (defaultId === null) {
@@ -112,8 +109,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       }
 
       for (const p of dump.accountFilenamePatterns) {
-        const accId = p.account ? accountIdByName.get(p.account) : undefined;
-        if (!accId) continue;
+        const accId = resolveNameToId(p.account, accountIdByName);
+        if (accId === null) continue;
         await tx.insert(accountFilenamePatterns).values({
           userId: uid,
           pattern: p.pattern,
@@ -124,8 +121,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
       let rulesInserted = 0;
       for (const r of dump.rules) {
-        const catId = r.category ? categoryIdByName.get(r.category) : undefined;
-        if (!catId) continue;
+        const catId = resolveNameToId(r.category, categoryIdByName);
+        if (catId === null) continue;
         await tx.insert(rules).values({
           userId: uid,
           keyword: r.keyword,
@@ -142,14 +139,12 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       // restoring an old dump still re-inserts them so no data is lost.
       let transferRulesInserted = 0;
       for (const r of dump.transferRules ?? []) {
-        const counterpartId = r.counterpartAccount
-          ? accountIdByName.get(r.counterpartAccount)
-          : undefined;
+        const counterpartId = resolveNameToId(r.counterpartAccount, accountIdByName);
         await tx.insert(transferRules).values({
           userId: uid,
           keyword: r.keyword,
           direction: r.direction,
-          counterpartAccountId: counterpartId ?? null,
+          counterpartAccountId: counterpartId,
           enabled: r.enabled,
         });
         transferRulesInserted++;
@@ -157,8 +152,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
       let checkpointsInserted = 0;
       for (const c of dump.balanceCheckpoints ?? []) {
-        const accId = accountIdByName.get(c.account);
-        if (!accId) continue;
+        const accId = resolveNameToId(c.account, accountIdByName);
+        if (accId === null) continue;
         await tx.insert(balanceCheckpoints).values({
           userId: uid,
           accountId: accId,
@@ -174,8 +169,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       const fileImportIdByKey = new Map<string, number>();
       let fileImportsInserted = 0;
       for (const f of dump.fileImports ?? []) {
-        const accId = accountIdByName.get(f.account);
-        if (!accId) continue;
+        const accId = resolveNameToId(f.account, accountIdByName);
+        if (accId === null) continue;
         const [inserted] = await tx
           .insert(fileImports)
           .values({
@@ -199,10 +194,10 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
       let txCount = 0;
       for (const t of dump.transactions) {
-        const accId = accountIdByName.get(t.account);
-        if (!accId) continue;
-        const catId = t.category ? categoryIdByName.get(t.category) ?? null : null;
-        const srcId = t.sourceFileKey ? fileImportIdByKey.get(t.sourceFileKey) ?? null : null;
+        const accId = resolveNameToId(t.account, accountIdByName);
+        if (accId === null) continue;
+        const catId = resolveNameToId(t.category, categoryIdByName);
+        const srcId = resolveNameToId(t.sourceFileKey, fileImportIdByKey);
         const [insertedTx] = await tx.insert(transactions).values({
           userId: uid,
           accountId: accId,
@@ -230,7 +225,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         if (insertedTx && t.splits && t.splits.length > 0) {
           const rows = t.splits.map((s) => ({
             transactionId: insertedTx.id,
-            categoryId: s.category ? categoryIdByName.get(s.category) ?? null : null,
+            categoryId: resolveNameToId(s.category, categoryIdByName),
             amount: s.amount,
             memo: s.memo ?? null,
           }));

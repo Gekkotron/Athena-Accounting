@@ -12,6 +12,14 @@ Self-hosted personal accounting app. Local-only, LAN-reachable. See
 
 ## Recently landed
 
+- 2026-07-06 — Backup module unit tests. Extracted three pure helpers to
+  `backend/src/http/routes/backup/helpers.ts` (`resolveNameToId`,
+  `normalizeCategoryKind`, `planCategoryParentLinks`), refactored
+  `restore.ts` to consume them, and added `backup-helpers.test.ts`
+  (18 unit tests covering natural-key resolution, the legacy
+  `kind='transfer'` coercion, the category parent-link planner, and
+  `fileImportKey`). The backup row in the refactor + tests progress
+  table is now complete. Fifth interleave iteration.
 - 2026-07-06 — Transaction splits (ventilation). New `transaction_splits`
   table (migration 0014) with a deferrable checksum trigger guaranteeing
   `SUM(splits.amount) = parent.amount` to the cent, plus an amount-lock
@@ -60,7 +68,7 @@ Empty. Update this section when starting a new initiative.
 | Rules.tsx          | ✅ (8)       | ✅    | ✅ (27)    |
 | Transactions.tsx   | ✅ (8)       | ✅    | ✅ (27)    |
 | Imports.tsx        | ✅ (7)       | ✅    | ✅ (15)    |
-| backup.ts (backend)| ⬜           | ⬜    | ⬜         |
+| backup.ts (backend)| ✅           | ✅ (4)| ✅ (18)    |
 
 ## Known deferrals
 
