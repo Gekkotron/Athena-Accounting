@@ -127,6 +127,40 @@ describe.skipIf(!RUN)('/api/tri', () => {
       const labels: string[] = res.json().groups.map((g: { normalized_label: string }) => g.normalized_label);
       expect(labels.every((l) => !l.includes('interne') && !l.includes('viremement'))).toBe(true);
     });
+
+    it('groups exclude transactions that have splits', async () => {
+      // Baseline: an uncategorized transaction should appear.
+      const bareId = await makeTx({
+        accountId, date: '2026-07-03', amount: '-9.99', rawLabel: 'newthing 42',
+      });
+      const groupsBefore = await app.inject({
+        method: 'GET', url: '/api/tri/groups', headers: { cookie },
+      });
+      const labelsBefore = (groupsBefore.json().groups as Array<{ normalized_label: string }>)
+        .map((g) => g.normalized_label);
+      expect(labelsBefore).toContain('newthing');
+
+      // Add splits — the row should now be considered categorized.
+      const other = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'TriOther', kind: 'neutral' },
+      });
+      const otherCatId = other.json().category.id;
+
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${bareId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId, amount: '-5.99' },
+          { categoryId: otherCatId, amount: '-4.00' },
+        ] },
+      });
+      const groupsAfter = await app.inject({
+        method: 'GET', url: '/api/tri/groups', headers: { cookie },
+      });
+      const labelsAfter = (groupsAfter.json().groups as Array<{ normalized_label: string }>)
+        .map((g) => g.normalized_label);
+      expect(labelsAfter).not.toContain('newthing');
+    });
   });
 
   describe('POST /api/tri/assign', () => {

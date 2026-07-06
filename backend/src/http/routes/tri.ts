@@ -60,6 +60,7 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
       LEFT JOIN categories c ON c.id = t.category_id
       WHERE t.user_id = ${uid}
         AND t.transfer_group_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id)
         AND (t.category_id IS NULL OR c.is_default = TRUE OR t.category_source = 'default')
       GROUP BY t.normalized_label
       ORDER BY transaction_count DESC, t.normalized_label
@@ -73,6 +74,7 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
       LEFT JOIN categories c ON c.id = t.category_id
       WHERE t.user_id = ${uid}
         AND t.transfer_group_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id)
         AND (t.category_id IS NULL OR c.is_default = TRUE OR t.category_source = 'default')
     `);
 
