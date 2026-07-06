@@ -17,6 +17,7 @@ function renderEditor(overrides: Partial<React.ComponentProps<typeof SplitEditor
       parentAmountMagnitude={100}
       parentAmountSign={-1}
       initial={[]}
+      resetKey="test-1"
       categories={cats}
       onChange={onChange}
       {...overrides}

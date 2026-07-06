@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Category, TransactionSplit } from '../../api/types';
 
 export type DraftSplit = {
@@ -10,7 +10,7 @@ export type DraftSplit = {
 
 function toCents(mag: string): number {
   const cleaned = mag.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
-  if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return NaN;
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return NaN;
   return Math.round(Number(cleaned) * 100);
 }
 
@@ -36,6 +36,7 @@ export function SplitEditor({
   parentAmountSign,
   disabled = false,
   initial,
+  resetKey,
   categories,
   onChange,
 }: {
@@ -43,15 +44,20 @@ export function SplitEditor({
   parentAmountSign: -1 | 1 | 0;
   disabled?: boolean;
   initial: TransactionSplit[];
+  resetKey: string | number;
   categories: Category[];
   onChange: (splits: DraftSplit[]) => void;
 }) {
   const [rows, setRows] = useState<DraftSplit[]>(() => fromInitial(initial));
 
-  // Rehydrate whenever the initial array identity changes (modal reopen).
+  // Rehydrate only when resetKey changes, not on every render.
+  const lastResetKeyRef = useRef(resetKey);
   useEffect(() => {
-    setRows(fromInitial(initial));
-  }, [initial]);
+    if (lastResetKeyRef.current !== resetKey) {
+      lastResetKeyRef.current = resetKey;
+      setRows(fromInitial(initial));
+    }
+  }, [resetKey, initial]);
 
   const parentCents = Math.round(parentAmountMagnitude * 100);
   const remainderCents = useMemo(() => {
@@ -161,6 +167,7 @@ export function SplitEditor({
               inputMode="decimal"
               value={r.amountMagnitude}
               onChange={(e) => editRow(i, { amountMagnitude: e.target.value })}
+              onKeyDown={(e) => { if (e.key === '-') e.preventDefault(); }}
               placeholder="0,00"
             />
             <select
@@ -182,6 +189,8 @@ export function SplitEditor({
             <button
               type="button"
               className="btn-ghost !py-1 !px-2 text-ink-500 hover:text-clay-300"
+              aria-label="Retirer cette ligne"
+              title="Retirer cette ligne"
               onClick={() => removeRow(i)}
             >
               ✕
@@ -195,7 +204,10 @@ export function SplitEditor({
       >
         <span>
           Reste à ventiler :{' '}
-          <span className="font-mono">{signPrefix}{centsToMag(Math.abs(remainderCents))} €</span>
+          <span className="font-mono">
+            {remainderCents !== 0 ? signPrefix : ''}
+            {centsToMag(Math.abs(remainderCents))} €
+          </span>
         </span>
         <div className="flex gap-2">
           <button type="button" className="btn-ghost !py-1 !px-2 text-sm" onClick={addRow}>
