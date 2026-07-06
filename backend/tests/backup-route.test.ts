@@ -304,6 +304,62 @@ describe.skipIf(!RUN)('/api/backup', () => {
         .toEqual(['-40.00', '-60.00']);
     });
 
+    it('re-importing overwrites existing splits (exercises the split-wipe path)', async () => {
+      await seedSomeData();
+      // Create a base split state.
+      const txRes = await app.inject({
+        method: 'POST', url: '/api/transactions', headers: { cookie },
+        payload: {
+          accountId, date: '2026-07-04', amount: '-100.00',
+          rawLabel: 'Amazon overwrite test',
+        },
+      });
+      const txId = txRes.json().transaction.id;
+      const otherCat = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'OverwriteCat', kind: 'expense' },
+      });
+      const otherCatId = otherCat.json().category.id;
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${txId}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId, amount: '-60.00', memo: 'original' },
+          { categoryId: otherCatId, amount: '-40.00' },
+        ] },
+      });
+
+      // Export the current state.
+      const firstExport = await app.inject({
+        method: 'GET', url: '/api/backup/export', headers: { cookie },
+      });
+      const dump = firstExport.json();
+
+      // Mutate the dump so the tx now has different splits.
+      const dumpTx = (dump.transactions as Array<{ rawLabel: string; splits?: unknown[] }>)
+        .find((t) => t.rawLabel === 'Amazon overwrite test')!;
+      (dumpTx as { splits: unknown[] }).splits = [
+        { category: 'OverwriteCat', amount: '-100.00' },
+      ];
+
+      // Restore WITHOUT wiping first — restore.ts should wipe old splits itself.
+      const restored = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie },
+        payload: dump,
+      });
+      expect(restored.statusCode).toBe(200);
+
+      // Fetch the transaction and confirm only the new split shape survived.
+      const list = await app.inject({
+        method: 'GET', url: `/api/transactions?fromDate=2026-07-04&toDate=2026-07-04`,
+        headers: { cookie },
+      });
+      const roundTripped = (list.json().transactions as Array<{
+        rawLabel: string; splits: Array<{ amount: string }>;
+      }>).find((t) => t.rawLabel === 'Amazon overwrite test')!;
+      expect(roundTripped.splits).toHaveLength(1);
+      expect(roundTripped.splits[0].amount).toBe('-100.00');
+    });
+
     it('imports a v1 dump without splits cleanly', async () => {
       const v1: Record<string, unknown> = {
         version: 1,
