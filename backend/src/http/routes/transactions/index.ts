@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
-import { transactions } from '../../../db/schema.js';
+import { transactions, transactionSplits } from '../../../db/schema.js';
 import { normalizeLabel } from '../../../domain/imports/normalize.js';
 import { computeDedupKey } from '../../../domain/imports/dedup.js';
 import { categorizeOne, loadRuleEngine } from '../../../domain/rules/recategorize.js';
@@ -11,6 +11,33 @@ import { CreateBody, ListQuery, PatchBody } from './schemas.js';
 import { isPgError, parseId } from './helpers.js';
 import { registerDuplicateRoutes } from './duplicates.js';
 import { registerSplitsRoutes } from './splits.js';
+
+async function hydrateSplits<T extends { id: number }>(rows: T[]): Promise<Array<T & { splits: Array<{
+  id: number; transactionId: number; categoryId: number | null; amount: string; memo: string | null;
+}> }>> {
+  if (rows.length === 0) return rows.map((r) => ({ ...r, splits: [] }));
+  const ids = rows.map((r) => r.id);
+  const splits = await db
+    .select()
+    .from(transactionSplits)
+    .where(inArray(transactionSplits.transactionId, ids));
+  const byTx = new Map<number, Array<typeof splits[number]>>();
+  for (const s of splits) {
+    const arr = byTx.get(s.transactionId) ?? [];
+    arr.push(s);
+    byTx.set(s.transactionId, arr);
+  }
+  return rows.map((r) => ({
+    ...r,
+    splits: (byTx.get(r.id) ?? []).map((s) => ({
+      id: s.id,
+      transactionId: s.transactionId,
+      categoryId: s.categoryId,
+      amount: s.amount,
+      memo: s.memo,
+    })),
+  }));
+}
 
 export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -144,8 +171,9 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       .where(whereExpr);
     const total = countRows[0]?.total ?? 0;
 
+    const hydrated = await hydrateSplits(rows);
     return {
-      transactions: rows,
+      transactions: hydrated,
       pagination: { total, limit: q.limit, offset: q.offset },
     };
   });
@@ -159,7 +187,8 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       .from(transactions)
       .where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
-    return { transaction: row };
+    const [hydrated] = await hydrateSplits([row]);
+    return { transaction: hydrated };
   });
 
   // Inline category edit from the UI. Any explicit categoryId set via this

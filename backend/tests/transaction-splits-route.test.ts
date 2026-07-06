@@ -332,6 +332,41 @@ describe.skipIf(!RUN)('transaction_splits DB layer', () => {
       expect(rows).toHaveLength(0);
     });
 
+    it('GET /api/transactions hydrates splits: [] and the split rows', async () => {
+      const txIdPlain = await makeTx({
+        accountId, date: '2026-06-27', amount: '-25.00', rawLabel: 'coffee',
+      });
+      const txIdSplit = await makeTx({
+        accountId, date: '2026-06-27', amount: '-100.00', rawLabel: 'Amazon',
+      });
+      await app.inject({
+        method: 'PUT', url: `/api/transactions/${txIdSplit}/splits`, headers: { cookie },
+        payload: { splits: [
+          { categoryId: categoryBooksId,   amount: '-60.00' },
+          { categoryId: categoryElectroId, amount: '-40.00' },
+        ] },
+      });
+      const list = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?accountId=${accountId}&fromDate=2026-06-27&toDate=2026-06-27`,
+        headers: { cookie },
+      });
+      expect(list.statusCode).toBe(200);
+      const txns = list.json().transactions as Array<{ id: number; splits: unknown[] }>;
+      const plain = txns.find((t) => t.id === txIdPlain)!;
+      const split = txns.find((t) => t.id === txIdSplit)!;
+      expect(plain.splits).toEqual([]);
+      expect(split.splits).toHaveLength(2);
+      expect(split.splits[0]).toMatchObject({
+        transactionId: txIdSplit, categoryId: categoryBooksId, amount: '-60.00',
+      });
+
+      const single = await app.inject({
+        method: 'GET', url: `/api/transactions/${txIdSplit}`, headers: { cookie },
+      });
+      expect(single.json().transaction.splits).toHaveLength(2);
+    });
+
     it('GET / PUT / DELETE unauthenticated → 401', async () => {
       for (const method of ['GET', 'PUT', 'DELETE'] as const) {
         const res = await app.inject({
