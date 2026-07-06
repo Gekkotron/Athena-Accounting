@@ -392,6 +392,7 @@ describe.skipIf(!RUN)('/api/imports', () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body.rows).toEqual([]);
+      expect(body.skippedRows.length).toBeGreaterThan(0);
     });
   });
 });

@@ -93,7 +93,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
     setPreviewSkipped([]);
     setPreviewError(null);
   }, [
-    tableRect, dateCol, descCol, signedCol, debitCol, creditCol,
+    tableRect, tableRepeats, dateCol, descCol, signedCol, debitCol, creditCol,
     amountMode, headerRect, selectedPages, pickedAnchor, pickedOtherAnchors,
   ]);
 
