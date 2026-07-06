@@ -10,6 +10,7 @@ import { userId } from '../../plugins/auth.js';
 import { CreateBody, ListQuery, PatchBody } from './schemas.js';
 import { isPgError, parseId } from './helpers.js';
 import { registerDuplicateRoutes } from './duplicates.js';
+import { registerSplitsRoutes } from './splits.js';
 
 export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -87,6 +88,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   registerDuplicateRoutes(app);
+  registerSplitsRoutes(app);
 
   app.get('/api/transactions', async (req, reply) => {
     const uid = userId(req);
