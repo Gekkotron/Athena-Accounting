@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { categories, transactions, transactionSplits } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
@@ -98,16 +98,15 @@ export function registerSplitsRoutes(app: FastifyInstance): void {
     }
 
     // Category ownership: every categoryId must belong to the caller.
+    // Matches the pattern in routes/tri.ts — fetches only the intersection
+    // and compares counts.
     const wanted = Array.from(new Set(splits.map((s) => s.categoryId)));
     const owned = await db
       .select({ id: categories.id })
       .from(categories)
-      .where(and(eq(categories.userId, uid)));
-    const ownedSet = new Set(owned.map((c) => c.id));
-    for (const wid of wanted) {
-      if (!ownedSet.has(wid)) {
-        return reply.code(400).send({ error: 'catégorie inconnue' });
-      }
+      .where(and(eq(categories.userId, uid), inArray(categories.id, wanted)));
+    if (owned.length !== wanted.length) {
+      return reply.code(400).send({ error: 'catégorie inconnue' });
     }
 
     try {
