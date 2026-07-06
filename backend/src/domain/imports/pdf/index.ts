@@ -274,3 +274,34 @@ export async function applyTemplateAndImport(opts: {
   await db.delete(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));
   return { result, skippedRows };
 }
+
+export interface PreviewTemplateResult {
+  rows: import('../ofx-parser.js').ParsedTransaction[];
+  skippedRows: Array<{ rowText: string; reason: string }>;
+}
+
+// Extract rows from a draft using proposed zones, without persisting
+// anything. Powers the wizard's "Aperçu" button — mirrors
+// applyTemplateAndImport's read path but stops before runImport, the
+// template upsert, and the anchor derivation. Anchor derivation is
+// deliberately skipped: preview should reflect what the user's CURRENT
+// paint would extract, not what a save would stamp onto the template.
+export async function previewTemplate(opts: {
+  draftId: number;
+  zones: TemplateZones;
+  userId: number;
+}): Promise<PreviewTemplateResult> {
+  validateZones(opts.zones);
+  const [draft] = await db.select().from(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));
+  if (!draft || draft.userId !== opts.userId || draft.expiresAt < new Date()) {
+    const err = new Error('draft_expired');
+    (err as any).code = 'draft_expired';
+    throw err;
+  }
+  const stored = draft.pdfBytes as unknown;
+  const b64 = typeof stored === 'string' ? stored : (stored as Buffer).toString('utf8');
+  const buf = Buffer.from(b64, 'base64');
+  const pages = await extractText(buf);
+  const { rows, skippedRows } = applyTemplate(pages, opts.zones);
+  return { rows, skippedRows };
+}

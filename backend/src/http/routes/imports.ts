@@ -7,7 +7,7 @@ import {
   resolveAccountFromFilename,
   runImport,
 } from '../../domain/imports/import-service.js';
-import { importPdf, applyTemplateAndImport } from '../../domain/imports/pdf/index.js';
+import { importPdf, applyTemplateAndImport, previewTemplate } from '../../domain/imports/pdf/index.js';
 import type { TemplateZones } from '../../domain/imports/pdf/zones.js';
 import { userId } from '../plugins/auth.js';
 
@@ -115,6 +115,23 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       if (err?.code === 'template_yielded_no_rows') return reply.code(422).send({ code: 'template_yielded_no_rows', error: 'zones produced 0 rows' });
       app.log.error({ err }, 'apply template failed');
       return reply.code(400).send({ error: 'apply template failed', message: err?.message ?? String(err) });
+    }
+  });
+
+  app.post('/api/imports/pdf/templates/preview', async (req, reply) => {
+    const body = req.body as { draftId?: number; zones?: TemplateZones };
+    if (!body?.draftId || !body.zones) {
+      return reply.code(400).send({ error: 'draftId and zones are required' });
+    }
+    try {
+      const r = await previewTemplate({ draftId: body.draftId, zones: body.zones, userId: userId(req) });
+      return reply.code(200).send(r);
+    } catch (err: any) {
+      if (err?.code === 'draft_expired') {
+        return reply.code(410).send({ code: 'draft_expired', error: 'draft expired or not found' });
+      }
+      app.log.error({ err }, 'preview template failed');
+      return reply.code(400).send({ error: 'preview failed', message: err?.message ?? String(err) });
     }
   });
 
