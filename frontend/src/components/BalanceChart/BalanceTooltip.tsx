@@ -44,7 +44,7 @@ export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, con
       <div className="font-mono text-[10px] text-ink-500 mb-0.5">
         {formatDate(hovered.date)}
       </div>
-      <div className={`font-mono text-sm tabular-nums ${hovered.value < 0 ? 'text-clay-300' : hovered.value > 0 ? 'text-sage-300' : 'text-ink-300'}`}>
+      <div className={`font-mono text-sm tabular-nums private ${hovered.value < 0 ? 'text-clay-300' : hovered.value > 0 ? 'text-sage-300' : 'text-ink-300'}`}>
         {formatAmount(hovered.value, currency)}
         {delta !== null && (
           <span data-testid="tooltip-delta" className={`ml-1.5 text-[11px] ${deltaClass}`}>
@@ -61,12 +61,12 @@ export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, con
           </div>
           {hoveredCheckpoint.drift ? (
             <>
-              <div>attendu · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
-              <div>réel · <span className="text-ink-300">{formatAmount(hoveredCheckpoint.actual, currency)}</span></div>
-              <div className="text-amber-300">écart · {formatAmount(hoveredCheckpoint.delta, currency)}</div>
+              <div>attendu · <span className="text-ink-300 private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
+              <div>réel · <span className="text-ink-300 private">{formatAmount(hoveredCheckpoint.actual, currency)}</span></div>
+              <div className="text-amber-300">écart · <span className="private">{formatAmount(hoveredCheckpoint.delta, currency)}</span></div>
             </>
           ) : (
-            <div className="text-sage-300">attendu ✓ {formatAmount(hoveredCheckpoint.expectedAmount, currency)}</div>
+            <div className="text-sage-300">attendu ✓ <span className="private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
           )}
         </div>
       )}
