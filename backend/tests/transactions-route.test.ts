@@ -197,6 +197,31 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       expect(res.json().transactions).toHaveLength(2);
     });
 
+    it('treats a bare integer as a range (19 -> 19.00..19.99, sign-agnostic)', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '19.00', rawLabel: 'lo' });
+      await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '19.72', rawLabel: 'mid' });
+      await makeTx({ accountId: accountAId, date: '2026-06-17', amount: '-19.50', rawLabel: 'neg' });
+      await makeTx({ accountId: accountAId, date: '2026-06-18', amount: '20.00', rawLabel: 'above' });
+      await makeTx({ accountId: accountAId, date: '2026-06-19', amount: '18.99', rawLabel: 'below' });
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?amount=19',
+        headers: { cookie },
+      });
+      const labels = res.json().transactions.map((t: { rawLabel: string }) => t.rawLabel).sort();
+      expect(labels).toEqual(['lo', 'mid', 'neg']);
+    });
+
+    it('keeps an explicit-decimal amount an exact match (19.72 stays exact)', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '19.72', rawLabel: 'exact' });
+      await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '19.00', rawLabel: 'noise' });
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?amount=19.72',
+        headers: { cookie },
+      });
+      const labels = res.json().transactions.map((t: { rawLabel: string }) => t.rawLabel);
+      expect(labels).toEqual(['exact']);
+    });
+
     it('search matches raw_label case-insensitively', async () => {
       await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'CB CARREFOUR' });
       await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-1.00', rawLabel: 'PAIEMENT MONOPRIX' });
