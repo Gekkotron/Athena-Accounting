@@ -477,6 +477,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           x={hover.x}
           y={hover.y}
           containerWidth={containerRef.current?.clientWidth ?? 1000}
+          previousValue={hover.idx > 0 ? data[hover.idx - 1]!.value : null}
         />
       )}
     </div>

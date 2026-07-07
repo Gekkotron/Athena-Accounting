@@ -9,6 +9,9 @@ interface Props {
   x: number;
   y: number;
   containerWidth: number;
+  // Value of the point immediately before the hovered one, or null at the
+  // very first point. Drives the "diff from the last point" chip.
+  previousValue: number | null;
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -19,7 +22,16 @@ function clamp(v: number, min: number, max: number): number {
 // the data point. -translate-x-1/2 + -translate-y-full + -mt-3 puts it just
 // above the dot, centered horizontally. The container also clamps the X so
 // the tooltip never overflows on the sides.
-export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, containerWidth }: Props): JSX.Element {
+export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, containerWidth, previousValue }: Props): JSX.Element {
+  // Diff from the previous data point, e.g. "2 300 € (−100 €)". Intl renders
+  // the minus for negatives; we prepend an explicit "+" for gains so the
+  // direction reads at a glance without relying on colour alone.
+  const delta = previousValue === null ? null : hovered.value - previousValue;
+  const deltaStr =
+    delta === null ? '' : `${delta > 0 ? '+' : ''}${formatAmount(delta, currency)}`;
+  const deltaClass =
+    delta === null || delta === 0 ? 'text-ink-500' : delta > 0 ? 'text-sage-300' : 'text-clay-300';
+
   return (
     <div
       className="absolute pointer-events-none surface px-3 py-2 shadow-card min-w-[140px]"
@@ -34,6 +46,11 @@ export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, con
       </div>
       <div className={`font-mono text-sm tabular-nums ${hovered.value < 0 ? 'text-clay-300' : hovered.value > 0 ? 'text-sage-300' : 'text-ink-300'}`}>
         {formatAmount(hovered.value, currency)}
+        {delta !== null && (
+          <span data-testid="tooltip-delta" className={`ml-1.5 text-[11px] ${deltaClass}`}>
+            ({deltaStr})
+          </span>
+        )}
       </div>
       {hoveredCheckpoint && (
         <div className="mt-1 pt-1 border-t border-ink-800/60 font-mono text-[10px] text-ink-500">
