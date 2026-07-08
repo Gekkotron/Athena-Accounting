@@ -129,10 +129,12 @@ mirroring existing page patterns. Mutations invalidate both queries.
 ## Backup
 
 Add `category_budgets` to the backup export/import payload
-(`backup/export.ts` + `backup/restore.ts`), bumping the payload `VERSION`.
-Because restore remaps entities by **name**, each exported budget references its
-category by `categoryName` (not raw id); restore resolves it back to the new
-category id, skipping any budget whose category didn't restore.
+(`backup/export.ts` + `backup/restore.ts`) as an **optional** array. Following
+the codebase's additive precedent (checkpoints, splits, fileImports were all
+added this way), the payload `VERSION` stays `2` — old backups without the field
+still validate. Because restore remaps entities by **name**, each exported
+budget references its category by name (not raw id); restore resolves it back to
+the new category id, skipping any budget whose category didn't restore.
 
 ## Testing
 
