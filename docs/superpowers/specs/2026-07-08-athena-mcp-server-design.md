@@ -74,7 +74,7 @@ back to the MCP server, which decrypts and returns the tool result
   salt = "athena-mcp-wrap", info = "key-wrap", length = 32)`. Reuses the
   already-required `SESSION_SECRET`; no new required env var.
 - **Wrapped key at rest:** `mcpKeyWrapped = base64(nonce(12) || AES-256-GCM(
-  masterKey, K) || tag)`, stored in the user's settings JSONB.
+  masterKey, K) || tag)`, stored in the `user_settings.mcp_key_wrapped` column.
 
 Why wrapped rather than a one-way hash: symmetric content encryption requires
 the backend to recover `K`, which a hash cannot provide. Wrapping keeps `K`
@@ -123,7 +123,7 @@ New route, **not** behind `requireAuth` (it performs its own crypto auth), with
 a dedicated rate limit (e.g. 60 req/min per IP). Steps:
 
 1. Validate the envelope shape (zod). On failure → plaintext 400.
-2. Resolve the user by `user` (username). Load `mcpEnabled` + `mcpKeyWrapped`.
+2. Resolve the user by `user` (username). Load `mcp_enabled` + `mcp_key_wrapped`.
    If the user is unknown, MCP is disabled, or no wrapped key exists →
    plaintext 401/403.
 3. Unwrap `K` with the master key.
@@ -162,23 +162,29 @@ encrypted tunnel, keeping the external surface to a single endpoint.
 
 ### C. Backend — MCP settings (enable + token)
 
-Storage: the per-user `user_settings.settings` JSONB gains:
-- `mcpEnabled: boolean` (default `false`)
-- `mcpKeyWrapped: string | null` (default null)
+Storage: **dedicated columns** on `user_settings` (migration `0016`), not the
+`settings` JSONB:
+- `mcp_enabled boolean NOT NULL DEFAULT false`
+- `mcp_key_wrapped text` (nullable)
 
-Neither is exposed through the generic `PATCH /api/settings`; `loadSettingsFor`
-strips both from the general `GET /api/settings` response. MCP state is read
-and mutated only through dedicated endpoints (behind `requireAuth`, used by the
-Réglages UI over the normal session cookie):
+Columns (not JSONB keys) because `SettingsSchema` is `.strict()`: an unknown
+key in the JSONB makes `mergeSettings` reject the whole blob and fall back to
+defaults, silently resetting the user's dashboard settings. Columns also mean
+`loadSettingsFor` (which selects only `userSettings.settings`) never sees them,
+so they are naturally excluded from `GET /api/settings` — no stripping needed.
+MCP state is read and mutated only through dedicated endpoints (behind
+`requireAuth`, used by the Réglages UI over the normal session cookie):
 - `GET /api/settings/mcp` → `{ enabled: boolean, hasToken: boolean }`
-  (`hasToken = mcpKeyWrapped != null`; never returns key material)
+  (`hasToken = mcp_key_wrapped IS NOT NULL`; never returns key material)
 - `PUT /api/settings/mcp` → `{ enabled }` toggle
 - `POST /api/settings/mcp/token` → generate token → derive `K` → wrap `K` →
-  store `mcpKeyWrapped` → return `{ token }` **once**. Regeneration overwrites
+  store `mcp_key_wrapped` → return `{ token }` **once**. Regeneration overwrites
   the wrapped key (old token stops working immediately).
-- `DELETE /api/settings/mcp/token` → set `mcpKeyWrapped` to null (revoke).
+- `DELETE /api/settings/mcp/token` → set `mcp_key_wrapped` to null (revoke).
 
-Writes use the existing JSONB upsert/merge pattern in `settingsRoutes`.
+Writes upsert the `user_settings` row (created lazily — a user who never
+touched settings has no row yet), setting the mcp columns and leaving the
+`settings` JSONB at its default.
 
 ### D. MCP server package `/mcp`
 
@@ -264,7 +270,8 @@ A card on the settings page:
   - `/api/settings/mcp`: GET shape, PUT toggle, POST returns token once and
     stores a wrapped key, DELETE revokes, regeneration invalidates the old
     token.
-  - General `GET /api/settings` never leaks `mcpEnabled`/`mcpKeyWrapped`.
+  - General `GET /api/settings` response contains no mcp fields (the mcp
+  columns are not selected by `loadSettingsFor`).
 - **MCP (Vitest):**
   - `crypto.ts` matches the backend scheme (shared test vectors: same token →
     same `K`; a fixed nonce+key produces the expected ciphertext).
