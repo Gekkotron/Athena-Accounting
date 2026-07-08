@@ -7,6 +7,7 @@ import { runMigrations } from './db/migrate.js';
 import { authPlugin } from './http/plugins/auth.js';
 import { onboardingRoutes } from './http/routes/onboarding.js';
 import { authRoutes } from './http/routes/auth.js';
+import { mcpRpcRoutes } from './http/routes/mcp/index.js';
 import { accountsRoutes } from './http/routes/accounts.js';
 import { patternRoutes } from './http/routes/account-patterns.js';
 import { importsRoutes } from './http/routes/imports.js';
@@ -21,6 +22,7 @@ import { backupRoutes } from './http/routes/backup/index.js';
 import { pdfTemplatesRoutes } from './http/routes/pdf-templates.js';
 import { balanceCheckpointsRoutes } from './http/routes/balance-checkpoints.js';
 import { settingsRoutes } from './http/routes/settings.js';
+import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
@@ -48,6 +50,9 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   // Public routes (no auth required to discover / complete onboarding, or log in).
   await app.register(onboardingRoutes);
   await app.register(authRoutes);
+  // /api/mcp/rpc performs its own crypto-based auth (see mcp/index.ts), so it
+  // belongs with the public routes rather than the requireAuth-gated block.
+  await app.register(mcpRpcRoutes);
 
   // Authenticated routes (preHandler enforced inside each plugin via addHook).
   await app.register(accountsRoutes);
@@ -63,6 +68,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(pdfTemplatesRoutes);
   await app.register(balanceCheckpointsRoutes);
   await app.register(settingsRoutes);
+  await app.register(mcpSettingsRoutes);
   await app.register(budgetsRoutes);
 
   startDraftSweeper(app);
