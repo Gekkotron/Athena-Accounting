@@ -149,6 +149,26 @@ describe('backup/schema.ts', () => {
     });
     expect(parsed.success).toBe(true);
   });
+
+  it('rejects a budget with monthlyLimit of "0"', () => {
+    const parsed = BackupBody.safeParse({
+      ...minimalDump,
+      budgets: [
+        { category: 'Groceries', monthlyLimit: '0', currency: 'EUR' },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('accepts a budget with a positive monthlyLimit', () => {
+    const parsed = BackupBody.safeParse({
+      ...minimalDump,
+      budgets: [
+        { category: 'Groceries', monthlyLimit: '300.00', currency: 'EUR' },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
 });
 
 describe('fileImportKey', () => {

@@ -132,7 +132,7 @@ export const BackupBody = z.object({
   budgets: z.array(
     z.object({
       category: z.string().nullable(),
-      monthlyLimit: z.string().regex(/^\d+(\.\d{1,2})?$/),
+      monthlyLimit: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((s) => Number(s) > 0, 'must be greater than 0'),
       currency: z.string(),
     }),
   ).optional(),
