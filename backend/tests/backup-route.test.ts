@@ -213,6 +213,30 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(cpsAfter.json().checkpoints[0].note).toBe('mai');
     });
 
+    it('round-trips category budgets by category name', async () => {
+      const cat = await app.inject({
+        method: 'POST', url: '/api/categories',
+        headers: { cookie }, payload: { name: 'Loisirs', kind: 'expense' },
+      });
+      const catId = cat.json().category.id;
+      await app.inject({
+        method: 'POST', url: '/api/budgets',
+        headers: { cookie }, payload: { categoryId: catId, monthlyLimit: '150.00' },
+      });
+
+      const dump = (await app.inject({ method: 'GET', url: '/api/backup/export', headers: { cookie } })).json();
+      expect(dump.budgets.find((b: { category: string }) => b.category === 'Loisirs').monthlyLimit).toBe('150.00');
+
+      const restore = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: dump,
+      });
+      expect(restore.statusCode).toBe(200);
+
+      const budgets = (await app.inject({ method: 'GET', url: '/api/budgets', headers: { cookie } })).json().budgets;
+      expect(budgets).toHaveLength(1);
+      expect(budgets[0].monthlyLimit).toBe('150.00');
+    });
+
     it('coerces legacy kind=transfer categories to neutral', async () => {
       // Craft a minimal legacy-shaped dump: single category with kind:'transfer'.
       const payload = {

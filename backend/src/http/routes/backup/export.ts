@@ -6,6 +6,7 @@ import {
   accountFilenamePatterns,
   balanceCheckpoints,
   categories,
+  categoryBudgets,
   fileImports,
   rules,
   transactions,
@@ -24,7 +25,7 @@ import { VERSION, fileImportKey } from './schema.js';
 export function registerExportRoute(app: FastifyInstance): void {
   app.get('/api/backup/export', async (req, reply) => {
     const uid = userId(req);
-    const [accs, cats, patterns, rls, txs, fimps, checkpoints, splits] = await Promise.all([
+    const [accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
       db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
@@ -38,6 +39,7 @@ export function registerExportRoute(app: FastifyInstance): void {
         .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
         .where(eq(transactions.userId, uid))
         .then((rows) => rows.map((r) => r.transaction_splits)),
+      db.select().from(categoryBudgets).where(eq(categoryBudgets.userId, uid)),
     ]);
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
@@ -62,6 +64,7 @@ export function registerExportRoute(app: FastifyInstance): void {
         accountFilenamePatterns: patterns.length,
         fileImports: fimps.length,
         balanceCheckpoints: checkpoints.length,
+        budgets: budgets.length,
       },
       accounts: accs.map((a) => ({
         name: a.name,
@@ -135,6 +138,11 @@ export function registerExportRoute(app: FastifyInstance): void {
         checkpointDate: c.checkpointDate,
         expectedAmount: c.expectedAmount,
         note: c.note,
+      })),
+      budgets: budgets.map((b) => ({
+        category: categoryById.get(b.categoryId)?.name ?? null,
+        monthlyLimit: b.monthlyLimit,
+        currency: b.currency,
       })),
     };
 
