@@ -21,6 +21,7 @@ import { backupRoutes } from './http/routes/backup/index.js';
 import { pdfTemplatesRoutes } from './http/routes/pdf-templates.js';
 import { balanceCheckpointsRoutes } from './http/routes/balance-checkpoints.js';
 import { settingsRoutes } from './http/routes/settings.js';
+import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
@@ -63,6 +64,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(pdfTemplatesRoutes);
   await app.register(balanceCheckpointsRoutes);
   await app.register(settingsRoutes);
+  await app.register(mcpSettingsRoutes);
   await app.register(budgetsRoutes);
 
   startDraftSweeper(app);
