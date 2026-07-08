@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../api/client';
+import { api, ApiError } from '../../api/client';
 import type { Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
 import { formatAmount } from '../../lib/format';
@@ -22,6 +22,16 @@ function barColor(pct: number): string {
   return 'bg-sage-500';
 }
 
+function isValidLimit(v: string): boolean {
+  return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
+}
+
+const MUTATION_ERROR_FALLBACK = "Impossible d'enregistrer le budget.";
+
+function mutationErrorMessage(err: unknown): string {
+  return err instanceof ApiError ? err.message : MUTATION_ERROR_FALLBACK;
+}
+
 export function Budgets(): JSX.Element {
   const [month, setMonth] = useState(currentMonth());
   const { budgets, create, update, remove } = useBudgets();
@@ -39,12 +49,14 @@ export function Budgets(): JSX.Element {
 
   const [newCatId, setNewCatId] = useState('');
   const [newLimit, setNewLimit] = useState('');
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const submitNew = () => {
     const categoryId = Number(newCatId);
-    if (!categoryId || !/^\d+(\.\d{1,2})?$/.test(newLimit) || Number(newLimit) <= 0) return;
+    if (!categoryId || !isValidLimit(newLimit)) return;
     create.mutate({ categoryId, monthlyLimit: newLimit }, {
-      onSuccess: () => { setNewCatId(''); setNewLimit(''); },
+      onSuccess: () => { setNewCatId(''); setNewLimit(''); setMutationError(null); },
+      onError: (err) => setMutationError(mutationErrorMessage(err)),
     });
   };
 
@@ -63,6 +75,12 @@ export function Budgets(): JSX.Element {
           <button className="btn-ghost !py-1 !px-2" aria-label="Mois suivant" onClick={() => setMonth((m) => shiftMonth(m, 1))}>›</button>
         </div>
       </div>
+
+      {mutationError && (
+        <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
+          {mutationError}
+        </div>
+      )}
 
       {report.data && rows.length > 0 && (
         <div className="surface p-4 flex items-center justify-between text-sm">
@@ -95,15 +113,24 @@ export function Budgets(): JSX.Element {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <span className={`text-xs ${r.over ? 'text-clay-300' : 'text-ink-400'}`}>
-                    {r.over
-                      ? `Dépassé de ${formatAmount((Number(r.spent) - Number(r.limit)).toFixed(2), r.currency)}`
-                      : `Reste ${formatAmount(r.remaining, r.currency)}`}
+                    {r.over ? 'Dépassé de ' : 'Reste '}
+                    <span className="private">
+                      {r.over
+                        ? formatAmount((-Number(r.remaining)).toFixed(2), r.currency)
+                        : formatAmount(r.remaining, r.currency)}
+                    </span>
                   </span>
                   <BudgetRowActions
                     id={budgets.find((b) => b.categoryId === r.categoryId)?.id}
                     currentLimit={r.limit}
-                    onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit })}
-                    onDelete={(id) => remove.mutate(id)}
+                    onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
+                      onSuccess: () => setMutationError(null),
+                      onError: (err) => setMutationError(mutationErrorMessage(err)),
+                    })}
+                    onDelete={(id) => remove.mutate(id, {
+                      onSuccess: () => setMutationError(null),
+                      onError: (err) => setMutationError(mutationErrorMessage(err)),
+                    })}
                   />
                 </div>
               </li>
@@ -153,7 +180,7 @@ function BudgetRowActions(props: {
           aria-label="Modifier le plafond" value={value} onChange={(e) => setValue(e.target.value)}
         />
         <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => {
-          if (/^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0) { onSave(id, value); setEditing(false); }
+          if (isValidLimit(value)) { onSave(id, value); setEditing(false); }
         }}>OK</button>
         <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => { setValue(currentLimit); setEditing(false); }}>Annuler</button>
       </span>
