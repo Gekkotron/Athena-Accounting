@@ -199,4 +199,40 @@ describe.skipIf(!RUN)('/api/reports', () => {
       expect(Number(other.total)).toBeCloseTo(-70.0, 2);
     });
   });
+
+  it('GET /api/reports/budget returns planned vs actual for the month', async () => {
+    // an expense category with a 300 limit
+    const cat = await app.inject({
+      method: 'POST', url: '/api/categories',
+      headers: { cookie }, payload: { name: 'Resto', kind: 'expense' },
+    });
+    const catId = cat.json().category.id;
+    await app.inject({
+      method: 'POST', url: '/api/budgets',
+      headers: { cookie }, payload: { categoryId: catId, monthlyLimit: '300.00' },
+    });
+    // two expenses in 2025-03 totalling -240
+    await makeTx({ accountId: accountEURId, date: '2025-03-05', amount: '-100.00', rawLabel: 'a', categoryId: catId });
+    await makeTx({ accountId: accountEURId, date: '2025-03-20', amount: '-140.00', rawLabel: 'b', categoryId: catId });
+    // an expense in a different month must NOT count
+    await makeTx({ accountId: accountEURId, date: '2025-04-01', amount: '-999.00', rawLabel: 'c', categoryId: catId });
+
+    const res = await app.inject({
+      method: 'GET', url: '/api/reports/budget?month=2025-03', headers: { cookie },
+    });
+    expect(res.statusCode).toBe(200);
+    const row = res.json().rows.find((r: { categoryId: number }) => r.categoryId === catId);
+    expect(row.limit).toBe('300.00');
+    expect(row.spent).toBe('240.00');
+    expect(row.remaining).toBe('60.00');
+    expect(row.pct).toBe(80);
+    expect(row.over).toBe(false);
+  });
+
+  it('GET /api/reports/budget rejects a malformed month with 400', async () => {
+    const res = await app.inject({
+      method: 'GET', url: '/api/reports/budget?month=2025-3', headers: { cookie },
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });

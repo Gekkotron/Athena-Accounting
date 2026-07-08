@@ -12,6 +12,7 @@ const nav: { to: string; label: string; end?: boolean; icon: NavIconName }[] = [
   { to: '/transactions', label: 'Transactions', icon: 'transactions' },
   { to: '/tri', label: 'Tri', icon: 'tri' },
   { to: '/categories', label: 'Catégories', icon: 'categories' },
+  { to: '/budgets', label: 'Budgets', icon: 'budgets' },
   { to: '/rules', label: 'Règles', icon: 'rules' },
   { to: '/accounts', label: 'Comptes', icon: 'accounts' },
   { to: '/imports', label: 'Imports / Sauvegarde', icon: 'imports' },

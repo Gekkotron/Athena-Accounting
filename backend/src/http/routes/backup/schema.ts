@@ -126,6 +126,16 @@ export const BackupBody = z.object({
       statedBalanceDate: z.string().nullable().optional(),
     }),
   ).optional(),
+  // Monthly category budgets (migration 0015). Optional so pre-0015 backups
+  // still validate. Referenced by category name; restore skips a budget whose
+  // category did not restore.
+  budgets: z.array(
+    z.object({
+      category: z.string().nullable(),
+      monthlyLimit: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((s) => Number(s) > 0, 'must be greater than 0'),
+      currency: z.string(),
+    }),
+  ).optional(),
 });
 
 export type BackupDump = z.infer<typeof BackupBody>;

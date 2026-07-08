@@ -8,6 +8,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Tri } from './pages/Tri';
 import { Categories } from './pages/Categories';
+import { Budgets } from './pages/Budgets';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
 import { Imports } from './pages/Imports';
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/tri" element={<Tri />} />
         <Route path="/categories" element={<Categories />} />
+        <Route path="/budgets" element={<Budgets />} />
         <Route path="/rules" element={<Rules />} />
         <Route path="/accounts" element={<Accounts />} />
         <Route path="/imports" element={<Imports />} />

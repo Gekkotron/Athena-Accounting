@@ -6,6 +6,7 @@ import {
   accountFilenamePatterns,
   balanceCheckpoints,
   categories,
+  categoryBudgets,
   fileImports,
   rules,
   transactions,
@@ -48,6 +49,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       await tx.delete(rules).where(eq(rules.userId, uid));
       await tx.delete(transferRules).where(eq(transferRules.userId, uid));
       await tx.delete(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid));
+      await tx.delete(categoryBudgets).where(eq(categoryBudgets.userId, uid));
       await tx.delete(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid));
       await tx.delete(categories).where(eq(categories.userId, uid));
       await tx.delete(accounts).where(eq(accounts.userId, uid));
@@ -164,6 +166,19 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         checkpointsInserted++;
       }
 
+      let budgetsInserted = 0;
+      for (const b of dump.budgets ?? []) {
+        const catId = resolveNameToId(b.category, categoryIdByName);
+        if (catId === null) continue;
+        await tx.insert(categoryBudgets).values({
+          userId: uid,
+          categoryId: catId,
+          monthlyLimit: b.monthlyLimit,
+          currency: b.currency,
+        });
+        budgetsInserted++;
+      }
+
       // file_imports — restore the Imports → Historique audit trail. Keep a
       // natural-key → new-id map so transactions can re-link via source_file_id.
       const fileImportIdByKey = new Map<string, number>();
@@ -241,6 +256,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           rules: rulesInserted,
           transferRules: transferRulesInserted,
           balanceCheckpoints: checkpointsInserted,
+          budgets: budgetsInserted,
           transactions: txCount,
           fileImports: fileImportsInserted,
         },

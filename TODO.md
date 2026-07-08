@@ -32,8 +32,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   positifs.
 - Réordonner les règles par drag-and-drop (comme les comptes) — la priorité
   est déjà stockée, il manque juste l'UI @dnd-kit.
-- Budget mensuel par catégorie avec chip rouge quand dépassé. Table
-  `category_budgets { categoryId, monthlyLimit, currency }`.
 - Vue "Comparatif mensuel" : ce mois-ci vs le mois dernier par catégorie,
   avec delta et sparkline. Bâti sur `/api/reports/categories` qui expose
   déjà les mois.
@@ -62,6 +60,105 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   monté NAS sans passer par le bouton manuel.
 - Metrics Prometheus (`/metrics`) : nombre d'imports, latence des requêtes,
   taille de la DB. Utile en environnement homelab avec Grafana.
+
+### 🔍 Inspirations ezBookkeeping (audit 2026-07-08)
+
+<!-- Comparaison des features de ezbookkeeping.mayswind.net avec Athena. Ne sont
+     listées QUE celles qu'on n'a pas déjà : rate-limit login, QFX (routé vers
+     le parser OFX), multi-devise, thème sombre, Docker/Postgres sont déjà en
+     place ; i18n, Sankey, comparatif mensuel, détection de récurrences et table
+     FX manuelle sont déjà plus haut dans ce fichier. Écartées volontairement :
+     géoloc + carte sur les transactions et multi-fuseau horaire (hors périmètre
+     d'un outil mono-foyer nourri par des relevés bancaires). Ordre : du plus
+     proche du cœur métier au plus périphérique. -->
+
+**Imports — le cœur d'Athena, plus forte valeur**
+- Import CAMT.053 / CAMT.052 (ISO 20022, XML SEPA) — beaucoup de banques FR/EU
+  l'exportent nativement. Nouveau parser à côté de `ofx-parser.ts`, réutilise le
+  dédup DB et le moteur de règles existants.
+- Import MT940 (relevé SWIFT) — format texte répandu en Europe. Même pipeline.
+- Import QIF — format legacy, utile pour rapatrier un vieux logiciel.
+- Import depuis Firefly III / GnuCash — chemin de migration pour qui quitte un
+  autre self-hosted. Plus gros chantier, priorité basse.
+
+**Richesse des transactions**
+- Sous-catégories (hiérarchie 2 niveaux) — la colonne `parentId` existe déjà en
+  base (`schema.ts`) mais l'UI Categories ne l'expose pas. Petit effort, forte
+  valeur.
+- Pièces jointes / images sur une transaction (reçus, factures) — stockées sur
+  le volume local (pas de cloud). Nouvelle table `transaction_attachments`.
+- Reconnaissance de reçu (image → date/montant/marchand) — prolonge l'idée OCR
+  PDF + nuextract déjà notée. Modèle self-hosted uniquement (contrainte no-cloud).
+- Transactions planifiées / échéancier (loyer, salaire à venir) — dates futures
+  matérialisées automatiquement. Complète la « détection de récurrences » déjà
+  listée.
+
+**Sécurité & confidentialité — dans l'esprit privacy-first**
+- 2FA TOTP (app d'authentification) — optionnel par utilisateur. Le rate-limit
+  login est déjà là ; le 2FA est la brique manquante.
+- Verrouillage applicatif par code PIN — aujourd'hui `PrivacyContext` ne fait que
+  flouter après 5 min d'inactivité ; ajouter un vrai déverrouillage (PIN) avant
+  de re-révéler les montants.
+- WebAuthn / passkey — variante plus forte du verrouillage, plus gros chantier.
+- OIDC (auth externe) — surtout pertinent en multi-utilisateurs ; priorité basse
+  pour un install LAN mono-foyer.
+
+**Localisation & formats**
+- Formats de date / nombre / devise configurables — actuellement fr-FR en dur ;
+  à brancher sur `user_settings` en même temps que l'i18n déjà prévu.
+
+**Plateforme**
+- PWA installable (manifest + service worker, shell offline) — pratique pour
+  consulter l'app depuis un mobile sur le LAN. Rien en place aujourd'hui.
+- Image Docker multi-arch (ARM64) — le Geekom est x86 donc pas pour nous, mais
+  utile aux autres une fois le projet public.
+
+**Automatisation & intégration**
+- API publique documentée + petit outil CLI — pour scripter imports/exports en
+  homelab.
+- Serveur MCP exposant les données à un agent IA local — niche mais raccord avec
+  l'écosystème du projet ; strictement local.
+
+### 🔍 Inspirations Actual Budget + Firefly III (audit 2026-07-08)
+
+<!-- Comparaison de actualbudget.org/#features et firefly-iii.org avec Athena. Ne
+     sont listées QUE les features qu'on n'a pas déjà, ni ici ni plus haut. Déjà
+     couvert (donc écarté) : moteur de règles, splits, multi-devise + table FX
+     manuelle, thème sombre, imports fichiers (OFX/CSV/PDF/QIF/CAMT), migration
+     Firefly/GnuCash, transactions récurrentes + échéancier, budget mensuel par
+     catégorie, comparatif mensuel, undo, API publique + CLI, rapports
+     solde/timeseries/catégories. Écartées volontairement (voir bas de section).
+     Ordre : du plus proche du cœur métier au plus périphérique. -->
+
+**Budgétisation — le grand manque vs les deux outils**
+- Budgétisation par enveloppes (façon Actual / YNAB) : allouer chaque euro à une
+  enveloppe catégorie en début de mois, reporter le reliquat au mois suivant.
+  Plus ambitieux que la simple limite mensuelle, et un vrai changement de posture
+  (Athena aujourd'hui = suivi rétrospectif des relevés, l'enveloppe = prospectif).
+  À trancher : est-ce cohérent avec un outil nourri après coup par les banques ?
+- Tirelires / objectifs d'épargne (piggy banks, Firefly III) : cible d'épargne
+  rattachée à un compte, avec barre de progression et échéance optionnelle.
+  Autonome, s'aligne bien avec la contrainte no-cloud. Effort moyen.
+
+**Rapports**
+- Générateur de rapports personnalisés (façon Actual) : choisir dimensions,
+  regroupement, plage, et sauvegarder la vue. Les rapports actuels sont figés ;
+  celui-ci les rend composables. Gros chantier, priorité basse.
+
+**Migration**
+- Import YNAB4 / nYNAB : chemin de reprise pour qui vient de YNAB (Actual le fait
+  déjà). Rejoint le cluster d'imports migration (Firefly/GnuCash) déjà noté.
+  Priorité basse.
+
+<!-- Écartées volontairement :
+     - Bank syncing (GoCardless / SimpleFIN / Nordigen) : tous passent par un
+       agrégateur cloud → viole la contrainte no-cloud. Hors périmètre.
+     - Chiffrement bout-en-bout vers un serveur de sync (Actual) : Actual en a
+       besoin car il synchronise via un serveur ; Athena est LAN-only mono-foyer
+       avec la donnée dans son propre Postgres — le modèle de menace ne s'applique
+       pas. Le verrou PIN / 2FA déjà listés couvrent le risque local réel.
+     - Sync multi-appareils : les navigateurs du LAN tapent directement le serveur
+       Athena, pas de base locale par appareil à réconcilier. Sans objet. -->
 
 ## 📌 Pour plus tard (committed)
 
@@ -181,6 +278,10 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   service Postgres 16, badges dans le README).
 - Frontend test harness (Vitest + Testing Library + jsdom) + first
   refactor+test iteration on Accounts.tsx.
+- **Budgets** : `category_budgets` table (migration 0015), `/api/budgets`
+  CRUD endpoints with 409/400 rules, `/api/reports/budget` for
+  planned-vs-actual, and a dedicated Budgets page with month picker,
+  per-category bars, and red overflow indicator.
 
 ---
 
