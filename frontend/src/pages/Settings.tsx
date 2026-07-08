@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Account } from '../api/types';
 import { useSettings } from '../lib/useSettings';
 import { DEFAULTS, type Settings as SettingsShape } from '../lib/settings';
 import { RangePicker, type RangeKey } from '../components/RangePicker';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../api/mcp';
 
 export function Settings(): JSX.Element {
   const { settings, isReady, patch, mutation } = useSettings();
@@ -27,6 +28,26 @@ export function Settings(): JSX.Element {
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
   });
   const accounts = accountsQ.data?.accounts ?? [];
+
+  const qc = useQueryClient();
+  const [freshToken, setFreshToken] = useState<string | null>(null);
+  const mcpQ = useQuery({ queryKey: ['mcp-settings'], queryFn: getMcpSettings });
+  const mcp = mcpQ.data ?? { enabled: false, hasToken: false };
+
+  const toggleMcp = async (enabled: boolean) => {
+    await setMcpEnabled(enabled);
+    qc.invalidateQueries({ queryKey: ['mcp-settings'] });
+  };
+  const genToken = async () => {
+    const { token } = await generateMcpToken();
+    setFreshToken(token);
+    qc.invalidateQueries({ queryKey: ['mcp-settings'] });
+  };
+  const revokeToken = async () => {
+    await revokeMcpToken();
+    setFreshToken(null);
+    qc.invalidateQueries({ queryKey: ['mcp-settings'] });
+  };
 
   if (!isReady) {
     return (
@@ -117,6 +138,50 @@ export function Settings(): JSX.Element {
             onCommit={(v) => send('duplicateSimilarityThreshold', v)}
             flashing={flashKey === 'duplicateSimilarityThreshold'}
           />
+        </section>
+
+        <section data-testid="mcp-section" className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
+          <div>
+            <div className="label">Accès MCP</div>
+            <p className="text-sm text-ink-400 mt-1">
+              Permet à un assistant local (Ollama via un client MCP) de gérer vos transactions.
+              Le contenu est chiffré avec le jeton — rien ne circule en clair.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-ink-200">
+            <input
+              data-testid="mcp-enable"
+              type="checkbox"
+              checked={mcp.enabled}
+              onChange={(e) => void toggleMcp(e.target.checked)}
+            />
+            Activer l'accès MCP
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              data-testid="mcp-generate"
+              type="button"
+              className="btn-primary"
+              onClick={() => void genToken()}
+            >
+              {mcp.hasToken ? 'Régénérer le jeton' : 'Générer un jeton'}
+            </button>
+            {mcp.hasToken && (
+              <button type="button" className="btn-ghost" onClick={() => void revokeToken()}>
+                Révoquer
+              </button>
+            )}
+          </div>
+          {freshToken && (
+            <div className="rounded-md bg-ink-900 p-3 text-sm">
+              <p className="text-amber-400 mb-1">Ce jeton ne sera plus affiché — copiez-le maintenant.</p>
+              <code data-testid="mcp-token" className="break-all text-ink-100">{freshToken}</code>
+              <p className="text-ink-400 mt-2">
+                Configurez le client MCP avec <code>ATHENA_MCP_USER</code> (votre identifiant) et
+                <code> ATHENA_MCP_TOKEN</code>.
+              </p>
+            </div>
+          )}
         </section>
 
         <section className="pt-4 border-t border-ink-800/60">
