@@ -154,3 +154,28 @@ export interface BalanceCheckpoint {
   note: string | null;
   createdAt: string;
 }
+
+export type Budget = {
+  id: number;
+  categoryId: number;
+  monthlyLimit: string;
+  currency: string;
+};
+
+export type BudgetReportRow = {
+  categoryId: number;
+  name: string;
+  color: string | null;
+  limit: string;
+  currency: string;
+  spent: string;
+  remaining: string;
+  pct: number;
+  over: boolean;
+};
+
+export type BudgetReport = {
+  month: string;
+  rows: BudgetReportRow[];
+  totals: { limit: string; spent: string };
+};
