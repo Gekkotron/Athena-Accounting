@@ -69,4 +69,23 @@ describe('Budgets page', () => {
     await user.click(await screen.findByText('Supprimer'));
     expect(await screen.findByText('Suppression impossible.')).toBeInTheDocument();
   });
+
+  it('shows a red (not amber) bar when over budget even though pct rounds to 100', async () => {
+    const { api } = await import('../../api/client');
+    (api as unknown as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+      if (path === '/api/budgets') return Promise.resolve({ budgets: [{ id: 1, categoryId: 10, monthlyLimit: '1000.00', currency: 'EUR' }] });
+      if (path === '/api/reports/budget') return Promise.resolve({
+        month: '2025-03',
+        // 1004/1000 → pct rounds to 100, but over is true.
+        rows: [{ categoryId: 10, name: 'Courses', color: null, limit: '1000.00', currency: 'EUR', spent: '1004.00', remaining: '-4.00', pct: 100, over: true }],
+        totals: { limit: '1000.00', spent: '1004.00' },
+      });
+      if (path === '/api/categories') return Promise.resolve({ categories: [{ id: 10, name: 'Courses', kind: 'expense' }] });
+      return Promise.resolve({});
+    });
+    const { container } = renderPage();
+    expect(await screen.findByText(/dépassé/i)).toBeInTheDocument();
+    expect(container.querySelector('.bg-clay-500')).not.toBeNull();
+    expect(container.querySelector('.bg-amber-500')).toBeNull();
+  });
 });

@@ -19,6 +19,26 @@ const BudgetQuery = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/, 'must be YYYY-MM').optional(),
 });
 
+// Shared "effective transactions" CTE body: a transaction with no splits
+// contributes itself; a split transaction contributes one row per split (each
+// attributed to its own split category). Used by both the categories report and
+// the budget report so they count splits identically. Includes account_id — the
+// categories report filters on it; the budget report simply ignores that column.
+const TX_EFFECTIVE_CTE = sql`
+      tx_effective AS (
+        SELECT t.id, t.user_id, t.account_id, t.date, t.transfer_group_id,
+               t.category_id, t.amount
+          FROM transactions t
+         WHERE NOT EXISTS (
+           SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id
+         )
+        UNION ALL
+        SELECT t.id, t.user_id, t.account_id, t.date, t.transfer_group_id,
+               s.category_id, s.amount
+          FROM transactions t
+          JOIN transaction_splits s ON s.transaction_id = t.id
+      )`;
+
 export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
@@ -159,19 +179,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       -- transaction_count below counts virtual rows: a transaction with no
       -- splits contributes 1, but an N-way split contributes N rows (one per
       -- split), each attributed to its own split category.
-      WITH tx_effective AS (
-        SELECT t.id, t.user_id, t.account_id, t.date, t.transfer_group_id,
-               t.category_id, t.amount
-          FROM transactions t
-         WHERE NOT EXISTS (
-           SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id
-         )
-        UNION ALL
-        SELECT t.id, t.user_id, t.account_id, t.date, t.transfer_group_id,
-               s.category_id, s.amount
-          FROM transactions t
-          JOIN transaction_splits s ON s.transaction_id = t.id
-      )
+      WITH ${TX_EFFECTIVE_CTE}
       SELECT
         c.id AS category_id,
         c.name AS category_name,
@@ -215,15 +223,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       currency: string;
       spent: string;
     }>(sql`
-      WITH tx_effective AS (
-        SELECT t.id, t.user_id, t.date, t.transfer_group_id, t.category_id, t.amount
-          FROM transactions t
-         WHERE NOT EXISTS (SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id)
-        UNION ALL
-        SELECT t.id, t.user_id, t.date, t.transfer_group_id, s.category_id, s.amount
-          FROM transactions t
-          JOIN transaction_splits s ON s.transaction_id = t.id
-      )
+      WITH ${TX_EFFECTIVE_CTE}
       SELECT
         b.category_id                              AS category_id,
         c.name                                     AS name,

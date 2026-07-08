@@ -89,4 +89,44 @@ describe.skipIf(!RUN)('/api/budgets', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("does not leak or mutate another user's budgets (cross-user isolation)", async () => {
+    const { db } = await import('../src/db/client.js');
+    const { users, categories, categoryBudgets } = await import('../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    // Second user with their own expense category + budget, inserted directly
+    // (onboarding refuses a second user after the first-run account exists).
+    const [otherUser] = await db.insert(users).values({
+      username: 'other-user-budgets', passwordHash: 'x',
+    }).returning();
+    const [otherCat] = await db.insert(categories).values({
+      userId: otherUser!.id, name: 'Autre Resto', kind: 'expense',
+    }).returning();
+    const [otherBudget] = await db.insert(categoryBudgets).values({
+      userId: otherUser!.id, categoryId: otherCat!.id, monthlyLimit: '500.00', currency: 'EUR',
+    }).returning();
+
+    // The first user must not see the other user's budget in their list.
+    const list = await app.inject({ method: 'GET', url: '/api/budgets', headers: { cookie } });
+    expect(list.json().budgets.some((b: { id: number }) => b.id === otherBudget!.id)).toBe(false);
+
+    // And must not be able to update or delete it — 404, never 200/204.
+    const put = await app.inject({
+      method: 'PUT', url: `/api/budgets/${otherBudget!.id}`,
+      headers: { cookie }, payload: { monthlyLimit: '1.00' },
+    });
+    expect(put.statusCode).toBe(404);
+    const del = await app.inject({
+      method: 'DELETE', url: `/api/budgets/${otherBudget!.id}`, headers: { cookie },
+    });
+    expect(del.statusCode).toBe(404);
+
+    // The other user's budget is untouched.
+    const [still] = await db.select().from(categoryBudgets).where(eq(categoryBudgets.id, otherBudget!.id));
+    expect(still?.monthlyLimit).toBe('500.00');
+
+    // Cleanup — cascades to the category + budget.
+    await db.delete(users).where(eq(users.id, otherUser!.id));
+  });
 });
