@@ -69,6 +69,13 @@ bank data never leaves your network.
 - Argon2id-hashed first-run onboarding; session cookie auth with login
   rate-limiting, session-id rotation, and an anti-takeover onboarding lock.
 
+**MCP access**
+
+- Optional local Model Context Protocol server: let a local LLM (e.g. Ollama
+  via an MCP client) create, update, delete, and search transactions. Content
+  is encrypted end-to-end with a per-user token — nothing travels the LAN in
+  plaintext. See [docs/mcp.md](docs/mcp.md).
+
 ## Stack
 
 - **Backend:** Node 20 + Fastify 5 + TypeScript + Drizzle ORM
