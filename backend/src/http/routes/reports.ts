@@ -15,6 +15,10 @@ const RangeQuery = z.object({
   accountId: z.coerce.number().int().positive().optional(),
 });
 
+const BudgetQuery = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'must be YYYY-MM').optional(),
+});
+
 export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
@@ -188,5 +192,81 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
     `);
 
     return { rows: rows.rows };
+  });
+
+  // Planned-vs-actual per budgeted expense category for one calendar month.
+  // Reuses the tx_effective CTE from /api/reports/categories so splits count
+  // per split-category and internal transfers are excluded. Only categories
+  // that have a budget row appear. spent = -SUM(amount) (expenses are stored
+  // negative); a budgeted category with no spend that month returns "0.00".
+  app.get('/api/reports/budget', async (req, reply) => {
+    const uid = userId(req);
+    const parsed = BudgetQuery.safeParse(req.query);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
+    }
+    const month = parsed.data.month ?? new Date().toISOString().slice(0, 7);
+
+    const result = await db.execute<{
+      category_id: number;
+      name: string;
+      color: string | null;
+      limit: string;
+      currency: string;
+      spent: string;
+    }>(sql`
+      WITH tx_effective AS (
+        SELECT t.id, t.user_id, t.date, t.transfer_group_id, t.category_id, t.amount
+          FROM transactions t
+         WHERE NOT EXISTS (SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id)
+        UNION ALL
+        SELECT t.id, t.user_id, t.date, t.transfer_group_id, s.category_id, s.amount
+          FROM transactions t
+          JOIN transaction_splits s ON s.transaction_id = t.id
+      )
+      SELECT
+        b.category_id                              AS category_id,
+        c.name                                     AS name,
+        c.color                                    AS color,
+        b.monthly_limit::text                      AS limit,
+        b.currency                                 AS currency,
+        COALESCE(-SUM(e.amount), 0)::text          AS spent
+      FROM category_budgets b
+      JOIN categories c ON c.id = b.category_id AND c.user_id = ${uid}
+      LEFT JOIN tx_effective e
+        ON e.category_id = b.category_id
+       AND e.user_id = ${uid}
+       AND e.transfer_group_id IS NULL
+       AND to_char(date_trunc('month', e.date::timestamp), 'YYYY-MM') = ${month}
+      WHERE b.user_id = ${uid}
+      GROUP BY b.category_id, c.name, c.color, b.monthly_limit, b.currency
+      ORDER BY c.name ASC
+    `);
+
+    let totalLimit = 0;
+    let totalSpent = 0;
+    const rows = result.rows.map((r) => {
+      const limit = Number(r.limit);
+      const spent = Number(r.spent);
+      totalLimit += limit;
+      totalSpent += spent;
+      return {
+        categoryId: r.category_id,
+        name: r.name,
+        color: r.color,
+        limit: r.limit,
+        currency: r.currency,
+        spent: spent.toFixed(2),
+        remaining: (limit - spent).toFixed(2),
+        pct: limit > 0 ? Math.round((spent / limit) * 100) : 0,
+        over: spent > limit,
+      };
+    });
+
+    return {
+      month,
+      rows,
+      totals: { limit: totalLimit.toFixed(2), spent: totalSpent.toFixed(2) },
+    };
   });
 }
