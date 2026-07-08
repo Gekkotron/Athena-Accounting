@@ -6,20 +6,68 @@
 Self-hosted personal accounting. Local-only, no cloud dependencies, your
 bank data never leaves your network.
 
+## Features
+
+**Imports** — the core of Athena
+
 - Import OFX (SGML, Latin-1 or UTF-8), French CSV, and PDF bank
-  statements (interactive template wizard on the first PDF from a new
-  bank; automatic thereafter)
-- Database-level deduplication on re-imports
-- Configurable rule engine for automatic categorisation, with sign guards
-  and accent/case-insensitive word matching
-- Internal transfer detection (the two legs are linked and excluded
-  from income/expense aggregates)
+  statements. The first PDF from a new bank opens an interactive template
+  wizard (paint the amount/date/label zones once); every later statement
+  in the same format imports automatically.
+- Multi-account PDF templates: content-based page filtering derives the
+  account anchor and cut markers, survives pdfjs line fragmentation and
+  cross-statement header re-wording, with a manual "mine / other account"
+  selector and an auto-recovery re-train when a saved template stops
+  matching.
+- Folder or multi-file upload, processed sequentially with a per-file
+  summary (inserted / skipped / needs-template / errored).
+- Database-level deduplication on re-imports, plus an import audit trail
+  and a "read but deduped" count in each import summary.
+
+**Categorisation**
+
+- Configurable rule engine with sign guards and accent/case-insensitive
+  word matching; retroactive re-application preserves manual overrides.
 - Bulk "Tri" tab for the long tail of uncategorised transactions, with
-  on-the-fly rule generation
-- Multi-currency, multi-account, with opening-balance discipline
-- Argon2id-hashed first-run onboarding; session cookie auth
+  on-the-fly rule generation from a keyword assignment.
+- Internal transfer detection: the two legs are linked (`transfer_group_id`)
+  and excluded from income/expense aggregates.
+- Colour-coded category kinds (expense / income / neutral).
+
+**Transactions**
+
+- Accent- and case-insensitive full-text search across raw label,
+  normalised label, memo and notes.
+- Transaction splits (ventilation): sub-lines whose sum is forced to equal
+  the parent amount by a deferrable DB trigger.
+- Bulk select + bulk delete, inline category edit, and a "possible
+  duplicates" panel with a configurable similarity threshold.
+
+**Accounts & dashboard**
+
+- Multi-currency, multi-account, with opening-balance discipline and
+  drag-to-reorder.
+- Locked money (PEA / dépôt à terme): the hero shows "Disponible" with a
+  "+ X€ bloqués" tag until the lock matures.
+- Balance checkpoints: record an expected balance from a statement; the
+  dashboard chart marks it with a diamond that turns amber and draws a
+  dotted line when the running total drifts by more than one cent.
+- Balance chart with a calendar X-axis, brush-to-zoom, and configurable
+  dotted gap segments; category donut and account/range filters.
+- Privacy mode blurs amounts after inactivity.
+- Optional per-category monthly budgets on a dedicated Budgets screen:
+  planned-vs-actual bar per expense category for a chosen month, red when over.
+
+**Data & settings**
+
+- Backup export / import (accounts, transactions, checkpoints, splits).
 - Per-user configurable defaults (dashboard range, chart account, chart
-  gap threshold, duplicates similarity threshold) via the Réglages page
+  gap threshold, duplicates similarity threshold) via the Réglages page.
+
+**Security**
+
+- Argon2id-hashed first-run onboarding; session cookie auth with login
+  rate-limiting, session-id rotation, and an anti-takeover onboarding lock.
 
 ## Stack
 
@@ -189,9 +237,11 @@ valeur *par défaut*, passez par Réglages.
 | GET    | `/api/imports[/:id]`                  | Import audit trail.                    |
 | GET    | `/api/tri/groups`                     | Bundle un-categorised by label.        |
 | POST   | `/api/tri/assign`                     | Bulk assign + optional rule creation.  |
+| GET POST PUT DELETE | `/api/budgets[/…]`      | Per-category monthly limits.           |
 | GET    | `/api/reports/balance`                | Totals per currency.                   |
 | GET    | `/api/reports/timeseries`             | Per-account running balance.           |
 | GET    | `/api/reports/categories`             | Per-category monthly aggregates.       |
+| GET    | `/api/reports/budget`                 | Planned vs actual for a month.         |
 | GET PATCH | `/api/settings`                    | Per-user defaults (JSONB blob).        |
 
 ## Migrations
