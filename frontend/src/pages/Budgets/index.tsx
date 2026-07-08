@@ -16,8 +16,11 @@ function shiftMonth(month: string, delta: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function barColor(pct: number): string {
-  if (pct > 100) return 'bg-clay-500';
+// Over budget is red (authoritative: server flags `over` as spent > limit, which
+// survives pct rounding — e.g. 1004/1000 rounds to pct 100 but is still over).
+// Otherwise amber from 80%, green below.
+function barColor(pct: number, over: boolean): string {
+  if (over) return 'bg-clay-500';
   if (pct >= 80) return 'bg-amber-500';
   return 'bg-sage-500';
 }
@@ -54,6 +57,7 @@ export function Budgets(): JSX.Element {
   const submitNew = () => {
     const categoryId = Number(newCatId);
     if (!categoryId || !isValidLimit(newLimit)) return;
+    setMutationError(null);
     create.mutate({ categoryId, monthlyLimit: newLimit }, {
       onSuccess: () => { setNewCatId(''); setNewLimit(''); setMutationError(null); },
       onError: (err) => setMutationError(mutationErrorMessage(err)),
@@ -109,7 +113,7 @@ export function Budgets(): JSX.Element {
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-ink-800 overflow-hidden">
-                  <div className={`h-full ${barColor(r.pct)}`} style={{ width: `${pctClamped}%` }} />
+                  <div className={`h-full ${barColor(r.pct, r.over)}`} style={{ width: `${pctClamped}%` }} />
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <span className={`text-xs ${r.over ? 'text-clay-300' : 'text-ink-400'}`}>
