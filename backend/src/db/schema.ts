@@ -146,6 +146,31 @@ export const categories = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// category_budgets  —  one recurring monthly spending limit per expense
+// category (migration 0015). UNIQUE(user_id, category_id).
+// ---------------------------------------------------------------------------
+
+export const categoryBudgets = pgTable(
+  'category_budgets',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    categoryId: integer('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'cascade' }),
+    monthlyLimit: numeric('monthly_limit', { precision: 14, scale: 2 }).notNull(),
+    currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqUserCategory: uniqueIndex('category_budgets_user_category_idx').on(t.userId, t.categoryId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // rules  —  rule engine. match_mode='word' is the default and prevents
 // "paye" from matching "payweb"; matching is accent/case-insensitive thanks
 // to an index on immutable_unaccent(lower(keyword)).
