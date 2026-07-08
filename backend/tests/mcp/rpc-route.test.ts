@@ -64,6 +64,24 @@ describe.skipIf(!RUN)('POST /api/mcp/rpc', () => {
     expect(removed.body.ok).toBe(true);
   });
 
+  it('delete_transaction with a path-traversal id is confined (no splits route escape)', async () => {
+    const acc = await app.inject({
+      method: 'POST', url: '/api/accounts', headers: { cookie },
+      payload: { name: 'RPC-confine', type: 'courant', openingDate: '2026-01-01' },
+    });
+    const accountId = acc.json().account.id;
+    const created = decode(await call('create_transaction', { accountId, date: '2026-02-01', amount: '-5.00', rawLabel: 'Keep me' }));
+    expect(created.status).toBe(201);
+
+    const traversal = decode(await call('delete_transaction', { id: '5/splits' }));
+    expect(traversal.status).not.toBe(200);
+    expect([400, 404]).toContain(traversal.status);
+
+    const found = decode(await call('search_transactions', { search: 'Keep me' }));
+    expect(found.status).toBe(200);
+    expect(found.body.transactions.some((t: any) => t.id === created.body.transaction.id)).toBe(true);
+  });
+
   it('list_accounts and list_categories return 200 encrypted', async () => {
     expect(decode(await call('list_accounts', {})).status).toBe(200);
     expect(decode(await call('list_categories', {})).status).toBe(200);
