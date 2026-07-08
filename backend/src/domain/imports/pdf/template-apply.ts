@@ -118,11 +118,19 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
       if (!dateRaw) {
         // Row has no date in the date column. If it carries description text,
         // treat it as a wrapped continuation line of the previous transaction
-        // (e.g. "CARTE 4964" under "MAGASIN U"). Otherwise it's a separator
-        // or footer row — skip silently.
+        // (e.g. "CARTE 4964" under "MAGASIN U").
         if (descText && pageLastRow) {
           pageLastRow.rawLabel = mergeContinuationLabel(pageLastRow.rawLabel, descText);
+        } else if (!descText && r.items.length > 0) {
+          // The row has text inside the table zone, but neither the date nor
+          // the description column captured any of it — the columns don't
+          // line up with the content (misdrawn/misaligned zones). Surface it
+          // so the user gets feedback instead of a silently empty preview.
+          const rowText = r.items.map((i) => i.str).join(' ');
+          skipped.push({ rowText, reason: 'aucune colonne ne correspond au contenu de la ligne' });
         }
+        // else: genuine separator/blank row (or an orphan continuation with
+        // no preceding transaction) — skip silently.
         continue;
       }
       const rowText = r.items.map((i) => i.str).join(' ');

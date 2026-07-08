@@ -47,6 +47,27 @@ describe('applyTemplate', () => {
     expect(r.skippedRows[0]!.reason).toMatch(/date/);
   });
 
+  it('records skipped rows when columns miss all the row content (misaligned zones)', () => {
+    // The table zone still covers the text, but the columns are drawn far to
+    // the left of it — so no cell captures the date/description. The row must
+    // be surfaced as skipped, not dropped silently, or a misdrawn template
+    // yields an empty preview with no explanation.
+    const pages = [page([
+      item('15/01/2026', 40, 220), item('CB CARREFOUR', 120, 220), item('-42,30', 480, 220),
+      item('17/01/2026', 40, 240), item('SALAIRE', 120, 240), item('1 200,00', 480, 240),
+    ])];
+    const r = applyTemplate(pages, {
+      ...zones,
+      columns: [
+        { xStart: 0, xEnd: 5, role: 'date' },
+        { xStart: 5, xEnd: 10, role: 'description' },
+        { xStart: 10, xEnd: 15, role: 'amountSigned' },
+      ],
+    });
+    expect(r.rows).toEqual([]);
+    expect(r.skippedRows.length).toBeGreaterThan(0);
+  });
+
   it('honors tableRepeatsPerPage=false (later pages ignored)', () => {
     const pages = [
       page([item('15/01/2026', 40, 220), item('A', 120, 220), item('-1,00', 480, 220)]),
