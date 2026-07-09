@@ -1,0 +1,48 @@
+# Throwaway stack for running the DB-gated backend test suite
+# (the tests guarded by RUN_DB_TESTS=1) — entirely inside Docker, so it needs
+# NO Node/npm on the host, only Docker + the compose plugin.
+#
+# WHY A SEPARATE FILE: those tests issue UNCONDITIONAL whole-table deletes
+# (db.delete(transactions), db.delete(users), ...) against whatever
+# DATABASE_URL points at. Running them against the real `db` service in
+# docker-compose.yml would DESTROY production data. This stack is isolated by
+# construction: a distinct compose project, ephemeral tmpfs storage (nothing
+# persists, cannot touch the real ./postgres-data volume), and its own
+# test-only database name and credentials.
+#
+# Usage (from the repo root — needs only Docker):
+#   docker compose -f docker-compose.test.yml run --rm --build backend-test
+#   docker compose -f docker-compose.test.yml down -v
+# Or the one-command wrapper (auto-teardown): bash backend/scripts/test-db.sh
+# See docs/running-db-tests.md.
+services:
+  test-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: athena_test
+      POSTGRES_PASSWORD: athena_test
+      POSTGRES_DB: athena_test
+    tmpfs:
+      # Ephemeral storage: nothing is written to disk, nothing persists.
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U athena_test -d athena_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  backend-test:
+    build:
+      context: ./backend
+      target: test
+    environment:
+      # Reaches test-db over the compose network (service name + internal port).
+      DATABASE_URL: postgres://athena_test:athena_test@test-db:5432/athena_test
+      # env.ts requires a >=32-char SESSION_SECRET. Only ever used against the
+      # disposable test DB, so it is not a secret.
+      SESSION_SECRET: athena-test-session-secret-not-a-real-secret-0123456789
+      RUN_DB_TESTS: "1"
+      NODE_ENV: test
+    depends_on:
+      test-db:
+        condition: service_healthy
