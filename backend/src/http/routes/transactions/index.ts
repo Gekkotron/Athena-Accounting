@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
-import { transactions, transactionSplits } from '../../../db/schema.js';
+import { transactions, transactionSplits, accounts } from '../../../db/schema.js';
 import { normalizeLabel } from '../../../domain/imports/normalize.js';
 import { computeDedupKey } from '../../../domain/imports/dedup.js';
 import { categorizeOne, loadRuleEngine } from '../../../domain/rules/recategorize.js';
@@ -11,6 +11,7 @@ import { CreateBody, ListQuery, PatchBody } from './schemas.js';
 import { isPgError, parseId } from './helpers.js';
 import { registerDuplicateRoutes } from './duplicates.js';
 import { registerSplitsRoutes } from './splits.js';
+import { computeRunningBalances } from './running-balance.js';
 
 /**
  * Attach `splits: TransactionSplit[]` to each row. Batched single query on
@@ -216,7 +217,31 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       .where(whereExpr);
     const total = countRows[0]?.total ?? 0;
 
-    const hydrated = await hydrateSplits(rows);
+    // Running balance: only computed when the view is scoped to one account
+    // (the only case the UI can display it). We accumulate over the account's
+    // FULL chronological history — including transfer rows the list hides by
+    // default — so pagination, sort order, and row filters never distort it.
+    let balanceById: Map<number, string> | null = null;
+    if (q.accountId) {
+      const [acct] = await db
+        .select({ openingBalance: accounts.openingBalance })
+        .from(accounts)
+        .where(and(eq(accounts.id, q.accountId), eq(accounts.userId, uid)));
+      if (acct) {
+        const history = await db
+          .select({ id: transactions.id, amount: transactions.amount })
+          .from(transactions)
+          .where(and(eq(transactions.userId, uid), eq(transactions.accountId, q.accountId)))
+          .orderBy(asc(transactions.date), asc(transactions.id));
+        balanceById = computeRunningBalances(history, acct.openingBalance);
+      }
+    }
+
+    const withBalance = balanceById
+      ? rows.map((r) => ({ ...r, runningBalance: balanceById!.get(r.id) }))
+      : rows;
+
+    const hydrated = await hydrateSplits(withBalance);
     return {
       transactions: hydrated,
       pagination: { total, limit: q.limit, offset: q.offset },

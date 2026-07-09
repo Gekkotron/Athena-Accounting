@@ -310,6 +310,38 @@ describe.skipIf(!RUN)('/api/transactions', () => {
     });
   });
 
+  describe('GET /api/transactions running balance', () => {
+    it('attaches runningBalance per row when accountId is set', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-01-01', amount: '100.00', rawLabel: 'RB-A' });
+      await makeTx({ accountId: accountAId, date: '2026-01-02', amount: '-30.00', rawLabel: 'RB-B' });
+      await makeTx({ accountId: accountAId, date: '2026-01-03', amount: '-4.50', rawLabel: 'RB-C' });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?accountId=${accountAId}&sort=date&order=asc`,
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const txs = res.json().transactions as Array<{ rawLabel: string; runningBalance?: string }>;
+      const byLabel = Object.fromEntries(txs.map((t) => [t.rawLabel, t.runningBalance]));
+      expect(byLabel['RB-A']).toBe('100.00');
+      expect(byLabel['RB-B']).toBe('70.00');
+      expect(byLabel['RB-C']).toBe('65.50');
+    });
+
+    it('omits runningBalance when no accountId is given', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-01-01', amount: '100.00', rawLabel: 'RB-NOACC' });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/transactions',
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const txs = res.json().transactions as Array<{ runningBalance?: string }>;
+      expect(txs.every((t) => t.runningBalance === undefined)).toBe(true);
+    });
+  });
+
   describe('GET /api/transactions/:id', () => {
     it('returns the transaction', async () => {
       const id = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'x' });
