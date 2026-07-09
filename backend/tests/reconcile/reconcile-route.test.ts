@@ -24,11 +24,18 @@ describe.skipIf(!RUN)('POST /api/reconcile', () => {
   let app: FastifyInstance;
   let cookie: string;
   let accountId: number;
+  // The shared test DB runs in multi-user mode: user ids are serial and are
+  // NOT reset between test files, so `recon` is only id 1 when this file runs
+  // first. Capture its real id and seed rows under it — hardcoding userId: 1
+  // makes the seeded transaction invisible to the route's userId-scoped fetch
+  // and silently drops `matched` to 0 in a full-suite run.
+  let ownerId: number;
 
   beforeAll(async () => {
     const { buildApp } = await import('../helpers/build-app.js');
     app = await buildApp();
-    await app.inject({ method: 'POST', url: '/api/onboarding/create', payload: { username: 'recon', password: 'recon-1234' } });
+    const onboard = await app.inject({ method: 'POST', url: '/api/onboarding/create', payload: { username: 'recon', password: 'recon-1234' } });
+    ownerId = onboard.json().user.id;
     const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'recon', password: 'recon-1234' } });
     cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
     const acc = await app.inject({ method: 'POST', url: '/api/accounts', headers: { cookie }, payload: { name: 'Courant', type: 'courant', openingDate: '2025-01-01' } });
@@ -65,7 +72,7 @@ describe.skipIf(!RUN)('POST /api/reconcile', () => {
     const h = runHeuristic(pages);
     // Derive the template from the same extraction so alignment is guaranteed.
     await db.insert(pdfStatementTemplates).values({
-      userId: 1, fingerprint: fingerprintHeader(pages[0]!), accountId, label: 'test', zones: h.zones!, source: 'heuristic',
+      userId: ownerId, fingerprint: fingerprintHeader(pages[0]!), accountId, label: 'test', zones: h.zones!, source: 'heuristic',
     });
     const parsed = parseStatementRows(pages, h.zones!);
     expect(parsed.kind).toBe('parsed');
@@ -84,7 +91,7 @@ describe.skipIf(!RUN)('POST /api/reconcile', () => {
     const seed = rows[0]!;
     const seedNorm = normalizeLabel(seed.rawLabel);
     await db.insert(transactions).values({
-      userId: 1, accountId, date: seed.date, amount: seed.amount,
+      userId: ownerId, accountId, date: seed.date, amount: seed.amount,
       rawLabel: seed.rawLabel || 'seed', normalizedLabel: seedNorm,
       dedupKey: computeDedupKey({ accountId, date: seed.date, amount: seed.amount, normalizedLabel: seedNorm, fitid: seed.fitid }),
     });
