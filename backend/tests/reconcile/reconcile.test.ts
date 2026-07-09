@@ -49,15 +49,29 @@ describe('reconcile', () => {
   });
 
   it('Athena row in period not on statement → extra; transfer legs excluded', () => {
-    const s = [sline('2025-04-10', '-5.73', 'magasin u')];
+    // Statement spans 2025-04-10..2025-04-20 so the unmatched row on 2025-04-15
+    // falls inside [from,to] and is reported extra.
+    const s = [sline('2025-04-10', '-5.73', 'magasin u'), sline('2025-04-20', '-10.00', 'autre')];
     const e = [
       etx(1, '2025-04-10', '-5.73', 'magasin u'),
+      etx(4, '2025-04-20', '-10.00', 'autre'),
       etx(2, '2025-04-15', '-99.00', 'erreur'),
       etx(3, '2025-04-16', '-500.00', 'virement interne', 'grp-1'),
     ];
     const r = reconcile(s, e);
     expect(r.summary.extra).toBe(1);
     expect(r.extra[0]).toMatchObject({ id: 2 });
+  });
+
+  it('unmatched Athena row dated outside the statement period → not extra', () => {
+    const s = [sline('2025-04-10', '-5.73', 'magasin u'), sline('2025-04-20', '-10.00', 'autre')];
+    const e = [
+      etx(1, '2025-04-10', '-5.73', 'magasin u'),
+      etx(4, '2025-04-20', '-10.00', 'autre'),
+      etx(5, '2025-05-05', '-99.00', 'hors periode'),
+    ];
+    const r = reconcile(s, e);
+    expect(r.summary.extra).toBe(0);
   });
 
   it('each Athena row is consumed at most once', () => {

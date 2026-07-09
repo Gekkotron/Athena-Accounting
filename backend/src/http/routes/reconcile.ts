@@ -13,6 +13,15 @@ import { computeDedupKey } from '../../domain/imports/dedup.js';
 import { reconcile, renderReconcileSummary, type StatementLine, type ExistingTx } from '../../domain/reconcile/reconcile.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
+const DATE_TOLERANCE_DAYS = 3;
+
+// Shift a YYYY-MM-DD date by n days (UTC), used to widen the existing-transactions
+// fetch window so fuzzy matching can see counterparts just outside the statement period.
+function shiftDays(d: string, n: number): string {
+  const t = new Date(`${d}T00:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + n);
+  return t.toISOString().slice(0, 10);
+}
 
 const Body = z.object({
   pdfBase64: z.string().min(1),
@@ -70,15 +79,23 @@ export async function reconcileRoutes(app: FastifyInstance): Promise<void> {
     const from = fromDate ?? dates[0] ?? '0000-01-01';
     const to = toDate ?? dates[dates.length - 1] ?? '9999-12-31';
 
+    // Widen the fetch window by ±dateToleranceDays so fuzzy matching can see a counterpart
+    // transaction dated just outside the statement's [from,to] period. The TRUE (unwidened)
+    // from/to are still passed into reconcile() below so the `extra` bucket stays period-bounded.
     const rows = await db.select({
       id: transactions.id, date: transactions.date, amount: transactions.amount,
       rawLabel: transactions.rawLabel, normalizedLabel: transactions.normalizedLabel,
       dedupKey: transactions.dedupKey, transferGroupId: transactions.transferGroupId,
     }).from(transactions)
-      .where(and(eq(transactions.userId, uid), eq(transactions.accountId, accountId), between(transactions.date, from, to)));
+      .where(and(
+        eq(transactions.userId, uid),
+        eq(transactions.accountId, accountId),
+        between(transactions.date, shiftDays(from, -DATE_TOLERANCE_DAYS), shiftDays(to, DATE_TOLERANCE_DAYS)),
+      ))
+      .orderBy(transactions.date, transactions.id);
     const existing: ExistingTx[] = rows.map((r) => ({ ...r }));
 
-    const report = reconcile(statement, existing, { dateToleranceDays: 3, from, to });
+    const report = reconcile(statement, existing, { dateToleranceDays: DATE_TOLERANCE_DAYS, from, to });
     return { account: { id: acc.id, name: acc.name }, ...report, summaryText: renderReconcileSummary(report, acc.name) };
   });
 }

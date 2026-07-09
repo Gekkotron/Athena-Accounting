@@ -146,9 +146,10 @@ recorded in Athena, without changing anything.
   - **matched** — statement line found in Athena with the same date,
     amount, and label.
   - **missing** — on the statement, not in Athena.
-  - **mismatched** — a likely match was found (same label, date within a
-    few days, and/or same amount) but something differs; each entry says
-    whether the difference is the date or the amount.
+  - **mismatched** — an existing transaction has the same normalized label
+    and a date within ±3 days of the statement line; if the amount also
+    differs, it's reported as `amount_differs`, otherwise (same amount,
+    just off by a few days) it's `date_off`.
   - **extra** — in Athena for that account/period, not on the statement
     (transfers between your own accounts are excluded from this bucket).
 - The backend renders a human-readable summary (`summaryText`) alongside

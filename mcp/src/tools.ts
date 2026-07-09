@@ -13,11 +13,13 @@ export function readPdfBase64(path: string): string {
   if (!path.toLowerCase().endsWith('.pdf')) throw new Error(`not a .pdf file: ${path}`);
   let stat;
   try { stat = statSync(path); } catch { throw new Error(`file not found: ${path}`); }
+  if (!stat.isFile()) throw new Error(`not a file: ${path}`);
   if (stat.size > PDF_MAX_BYTES) throw new Error(`PDF exceeds 10MB: ${path}`);
   return readFileSync(path).toString('base64');
 }
 
 export function summarizeSearch(result: unknown): string {
+  if (result === null || typeof result !== 'object') return '0 transactions found.';
   const r = result as { transactions?: Array<{ date: string; amount: string }>; pagination?: { total?: number } };
   const txs = r.transactions ?? [];
   if (txs.length === 0) return '0 transactions found.';

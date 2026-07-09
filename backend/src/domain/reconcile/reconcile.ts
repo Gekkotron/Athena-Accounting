@@ -82,9 +82,13 @@ export function reconcile(
   const from = opts.from ?? dates[0] ?? '';
   const to = opts.to ?? dates[dates.length - 1] ?? '';
 
+  // Matching (above) sees the full `existing` set, which the caller may have widened by
+  // ±dateToleranceDays so a counterpart just outside the statement period can still be
+  // fuzzy-matched. `extra` is bounded to the TRUE statement period so such a near-boundary
+  // row — once it fails to match — isn't mislabeled extra just because it was fetched.
   const extra = existing
     .map((e, i) => ({ e, i }))
-    .filter(({ e, i }) => !used.has(i) && e.transferGroupId === null)
+    .filter(({ e, i }) => !used.has(i) && e.transferGroupId === null && e.date >= from && e.date <= to)
     .map(({ e }) => ({ id: e.id, date: e.date, amount: e.amount, rawLabel: e.rawLabel }));
 
   return {
