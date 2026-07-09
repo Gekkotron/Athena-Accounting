@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { statSync, readFileSync } from 'node:fs';
+import { statSync, readFileSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { isAbsolute, join } from 'node:path';
 
 interface RpcLike { rpc(op: string, args: Record<string, unknown>): Promise<unknown>; }
 
@@ -9,10 +11,41 @@ const amountStr = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'decimal, up to 2 dp')
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
 
-export function readPdfBase64(path: string): string {
+// Expand a leading ~ / ~/ to the user's home directory.
+function expandTilde(p: string): string {
+  if (p === '~') return homedir();
+  if (p.startsWith('~/')) return join(homedir(), p.slice(2));
+  return p;
+}
+
+// Resolve the caller-supplied path. A bare filename (or any relative path) is
+// resolved against `statementsDir` when configured, so the model can pass just
+// "april.pdf" instead of a full absolute path. Absolute paths pass through.
+function resolvePdfPath(input: string, statementsDir?: string): string {
+  const p = expandTilde(input);
+  if (!isAbsolute(p) && statementsDir) return join(expandTilde(statementsDir), p);
+  return p;
+}
+
+export function readPdfBase64(input: string, statementsDir?: string): string {
+  const path = resolvePdfPath(input, statementsDir);
   if (!path.toLowerCase().endsWith('.pdf')) throw new Error(`not a .pdf file: ${path}`);
   let stat;
-  try { stat = statSync(path); } catch { throw new Error(`file not found: ${path}`); }
+  try {
+    stat = statSync(path);
+  } catch {
+    // Help the caller (and the model) recover: if a statements dir is set,
+    // list the .pdf files actually available there.
+    let hint = '';
+    if (statementsDir) {
+      const dir = expandTilde(statementsDir);
+      try {
+        const pdfs = readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.pdf'));
+        hint = pdfs.length ? ` — available in ${dir}: ${pdfs.join(', ')}` : ` — no .pdf files in ${dir}`;
+      } catch { /* dir unreadable — skip the hint */ }
+    }
+    throw new Error(`file not found: ${path}${hint}`);
+  }
   if (!stat.isFile()) throw new Error(`not a file: ${path}`);
   if (stat.size > PDF_MAX_BYTES) throw new Error(`PDF exceeds 10MB: ${path}`);
   return readFileSync(path).toString('base64');
@@ -84,7 +117,7 @@ export async function callTool(client: RpcLike, op: string, args: Record<string,
   return await client.rpc(op, args);
 }
 
-export function registerTools(server: McpServer, client: RpcLike): void {
+export function registerTools(server: McpServer, client: RpcLike, opts: { statementsDir?: string } = {}): void {
   for (const spec of TOOL_SPECS) {
     server.tool(spec.name, spec.description, spec.schema as Record<string, z.ZodTypeAny>, async (args: Record<string, unknown>) => {
       try {
@@ -103,14 +136,14 @@ export function registerTools(server: McpServer, client: RpcLike): void {
     'reconcile_statement',
     "Reconcile a bank-statement PDF against Athena. Reads a PDF file on this machine, compares it to recorded transactions, and returns matched/missing/mismatched/extra. Read-only — it never changes data.",
     {
-      path: z.string().describe('Absolute path to the statement PDF on this machine'),
-      accountId: z.number().int().positive().describe('Athena account id (from list_accounts)'),
+      path: z.string().describe('The statement PDF: a bare filename (resolved against ATHENA_STATEMENTS_DIR if set) or an absolute path on this machine. Not a URL.'),
+      accountId: z.number().int().positive().describe('The Athena account id — the small integer from list_accounts, NOT the bank account number.'),
       fromDate: dateStr.optional(),
       toDate: dateStr.optional(),
     },
     async (args: Record<string, unknown>) => {
       try {
-        const pdfBase64 = readPdfBase64(String(args.path));
+        const pdfBase64 = readPdfBase64(String(args.path), opts.statementsDir);
         const result = await client.rpc('reconcile_statement', {
           pdfBase64, accountId: args.accountId, fromDate: args.fromDate, toDate: args.toDate,
         }) as { summaryText?: string };

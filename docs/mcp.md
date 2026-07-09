@@ -58,7 +58,8 @@ Claude Desktop and several other MCP clients):
       "env": {
         "ATHENA_API_URL": "http://<mini-pc-host>:3000",
         "ATHENA_MCP_USER": "<your-athena-username>",
-        "ATHENA_MCP_TOKEN": "<paste-token-here>"
+        "ATHENA_MCP_TOKEN": "<paste-token-here>",
+        "ATHENA_STATEMENTS_DIR": "/Users/you/AthenaStatements"
       }
     }
   }
@@ -71,6 +72,11 @@ Replace the placeholders:
   and port where `backend` is reachable). Do not include a trailing slash.
 - `ATHENA_MCP_USER` — your Athena login username.
 - `ATHENA_MCP_TOKEN` — the token generated in step 1.
+- `ATHENA_STATEMENTS_DIR` *(optional)* — a folder your statement PDFs live in.
+  When set, `reconcile_statement` resolves a **bare filename** (e.g.
+  `april.pdf`) against it, so you don't have to type a full absolute path. A
+  leading `~` is expanded, and if a file isn't found the error lists the `.pdf`
+  files actually in the folder.
 
 All three are required; the server refuses to start if any is missing.
 
@@ -207,11 +213,13 @@ recorded and skip everything that's already there.
 
 `reconcile_statement(path, accountId, fromDate?, toDate?)`
 
-- `path` (required) — absolute path to the statement PDF **on the machine
-  running the MCP server**, not the machine running the chat client. Must
-  end in `.pdf` and be at most 10 MB.
-- `accountId` (required) — the Athena account id to reconcile against
-  (from `list_accounts`).
+- `path` (required) — the statement PDF **on the machine running the MCP
+  server** (not the machine running the chat client). Either a **bare
+  filename** resolved against `ATHENA_STATEMENTS_DIR` (see step 3) or an
+  absolute path; a leading `~` is expanded. Must end in `.pdf` and be at
+  most 10 MB.
+- `accountId` (required) — the Athena account id to reconcile against — the
+  small integer from `list_accounts`, **not** the bank account number.
 - `fromDate`, `toDate` (optional, `YYYY-MM-DD`) — restrict the comparison
   window. If omitted, the window defaults to the earliest/latest dates
   found on the parsed statement.
