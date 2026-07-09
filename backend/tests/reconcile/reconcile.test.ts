@@ -72,6 +72,13 @@ describe('reconcile', () => {
     expect(r.statementPeriod).toEqual({ from: '2025-04-03', to: '2025-04-28' });
   });
 
+  it('global exact-match priority: a later line\'s exact match is not stolen by an earlier fuzzy match', () => {
+    const s = [sline('2025-04-10', '-5.73', 'magasin u'), sline('2025-04-11', '-5.73', 'magasin u')];
+    const e = [etx(1, '2025-04-11', '-5.73', 'magasin u')];
+    const r = reconcile(s, e);
+    expect(r.summary).toMatchObject({ matched: 1, missing: 1, mismatched: 0 });
+  });
+
   it('renderReconcileSummary produces a one-glance line + missing detail', () => {
     const s = [sline('2025-04-12', '-18.90', 'fnac')];
     const r = reconcile(s, []);

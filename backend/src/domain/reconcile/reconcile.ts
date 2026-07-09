@@ -40,16 +40,27 @@ export function reconcile(
   const missing: ReconcileReport['missing'] = [];
   const mismatched: ReconcileReport['mismatched'] = [];
 
+  // Pass 1 (exact): give every statement line a chance at an exact dedupKey match
+  // before any fuzzy matching runs, so an earlier line's fuzzy match can't steal
+  // a row that a later line would have matched exactly.
+  const unmatched: StatementLine[] = [];
   for (const s of statement) {
     const exact = (byDedup.get(s.dedupKey) ?? []).find((i) => !used.has(i));
     if (exact !== undefined) { used.add(exact); matched++; continue; }
+    unmatched.push(s);
+  }
 
+  // Pass 2 (fuzzy): only for lines that didn't match exactly, against whatever
+  // existing rows are still unused after all exact matches were consumed.
+  for (const s of unmatched) {
     let candIdx = -1;
     let reason: 'date_off' | 'amount_differs' | null = null;
     for (let i = 0; i < existing.length; i++) {
       if (used.has(i)) continue;
       const e = existing[i]!;
-      if (Math.abs(dayDiff(s.date, e.date)) > tol) continue;
+      // First-unused-within-tolerance wins; tie-break among multiple candidates is unspecified.
+      const dd = dayDiff(s.date, e.date);
+      if (Number.isNaN(dd) || Math.abs(dd) > tol) continue;
       if (e.normalizedLabel !== s.normalizedLabel) continue;
       if (e.amount === s.amount) { candIdx = i; reason = 'date_off'; break; }        // same amount+label, off by days
       candIdx = i; reason = 'amount_differs'; break;                                  // same label+date-ish, amount differs
