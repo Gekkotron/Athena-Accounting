@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../api/client';
 import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
@@ -40,6 +40,26 @@ function friendlyCheckpointError(err: unknown, action: 'ajout' | 'mise à jour' 
 
 function capitalise(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Group checkpoints by ISO-year (`checkpointDate.slice(0,4)`), keep them
+// date-descending inside each group, and return year buckets ordered from
+// most-recent to oldest. The API returns oldest-first — we invert here so
+// the freshly-imported statements land at the top of the drawer.
+function groupByYear(rows: BalanceCheckpoint[]): Array<{ year: string; items: BalanceCheckpoint[] }> {
+  const buckets = new Map<string, BalanceCheckpoint[]>();
+  for (const r of rows) {
+    const y = r.checkpointDate.slice(0, 4);
+    const arr = buckets.get(y) ?? [];
+    arr.push(r);
+    buckets.set(y, arr);
+  }
+  return Array.from(buckets.entries())
+    .map(([year, items]) => ({
+      year,
+      items: [...items].sort((a, b) => b.checkpointDate.localeCompare(a.checkpointDate)),
+    }))
+    .sort((a, b) => b.year.localeCompare(a.year));
 }
 
 export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; currency: string }) {
@@ -90,6 +110,8 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
   });
 
   const rows = q.data?.checkpoints ?? [];
+  const groups = useMemo(() => groupByYear(rows), [rows]);
+  const mostRecentYear = groups[0]?.year;
 
   return (
     <div className="mt-2">
@@ -98,33 +120,46 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
           Aucun point de contrôle. Ajoutez-en un pour vérifier vos soldes contre un relevé.
         </div>
       )}
-      {rows.length > 0 && (
-        <table className="w-full text-[11px] font-mono mb-2">
-          <thead>
-            <tr className="text-ink-600">
-              <th className="text-left font-normal">date</th>
-              <th className="text-right font-normal">attendu</th>
-              <th className="text-left font-normal pl-3">note</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((c: BalanceCheckpoint) => (
-              <CheckpointRow
-                key={c.id}
-                cp={c}
-                currency={currency}
-                onSave={(p) => patch.mutate({ cpId: c.id, patch: p })}
-                onDelete={() => del.mutate(c.id)}
-                saving={patch.isPending}
-                deleting={del.isPending}
-              />
-            ))}
-          </tbody>
-        </table>
-      )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Chronological accordion — one <details> per year, most-recent open
+          by default. Uses the native disclosure element so keyboard/screen-
+          reader accessibility comes for free; content stays in the DOM when
+          closed (so existing text-based tests keep working). */}
+      {groups.map(({ year, items }) => (
+        <details
+          key={year}
+          open={year === mostRecentYear}
+          className="mb-1 group"
+        >
+          <summary className="list-none cursor-pointer select-none flex items-center gap-1.5 text-[11px] text-ink-500 hover:text-ink-300 py-1">
+            <span
+              aria-hidden
+              className="inline-block w-3 transition-transform group-open:rotate-90"
+            >
+              ▸
+            </span>
+            <span className="font-mono text-ink-300">{year}</span>
+            <span className="text-ink-700">({items.length})</span>
+          </summary>
+          <table className="w-full text-[11px] font-mono">
+            <tbody>
+              {items.map((c) => (
+                <CheckpointRow
+                  key={c.id}
+                  cp={c}
+                  currency={currency}
+                  onSave={(p) => patch.mutate({ cpId: c.id, patch: p })}
+                  onDelete={() => del.mutate(c.id)}
+                  saving={patch.isPending}
+                  deleting={del.isPending}
+                />
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ))}
+
+      <div className="flex flex-wrap items-center gap-2 mt-2">
         <input
           type="date"
           className="input-sm w-36"
