@@ -247,6 +247,11 @@ describe('TransactionRow checkpoint checkbox', () => {
     expect(onToggleCheckpoint).toHaveBeenCalledWith(txWithBalance, true);
   });
 
+  it('disables the checkbox while its mutation is pending', () => {
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpointPending: true });
+    expect(screen.getByRole('checkbox', { name: cpLabel })).toBeDisabled();
+  });
+
   it('is absent on a non-end-of-day row', () => {
     renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: false });
     expect(screen.queryByRole('checkbox', { name: cpLabel })).not.toBeInTheDocument();

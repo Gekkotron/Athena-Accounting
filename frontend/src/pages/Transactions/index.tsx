@@ -57,6 +57,7 @@ export function Transactions() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
   const [pendingCheckpointDate, setPendingCheckpointDate] = useState<string | null>(null);
+  const [checkpointError, setCheckpointError] = useState<string | null>(null);
 
   // Reset the selection whenever the visible set changes (filter or page).
   // Otherwise selectedIds may contain rows the user can no longer see, and
@@ -161,14 +162,22 @@ export function Transactions() {
         expectedAmount: vars.amount,
         note: null,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['balance-checkpoints'] });
+      setCheckpointError(null);
+    },
+    onError: (err: ApiError) => setCheckpointError(err.message),
     onSettled: () => setPendingCheckpointDate(null),
   });
 
   const removeCheckpointM = useMutation({
     mutationFn: (vars: { accountId: number; cpId: number }) =>
       deleteCheckpoint(vars.accountId, vars.cpId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['balance-checkpoints'] });
+      setCheckpointError(null);
+    },
+    onError: (err: ApiError) => setCheckpointError(err.message),
     onSettled: () => setPendingCheckpointDate(null),
   });
 
@@ -270,6 +279,20 @@ export function Transactions() {
               Supprimer
             </button>
           </div>
+        </div>
+      )}
+
+      {checkpointError && (
+        <div className="rounded-lg border border-clay-800/60 bg-clay-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-clay-200">
+            Point de contrôle : {checkpointError}
+          </span>
+          <button
+            className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+            onClick={() => setCheckpointError(null)}
+          >
+            Fermer
+          </button>
         </div>
       )}
 
