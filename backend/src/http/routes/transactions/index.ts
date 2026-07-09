@@ -207,7 +207,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
       .select()
       .from(transactions)
       .where(whereExpr)
-      .orderBy(dir(orderCol), desc(transactions.id))
+      .orderBy(dir(orderCol), dir(transactions.id))
       .limit(q.limit)
       .offset(q.offset);
 

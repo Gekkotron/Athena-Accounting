@@ -427,6 +427,32 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       // opening-date bound were missing this would read 1099.00.
       expect(byLabel['POST-OPEN']).toBe('100.00');
     });
+
+    it('renders same-day rows in balance-chronology order when sorted asc', async () => {
+      // Two rows on the same day. The running-balance history accumulates in
+      // insertion order (id asc), so the list must render them id-asc when the
+      // user picks `order=asc` — otherwise the top-to-bottom `runningBalance`
+      // chain reads backwards within the day (regression from before the
+      // list's id tie-breaker was tied to `dir`).
+      const firstId = await makeTx({ accountId: accountAId, date: '2026-04-01', amount: '-10.00', rawLabel: 'SAME-A' });
+      const secondId = await makeTx({ accountId: accountAId, date: '2026-04-01', amount: '-5.00', rawLabel: 'SAME-B' });
+      expect(secondId).toBeGreaterThan(firstId);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?accountId=${accountAId}&sort=date&order=asc`,
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const txs = res.json().transactions as Array<{ id: number; rawLabel: string; runningBalance?: string }>;
+      const idxA = txs.findIndex((t) => t.rawLabel === 'SAME-A');
+      const idxB = txs.findIndex((t) => t.rawLabel === 'SAME-B');
+      // SAME-A (smaller id, applied first) must appear above SAME-B.
+      expect(idxA).toBeLessThan(idxB);
+      // And its balance must be the pre-B balance, not post-B.
+      expect(txs[idxA]?.runningBalance).toBe('-10.00');
+      expect(txs[idxB]?.runningBalance).toBe('-15.00');
+    });
   });
 
   describe('GET /api/transactions/:id', () => {
