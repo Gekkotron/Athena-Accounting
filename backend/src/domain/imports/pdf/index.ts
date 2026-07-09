@@ -9,6 +9,7 @@ import { deriveAccountAnchor, deriveOtherAccountAnchors, pageContainsAnchor } fr
 import { renderPagesToPng, type RenderedPage } from './render.js';
 import { validateZones, type TemplateZones } from './zones.js';
 import { runImport, type ImportResult } from '../import-service.js';
+import { parseStatementRows } from './parse-rows.js';
 
 const HEURISTIC_AUTO_THRESHOLD = 0.9;
 const HEURISTIC_SUGGEST_THRESHOLD = 0.5;
@@ -64,14 +65,14 @@ export async function importPdf(opts: {
       );
     if (tpl) {
       const z = tpl.zones as TemplateZones;
-      const { rows, skippedRows } = applyTemplate(pages, z);
-      if (rows.length === 0) {
+      const parsed = parseStatementRows(pages, z);
+      if (parsed.kind === 'stale') {
         // The saved template doesn't produce anything on this PDF. Rather
         // than 422 the user out with a cryptic "retrain" message, drop
         // straight back into the wizard with a draft — same code path
         // that a first-time import takes — and include a short diagnostic
         // so the user knows WHY the template didn't apply.
-        const diag = diagnoseStaleTemplate(pages, z, skippedRows);
+        const diag = diagnoseStaleTemplate(pages, z, parsed.skippedRows);
         return await parkDraft(opts, pages, fingerprint, z, 'template_stale', diag);
       }
       const result = await runImport({
@@ -79,9 +80,9 @@ export async function importPdf(opts: {
         accountId: opts.accountId,
         userId: opts.userId,
         format: 'pdf',
-        prepared: rows,
+        prepared: parsed.rows,
       });
-      return { kind: 'imported', result, skippedRows };
+      return { kind: 'imported', result, skippedRows: parsed.skippedRows };
     }
   }
 
