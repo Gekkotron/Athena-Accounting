@@ -340,6 +340,59 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       const txs = res.json().transactions as Array<{ runningBalance?: string }>;
       expect(txs.every((t) => t.runningBalance === undefined)).toBe(true);
     });
+
+    it('folds hidden transfer rows into the balance even though the list omits them by default', async () => {
+      // Two normal, visible rows around a transfer-tagged row seeded by direct
+      // DB insert (same pattern as tri-route.test.ts's transfer-exclusion
+      // case and cfea163's matched-tx seed): `includeTransfers` defaults to
+      // false, so the transfer row must never surface in `transactions`, yet
+      // the running balance must still accumulate its amount for every row
+      // dated after it.
+      await makeTx({ accountId: accountAId, date: '2026-03-01', amount: '100.00', rawLabel: 'RBX-A' });
+      await makeTx({ accountId: accountAId, date: '2026-03-03', amount: '5.00', rawLabel: 'RBX-C' });
+
+      const { db } = await import('../src/db/client.js');
+      const { transactions } = await import('../src/db/schema.js');
+      const { computeDedupKey } = await import('../src/domain/imports/dedup.js');
+      const { normalizeLabel } = await import('../src/domain/imports/normalize.js');
+      const { randomUUID } = await import('node:crypto');
+
+      const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
+      const uid = me.json().user.id;
+
+      const rawLabel = 'RBX-TRANSFER-HIDDEN';
+      const normalizedLabel = normalizeLabel(rawLabel);
+      await db.insert(transactions).values({
+        userId: uid,
+        accountId: accountAId,
+        date: '2026-03-02',
+        amount: '-20.00',
+        rawLabel,
+        normalizedLabel,
+        dedupKey: computeDedupKey({
+          accountId: accountAId, date: '2026-03-02', amount: '-20.00', normalizedLabel, fitid: null,
+        }),
+        transferGroupId: randomUUID(),
+      });
+
+      // No includeTransfers param: the transfer row must be hidden from the list.
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?accountId=${accountAId}&sort=date&order=asc`,
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const txs = res.json().transactions as Array<{ rawLabel: string; runningBalance?: string }>;
+
+      expect(txs.some((t) => t.rawLabel === rawLabel)).toBe(false);
+
+      const byLabel = Object.fromEntries(txs.map((t) => [t.rawLabel, t.runningBalance]));
+      // opening 0 + 100.00 (RBX-A) = 100.00.
+      expect(byLabel['RBX-A']).toBe('100.00');
+      // ... + (-20.00 hidden transfer, 03-02) + 5.00 (RBX-C, 03-03) = 85.00.
+      // If the balance ignored the hidden transfer this would read 105.00.
+      expect(byLabel['RBX-C']).toBe('85.00');
+    });
   });
 
   describe('GET /api/transactions/:id', () => {
