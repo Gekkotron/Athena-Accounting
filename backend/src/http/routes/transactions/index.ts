@@ -219,19 +219,29 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
 
     // Running balance: only computed when the view is scoped to one account
     // (the only case the UI can display it). We accumulate over the account's
-    // FULL chronological history — including transfer rows the list hides by
-    // default — so pagination, sort order, and row filters never distort it.
+    // history on the SAME basis as `currentBalance` (see accounts.ts /
+    // reports.ts): opening_balance + Σ amounts for transactions dated on or
+    // after the account's opening_date. That keeps the last row reconciled
+    // with the balance shown on the Accounts page. Transfer rows the list
+    // hides by default are still included (only pre-opening rows are excluded);
+    // rows dated before opening_date get no entry and render "—" in the UI,
+    // exactly as currentBalance excludes them. Because the map is keyed by tx
+    // id, pagination, sort order, and row filters never distort a row's value.
     let balanceById: Map<number, string> | null = null;
     if (q.accountId) {
       const [acct] = await db
-        .select({ openingBalance: accounts.openingBalance })
+        .select({ openingBalance: accounts.openingBalance, openingDate: accounts.openingDate })
         .from(accounts)
         .where(and(eq(accounts.id, q.accountId), eq(accounts.userId, uid)));
       if (acct) {
         const history = await db
           .select({ id: transactions.id, amount: transactions.amount })
           .from(transactions)
-          .where(and(eq(transactions.userId, uid), eq(transactions.accountId, q.accountId)))
+          .where(and(
+            eq(transactions.userId, uid),
+            eq(transactions.accountId, q.accountId),
+            gte(transactions.date, acct.openingDate),
+          ))
           .orderBy(asc(transactions.date), asc(transactions.id));
         balanceById = computeRunningBalances(history, acct.openingBalance);
       }

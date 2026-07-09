@@ -393,6 +393,40 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       // If the balance ignored the hidden transfer this would read 105.00.
       expect(byLabel['RBX-C']).toBe('85.00');
     });
+
+    it('excludes transactions dated before the account opening date, matching currentBalance', async () => {
+      // The running balance uses the same basis as currentBalance: only
+      // transactions on/after opening_date count. A pre-opening row is still
+      // listed but gets no balance entry (renders "—" in the UI); a post-opening
+      // row's balance must NOT include the pre-opening amount.
+      const acc = await app.inject({
+        method: 'POST', url: '/api/accounts',
+        headers: { cookie },
+        payload: { name: 'TxOpen', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2026-06-01' },
+      });
+      const openAccId = acc.json().account.id;
+
+      await makeTx({ accountId: openAccId, date: '2026-05-01', amount: '999.00', rawLabel: 'PRE-OPEN' });
+      await makeTx({ accountId: openAccId, date: '2026-06-02', amount: '100.00', rawLabel: 'POST-OPEN' });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?accountId=${openAccId}&sort=date&order=asc`,
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const txs = res.json().transactions as Array<{ rawLabel: string; runningBalance?: string }>;
+      const byLabel = Object.fromEntries(txs.map((t) => [t.rawLabel, t.runningBalance]));
+
+      // Both rows are still listed (the list itself isn't date-filtered)...
+      expect(txs.some((t) => t.rawLabel === 'PRE-OPEN')).toBe(true);
+      expect(txs.some((t) => t.rawLabel === 'POST-OPEN')).toBe(true);
+      // ...but the pre-opening row has no balance entry.
+      expect(byLabel['PRE-OPEN']).toBeUndefined();
+      // opening 0 + 100.00, EXCLUDING the 999.00 pre-opening amount. If the
+      // opening-date bound were missing this would read 1099.00.
+      expect(byLabel['POST-OPEN']).toBe('100.00');
+    });
   });
 
   describe('GET /api/transactions/:id', () => {
