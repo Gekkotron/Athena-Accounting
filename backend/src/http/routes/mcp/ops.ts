@@ -40,6 +40,8 @@ export function buildOp(op: string, args: Record<string, unknown>): BuiltOp {
       const { id } = args as { id?: unknown };
       return { method: 'DELETE', url: `/api/transactions/${encodeURIComponent(String(id))}` };
     }
+    case 'reconcile_statement':
+      return { method: 'POST', url: '/api/reconcile', payload: args };
     default:
       throw new UnknownOpError(op);
   }

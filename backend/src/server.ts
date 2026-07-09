@@ -24,6 +24,7 @@ import { balanceCheckpointsRoutes } from './http/routes/balance-checkpoints.js';
 import { settingsRoutes } from './http/routes/settings.js';
 import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
+import { reconcileRoutes } from './http/routes/reconcile.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
   const logger = opts?.logger === false
@@ -70,6 +71,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(settingsRoutes);
   await app.register(mcpSettingsRoutes);
   await app.register(budgetsRoutes);
+  await app.register(reconcileRoutes);
 
   startDraftSweeper(app);
 
