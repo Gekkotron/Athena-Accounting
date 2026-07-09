@@ -23,11 +23,13 @@ export function TransactionModal({
   // We hold the date in the FRENCH textual form (JJ/MM/AAAA) and parse to
   // ISO only at submit time. This lets the user paste "14/07/2025"
   // straight from a bank statement without fighting the picker.
-  const todayFr = formatDate(new Date().toISOString().slice(0, 10));
   const isEdit = !!transaction;
 
   const [accountId, setAccountId] = useState<number | ''>('');
-  const [date, setDate] = useState(todayFr);
+  // Blank by default in create mode: pre-filling today's date silently
+  // stamped new transactions with the wrong day whenever the user forgot to
+  // overwrite it. Empty forces a deliberate entry.
+  const [date, setDate] = useState('');
   const [amount, setAmount] = useState('');
   const [rawLabel, setRawLabel] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
@@ -55,7 +57,7 @@ export function TransactionModal({
       setSplitsDraft(fromInitial(transaction.splits));
     } else {
       setAccountId(accounts[0]?.id ?? '');
-      setDate(todayFr);
+      setDate('');
       setAmount('');
       setRawLabel('');
       setCategoryId('');
