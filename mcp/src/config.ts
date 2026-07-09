@@ -1,4 +1,4 @@
-export interface Config { apiUrl: string; user: string; token: string; }
+export interface Config { apiUrl: string; user: string; token: string; statementsDir?: string; }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const missing: string[] = [];
@@ -8,5 +8,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (missing.length) {
     throw new Error(`Missing required env: ${missing.join(', ')}`);
   }
-  return { apiUrl: apiUrl.replace(/\/$/, ''), user, token };
+  // Optional: a folder to resolve bare statement filenames against.
+  const statementsDir = env.ATHENA_STATEMENTS_DIR;
+  return {
+    apiUrl: apiUrl.replace(/\/$/, ''), user, token,
+    ...(statementsDir ? { statementsDir } : {}),
+  };
 }

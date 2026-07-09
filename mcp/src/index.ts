@@ -8,7 +8,7 @@ async function main(): Promise<void> {
   const cfg = loadConfig();
   const client = new RpcClient(cfg);
   const server = new McpServer({ name: 'athena-mcp', version: '0.1.0' });
-  registerTools(server, client);
+  registerTools(server, client, { statementsDir: cfg.statementsDir });
   await server.connect(new StdioServerTransport());
 }
 
