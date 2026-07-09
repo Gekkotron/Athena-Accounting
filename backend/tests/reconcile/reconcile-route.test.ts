@@ -72,9 +72,22 @@ describe.skipIf(!RUN)('POST /api/reconcile', () => {
     const rows = parsed.kind === 'parsed' ? parsed.rows : [];
     expect(rows.length).toBe(2);
 
-    // Seed ONLY the first parsed row into Athena via the manual create endpoint,
-    // so exactly one line should be "matched" and one "missing".
-    await app.inject({ method: 'POST', url: '/api/transactions', headers: { cookie }, payload: { accountId, date: rows[0]!.date, amount: rows[0]!.amount, rawLabel: rows[0]!.rawLabel } });
+    // Seed ONLY the first parsed row so exactly one line is "matched" and one
+    // "missing". Insert directly (not via POST /api/transactions): the heuristic
+    // can leave rawLabel empty on a synthetic pdfkit PDF, which the create
+    // endpoint rejects (rawLabel min length 1). We insert with the SAME
+    // computeDedupKey the route derives, so the dedup keys match regardless of
+    // what rawLabel/normalizedLabel come out as.
+    const { normalizeLabel } = await import('../../src/domain/imports/normalize.js');
+    const { computeDedupKey } = await import('../../src/domain/imports/dedup.js');
+    const { transactions } = await import('../../src/db/schema.js');
+    const seed = rows[0]!;
+    const seedNorm = normalizeLabel(seed.rawLabel);
+    await db.insert(transactions).values({
+      userId: 1, accountId, date: seed.date, amount: seed.amount,
+      rawLabel: seed.rawLabel || 'seed', normalizedLabel: seedNorm,
+      dedupKey: computeDedupKey({ accountId, date: seed.date, amount: seed.amount, normalizedLabel: seedNorm, fitid: seed.fitid }),
+    });
 
     const res = await app.inject({ method: 'POST', url: '/api/reconcile', headers: { cookie }, payload: { pdfBase64, accountId } });
     expect(res.statusCode).toBe(200);
