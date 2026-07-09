@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TransactionRow } from '../TransactionRow';
-import type { Transaction, Category, Account } from '../../../api/types';
+import type { Transaction, Category, Account, BalanceCheckpoint } from '../../../api/types';
 
 const acc: Account = {
   id: 1,
@@ -64,6 +64,10 @@ function renderRow(
     expanded: boolean;
     showBalance: boolean;
     onToggleExpanded: (id: number) => void;
+    isEndOfDay: boolean;
+    checkpoint: BalanceCheckpoint | undefined;
+    checkpointPending: boolean;
+    onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
   }> = {},
 ) {
   const tx = overrides.tx ?? t;
@@ -73,6 +77,7 @@ function renderRow(
   const onDelete = vi.fn();
   const onToggleSelect = vi.fn();
   const onToggleExpanded = overrides.onToggleExpanded ?? (() => {});
+  const onToggleCheckpoint = overrides.onToggleCheckpoint ?? vi.fn();
   const result = render(
     <table>
       <tbody>
@@ -89,11 +94,15 @@ function renderRow(
           expanded={overrides.expanded ?? false}
           onToggleExpanded={onToggleExpanded}
           showBalance={overrides.showBalance ?? false}
+          isEndOfDay={overrides.isEndOfDay ?? false}
+          checkpoint={overrides.checkpoint}
+          checkpointPending={overrides.checkpointPending ?? false}
+          onToggleCheckpoint={onToggleCheckpoint}
         />
       </tbody>
     </table>,
   );
-  return { onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, container: result.container };
+  return { onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, onToggleCheckpoint, container: result.container };
 }
 
 describe('TransactionRow', () => {
@@ -210,5 +219,41 @@ describe('TransactionRow running-balance cell', () => {
   it('does not render the running balance when showBalance is false', () => {
     renderRow({ tx: txWithBalance, showBalance: false });
     expect(screen.queryByText(/70[.,]00/)).not.toBeInTheDocument();
+  });
+});
+
+describe('TransactionRow checkpoint checkbox', () => {
+  const txWithBalance: Transaction = { ...t, runningBalance: '70.00' };
+  const cpLabel = /valider le solde/i;
+
+  it('shows an unchecked checkbox on the end-of-day row when no checkpoint exists', () => {
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true });
+    const cb = screen.getByRole('checkbox', { name: cpLabel });
+    expect(cb).not.toBeChecked();
+  });
+
+  it('shows a checked checkbox when a checkpoint exists for the date', () => {
+    const checkpoint: BalanceCheckpoint = {
+      id: 3, accountId: 1, checkpointDate: '2026-06-15', expectedAmount: '70.00', note: null, createdAt: '2026-06-15T00:00:00Z',
+    };
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpoint });
+    expect(screen.getByRole('checkbox', { name: cpLabel })).toBeChecked();
+  });
+
+  it('calls onToggleCheckpoint(tx, true) when ticked', async () => {
+    const user = userEvent.setup();
+    const { onToggleCheckpoint } = renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true });
+    await user.click(screen.getByRole('checkbox', { name: cpLabel }));
+    expect(onToggleCheckpoint).toHaveBeenCalledWith(txWithBalance, true);
+  });
+
+  it('is absent on a non-end-of-day row', () => {
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: false });
+    expect(screen.queryByRole('checkbox', { name: cpLabel })).not.toBeInTheDocument();
+  });
+
+  it('is absent when the row has no running balance', () => {
+    renderRow({ tx: t, showBalance: true, isEndOfDay: true }); // t has no runningBalance
+    expect(screen.queryByRole('checkbox', { name: cpLabel })).not.toBeInTheDocument();
   });
 });

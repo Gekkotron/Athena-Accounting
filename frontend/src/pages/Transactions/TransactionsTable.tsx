@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import type { Account, Category, Transaction } from '../../api/types';
+import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import type { Filters } from './index';
 import { Th } from './Th';
 import { TransactionRow } from './TransactionRow';
+import { endOfDayRowIds } from './endOfDay';
 
 export function TransactionsTable({
   transactions,
@@ -21,6 +22,9 @@ export function TransactionsTable({
   onDelete,
   expandedIds,
   onToggleExpanded,
+  checkpointByDate,
+  pendingCheckpointDate,
+  onToggleCheckpoint,
 }: {
   transactions: Transaction[];
   categories: Category[];
@@ -38,11 +42,15 @@ export function TransactionsTable({
   onDelete: (tx: Transaction) => void;
   expandedIds: Set<number>;
   onToggleExpanded: (id: number) => void;
+  checkpointByDate: Map<string, BalanceCheckpoint>;
+  pendingCheckpointDate: string | null;
+  onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
 }) {
   const visibleSelected = transactions.filter((t) => selectedIds.has(t.id)).length;
   const allSelected = transactions.length > 0 && visibleSelected === transactions.length;
   const partiallySelected = visibleSelected > 0 && !allSelected;
   const showBalance = filters.accountId != null && filters.sort === 'date';
+  const endOfDayIds = showBalance ? endOfDayRowIds(transactions) : new Set<number>();
 
   const headerCheckbox = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -93,6 +101,10 @@ export function TransactionsTable({
                   selected={selectedIds.has(t.id)}
                   expanded={expandedIds.has(t.id)}
                   showBalance={showBalance}
+                  isEndOfDay={endOfDayIds.has(t.id)}
+                  checkpoint={checkpointByDate.get(t.date)}
+                  checkpointPending={pendingCheckpointDate === t.date}
+                  onToggleCheckpoint={onToggleCheckpoint}
                   onToggleExpanded={onToggleExpanded}
                   onToggleSelect={onToggleSelect}
                   onUpdateCategory={onUpdateCategory}

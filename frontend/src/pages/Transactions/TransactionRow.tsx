@@ -1,4 +1,4 @@
-import type { Account, Category, Transaction } from '../../api/types';
+import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 
 export function TransactionRow({
@@ -14,6 +14,10 @@ export function TransactionRow({
   expanded,
   onToggleExpanded,
   showBalance,
+  isEndOfDay,
+  checkpoint,
+  checkpointPending,
+  onToggleCheckpoint,
 }: {
   tx: Transaction;
   account: Account | undefined;
@@ -27,6 +31,10 @@ export function TransactionRow({
   expanded: boolean;
   onToggleExpanded: (id: number) => void;
   showBalance: boolean;
+  isEndOfDay: boolean;
+  checkpoint: BalanceCheckpoint | undefined;
+  checkpointPending: boolean;
+  onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
 }) {
   const catById = new Map(categories.map((c) => [c.id, c]));
   return (
@@ -111,7 +119,20 @@ export function TransactionRow({
         </td>
         {showBalance && (
           <td className="px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums text-ink-300">
-            {tx.runningBalance != null ? formatAmount(tx.runningBalance, account?.currency ?? 'EUR') : '—'}
+            <span className="inline-flex items-center justify-end gap-2">
+              {isEndOfDay && tx.runningBalance != null && (
+                <input
+                  type="checkbox"
+                  className="align-middle accent-sage-300"
+                  checked={checkpoint != null}
+                  disabled={checkpointPending}
+                  onChange={(e) => onToggleCheckpoint(tx, e.target.checked)}
+                  aria-label={`Valider le solde du ${formatDate(tx.date)} comme point de contrôle`}
+                  title="Valider ce solde comme point de contrôle"
+                />
+              )}
+              <span>{tx.runningBalance != null ? formatAmount(tx.runningBalance, account?.currency ?? 'EUR') : '—'}</span>
+            </span>
           </td>
         )}
         <td className="px-3 py-2.5 text-right whitespace-nowrap">

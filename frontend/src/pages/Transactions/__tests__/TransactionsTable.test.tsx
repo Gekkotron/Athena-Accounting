@@ -50,6 +50,7 @@ function renderTable(overrides: Partial<{
   const onToggleSelect = vi.fn();
   const onToggleSelectAll = vi.fn();
   const onToggleExpanded = vi.fn();
+  const onToggleCheckpoint = vi.fn();
   render(
     <TransactionsTable
       transactions={overrides.transactions ?? rows}
@@ -68,6 +69,9 @@ function renderTable(overrides: Partial<{
       onDelete={onDelete}
       expandedIds={new Set()}
       onToggleExpanded={onToggleExpanded}
+      checkpointByDate={new Map()}
+      pendingCheckpointDate={null}
+      onToggleCheckpoint={onToggleCheckpoint}
     />,
   );
   return { setFilters, setOffset, onUpdateCategory, onUpdateNotes, onEdit, onDelete, onToggleSelect, onToggleSelectAll, onToggleExpanded };

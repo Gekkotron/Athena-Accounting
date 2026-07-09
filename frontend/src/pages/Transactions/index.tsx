@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
-import type { Account, Category, Transaction } from '../../api/types';
+import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { TransactionsTable } from './TransactionsTable';
 import { FiltersBar } from './FiltersBar';
 import { TransactionModal } from './TransactionModal';
 import { parseAmountQuery } from './parseAmountQuery';
+import { listCheckpoints, createCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 
 export interface Filters {
   accountId?: number;
@@ -55,6 +56,7 @@ export function Transactions() {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+  const [pendingCheckpointDate, setPendingCheckpointDate] = useState<string | null>(null);
 
   // Reset the selection whenever the visible set changes (filter or page).
   // Otherwise selectedIds may contain rows the user can no longer see, and
@@ -95,6 +97,12 @@ export function Transactions() {
       }>('/api/transactions', {
         query: { ...filters, limit: PAGE, offset },
       }),
+  });
+
+  const checkpointsQ = useQuery({
+    queryKey: ['balance-checkpoints', filters.accountId],
+    queryFn: () => listCheckpoints(filters.accountId!),
+    enabled: filters.accountId != null,
   });
 
   const updateCategory = useMutation({
@@ -146,12 +154,47 @@ export function Transactions() {
     onError: (err: ApiError) => setBulkDeleteError(err.message),
   });
 
+  const createCheckpointM = useMutation({
+    mutationFn: (vars: { accountId: number; date: string; amount: string }) =>
+      createCheckpoint(vars.accountId, {
+        checkpointDate: vars.date,
+        expectedAmount: vars.amount,
+        note: null,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints'] }),
+    onSettled: () => setPendingCheckpointDate(null),
+  });
+
+  const removeCheckpointM = useMutation({
+    mutationFn: (vars: { accountId: number; cpId: number }) =>
+      deleteCheckpoint(vars.accountId, vars.cpId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['balance-checkpoints'] }),
+    onSettled: () => setPendingCheckpointDate(null),
+  });
+
   const accounts = accountsQ.data?.accounts ?? [];
   const categories = categoriesQ.data?.categories ?? [];
   const txs = txQ.data?.transactions ?? [];
   const total = txQ.data?.pagination.total ?? 0;
 
   const accountById = new Map(accounts.map((a) => [a.id, a] as const));
+
+  const checkpointByDate: Map<string, BalanceCheckpoint> = new Map(
+    (checkpointsQ.data?.checkpoints ?? []).map((c) => [c.checkpointDate, c] as const),
+  );
+
+  const onToggleCheckpoint = (tx: Transaction, checked: boolean) => {
+    const accId = filters.accountId;
+    if (accId == null || tx.runningBalance == null) return;
+    setPendingCheckpointDate(tx.date);
+    if (checked) {
+      createCheckpointM.mutate({ accountId: accId, date: tx.date, amount: tx.runningBalance });
+    } else {
+      const cp = checkpointByDate.get(tx.date);
+      if (cp) removeCheckpointM.mutate({ accountId: accId, cpId: cp.id });
+      else setPendingCheckpointDate(null);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -234,6 +277,9 @@ export function Transactions() {
         transactions={txs}
         categories={categories}
         accountById={accountById}
+        checkpointByDate={checkpointByDate}
+        pendingCheckpointDate={pendingCheckpointDate}
+        onToggleCheckpoint={onToggleCheckpoint}
         isLoading={txQ.isLoading}
         filters={filters}
         setFilters={setFilters}
