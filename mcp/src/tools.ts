@@ -1,10 +1,31 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { statSync, readFileSync } from 'node:fs';
 
 interface RpcLike { rpc(op: string, args: Record<string, unknown>): Promise<unknown>; }
 
 const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 const amountStr = z.string().regex(/^-?\d+(\.\d{1,2})?$/, 'decimal, up to 2 dp');
+
+const PDF_MAX_BYTES = 10 * 1024 * 1024;
+
+export function readPdfBase64(path: string): string {
+  if (!path.toLowerCase().endsWith('.pdf')) throw new Error(`not a .pdf file: ${path}`);
+  let stat;
+  try { stat = statSync(path); } catch { throw new Error(`file not found: ${path}`); }
+  if (stat.size > PDF_MAX_BYTES) throw new Error(`PDF exceeds 10MB: ${path}`);
+  return readFileSync(path).toString('base64');
+}
+
+export function summarizeSearch(result: unknown): string {
+  const r = result as { transactions?: Array<{ date: string; amount: string }>; pagination?: { total?: number } };
+  const txs = r.transactions ?? [];
+  if (txs.length === 0) return '0 transactions found.';
+  const dates = txs.map((t) => t.date).sort();
+  const total = txs.reduce((sum, t) => sum + Number(t.amount), 0);
+  const shown = r.pagination?.total ?? txs.length;
+  return `${shown} transaction(s), ${dates[0]}–${dates[dates.length - 1]}, shown total ${total.toFixed(2)} €.`;
+}
 
 export const TOOL_SPECS = [
   { name: 'list_accounts', op: 'list_accounts', description: 'List accounts with balances and ids.', schema: {} },
@@ -66,10 +87,36 @@ export function registerTools(server: McpServer, client: RpcLike): void {
     server.tool(spec.name, spec.description, spec.schema as Record<string, z.ZodTypeAny>, async (args: Record<string, unknown>) => {
       try {
         const result = await callTool(client, spec.op, args);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+        const text = spec.op === 'search_transactions'
+          ? `${summarizeSearch(result)}\n\n${JSON.stringify(result, null, 2)}`
+          : JSON.stringify(result, null, 2);
+        return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
       }
     });
   }
+
+  server.tool(
+    'reconcile_statement',
+    "Reconcile a bank-statement PDF against Athena. Reads a PDF file on this machine, compares it to recorded transactions, and returns matched/missing/mismatched/extra. Read-only — it never changes data.",
+    {
+      path: z.string().describe('Absolute path to the statement PDF on this machine'),
+      accountId: z.number().int().positive().describe('Athena account id (from list_accounts)'),
+      fromDate: dateStr.optional(),
+      toDate: dateStr.optional(),
+    },
+    async (args: Record<string, unknown>) => {
+      try {
+        const pdfBase64 = readPdfBase64(String(args.path));
+        const result = await client.rpc('reconcile_statement', {
+          pdfBase64, accountId: args.accountId, fromDate: args.fromDate, toDate: args.toDate,
+        }) as { summaryText?: string };
+        const text = (result.summaryText ? `${result.summaryText}\n\n` : '') + JSON.stringify(result, null, 2);
+        return { content: [{ type: 'text' as const, text }] };
+      } catch (err) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(err as Error).message}` }], isError: true };
+      }
+    },
+  );
 }
