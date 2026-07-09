@@ -89,6 +89,9 @@ export interface Transaction {
   // Per-transaction lock override in years. Null falls back to the account's
   // lockYears; null on both means no lock. Clocked from the transaction date.
   lockYears?: number | null;
+  // Account balance after this transaction (opening balance + cumulative sum
+  // by date). Present only when the list is fetched with an accountId filter.
+  runningBalance?: string;
   splits: TransactionSplit[];
 }
 

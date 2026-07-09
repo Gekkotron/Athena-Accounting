@@ -62,6 +62,7 @@ function renderRow(
     tx: Transaction;
     selected: boolean;
     expanded: boolean;
+    showBalance: boolean;
     onToggleExpanded: (id: number) => void;
   }> = {},
 ) {
@@ -87,6 +88,7 @@ function renderRow(
           onDelete={onDelete}
           expanded={overrides.expanded ?? false}
           onToggleExpanded={onToggleExpanded}
+          showBalance={overrides.showBalance ?? false}
         />
       </tbody>
     </table>,
@@ -193,5 +195,20 @@ describe('TransactionRow', () => {
     renderRow({ tx: splitTx, expanded: false, onToggleExpanded: onToggle });
     await user.click(screen.getByRole('button', { name: /Ventilée \(2\)/ }));
     expect(onToggle).toHaveBeenCalledWith(splitTx.id);
+  });
+});
+
+describe('TransactionRow running-balance cell', () => {
+  const txWithBalance: Transaction = { ...t, runningBalance: '70.00' };
+
+  it('shows the formatted running balance when showBalance is true', () => {
+    renderRow({ tx: txWithBalance, showBalance: true });
+    // formatAmount emits the FR locale — the digit sequence 70,00 should appear.
+    expect(screen.getByText(/70[.,]00/)).toBeInTheDocument();
+  });
+
+  it('does not render the running balance when showBalance is false', () => {
+    renderRow({ tx: txWithBalance, showBalance: false });
+    expect(screen.queryByText(/70[.,]00/)).not.toBeInTheDocument();
   });
 });

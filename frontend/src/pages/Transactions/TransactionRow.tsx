@@ -13,6 +13,7 @@ export function TransactionRow({
   onDelete,
   expanded,
   onToggleExpanded,
+  showBalance,
 }: {
   tx: Transaction;
   account: Account | undefined;
@@ -25,6 +26,7 @@ export function TransactionRow({
   onDelete: (tx: Transaction) => void;
   expanded: boolean;
   onToggleExpanded: (id: number) => void;
+  showBalance: boolean;
 }) {
   const catById = new Map(categories.map((c) => [c.id, c]));
   return (
@@ -107,6 +109,11 @@ export function TransactionRow({
         <td className={`px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums ${amountSignClass(tx.amount)}`}>
           {formatAmount(tx.amount, account?.currency ?? 'EUR')}
         </td>
+        {showBalance && (
+          <td className="px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums text-ink-300">
+            {tx.runningBalance != null ? formatAmount(tx.runningBalance, account?.currency ?? 'EUR') : '—'}
+          </td>
+        )}
         <td className="px-3 py-2.5 text-right whitespace-nowrap">
           <div className="inline-flex gap-0.5">
             <button
@@ -150,6 +157,7 @@ export function TransactionRow({
               <td className="px-4 py-1.5 text-right font-mono text-xs tabular-nums">
                 {s.amount} {account?.currency ?? 'EUR'}
               </td>
+              {showBalance && <td />}
               <td />
             </tr>
           );
