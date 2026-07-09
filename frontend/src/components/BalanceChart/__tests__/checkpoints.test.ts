@@ -112,4 +112,57 @@ describe('buildCheckpointMarks', () => {
     // Jan 1 → Mar 1 = 31 (Jan) + 29 (Feb 2024, leap) = 60 days.
     expect(marks[0]!.cx).toBe(60);
   });
+
+  // Bank statements sometimes print the start-of-day balance (before the
+  // day's transactions), sometimes the end-of-day balance (after). We take
+  // whichever matches the checkpoint better, so a genuine reconciliation
+  // doesn't light up as drift purely because of the day's own transactions.
+  it('matches the start-of-day balance when the day has a transaction', () => {
+    // Day 02-01 moved balance 100 → 110 (a +10 transaction). A checkpoint
+    // at 02-01 equal to the previous bucket (100) is a start-of-day match.
+    const marks = buildCheckpointMarks(
+      seriesRange,
+      [{ date: '2024-02-01', expectedAmount: 100 }],
+      identityScale,
+    );
+    expect(marks[0]!.actual).toBe(100);
+    expect(marks[0]!.delta).toBe(0);
+    expect(marks[0]!.drift).toBe(false);
+  });
+
+  it('still matches end-of-day when that fits better than start-of-day', () => {
+    const marks = buildCheckpointMarks(
+      seriesRange,
+      [{ date: '2024-02-01', expectedAmount: 110 }],
+      identityScale,
+    );
+    expect(marks[0]!.actual).toBe(110);
+    expect(marks[0]!.delta).toBe(0);
+    expect(marks[0]!.drift).toBe(false);
+  });
+
+  it('drifts against the closer edge when neither start- nor end-of-day matches', () => {
+    // End-of-day = 110, start-of-day = 100. Expected 130 is closer to 110
+    // (delta 20) than to 100 (delta 30), so drift is reported vs. 110.
+    const marks = buildCheckpointMarks(
+      seriesRange,
+      [{ date: '2024-02-01', expectedAmount: 130 }],
+      identityScale,
+    );
+    expect(marks[0]!.actual).toBe(110);
+    expect(marks[0]!.delta).toBe(20);
+    expect(marks[0]!.drift).toBe(true);
+  });
+
+  it('falls back to end-of-day when the checkpoint sits on the very first bucket', () => {
+    // No previous bucket exists → nothing to compare start-of-day against.
+    const marks = buildCheckpointMarks(
+      seriesRange,
+      [{ date: '2024-01-01', expectedAmount: 100 }],
+      identityScale,
+    );
+    expect(marks[0]!.actual).toBe(100);
+    expect(marks[0]!.delta).toBe(0);
+    expect(marks[0]!.drift).toBe(false);
+  });
 });

@@ -15,10 +15,13 @@ export interface CheckpointMark extends Checkpoint {
 
 const CHECKPOINT_TOLERANCE = 0.01;
 
-// Attach each in-range checkpoint to its "actual" cumulative on that date
-// (latest bucket with bucket_date <= checkpointDate — same forward-fill as
-// the main series aggregation). The diamond's X is a direct query of the
-// caller-provided time-based scale, so the marker sits at the exact
+// Attach each in-range checkpoint to its "actual" cumulative on that date.
+// Banks aren't consistent about which balance they print on statement day D:
+// some show start-of-day (before D's transactions), some show end-of-day
+// (after). We compare the expected amount against BOTH and keep whichever
+// matches better — so a checkpoint that lines up with either edge of the
+// day does not falsely register drift. The diamond's X is a direct query
+// of the caller-provided time-based scale, so the marker sits at the exact
 // calendar X regardless of how densely surrounding buckets are spaced.
 export function buildCheckpointMarks(
   data: SeriesPoint[],
@@ -36,7 +39,10 @@ export function buildCheckpointMarks(
         Number.isFinite(c.expectedAmount),
     )
     .map((c) => {
-      // Binary search for the latest bucket <= c.date (used for "actual").
+      // Binary search for the latest bucket with bucket.date <= c.date
+      // (end-of-day balance). Start-of-day = balance at the previous bucket
+      // when the matched bucket is exactly c.date; otherwise the two are
+      // equal (no transaction landed on that day).
       let lo = 0;
       let hi = data.length - 1;
       while (lo < hi) {
@@ -44,8 +50,14 @@ export function buildCheckpointMarks(
         if (data[mid]!.date <= c.date) lo = mid;
         else hi = mid - 1;
       }
-      const actual = data[lo]!.value;
-      const delta = c.expectedAmount - actual;
+      const endOfDay = data[lo]!.value;
+      const startOfDay =
+        data[lo]!.date === c.date && lo > 0 ? data[lo - 1]!.value : endOfDay;
+      const deltaEnd = c.expectedAmount - endOfDay;
+      const deltaStart = c.expectedAmount - startOfDay;
+      const useStart = Math.abs(deltaStart) < Math.abs(deltaEnd);
+      const actual = useStart ? startOfDay : endOfDay;
+      const delta = useStart ? deltaStart : deltaEnd;
       const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
       const cx = xScale(c.date);
       return { ...c, actual, delta, drift, cx };
