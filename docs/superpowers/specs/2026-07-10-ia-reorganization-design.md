@@ -26,8 +26,9 @@ workflow phases of a bank-statement-first accounting tool.
 
 - Reduce top-level nav from 8 items to 6 (spread across 3 sections), without hiding features.
 - Group by workflow phase: **Every day**, **Classification**, **Structure**.
-- Elevate hidden sub-tools (checkpoints, PDF templates, duplicates, backup)
-  to deep-linkable, discoverable pages.
+- Elevate hidden sub-tools (filename patterns, PDF templates, duplicates,
+  backup) to deep-linkable, discoverable pages. Balance checkpoints stay in
+  the per-account drawer (extraction requires component redesign — deferred).
 - Zero visual or component redesign — this spec is IA only.
 - All old URLs redirect to their new home; bookmarks keep working.
 
@@ -60,7 +61,6 @@ workflow phases of a bank-statement-first accounting tool.
 🏦 Comptes               /comptes         ▾
    • Comptes             /comptes         ← default
    • Motifs de fichier   /comptes/motifs
-   • Points de contrôle  /comptes/points
 📥 Données               /donnees         ▾
    • Imports             /donnees/imports ← default
    • Doublons            /donnees/doublons
@@ -83,7 +83,7 @@ workflow phases of a bank-statement-first accounting tool.
 | `/categories` (`pages/Categories.tsx`) | `/regles/categories` — move to `pages/Rules/Categories.tsx` |
 | `/accounts` account list section | `/comptes` |
 | `/accounts` → `PatternsSection` | `/comptes/motifs` — own route, no drawer |
-| `/accounts` → `BalanceCheckpointsDrawer` | `/comptes/points` — own route, no drawer |
+| `/accounts` → `BalanceCheckpointsDrawer` | Stays inside `AccountCard` on `/comptes` — extraction deferred (requires component redesign, out of IA-only scope) |
 | `/imports` → `UploadForm` + `FileImportsList` | `/donnees/imports` |
 | `/imports` → `DuplicatesPanel` | `/donnees/doublons` |
 | `/imports` → `PdfTemplatesPanel` | `/donnees/modeles` |
@@ -154,9 +154,6 @@ The mobile drawer inherits the sectioned structure:
 - `frontend/src/pages/Rules/Categories.tsx` — moved from `pages/Categories.tsx`.
 - `frontend/src/pages/Accounts/Patterns.tsx` — extracts `PatternsSection`
   wrapper into a page.
-- `frontend/src/pages/Accounts/Checkpoints.tsx` — extracts the checkpoints
-  drawer content into a page (drawer removed; UX moves to a first-class
-  page).
 - `frontend/src/pages/Data/Imports.tsx` — wraps `UploadForm` + `FileImportsList`.
 - `frontend/src/pages/Data/Duplicates.tsx` — wraps `DuplicatesPanel`.
 - `frontend/src/pages/Data/PdfTemplates.tsx` — wraps `PdfTemplatesPanel`.
@@ -177,9 +174,7 @@ The mobile drawer inherits the sectioned structure:
 
 - `frontend/src/pages/Tri.tsx` (moved).
 - `frontend/src/pages/Categories.tsx` (moved).
-- Nothing else is deleted — the `BalanceCheckpointsDrawer` implementation
-  simply loses its drawer wrapper; its inner content becomes the
-  `/comptes/points` page.
+- Nothing else is deleted. `BalanceCheckpointsDrawer` is untouched.
 
 ## Interfaces
 
