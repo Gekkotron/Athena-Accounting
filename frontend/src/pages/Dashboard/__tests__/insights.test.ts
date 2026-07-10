@@ -1,0 +1,85 @@
+import { describe, it, expect } from 'vitest';
+import { buildInsights, monthLabel } from '../insights';
+import type { CategoryReportRow, BudgetReportRow } from '../../../api/types';
+
+function row(p: Partial<CategoryReportRow>): CategoryReportRow {
+  return {
+    category_id: null,
+    category_name: null,
+    category_kind: null,
+    category_is_internal_transfer: false,
+    month: '2026-06',
+    total: '0',
+    transaction_count: 0,
+    ...p,
+  };
+}
+
+const MONTHS = ['2026-04', '2026-05', '2026-06'];
+const REF = '2026-06';
+
+function build(rows: CategoryReportRow[], budgets: BudgetReportRow[] = []) {
+  return buildInsights(rows, budgets, MONTHS, REF, 'EUR');
+}
+
+describe('monthLabel', () => {
+  it('maps a YYYY-MM key to a lower-case French month', () => {
+    expect(monthLabel('2026-06')).toBe('juin');
+  });
+});
+
+describe('buildInsights — spend/income delta', () => {
+  it('emits a notable spend-delta when spend rises >= 10% vs the prior month', () => {
+    const rows = [
+      row({ category_id: 1, category_name: 'Courses', month: '2026-05', total: '-1000.00' }),
+      row({ category_id: 1, category_name: 'Courses', month: '2026-06', total: '-1200.00' }),
+    ];
+    const out = build(rows);
+    const spend = out.find((i) => i.key === 'spend-delta');
+    expect(spend).toBeDefined();
+    expect(spend!.headline).toContain('juin');
+    expect(spend!.detail).toContain('+20,0 %');
+    expect(spend!.detail).toContain('mai');
+    expect(spend!.tone).toBe('clay'); // spending more is unfavourable
+    expect(spend!.spark).toBeDefined();
+  });
+
+  it('does NOT emit spend-delta when the change is under the threshold', () => {
+    const rows = [
+      row({ category_id: 1, month: '2026-05', total: '-1000.00' }),
+      row({ category_id: 1, month: '2026-06', total: '-1050.00' }), // +5%
+    ];
+    expect(build(rows).some((i) => i.key === 'spend-delta')).toBe(false);
+  });
+
+  it('emits a notable income-delta with sage tone when income rises', () => {
+    const rows = [
+      row({ category_id: 2, category_name: 'Salaire', month: '2026-05', total: '2000.00' }),
+      row({ category_id: 2, category_name: 'Salaire', month: '2026-06', total: '2400.00' }), // +20%
+    ];
+    const income = build(rows).find((i) => i.key === 'income-delta');
+    expect(income).toBeDefined();
+    expect(income!.tone).toBe('sage');
+    expect(income!.headline).toContain('Vos revenus');
+  });
+
+  it('skips internal-transfer and non-finite rows', () => {
+    const rows = [
+      row({ category_id: 3, month: '2026-05', total: '-1000.00', category_is_internal_transfer: true }),
+      row({ category_id: 3, month: '2026-06', total: '-2000.00', category_is_internal_transfer: true }),
+      row({ category_id: 4, month: '2026-06', total: 'not-a-number' }),
+    ];
+    expect(build(rows)).toHaveLength(0);
+  });
+
+  it('returns at most TOP_N (4) insights', () => {
+    // Big swings in many categories → more than 4 candidates.
+    const rows = [
+      row({ category_id: 1, category_name: 'A', month: '2026-05', total: '-1000.00' }),
+      row({ category_id: 1, category_name: 'A', month: '2026-06', total: '-3000.00' }),
+      row({ category_id: 5, category_name: 'Salaire', month: '2026-05', total: '1000.00' }),
+      row({ category_id: 5, category_name: 'Salaire', month: '2026-06', total: '3000.00' }),
+    ];
+    expect(build(rows).length).toBeLessThanOrEqual(4);
+  });
+});
