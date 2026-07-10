@@ -88,8 +88,7 @@ describe('Dashboard', () => {
     });
     renderDashboard();
     expect(await screen.findByText('Disponible')).toBeInTheDocument();
-    // Multiple "bloqués" strings render (hero tag + per-card line); assert
-    // presence via getAllByText.
+    // The hero renders a "bloqués" tag when a lock is active.
     expect(screen.getAllByText(/bloqués/i).length).toBeGreaterThan(0);
   });
 
@@ -140,52 +139,4 @@ describe('Dashboard', () => {
     expect(patchCalls).toHaveLength(0);
   });
 
-  it('lists each account card with its current balance', async () => {
-    apiMock.mockImplementation(async (path: string) => {
-      if (path === '/api/settings') return {
-        settings: {
-          dashboardRange: '3m', dashboardChartScope: 'all',
-          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
-        },
-      };
-      if (path === '/api/accounts') return {
-        accounts: [
-          acc(1, 'CheckingA', { currentBalance: '250.00', availableBalance: '250.00' }),
-          acc(2, 'SavingsB', { currentBalance: '1000.00', availableBalance: '1000.00' }),
-        ],
-      };
-      if (path === '/api/reports/balance') return {
-        perCurrency: [{ currency: 'EUR', total: '1250.00', available: '1250.00', account_count: 2 }],
-      };
-      if (path === '/api/reports/timeseries') return { points: [] };
-      throw new Error(`unexpected: ${path}`);
-    });
-    renderDashboard();
-    expect(await screen.findByText('CheckingA')).toBeInTheDocument();
-    expect(screen.getByText('SavingsB')).toBeInTheDocument();
-  });
-
-  it('shows a "dont X€ bloqués · N ans" line on locked account cards', async () => {
-    apiMock.mockImplementation(async (path: string) => {
-      if (path === '/api/settings') return {
-        settings: {
-          dashboardRange: '3m', dashboardChartScope: 'all',
-          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
-        },
-      };
-      if (path === '/api/accounts') return {
-        accounts: [
-          acc(1, 'PEA', { lockYears: 5, currentBalance: '10000.00', availableBalance: '3000.00' }),
-        ],
-      };
-      if (path === '/api/reports/balance') return {
-        perCurrency: [{ currency: 'EUR', total: '10000.00', available: '3000.00', account_count: 1 }],
-      };
-      if (path === '/api/reports/timeseries') return { points: [] };
-      throw new Error(`unexpected: ${path}`);
-    });
-    renderDashboard();
-    expect(await screen.findByText(/dont.*bloqués/i)).toBeInTheDocument();
-    expect(screen.getByText(/5 ans/i)).toBeInTheDocument();
-  });
 });
