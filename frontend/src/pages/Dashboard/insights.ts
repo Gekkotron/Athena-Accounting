@@ -71,7 +71,12 @@ export function buildInsights(
     if (!Number.isFinite(amt) || amt === 0) continue;
     const i = idxOf.get(r.month);
     if (i === undefined) continue;
-    if (amt < 0) {
+    if (r.category_kind === 'income') {
+      // Revenue counts income-kind categories only. A positive amount sitting
+      // in an expense/neutral/uncategorised row (a refund, a reimbursement) is
+      // NOT revenue and must not inflate "Vos revenus" or the savings figure.
+      incomeByMonth[i] += amt;
+    } else if (amt < 0) {
       spendByMonth[i] += -amt;
       let c = catSpend.get(r.category_id);
       if (!c) {
@@ -79,8 +84,6 @@ export function buildInsights(
         catSpend.set(r.category_id, c);
       }
       c.spark[i] += -amt;
-    } else {
-      incomeByMonth[i] += amt;
     }
   }
 

@@ -54,13 +54,23 @@ describe('buildInsights — spend/income delta', () => {
 
   it('emits a notable income-delta with sage tone when income rises', () => {
     const rows = [
-      row({ category_id: 2, category_name: 'Salaire', month: '2026-05', total: '2000.00' }),
-      row({ category_id: 2, category_name: 'Salaire', month: '2026-06', total: '2400.00' }), // +20%
+      row({ category_id: 2, category_name: 'Salaire', category_kind: 'income', month: '2026-05', total: '2000.00' }),
+      row({ category_id: 2, category_name: 'Salaire', category_kind: 'income', month: '2026-06', total: '2400.00' }), // +20%
     ];
     const income = build(rows).find((i) => i.key === 'income-delta');
     expect(income).toBeDefined();
     expect(income!.tone).toBe('sage');
     expect(income!.headline).toContain('Vos revenus');
+  });
+
+  it('counts income-kind categories only — a positive refund in a non-income category is not revenue', () => {
+    const rows = [
+      // A refund posted to an expense category: positive, but not revenue.
+      row({ category_id: 7, category_name: 'Remboursement', category_kind: 'expense', month: '2026-05', total: '800.00' }),
+      row({ category_id: 7, category_name: 'Remboursement', category_kind: 'expense', month: '2026-06', total: '1200.00' }), // +50%
+    ];
+    // No income-kind rows → no income-delta despite the positive swing.
+    expect(build(rows).some((i) => i.key === 'income-delta')).toBe(false);
   });
 
   it('skips internal-transfer and non-finite rows', () => {
@@ -77,8 +87,8 @@ describe('buildInsights — spend/income delta', () => {
     const rows = [
       row({ category_id: 1, category_name: 'A', month: '2026-05', total: '-1000.00' }),
       row({ category_id: 1, category_name: 'A', month: '2026-06', total: '-3000.00' }),
-      row({ category_id: 5, category_name: 'Salaire', month: '2026-05', total: '1000.00' }),
-      row({ category_id: 5, category_name: 'Salaire', month: '2026-06', total: '3000.00' }),
+      row({ category_id: 5, category_name: 'Salaire', category_kind: 'income', month: '2026-05', total: '1000.00' }),
+      row({ category_id: 5, category_name: 'Salaire', category_kind: 'income', month: '2026-06', total: '3000.00' }),
     ];
     expect(build(rows).length).toBeLessThanOrEqual(4);
   });
@@ -87,7 +97,7 @@ describe('buildInsights — spend/income delta', () => {
 describe('buildInsights — savings', () => {
   it('flags a month where spending exceeded income with the top score', () => {
     const rows = [
-      row({ category_id: 2, category_name: 'Salaire', month: '2026-06', total: '500.00' }),
+      row({ category_id: 2, category_name: 'Salaire', category_kind: 'income', month: '2026-06', total: '500.00' }),
       row({ category_id: 1, category_name: 'Courses', month: '2026-06', total: '-1000.00' }),
     ];
     const out = build(rows);
@@ -102,11 +112,11 @@ describe('buildInsights — savings', () => {
   it('does not emit a savings insight when the rate is near the historical average', () => {
     // Same 50% savings rate every month → deviation 0 → not notable.
     const rows = [
-      row({ category_id: 2, month: '2026-04', total: '2000.00' }),
+      row({ category_id: 2, category_kind: 'income', month: '2026-04', total: '2000.00' }),
       row({ category_id: 1, month: '2026-04', total: '-1000.00' }),
-      row({ category_id: 2, month: '2026-05', total: '2000.00' }),
+      row({ category_id: 2, category_kind: 'income', month: '2026-05', total: '2000.00' }),
       row({ category_id: 1, month: '2026-05', total: '-1000.00' }),
-      row({ category_id: 2, month: '2026-06', total: '2000.00' }),
+      row({ category_id: 2, category_kind: 'income', month: '2026-06', total: '2000.00' }),
       row({ category_id: 1, month: '2026-06', total: '-1000.00' }),
     ];
     expect(build(rows).some((i) => i.key === 'savings')).toBe(false);

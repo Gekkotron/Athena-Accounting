@@ -41,8 +41,8 @@ function mockNotable() {
       rows: [
         { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-05', total: '-1000.00', transaction_count: 1 },
         { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-06', total: '-1200.00', transaction_count: 1 },
-        { category_id: 2, category_name: 'Salaire', category_kind: null, category_is_internal_transfer: false, month: '2026-05', total: '3000.00', transaction_count: 1 },
-        { category_id: 2, category_name: 'Salaire', category_kind: null, category_is_internal_transfer: false, month: '2026-06', total: '3000.00', transaction_count: 1 },
+        { category_id: 2, category_name: 'Salaire', category_kind: 'income', category_is_internal_transfer: false, month: '2026-05', total: '3000.00', transaction_count: 1 },
+        { category_id: 2, category_name: 'Salaire', category_kind: 'income', category_is_internal_transfer: false, month: '2026-06', total: '3000.00', transaction_count: 1 },
       ],
     });
   });
