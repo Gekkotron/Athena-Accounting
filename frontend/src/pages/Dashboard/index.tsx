@@ -10,7 +10,6 @@ import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { RangePicker, fromDateFor, rangeSuffixLabel, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
-import { ComparatifMensuelSection } from './ComparatifMensuelSection';
 import { AccountsGrid } from './AccountsGrid';
 
 export function Dashboard(): JSX.Element {
@@ -187,11 +186,6 @@ export function Dashboard(): JSX.Element {
             accountId={chartScope}
           />
         </section>
-      )}
-
-      {/* Comparatif mensuel — per-category MoM comparison */}
-      {currencies.length > 0 && (
-        <ComparatifMensuelSection currency={chartCurrency} accountId={chartScope} />
       )}
 
       <AccountsGrid
