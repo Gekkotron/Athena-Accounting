@@ -10,6 +10,7 @@ import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { RangePicker, fromDateFor, rangeSuffixLabel, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
+import { InsightsSection } from './InsightsSection';
 import { AccountsGrid } from './AccountsGrid';
 
 export function Dashboard(): JSX.Element {
@@ -130,6 +131,7 @@ export function Dashboard(): JSX.Element {
       )}
 
       {primary && <MoyennesMensuellesSection currency={primary.currency} />}
+      {primary && <InsightsSection currency={primary.currency} />}
 
       {/* Dashboard filters — account scope drives the balance chart; range
           drives the balance chart, the donut, and the per-account "sur X"
