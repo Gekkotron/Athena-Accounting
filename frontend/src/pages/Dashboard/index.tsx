@@ -165,7 +165,7 @@ export function Dashboard(): JSX.Element {
 
       {/* Cash-flow Sankey — follows the page range */}
       {currencies.length > 0 && (
-        <SankeySection range={range} currency={chartCurrency} />
+        <SankeySection range={range} currency={primary?.currency ?? chartCurrency} />
       )}
     </div>
   );

@@ -75,9 +75,11 @@ export function buildSankeyModel(
     const cat = byId.get(r.category_id);
     if (!cat || cat.isInternalTransfer) continue;
     if (r.category_kind !== 'income' && r.category_kind !== 'expense') continue;
+    const parsed = Number(r.total);
+    if (!Number.isFinite(parsed)) continue;
     const root = rootOf(cat, byId);
     const target = r.category_kind === 'income' ? income : expense;
-    const value = r.category_kind === 'income' ? Number(r.total) : -Number(r.total);
+    const value = r.category_kind === 'income' ? parsed : -parsed;
     const g = target.get(root.id) ?? { id: root.id, label: root.name, color: root.color, amount: 0 };
     g.amount += value;
     target.set(root.id, g);
@@ -154,9 +156,11 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   const left = stack(leftNodes, 0, 'left', pxPerUnit);
   const right = stack(rightNodes, width - nodeWidth, 'right', pxPerUnit);
 
-  // Center pool spans the full height (its amount == grandTotal).
+  // Center pool spans the full height for flow conservation, but the
+  // displayed amount is total income (grandTotal also folds in the deficit,
+  // which would overstate revenue in the label).
   const pool: LaidOutNode = {
-    key: 'pool', label: 'Revenus', amount: grandTotal, color: null, tone: 'category',
+    key: 'pool', label: 'Revenus', amount: model.totalIncome, color: null, tone: 'category',
     column: 'center', x: (width - nodeWidth) / 2, y: 0, w: nodeWidth, h: height,
   };
 

@@ -90,6 +90,14 @@ describe('buildSankeyModel', () => {
     // totalExpense should only count the positive group
     expect(m.totalExpense).toBe(500);
   });
+
+  it('skips rows with a non-numeric total instead of producing NaN', () => {
+    const cats = [cat(1, 'Salaire', 'income')];
+    const rows = [row(1, 'income', '1000'), row(1, 'income', 'not-a-number')];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    expect(m.totalIncome).toBe(1000);
+    expect(Number.isFinite(m.totalIncome)).toBe(true);
+  });
 });
 
 import { layoutSankey } from '../sankey';
@@ -139,5 +147,18 @@ describe('layoutSankey', () => {
     expect(nodes.filter((n) => n.column === 'right')).toHaveLength(2);
     expect(Math.abs(sum('left') - sum('right'))).toBeLessThanOrEqual(1);
     for (const n of nodes) expect(n.h).toBeGreaterThanOrEqual(0);
+  });
+
+  it('labels the pool with total income (not grandTotal) in a deficit, while keeping full height', () => {
+    const deficitModel = buildSankeyModel(
+      [row(1, 'income', '1000'), row(2, 'expense', '-1500')],
+      [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')],
+      'EUR',
+    );
+    const { nodes } = layoutSankey(deficitModel, { width: 600, height: 300 });
+    const pool = nodes.find((n) => n.key === 'pool')!;
+    expect(pool.amount).toBe(deficitModel.totalIncome);
+    expect(pool.amount).not.toBe(deficitModel.totalIncome + deficitModel.deficit);
+    expect(pool.h).toBe(300);
   });
 });
