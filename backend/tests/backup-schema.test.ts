@@ -45,7 +45,7 @@ describe('backup/schema.ts', () => {
         {
           name: 'PEA', type: 'brokerage', currency: 'EUR',
           openingBalance: '0.00', openingDate: '2024-01-01',
-          lockYears: 5, displayOrder: 1,
+          lockYears: 5, displayOrder: 1, isInvestment: true,
         },
       ],
       transactions: [

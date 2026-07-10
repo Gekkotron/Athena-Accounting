@@ -132,6 +132,27 @@ describe.skipIf(!RUN)('/api/accounts', () => {
     expect(put.json().account.lockYears).toBe(5);
   });
 
+  it('PUT toggles isInvestment', async () => {
+    const created = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: { name: 'Binance', type: 'crypto', openingDate: '2025-01-01' },
+    });
+    const id = created.json().account.id;
+    expect(created.json().account.isInvestment).toBe(false);
+    const put = await app.inject({
+      method: 'PUT', url: `/api/accounts/${id}`,
+      headers: { cookie }, payload: { isInvestment: true },
+    });
+    expect(put.statusCode).toBe(200);
+    expect(put.json().account.isInvestment).toBe(true);
+    const list = await app.inject({
+      method: 'GET', url: '/api/accounts', headers: { cookie },
+    });
+    const acc = list.json().accounts.find((a: { id: number }) => a.id === id);
+    expect(acc.isInvestment).toBe(true);
+  });
+
   it('PUT rejects empty patch with 400', async () => {
     const created = await app.inject({
       method: 'POST', url: '/api/accounts',

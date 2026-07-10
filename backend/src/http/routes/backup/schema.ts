@@ -24,6 +24,9 @@ export const BackupBody = z.object({
       displayOrder: z.number().int().optional(),
       // Lock-period default (migration 0011). Optional for backward compat.
       lockYears: z.number().int().min(0).max(99).nullable().optional(),
+      // Investment/placement flag (migration 0017). Optional so pre-0017
+      // backups still validate; missing means "false".
+      isInvestment: z.boolean().optional(),
     }),
   ),
   categories: z.array(

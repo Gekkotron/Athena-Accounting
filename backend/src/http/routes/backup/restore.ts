@@ -67,6 +67,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
             openingDate: a.openingDate,
             displayOrder: a.displayOrder ?? 0,
             lockYears: a.lockYears ?? null,
+            isInvestment: a.isInvestment ?? false,
           })
           .returning({ id: accounts.id });
         if (inserted) accountIdByName.set(a.name, inserted.id);

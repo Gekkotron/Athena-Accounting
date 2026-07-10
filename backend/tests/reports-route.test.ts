@@ -79,8 +79,38 @@ describe.skipIf(!RUN)('/api/reports', () => {
       // EUR: 1000 opening - 100 = 900
       expect(Number(eur.total)).toBeCloseTo(900);
       expect(Number(eur.available)).toBeCloseTo(900);
+      // No investment accounts, so invested === 0.
+      expect(Number(eur.invested)).toBeCloseTo(0);
       // USD: 500 opening + 50 = 550
       expect(Number(usd.total)).toBeCloseTo(550);
+    });
+
+    it('flags is_investment balances as `invested` in the per-currency total', async () => {
+      // Add a Binance-style investment account and check the aggregate.
+      const bin = await app.inject({
+        method: 'POST', url: '/api/accounts',
+        headers: { cookie },
+        payload: {
+          name: 'Binance', type: 'crypto', currency: 'EUR',
+          openingBalance: '6000', openingDate: '2025-01-01', isInvestment: true,
+        },
+      });
+      expect(bin.statusCode).toBe(201);
+      try {
+        const res = await app.inject({
+          method: 'GET', url: '/api/reports/balance', headers: { cookie },
+        });
+        const eur = res.json().perCurrency.find((r: { currency: string }) => r.currency === 'EUR');
+        // 1000 (REUR opening) + 6000 (Binance opening) = 7000 total; all available
+        // (no lock); 6000 flagged as invested.
+        expect(Number(eur.total)).toBeCloseTo(7000);
+        expect(Number(eur.available)).toBeCloseTo(7000);
+        expect(Number(eur.invested)).toBeCloseTo(6000);
+      } finally {
+        await app.inject({
+          method: 'DELETE', url: `/api/accounts/${bin.json().account.id}`, headers: { cookie },
+        });
+      }
     });
 
     it('rejects unauthenticated requests with 401', async () => {

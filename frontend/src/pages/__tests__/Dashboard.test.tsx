@@ -59,7 +59,7 @@ describe('Dashboard', () => {
       };
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/reports/balance') return {
-        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', account_count: 1 }],
+        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 }],
       };
       if (path === '/api/reports/timeseries') return { points: [] };
       throw new Error(`unexpected: ${path}`);
@@ -81,7 +81,7 @@ describe('Dashboard', () => {
       };
       if (path === '/api/accounts') return { accounts: [acc(1, 'PEA', { lockYears: 5, availableBalance: '0' })] };
       if (path === '/api/reports/balance') return {
-        perCurrency: [{ currency: 'EUR', total: '10000.00', available: '4000.00', account_count: 1 }],
+        perCurrency: [{ currency: 'EUR', total: '10000.00', available: '4000.00', invested: '0.00', account_count: 1 }],
       };
       if (path === '/api/reports/timeseries') return { points: [] };
       throw new Error(`unexpected: ${path}`);
@@ -90,6 +90,28 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Disponible')).toBeInTheDocument();
     // The hero renders a "bloqués" tag when a lock is active.
     expect(screen.getAllByText(/bloqués/i).length).toBeGreaterThan(0);
+  });
+
+  it('adds a "placés" tag and switches to "Disponible" when an investment account holds value', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Binance', { isInvestment: true })] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [{ currency: 'EUR', total: '10000.00', available: '10000.00', invested: '6000.00', account_count: 1 }],
+      };
+      if (path === '/api/reports/timeseries') return { points: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    // Hero label swaps to "Disponible" even without any lock, because
+    // invested > 0.
+    expect(await screen.findByText('Disponible')).toBeInTheDocument();
+    expect(screen.getAllByText(/placés/i).length).toBeGreaterThan(0);
   });
 
   it('reads dashboardChartScope from /api/settings on mount', async () => {
@@ -102,7 +124,7 @@ describe('Dashboard', () => {
       };
       if (path === '/api/accounts') return { accounts: [acc(1, 'A'), acc(2, 'B')] };
       if (path === '/api/reports/balance') return {
-        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', account_count: 2 }],
+        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 2 }],
       };
       if (path === '/api/reports/timeseries') return { points: [] };
       throw new Error(`unexpected: ${path}`);
@@ -125,7 +147,7 @@ describe('Dashboard', () => {
       };
       if (path === '/api/accounts') return { accounts: [acc(1, 'A'), acc(2, 'B')] };
       if (path === '/api/reports/balance') return {
-        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', account_count: 2 }],
+        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 2 }],
       };
       if (path === '/api/reports/timeseries') return { points: [] };
       throw new Error(`unexpected: ${path}`);

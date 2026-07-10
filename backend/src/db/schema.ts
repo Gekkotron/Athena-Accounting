@@ -94,6 +94,10 @@ export const accounts = pgTable(
     // opening_date + lock_years — Dashboard uses this to split "available"
     // vs "blocked" totals. Purely a reporting hint; no hard constraint.
     lockYears: integer('lock_years'),
+    // User-flagged as an investment/placement account (Binance, Kraken, etc.).
+    // Money in an is_investment account is reported as "Placé" on the Dashboard,
+    // distinct from lock_years-based "Bloqué". Purely a reporting hint.
+    isInvestment: boolean('is_investment').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

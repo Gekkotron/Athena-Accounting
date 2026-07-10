@@ -19,7 +19,7 @@ export function Dashboard(): JSX.Element {
   });
   const balanceQ = useQuery({
     queryKey: ['reports', 'balance'],
-    queryFn: () => api<{ perCurrency: { currency: string; total: string; available: string; account_count: number }[] }>(
+    queryFn: () => api<{ perCurrency: { currency: string; total: string; available: string; invested: string; account_count: number }[] }>(
       '/api/reports/balance',
     ),
   });

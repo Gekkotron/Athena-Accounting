@@ -48,6 +48,9 @@ export function AccountCard({
           )}
         </div>
       )}
+      {a.isInvestment && !hasBlocked && (
+        <div className="text-[11px] text-sky-300/90 mt-1 font-mono">placé</div>
+      )}
       <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
         ouvert {formatDate(a.openingDate)} ·{' '}
         <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>

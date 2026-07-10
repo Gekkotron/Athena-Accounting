@@ -9,6 +9,9 @@ export interface AccountFormValues {
   // Default lock period in years. null / '' input = no lock. Applies to the
   // opening balance and any transaction without its own override.
   lockYears: number | null;
+  // Flags the account as an investment/placement (crypto exchange, brokerage,
+  // etc.). Displayed as "Placé" on the Dashboard; independent of lockYears.
+  isInvestment: boolean;
 }
 
 function FormFields({
@@ -24,6 +27,8 @@ function FormFields({
   setOpeningDate,
   lockYearsInput,
   setLockYearsInput,
+  isInvestment,
+  setIsInvestment,
   mode,
 }: {
   name: string;
@@ -38,6 +43,8 @@ function FormFields({
   setOpeningDate: (v: string) => void;
   lockYearsInput: string;
   setLockYearsInput: (v: string) => void;
+  isInvestment: boolean;
+  setIsInvestment: (v: boolean) => void;
   mode: 'create' | 'edit';
 }) {
   return (
@@ -103,6 +110,19 @@ function FormFields({
           onChange={(e) => setLockYearsInput(e.target.value)}
         />
       </div>
+      <div className={mode === 'create' ? 'sm:col-span-2 lg:col-span-2' : 'col-span-2'}>
+        <label className="label mb-1.5 block" title="Marquez ce compte comme placement (exchange crypto, courtier, etc.) pour l'isoler du disponible sur le Dashboard, sans le rendre bloqué.">
+          Placement
+        </label>
+        <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-ink-200">
+          <input
+            type="checkbox"
+            checked={isInvestment}
+            onChange={(e) => setIsInvestment(e.target.checked)}
+          />
+          <span>Compte de placement (affiché comme <span className="italic">Placé</span>)</span>
+        </label>
+      </div>
     </>
   );
 }
@@ -134,6 +154,7 @@ export function AccountForm({
   const [lockYearsInput, setLockYearsInput] = useState(
     initial?.lockYears == null ? '' : String(initial.lockYears),
   );
+  const [isInvestment, setIsInvestment] = useState(initial?.isInvestment ?? false);
 
   const parsedLockYears = ((): number | null => {
     const raw = lockYearsInput.trim();
@@ -145,6 +166,7 @@ export function AccountForm({
   const values: AccountFormValues = {
     name, type, currency, openingBalance, openingDate,
     lockYears: parsedLockYears,
+    isInvestment,
   };
 
   if (mode === 'create') {
@@ -168,6 +190,8 @@ export function AccountForm({
           setOpeningDate={setOpeningDate}
           lockYearsInput={lockYearsInput}
           setLockYearsInput={setLockYearsInput}
+          isInvestment={isInvestment}
+          setIsInvestment={setIsInvestment}
           mode="create"
         />
         {error && (
@@ -200,6 +224,8 @@ export function AccountForm({
           setOpeningDate={setOpeningDate}
           lockYearsInput={lockYearsInput}
           setLockYearsInput={setLockYearsInput}
+          isInvestment={isInvestment}
+          setIsInvestment={setIsInvestment}
           mode="edit"
         />
       </div>

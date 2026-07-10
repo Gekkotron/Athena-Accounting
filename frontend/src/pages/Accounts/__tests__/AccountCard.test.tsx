@@ -51,6 +51,13 @@ describe('AccountCard', () => {
     expect(screen.queryByText(/bloqués/i)).not.toBeInTheDocument();
   });
 
+  it('shows a "placé" tag on an investment account with no lock', () => {
+    renderCard({
+      account: { ...acc, currentBalance: '250.00', availableBalance: '250.00', isInvestment: true },
+    });
+    expect(screen.getByText(/placé/i)).toBeInTheDocument();
+  });
+
   it('fires onEdit(account) when modifier is clicked', async () => {
     const onEdit = vi.fn();
     const user = userEvent.setup();
