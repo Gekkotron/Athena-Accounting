@@ -7,11 +7,10 @@ import { formatAmount, amountSignClass } from '../../lib/format';
 import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
-import { RangePicker, fromDateFor, rangeSuffixLabel, type RangeKey } from '../../components/RangePicker';
+import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
 import { InsightsSection } from './InsightsSection';
-import { AccountsGrid } from './AccountsGrid';
 
 export function Dashboard(): JSX.Element {
   const accountsQ = useQuery({
@@ -50,7 +49,6 @@ export function Dashboard(): JSX.Element {
     setChartScope(settings.dashboardChartScope);
   }, [isReady, settings.dashboardRange, settings.dashboardChartScope]);
   const rangeFromDate = fromDateFor(range);
-  const rangeSuffix = rangeSuffixLabel(range);
 
   // Checkpoints for the currently scoped account. Skipped entirely when scope
   // is 'all' — checkpoints are per-account by design.
@@ -87,31 +85,6 @@ export function Dashboard(): JSX.Element {
     return scoped.filter((p) => p.bucket >= rangeFromDate);
   }, [seriesQ.data, chartScope, rangeFromDate]);
 
-  // Per-account "balance at the start of the current range", computed from the
-  // full timeseries. Used to render the account cards' delta "+X sur 3 mois".
-  // The baseline is the LATEST cumulative <= rangeFromDate; if the account
-  // opened after the range started (no bucket before), we fall back to its
-  // opening balance so the delta reads as "everything since opening".
-  const accountBaseline = useMemo(() => {
-    const map = new Map<number, number>();
-    if (!rangeFromDate) return map;
-    const byAccount = new Map<number, BalancePoint[]>();
-    for (const p of seriesQ.data?.points ?? []) {
-      if (!byAccount.has(p.account_id)) byAccount.set(p.account_id, []);
-      byAccount.get(p.account_id)!.push(p);
-    }
-    for (const [accId, points] of byAccount) {
-      const sorted = [...points].sort((a, b) => a.bucket.localeCompare(b.bucket));
-      let baseline: number | null = null;
-      for (const p of sorted) {
-        if (p.bucket < rangeFromDate) baseline = Number(p.cumulative);
-        else break;
-      }
-      if (baseline !== null) map.set(accId, baseline);
-    }
-    return map;
-  }, [seriesQ.data, rangeFromDate]);
-
   return (
     <div className="flex flex-col gap-10">
       <DashboardHero primary={primary} />
@@ -134,9 +107,8 @@ export function Dashboard(): JSX.Element {
       {primary && <InsightsSection currency={primary.currency} />}
 
       {/* Dashboard filters — account scope drives the balance chart; range
-          drives the balance chart, the donut, and the per-account "sur X"
-          delta below. Local changes stay in this session only; the persistent
-          defaults live in Réglages. */}
+          drives the balance chart and the donut. Local changes stay in this
+          session only; the persistent defaults live in Réglages. */}
       {currencies.length > 0 && (
         <section className="surface p-4 md:p-5 flex flex-col gap-3">
           <select
@@ -190,12 +162,6 @@ export function Dashboard(): JSX.Element {
         </section>
       )}
 
-      <AccountsGrid
-        accounts={accounts}
-        accountBaseline={accountBaseline}
-        rangeFromDate={rangeFromDate}
-        rangeSuffix={rangeSuffix}
-      />
     </div>
   );
 }
