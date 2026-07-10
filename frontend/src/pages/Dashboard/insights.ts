@@ -163,6 +163,47 @@ export function buildInsights(
         });
       }
     }
+
+    // category movers (spend only)
+    let topInc: { name: string; d: number; pct: number; fromZero: boolean } | null = null;
+    let topDec: { name: string; d: number; pct: number } | null = null;
+    for (const c of catSpend.values()) {
+      const cur = c.spark[refIdx];
+      const prev = c.spark[prevIdx];
+      const d = cur - prev;
+      if (d > 0) {
+        const fromZero = prev === 0;
+        const pct = fromZero ? Infinity : (d / prev) * 100;
+        const notable = d >= MOVER_ABS_MIN && (fromZero || pct >= MOVER_PCT_MIN);
+        if (notable && (!topInc || d > topInc.d)) topInc = { name: c.name, d, pct, fromZero };
+      } else if (d < 0) {
+        const pct = prev > 0 ? (d / prev) * 100 : 0;
+        const notable = -d >= MOVER_ABS_MIN && pct <= -MOVER_PCT_MIN;
+        if (notable && (!topDec || d < topDec.d)) topDec = { name: c.name, d, pct };
+      }
+    }
+    if (topInc) {
+      insights.push({
+        key: 'top-increase',
+        icon: '🔺',
+        headline: `Plus forte hausse : ${topInc.name}`,
+        detail: topInc.fromZero
+          ? 'nouveau'
+          : `${signedAmount(topInc.d, currency)} (${signedPct(topInc.pct)}) vs ${monthLabel(prevMonth)}`,
+        tone: 'clay',
+        score: Math.min(Math.abs(topInc.pct), 100),
+      });
+    }
+    if (topDec) {
+      insights.push({
+        key: 'top-decrease',
+        icon: '🔻',
+        headline: `Plus forte baisse : ${topDec.name}`,
+        detail: `${signedAmount(topDec.d, currency)} (${signedPct(topDec.pct)}) vs ${monthLabel(prevMonth)}`,
+        tone: 'sage',
+        score: Math.min(Math.abs(topDec.pct), 100),
+      });
+    }
   }
 
   insights.sort((a, b) => b.score - a.score); // stable: equal scores keep catalog (push) order

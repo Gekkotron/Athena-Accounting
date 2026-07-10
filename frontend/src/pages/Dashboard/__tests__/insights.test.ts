@@ -112,3 +112,50 @@ describe('buildInsights — savings', () => {
     expect(build(rows).some((i) => i.key === 'savings')).toBe(false);
   });
 });
+
+describe('buildInsights — category movers', () => {
+  it('picks the largest spend increase and formats the delta', () => {
+    const rows = [
+      row({ category_id: 1, category_name: 'Restaurants', month: '2026-05', total: '-400.00' }),
+      row({ category_id: 1, category_name: 'Restaurants', month: '2026-06', total: '-550.00' }), // +150 (+37.5%)
+      row({ category_id: 2, category_name: 'Courses', month: '2026-05', total: '-1000.00' }),
+      row({ category_id: 2, category_name: 'Courses', month: '2026-06', total: '-1020.00' }), // +20 (+2%) — below thresholds
+    ];
+    const inc = build(rows).find((i) => i.key === 'top-increase');
+    expect(inc).toBeDefined();
+    expect(inc!.headline).toContain('Restaurants');
+    expect(inc!.detail).toContain('+150,00');
+    expect(inc!.detail).toContain('+37,5 %');
+    expect(inc!.tone).toBe('clay');
+  });
+
+  it('labels a from-zero category as "nouveau"', () => {
+    const rows = [
+      row({ category_id: 9, category_name: 'Vacances', month: '2026-06', total: '-300.00' }), // prev 0
+    ];
+    const inc = build(rows).find((i) => i.key === 'top-increase');
+    expect(inc).toBeDefined();
+    expect(inc!.detail).toBe('nouveau');
+    expect(inc!.score).toBe(100); // capped
+  });
+
+  it('picks the largest spend decrease with sage tone', () => {
+    const rows = [
+      row({ category_id: 3, category_name: 'Essence', month: '2026-05', total: '-300.00' }),
+      row({ category_id: 3, category_name: 'Essence', month: '2026-06', total: '-100.00' }), // -200 (-66.7%)
+    ];
+    const dec = build(rows).find((i) => i.key === 'top-decrease');
+    expect(dec).toBeDefined();
+    expect(dec!.headline).toContain('Essence');
+    expect(dec!.detail).toContain('-200,00');
+    expect(dec!.tone).toBe('sage');
+  });
+
+  it('ignores movers below the absolute floor', () => {
+    const rows = [
+      row({ category_id: 4, category_name: 'Café', month: '2026-05', total: '-10.00' }),
+      row({ category_id: 4, category_name: 'Café', month: '2026-06', total: '-45.00' }), // +35 (>30% but < 50€ floor)
+    ];
+    expect(build(rows).some((i) => i.key === 'top-increase')).toBe(false);
+  });
+});
