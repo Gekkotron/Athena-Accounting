@@ -114,10 +114,20 @@ export interface LaidOutLink {
 export interface SankeyLayout { nodes: LaidOutNode[]; links: LaidOutLink[]; width: number; height: number; }
 export interface LayoutOpts { width?: number; height?: number; nodeWidth?: number; gap?: number; minNodeHeight?: number; }
 
-// Cubic-Bézier centre-to-centre ribbon spine. Stroke width carries the amount.
-function spine(x0: number, y0: number, x1: number, y1: number): string {
+// Filled Sankey ribbon: two cubic-bezier curves (top + bottom) connecting a
+// source segment [top0..bot0] at x0 to a target segment [top1..bot1] at x1,
+// closed into a filled area. Width of the ribbon carries the amount at each end.
+function ribbonPath(
+  x0: number, top0: number, bot0: number,
+  x1: number, top1: number, bot1: number,
+): string {
   const xm = (x0 + x1) / 2;
-  return `M ${x0} ${y0} C ${xm} ${y0}, ${xm} ${y1}, ${x1} ${y1}`;
+  return (
+    `M ${x0} ${top0} ` +
+    `C ${xm} ${top0}, ${xm} ${top1}, ${x1} ${top1} ` +
+    `L ${x1} ${bot1} ` +
+    `C ${xm} ${bot1}, ${xm} ${bot0}, ${x0} ${bot0} Z`
+  );
 }
 
 export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyLayout {
@@ -138,13 +148,23 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   }
 
   const grandTotal = leftNodes.reduce((s, n) => s + n.amount, 0) || 1;
-  const maxNodes = Math.max(leftNodes.length, rightNodes.length);
-  const gapBudget = Math.max(0, maxNodes - 1) * gap;
-  const pxPerUnit = (height - gapBudget) / grandTotal;
+  const leftGapBudget = Math.max(0, leftNodes.length - 1) * gap;
+  const rightGapBudget = Math.max(0, rightNodes.length - 1) * gap;
+  // Use the larger gap budget so both columns share the same pxPerUnit —
+  // preserving flow conservation (left node heights sum ≈ right node heights sum).
+  const maxGapBudget = Math.max(leftGapBudget, rightGapBudget);
+  const pxPerUnit = (height - maxGapBudget) / grandTotal;
+  // The pool's ribbon face packs contiguously (no gaps between amounts),
+  // so its total span is the "flow height" — smaller than either column's
+  // total stack (which does interleave gaps). Center both vertically.
+  const flowHeight = grandTotal * pxPerUnit;
+  const poolFlowTop = (height - flowHeight) / 2;
 
-  const stack = (col: SankeyNode[], x: number, column: LaidOutNode['column'], pxPerUnit: number): LaidOutNode[] => {
+  const stack = (col: SankeyNode[], x: number, column: LaidOutNode['column'], gapBudget: number): LaidOutNode[] => {
+    const totalStack = col.reduce((s, n) => s + Math.max(minNodeHeight, n.amount * pxPerUnit), 0) + gapBudget;
+    const yStart = Math.max(0, (height - totalStack) / 2);
     const out: LaidOutNode[] = [];
-    let y = 0;
+    let y = yStart;
     for (const n of col) {
       const h = Math.max(minNodeHeight, n.amount * pxPerUnit);
       out.push({ ...n, column, x, y, w: nodeWidth, h });
@@ -153,12 +173,11 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
     return out;
   };
 
-  const left = stack(leftNodes, 0, 'left', pxPerUnit);
-  const right = stack(rightNodes, width - nodeWidth, 'right', pxPerUnit);
+  const left = stack(leftNodes, 0, 'left', leftGapBudget);
+  const right = stack(rightNodes, width - nodeWidth, 'right', rightGapBudget);
 
-  // Center pool spans the full height for flow conservation, but the
-  // displayed amount is total income (grandTotal also folds in the deficit,
-  // which would overstate revenue in the label).
+  // Center pool: reported height stays `height` for flow-conservation semantics.
+  // Rendering treats the pool as a thin spine over the flow y-range only.
   const pool: LaidOutNode = {
     key: 'pool', label: 'Revenus', amount: model.totalIncome, color: null, tone: 'category',
     column: 'center', x: (width - nodeWidth) / 2, y: 0, w: nodeWidth, h: height,
@@ -166,23 +185,27 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
 
   const nodes = [...left, pool, ...right];
 
-  // Links: each left node -> pool, pool -> each right node. Centre-to-centre.
+  // Links: filled ribbons whose top/bottom curves stack contiguously on the
+  // pool's edges (no gaps in the middle) — the visual expansion between the
+  // spread-out column stacks and the tight pool is what makes it a Sankey.
   const links: LaidOutLink[] = [];
-  const poolCx0 = pool.x;
-  const poolCx1 = pool.x + pool.w;
+  let leftCursor = poolFlowTop;
   for (const n of left) {
     links.push({
       key: `${n.key}->pool`, sourceKey: n.key, targetKey: 'pool',
-      path: spine(n.x + n.w, n.y + n.h / 2, poolCx0, n.y + n.h / 2),
+      path: ribbonPath(n.x + n.w, n.y, n.y + n.h, pool.x, leftCursor, leftCursor + n.h),
       width: Math.max(1, n.h), color: n.color,
     });
+    leftCursor += n.h;
   }
+  let rightCursor = poolFlowTop;
   for (const n of right) {
     links.push({
       key: `pool->${n.key}`, sourceKey: 'pool', targetKey: n.key,
-      path: spine(poolCx1, n.y + n.h / 2, n.x, n.y + n.h / 2),
+      path: ribbonPath(pool.x + pool.w, rightCursor, rightCursor + n.h, n.x, n.y, n.y + n.h),
       width: Math.max(1, n.h), color: n.color,
     });
+    rightCursor += n.h;
   }
 
   return { nodes, links, width, height };
