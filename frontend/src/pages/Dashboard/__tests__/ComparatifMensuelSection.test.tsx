@@ -95,4 +95,14 @@ describe('ComparatifMensuelSection', () => {
     renderSection();
     expect(await screen.findByText(/nouveau/i)).toBeInTheDocument();
   });
+
+  it('shows an error state when the report query fails', async () => {
+    apiMock.mockImplementation((url: string) => {
+      if (url === '/api/reports/categories') return Promise.reject(new Error('boom'));
+      if (url === '/api/categories') return Promise.resolve({ categories: [] });
+      return Promise.resolve({});
+    });
+    renderSection();
+    expect(await screen.findByText(/Erreur de chargement/i)).toBeInTheDocument();
+  });
 });

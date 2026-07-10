@@ -80,7 +80,7 @@ export function ComparatifMensuelSection({ currency, accountId }: Props): JSX.El
     }));
   }, [reportQ.data, categoriesQ.data, mode, currentMonth, months]);
 
-  if (reportQ.isLoading) {
+  if (reportQ.isLoading || categoriesQ.isLoading) {
     return (
       <section>
         <div className="section-rule mb-4">Comparatif mensuel</div>
@@ -90,6 +90,7 @@ export function ComparatifMensuelSection({ currency, accountId }: Props): JSX.El
   }
 
   const prevMonth = months[months.indexOf(currentMonth) - 1] ?? months[months.length - 2];
+  const hasError = reportQ.isError || categoriesQ.isError;
 
   return (
     <section>
@@ -120,7 +121,11 @@ export function ComparatifMensuelSection({ currency, accountId }: Props): JSX.El
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {hasError ? (
+        <div className="surface p-5 text-sm text-clay-300">
+          Erreur de chargement du comparatif mensuel.
+        </div>
+      ) : rows.length === 0 ? (
         <div className="surface p-5 text-sm text-ink-400 display-italic">
           Pas encore d'historique pour cette période.
         </div>
