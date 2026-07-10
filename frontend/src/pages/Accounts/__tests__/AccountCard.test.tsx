@@ -38,6 +38,19 @@ describe('AccountCard', () => {
     expect(screen.getByText(/250/)).toBeInTheDocument();
   });
 
+  it('shows a "dont X bloqués · N ans" line when part of the balance is locked', () => {
+    renderCard({
+      account: { ...acc, currentBalance: '10000.00', availableBalance: '3000.00', lockYears: 5 },
+    });
+    expect(screen.getByText(/bloqués/i)).toBeInTheDocument();
+    expect(screen.getByText(/5 ans/i)).toBeInTheDocument();
+  });
+
+  it('omits the blocked line when nothing is locked', () => {
+    renderCard({ account: { ...acc, currentBalance: '250.00', availableBalance: '250.00' } });
+    expect(screen.queryByText(/bloqués/i)).not.toBeInTheDocument();
+  });
+
   it('fires onEdit(account) when modifier is clicked', async () => {
     const onEdit = vi.fn();
     const user = userEvent.setup();

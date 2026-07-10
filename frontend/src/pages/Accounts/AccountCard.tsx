@@ -16,6 +16,10 @@ export function AccountCard({
   expanded: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: a.id });
+  const current = Number(a.currentBalance ?? '0');
+  const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
+  const blocked = current - available;
+  const hasBlocked = Math.abs(blocked) >= 0.005;
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -36,6 +40,14 @@ export function AccountCard({
       <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
         {formatAmount(a.currentBalance ?? '0', a.currency)}
       </div>
+      {hasBlocked && (
+        <div className="text-[11px] text-amber-300/90 mt-1 font-mono">
+          dont <span className="private">{formatAmount(blocked, a.currency)}</span> bloqués
+          {a.lockYears != null && (
+            <span className="text-ink-500"> · {a.lockYears} an{a.lockYears > 1 ? 's' : ''}</span>
+          )}
+        </div>
+      )}
       <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
         ouvert {formatDate(a.openingDate)} ·{' '}
         <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>
