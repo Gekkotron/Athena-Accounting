@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InsightsSection } from '../InsightsSection';
 
@@ -71,6 +71,25 @@ describe('InsightsSection', () => {
     });
     renderWithProviders();
     expect(await screen.findByText(/Rien de notable/i)).toBeInTheDocument();
+  });
+
+  it('steps to the previous complete month via the arrow', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path.includes('budget')) return Promise.resolve({ month: '', rows: [], totals: { limit: '0', spent: '0' } });
+      // Spend across three complete months so May-vs-April is a notable rise.
+      return Promise.resolve({
+        rows: [
+          { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-04', total: '-1000.00', transaction_count: 1 },
+          { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-05', total: '-1300.00', transaction_count: 1 },
+          { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-06', total: '-1200.00', transaction_count: 1 },
+        ],
+      });
+    });
+    renderWithProviders();
+    expect(await screen.findByText(/— juin 2026/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Mois précédent'));
+    expect(await screen.findByText(/— mai 2026/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Vos dépenses de mai/i)).toBeInTheDocument();
   });
 
   it('still renders money insights when the budget query fails', async () => {

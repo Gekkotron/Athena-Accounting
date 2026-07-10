@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { CategoryReportRow, BudgetReportRow } from '../../api/types';
@@ -29,7 +29,11 @@ interface Props {
 
 export function InsightsSection({ currency }: Props): JSX.Element | null {
   const months = useMemo(() => completeMonthWindow(AVG_WINDOW_MONTHS, new Date()), []);
-  const referenceMonth = months[months.length - 1];
+  // 0 = last complete month; higher steps further back. Capped so a prior month
+  // always remains in-window for the month-over-month comparison.
+  const [monthOffset, setMonthOffset] = useState(0);
+  const maxOffset = months.length - 2;
+  const referenceMonth = months[months.length - 1 - Math.min(monthOffset, maxOffset)];
   const fromDate = monthAgoISODate(AVG_WINDOW_MONTHS);
   const toDate = lastDayOfPrevMonthISODate();
 
@@ -67,11 +71,31 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
 
   return (
     <section>
-      <div className="section-rule mb-4">
-        Insights{' '}
-        <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
-          — {monthLabel(referenceMonth)}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="section-rule">
+          Insights{' '}
+          <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
+            — {monthLabel(referenceMonth)} {referenceMonth.slice(0, 4)}
+          </span>
+        </div>
+        <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
+          <button
+            onClick={() => setMonthOffset((o) => Math.min(o + 1, maxOffset))}
+            disabled={monthOffset >= maxOffset}
+            className="px-2.5 py-1.5 rounded-md text-ink-400 transition hover:text-ink-100 disabled:opacity-30 disabled:hover:text-ink-400"
+            aria-label="Mois précédent"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => setMonthOffset((o) => Math.max(o - 1, 0))}
+            disabled={monthOffset === 0}
+            className="px-2.5 py-1.5 rounded-md text-ink-400 transition hover:text-ink-100 disabled:opacity-30 disabled:hover:text-ink-400"
+            aria-label="Mois suivant"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       {catQ.isError ? (

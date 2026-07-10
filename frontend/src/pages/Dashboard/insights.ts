@@ -87,10 +87,15 @@ export function buildInsights(
     }
   }
 
+  // Averages are trailing: only months up to and including the reference month
+  // count, so stepping back to an earlier month never averages in months that
+  // come after the one being viewed.
+  const trailing = refIdx >= 0 ? refIdx + 1 : months.length;
   const activeCount =
-    months.filter((_, i) => spendByMonth[i] > 0 || incomeByMonth[i] > 0).length || 1;
-  const avgSpend = spendByMonth.reduce((a, b) => a + b, 0) / activeCount;
-  const avgIncome = incomeByMonth.reduce((a, b) => a + b, 0) / activeCount;
+    months.slice(0, trailing).filter((_, i) => spendByMonth[i] > 0 || incomeByMonth[i] > 0)
+      .length || 1;
+  const avgSpend = spendByMonth.slice(0, trailing).reduce((a, b) => a + b, 0) / activeCount;
+  const avgIncome = incomeByMonth.slice(0, trailing).reduce((a, b) => a + b, 0) / activeCount;
 
   const sparkOf = (arr: number[]) => arr.slice(Math.max(0, refIdx - 5), refIdx + 1);
 
