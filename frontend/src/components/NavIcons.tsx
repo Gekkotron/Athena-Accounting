@@ -38,24 +38,6 @@ export function IconTransactions({ className, size = 16 }: IconProps) {
   );
 }
 
-export function IconTri({ className, size = 16 }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M4 3v10M4 13l-2-2M4 13l2-2" />
-      <path d="M8 4h6M8 8h4M8 12h2" />
-    </svg>
-  );
-}
-
-export function IconCategories({ className, size = 16 }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M7.5 2 L13 2 L13 7.5 L7.5 13 L2 7.5 L7.5 2 Z" />
-      <circle cx="10.5" cy="5" r="0.9" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 export function IconRules({ className, size = 16 }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
@@ -97,11 +79,9 @@ export function IconBudgets({ className, size = 16 }: IconProps) {
 export const navIcons = {
   dashboard: IconDashboard,
   transactions: IconTransactions,
-  tri: IconTri,
-  categories: IconCategories,
+  budgets: IconBudgets,
   rules: IconRules,
   accounts: IconAccounts,
   imports: IconImports,
-  budgets: IconBudgets,
 } as const;
 export type NavIconName = keyof typeof navIcons;
