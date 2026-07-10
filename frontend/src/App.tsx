@@ -8,7 +8,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Tri } from './pages/Rules/Tri';
-import { Categories } from './pages/Categories';
+import { Categories } from './pages/Rules/Categories';
 import { Budgets } from './pages/Budgets';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';

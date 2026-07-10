@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../api/client';
-import type { Category, CategoryKind, CategoryReportRow } from '../api/types';
-import { formatAmount } from '../lib/format';
-import { KIND_LABEL, kindBadgeClass } from '../lib/categories';
-import { CategoryBreakdown } from '../components/CategoryBreakdown';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { api, ApiError } from '../../api/client';
+import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
+import { formatAmount } from '../../lib/format';
+import { KIND_LABEL, kindBadgeClass } from '../../lib/categories';
+import { CategoryBreakdown } from '../../components/CategoryBreakdown';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function Categories() {
   const qc = useQueryClient();
