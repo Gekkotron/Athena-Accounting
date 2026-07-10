@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Versioned envelope. Bump `version` when the shape changes in a non-additive
 // way — the importer refuses unknown versions outright.
-export const VERSION = 2;
+export const VERSION = 3;
 
 const categoryKind = z.enum(['expense', 'income', 'transfer', 'neutral']);
 const signConstraint = z.enum(['positive', 'negative', 'any']);
@@ -11,7 +11,7 @@ const categorySource = z.enum(['manual', 'auto', 'default', 'llm']);
 const transferDirection = z.enum(['outgoing', 'incoming']);
 
 export const BackupBody = z.object({
-  version: z.union([z.literal(1), z.literal(2)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   accounts: z.array(
     z.object({
       name: z.string(),
@@ -24,8 +24,9 @@ export const BackupBody = z.object({
       displayOrder: z.number().int().optional(),
       // Lock-period default (migration 0011). Optional for backward compat.
       lockYears: z.number().int().min(0).max(99).nullable().optional(),
-      // Investment/placement flag (migration 0017). Optional so pre-0017
-      // backups still validate; missing means "false".
+      // Legacy field (migration 0017, dropped in 0018). Kept optional so v2
+      // backups still validate; the importer translates isInvestment=true
+      // into type='investment' before insert.
       isInvestment: z.boolean().optional(),
     }),
   ),

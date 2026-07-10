@@ -13,7 +13,7 @@ const minimalDump = {
 
 describe('backup/schema.ts', () => {
   it('exports the current schema version constant', () => {
-    expect(VERSION).toBe(2);
+    expect(VERSION).toBe(3);
   });
 
   it('accepts a minimal, well-formed dump', () => {
@@ -22,13 +22,18 @@ describe('backup/schema.ts', () => {
   });
 
   it('rejects a dump with the wrong version literal', () => {
-    const bad = { ...minimalDump, version: 3 as unknown as 1 };
+    const bad = { ...minimalDump, version: 4 as unknown as 1 };
     const parsed = BackupBody.safeParse(bad);
     expect(parsed.success).toBe(false);
   });
 
   it('accepts version 2 (splits-capable dumps)', () => {
     const parsed = BackupBody.safeParse({ ...minimalDump, version: 2 as const });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('accepts version 3 (investment-type dumps)', () => {
+    const parsed = BackupBody.safeParse({ ...minimalDump, version: 3 as const });
     expect(parsed.success).toBe(true);
   });
 

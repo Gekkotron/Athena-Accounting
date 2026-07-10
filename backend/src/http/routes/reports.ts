@@ -47,8 +47,8 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/reports/balance', async (req) => {
     const uid = userId(req);
     // available = balance not locked by lock_years (Disponible + Placé combined).
-    // invested = the subset of `available` that lives in an account flagged as
-    // is_investment. Client computes: disponible = available - invested;
+    // invested = the subset of `available` that lives in an account whose type
+    // is 'investment'. Client computes: disponible = available - invested;
     // bloqué = total - available.
     const rows = await db.execute<{
       currency: string;
@@ -60,7 +60,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       WITH per_account AS (
         SELECT
           a.currency,
-          a.is_investment,
+          a.type,
           (
             a.opening_balance + COALESCE(
               (SELECT SUM(t.amount) FROM transactions t
@@ -96,7 +96,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         currency,
         SUM(total)::text AS total,
         SUM(available)::text AS available,
-        SUM(CASE WHEN is_investment THEN available ELSE 0 END)::text AS invested,
+        SUM(CASE WHEN type = 'investment' THEN available ELSE 0 END)::text AS invested,
         COUNT(*)::int AS account_count
       FROM per_account
       GROUP BY currency

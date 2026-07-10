@@ -100,7 +100,7 @@ describe('Dashboard', () => {
           chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
         },
       };
-      if (path === '/api/accounts') return { accounts: [acc(1, 'Binance', { isInvestment: true })] };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Binance', { type: 'investment' })] };
       if (path === '/api/reports/balance') return {
         perCurrency: [{ currency: 'EUR', total: '10000.00', available: '10000.00', invested: '6000.00', account_count: 1 }],
       };

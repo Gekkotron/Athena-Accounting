@@ -74,7 +74,6 @@ export function registerExportRoute(app: FastifyInstance): void {
         openingDate: a.openingDate,
         displayOrder: a.displayOrder,
         lockYears: a.lockYears,
-        isInvestment: a.isInvestment,
       })),
       categories: cats.map((c) => ({
         name: c.name,

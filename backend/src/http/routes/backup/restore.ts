@@ -56,18 +56,21 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
       const accountIdByName = new Map<string, number>();
       for (const a of dump.accounts) {
+        // Fold the legacy isInvestment flag (v2 backups) into the type column.
+        // A v2 backup carrying isInvestment=true always meant "Placé" on the
+        // Dashboard, regardless of the recorded type — mirror that here.
+        const type = a.isInvestment ? 'investment' : a.type;
         const [inserted] = await tx
           .insert(accounts)
           .values({
             userId: uid,
             name: a.name,
-            type: a.type,
+            type,
             currency: a.currency,
             openingBalance: a.openingBalance,
             openingDate: a.openingDate,
             displayOrder: a.displayOrder ?? 0,
             lockYears: a.lockYears ?? null,
-            isInvestment: a.isInvestment ?? false,
           })
           .returning({ id: accounts.id });
         if (inserted) accountIdByName.set(a.name, inserted.id);

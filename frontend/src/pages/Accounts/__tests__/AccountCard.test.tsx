@@ -53,7 +53,7 @@ describe('AccountCard', () => {
 
   it('shows a "placé" tag on an investment account with no lock', () => {
     renderCard({
-      account: { ...acc, currentBalance: '250.00', availableBalance: '250.00', isInvestment: true },
+      account: { ...acc, type: 'investment', currentBalance: '250.00', availableBalance: '250.00' },
     });
     expect(screen.getByText(/placé/i)).toBeInTheDocument();
   });

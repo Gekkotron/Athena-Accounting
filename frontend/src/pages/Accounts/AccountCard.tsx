@@ -48,7 +48,7 @@ export function AccountCard({
           )}
         </div>
       )}
-      {a.isInvestment && !hasBlocked && (
+      {a.type === 'investment' && !hasBlocked && (
         <div className="text-[11px] text-sky-300/90 mt-1 font-mono">placé</div>
       )}
       <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">

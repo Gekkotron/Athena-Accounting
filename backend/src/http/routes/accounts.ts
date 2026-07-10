@@ -28,7 +28,6 @@ const CreateBody = z.object({
   openingBalance: decimal.default('0'),
   openingDate: isoDate,
   lockYears: lockYears.optional(),
-  isInvestment: z.boolean().optional(),
 });
 
 const UpdateBody = z
@@ -39,7 +38,6 @@ const UpdateBody = z
     openingBalance: decimal,
     openingDate: isoDate,
     lockYears: lockYears,
-    isInvestment: z.boolean(),
   })
   .partial();
 
@@ -83,7 +81,6 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       display_order: number;
       created_at: Date;
       lock_years: number | null;
-      is_investment: boolean;
       current_balance: string;
       available_balance: string;
       transaction_count: number;
@@ -99,7 +96,6 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
         a.display_order,
         a.created_at,
         a.lock_years                                           AS lock_years,
-        a.is_investment                                        AS is_investment,
         (
           a.opening_balance + COALESCE(
             (SELECT SUM(t.amount) FROM transactions t
@@ -148,7 +144,6 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       displayOrder: r.display_order,
       createdAt: r.created_at,
       lockYears: r.lock_years,
-      isInvestment: r.is_investment,
       currentBalance: r.current_balance,
       availableBalance: r.available_balance,
       transactionCount: r.transaction_count,

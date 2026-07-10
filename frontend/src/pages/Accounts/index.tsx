@@ -138,7 +138,6 @@ export function Accounts() {
     openingBalance: string;
     openingDate: string;
     lockYears: number | null;
-    isInvestment: boolean;
   } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -152,7 +151,6 @@ export function Accounts() {
       openingBalance: a.openingBalance,
       openingDate: a.openingDate,
       lockYears: a.lockYears ?? null,
-      isInvestment: a.isInvestment ?? false,
     });
   };
 
@@ -174,7 +172,6 @@ export function Accounts() {
     if (draft.openingBalance !== a.openingBalance) patch.openingBalance = draft.openingBalance;
     if (draft.openingDate !== a.openingDate) patch.openingDate = draft.openingDate;
     if ((draft.lockYears ?? null) !== (a.lockYears ?? null)) patch.lockYears = draft.lockYears;
-    if (draft.isInvestment !== (a.isInvestment ?? false)) patch.isInvestment = draft.isInvestment;
     if (Object.keys(patch).length === 0) {
       cancelEdit();
       return;

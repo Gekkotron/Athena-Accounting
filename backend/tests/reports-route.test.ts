@@ -85,14 +85,14 @@ describe.skipIf(!RUN)('/api/reports', () => {
       expect(Number(usd.total)).toBeCloseTo(550);
     });
 
-    it('flags is_investment balances as `invested` in the per-currency total', async () => {
+    it("flags type='investment' balances as `invested` in the per-currency total", async () => {
       // Add a Binance-style investment account and check the aggregate.
       const bin = await app.inject({
         method: 'POST', url: '/api/accounts',
         headers: { cookie },
         payload: {
-          name: 'Binance', type: 'crypto', currency: 'EUR',
-          openingBalance: '6000', openingDate: '2025-01-01', isInvestment: true,
+          name: 'Binance', type: 'investment', currency: 'EUR',
+          openingBalance: '6000', openingDate: '2025-01-01',
         },
       });
       expect(bin.statusCode).toBe(201);

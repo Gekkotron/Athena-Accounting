@@ -28,9 +28,6 @@ export interface Account {
   // Default lock period in years. Applies to the opening balance and to
   // any transaction whose own lockYears is null. Clocked from openingDate.
   lockYears?: number | null;
-  // User-flagged as an investment/placement account. Displayed as "Placé"
-  // on the Dashboard; independent of the lockYears-based "Bloqué" tier.
-  isInvestment?: boolean;
   // Sum of amounts (including opening balance) that are unlocked as of
   // today. `blocked = currentBalance - availableBalance`.
   availableBalance?: string;
