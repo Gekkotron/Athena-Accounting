@@ -11,6 +11,7 @@ import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangeP
 import { DashboardHero } from './DashboardHero';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
 import { InsightsSection } from './InsightsSection';
+import { SankeySection } from './SankeySection';
 
 export function Dashboard(): JSX.Element {
   const accountsQ = useQuery({
@@ -160,6 +161,11 @@ export function Dashboard(): JSX.Element {
             accountId={chartScope}
           />
         </section>
+      )}
+
+      {/* Cash-flow Sankey — follows the page range */}
+      {currencies.length > 0 && (
+        <SankeySection range={range} currency={chartCurrency} />
       )}
 
     </div>
