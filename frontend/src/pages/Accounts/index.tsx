@@ -16,9 +16,8 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { api, ApiError } from '../../api/client';
-import type { Account, AccountFilenamePattern } from '../../api/types';
+import type { Account } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { PatternsSection } from './PatternsSection';
 import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
 
@@ -28,11 +27,6 @@ export function Accounts() {
     queryKey: ['accounts'],
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
   });
-  const patternsQ = useQuery({
-    queryKey: ['patterns'],
-    queryFn: () => api<{ patterns: AccountFilenamePattern[] }>('/api/account-filename-patterns'),
-  });
-
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -255,8 +249,6 @@ export function Accounts() {
           </DndContext>
         )}
       </section>
-
-      <PatternsSection patterns={patternsQ.data?.patterns ?? []} accounts={accountsQ.data?.accounts ?? []} />
 
       <ConfirmDialog
         open={!!confirmDelete}

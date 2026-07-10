@@ -56,8 +56,11 @@ beforeEach(() => {
   apiMock.mockReset();
 });
 
+// Filename-pattern assertions now live at
+// pages/Accounts/__tests__/Patterns.test.tsx (PatternsSection was extracted
+// to the /comptes/motifs route in Task 7).
 describe('Accounts page (characterization)', () => {
-  it('renders the account list and filename patterns', async () => {
+  it('renders the account list', async () => {
     seedRoutes({
       '/api/accounts': {
         accounts: [
@@ -71,14 +74,10 @@ describe('Accounts page (characterization)', () => {
             displayOrder: 1 },
         ],
       },
-      '/api/account-filename-patterns': {
-        patterns: [{ id: 10, pattern: 'compte_courant', accountId: 1, priority: 0 }],
-      },
     });
     renderAccounts();
     expect((await screen.findAllByText('Compte courant')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Livret A').length).toBeGreaterThan(0);
-    expect(screen.getByText('compte_courant')).toBeInTheDocument();
   });
 
   it('creates an account and shows the new card after refetch', async () => {
@@ -220,41 +219,5 @@ describe('Accounts page (characterization)', () => {
 
     expect(await screen.findByText(/existe déjà à cette date/i)).toBeInTheDocument();
     expect(postBodies[1]).toEqual({ checkpointDate: '2025-06-01', expectedAmount: '200.00' });
-  });
-
-  it('adds and deletes a filename pattern', async () => {
-    let patterns: any[] = [];
-    apiMock.mockImplementation(async (path: string, init?: any) => {
-      if (path === '/api/accounts' && !init?.method) {
-        return { accounts: [{ id: 1, name: 'A', type: 'checking', currency: 'EUR',
-          openingBalance: '0.00', openingDate: '2025-01-01', currentBalance: '0.00',
-          transactionCount: 0, countedTransactionCount: 0, displayOrder: 0 }] };
-      }
-      if (path === '/api/account-filename-patterns' && !init?.method) {
-        return { patterns };
-      }
-      if (path === '/api/account-filename-patterns' && init?.method === 'POST') {
-        const p = { id: 42, pattern: init.json.pattern, accountId: init.json.accountId, priority: 0 };
-        patterns = [p];
-        return { pattern: p };
-      }
-      if (path === '/api/account-filename-patterns/42' && init?.method === 'DELETE') {
-        patterns = [];
-        return { ok: true };
-      }
-      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
-    });
-
-    const user = userEvent.setup();
-    renderAccounts();
-    await screen.findAllByText('A');
-    // Pattern add-row lives at the bottom of the page.
-    const patternInput = fieldFor(/^motif$/i);
-    await user.type(patternInput, 'compte_courant');
-    await user.selectOptions(fieldFor(/^compte$/i), '1');
-    await user.click(screen.getByRole('button', { name: /^ajouter$/i }));
-    expect(await screen.findByText('compte_courant')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /supprimer/i }));
-    await waitFor(() => expect(screen.queryByText('compte_courant')).not.toBeInTheDocument());
   });
 });

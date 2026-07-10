@@ -12,6 +12,7 @@ import { Categories } from './pages/Rules/Categories';
 import { Budgets } from './pages/Budgets';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
+import { Patterns } from './pages/Accounts/Patterns';
 import { Imports } from './pages/Data/Imports';
 import { Duplicates } from './pages/Data/Duplicates';
 import { PdfTemplates } from './pages/Data/PdfTemplates';
@@ -93,7 +94,7 @@ export default function App() {
         {/* Comptes hub */}
         <Route path="/comptes" element={<HubLayout title="Comptes" tabs={COMPTES_TABS} />}>
           <Route index element={<Accounts />} />
-          {/* motifs added in Task 7 */}
+          <Route path="motifs" element={<Patterns />} />
         </Route>
 
         {/* Données hub */}
