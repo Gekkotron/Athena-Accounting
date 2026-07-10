@@ -91,3 +91,50 @@ describe('buildSankeyModel', () => {
     expect(m.totalExpense).toBe(500);
   });
 });
+
+import { layoutSankey } from '../sankey';
+
+describe('layoutSankey', () => {
+  const model = buildSankeyModel(
+    [row(1, 'income', '3000'), row(2, 'expense', '-800')],
+    [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')],
+    'EUR',
+  );
+
+  it('places three columns and a single center pool', () => {
+    const { nodes } = layoutSankey(model, { width: 600, height: 300 });
+    const cols = new Set(nodes.map((n) => n.column));
+    expect(cols).toEqual(new Set(['left', 'center', 'right']));
+    expect(nodes.filter((n) => n.column === 'center')).toHaveLength(1);
+    expect(nodes.find((n) => n.column === 'center')!.key).toBe('pool');
+  });
+
+  it('emits a savings node on the right when there is surplus', () => {
+    const { nodes } = layoutSankey(model, { width: 600, height: 300 });
+    expect(nodes.find((n) => n.key === 'out:savings')).toBeTruthy();
+    expect(nodes.find((n) => n.key === 'in:deficit')).toBeUndefined();
+  });
+
+  it('emits a deficit source on the left when overspending', () => {
+    const deficitModel = buildSankeyModel(
+      [row(1, 'income', '1000'), row(2, 'expense', '-1500')],
+      [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')],
+      'EUR',
+    );
+    const { nodes } = layoutSankey(deficitModel, { width: 600, height: 300 });
+    expect(nodes.find((n) => n.key === 'in:deficit')).toBeTruthy();
+    expect(nodes.find((n) => n.key === 'out:savings')).toBeUndefined();
+  });
+
+  it('produces only non-negative dimensions and positive link widths', () => {
+    const { nodes, links } = layoutSankey(model, { width: 600, height: 300 });
+    for (const n of nodes) { expect(n.w).toBeGreaterThan(0); expect(n.h).toBeGreaterThanOrEqual(0); }
+    for (const l of links) { expect(l.width).toBeGreaterThan(0); expect(l.path).toMatch(/^M/); }
+  });
+
+  it('conserves height: left node heights sum ~= right node heights sum', () => {
+    const { nodes } = layoutSankey(model, { width: 600, height: 300, gap: 0, minNodeHeight: 0 });
+    const sum = (col: string) => nodes.filter((n) => n.column === col).reduce((s, n) => s + n.h, 0);
+    expect(Math.abs(sum('left') - sum('right'))).toBeLessThan(0.5);
+  });
+});

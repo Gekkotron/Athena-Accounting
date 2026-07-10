@@ -98,3 +98,91 @@ export function buildSankeyModel(
     currency,
   };
 }
+
+export interface LaidOutNode {
+  key: string; label: string; amount: number; color: string | null;
+  tone: SankeyNode['tone'];
+  column: 'left' | 'center' | 'right';
+  x: number; y: number; w: number; h: number;
+}
+export interface LaidOutLink {
+  key: string; sourceKey: string; targetKey: string;
+  path: string; width: number; color: string | null;
+}
+export interface SankeyLayout { nodes: LaidOutNode[]; links: LaidOutLink[]; width: number; height: number; }
+export interface LayoutOpts { width?: number; height?: number; nodeWidth?: number; gap?: number; minNodeHeight?: number; }
+
+// Cubic-Bézier centre-to-centre ribbon spine. Stroke width carries the amount.
+function spine(x0: number, y0: number, x1: number, y1: number): string {
+  const xm = (x0 + x1) / 2;
+  return `M ${x0} ${y0} C ${xm} ${y0}, ${xm} ${y1}, ${x1} ${y1}`;
+}
+
+export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyLayout {
+  const width = opts.width ?? 640;
+  const height = opts.height ?? 320;
+  const nodeWidth = opts.nodeWidth ?? 14;
+  const gap = opts.gap ?? 6;
+  const minNodeHeight = opts.minNodeHeight ?? 2;
+
+  // Left = income sources (+ deficit source); right = expenses (+ savings).
+  const leftNodes: SankeyNode[] = [...model.incomeNodes];
+  if (model.deficit > 0) {
+    leftNodes.push({ key: 'in:deficit', label: 'Épargne puisée', amount: model.deficit, color: null, tone: 'clay' });
+  }
+  const rightNodes: SankeyNode[] = [...model.expenseNodes];
+  if (model.savings > 0) {
+    rightNodes.push({ key: 'out:savings', label: 'Épargne', amount: model.savings, color: null, tone: 'sage' });
+  }
+
+  const grandTotal = leftNodes.reduce((s, n) => s + n.amount, 0) || 1;
+  const scale = (col: SankeyNode[]) => {
+    const gaps = Math.max(0, col.length - 1) * gap;
+    return (height - gaps) / grandTotal;
+  };
+
+  const stack = (col: SankeyNode[], x: number, column: LaidOutNode['column'], pxPerUnit: number): LaidOutNode[] => {
+    const out: LaidOutNode[] = [];
+    let y = 0;
+    for (const n of col) {
+      const h = Math.max(minNodeHeight, n.amount * pxPerUnit);
+      out.push({ ...n, column, x, y, w: nodeWidth, h });
+      y += h + gap;
+    }
+    return out;
+  };
+
+  const leftScale = scale(leftNodes);
+  const rightScale = scale(rightNodes);
+  const left = stack(leftNodes, 0, 'left', leftScale);
+  const right = stack(rightNodes, width - nodeWidth, 'right', rightScale);
+
+  // Center pool spans the full height (its amount == grandTotal).
+  const pool: LaidOutNode = {
+    key: 'pool', label: 'Revenus', amount: grandTotal, color: null, tone: 'category',
+    column: 'center', x: (width - nodeWidth) / 2, y: 0, w: nodeWidth, h: height,
+  };
+
+  const nodes = [...left, pool, ...right];
+
+  // Links: each left node -> pool, pool -> each right node. Centre-to-centre.
+  const links: LaidOutLink[] = [];
+  const poolCx0 = pool.x;
+  const poolCx1 = pool.x + pool.w;
+  for (const n of left) {
+    links.push({
+      key: `${n.key}->pool`, sourceKey: n.key, targetKey: 'pool',
+      path: spine(n.x + n.w, n.y + n.h / 2, poolCx0, n.y + n.h / 2),
+      width: Math.max(1, n.h), color: n.color,
+    });
+  }
+  for (const n of right) {
+    links.push({
+      key: `pool->${n.key}`, sourceKey: 'pool', targetKey: n.key,
+      path: spine(poolCx1, n.y + n.h / 2, n.x, n.y + n.h / 2),
+      width: Math.max(1, n.h), color: n.color,
+    });
+  }
+
+  return { nodes, links, width, height };
+}
