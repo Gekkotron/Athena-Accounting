@@ -159,3 +159,44 @@ describe('buildInsights — category movers', () => {
     expect(build(rows).some((i) => i.key === 'top-increase')).toBe(false);
   });
 });
+
+function budgetRow(p: Partial<BudgetReportRow>): BudgetReportRow {
+  return {
+    categoryId: 1,
+    name: 'Cat',
+    color: null,
+    limit: '100.00',
+    currency: 'EUR',
+    spent: '0.00',
+    remaining: '100.00',
+    pct: 0,
+    over: false,
+    ...p,
+  };
+}
+
+describe('buildInsights — budget overruns', () => {
+  it('counts only over-budget rows and lists their names', () => {
+    const budgets = [
+      budgetRow({ categoryId: 1, name: 'Courses', over: true }),
+      budgetRow({ categoryId: 2, name: 'Loisirs', over: true }),
+      budgetRow({ categoryId: 3, name: 'Transport', over: false }),
+    ];
+    const out = build([], budgets);
+    const b = out.find((i) => i.key === 'budget-overruns');
+    expect(b).toBeDefined();
+    expect(b!.headline).toContain('2 budgets dépassés');
+    expect(b!.detail).toContain('Courses');
+    expect(b!.detail).toContain('Loisirs');
+    expect(b!.detail).not.toContain('Transport');
+    expect(b!.tone).toBe('clay');
+  });
+
+  it('emits no budget insight when nothing is over budget', () => {
+    expect(build([], [budgetRow({ over: false })]).some((i) => i.key === 'budget-overruns')).toBe(false);
+  });
+
+  it('returns an empty array when no insight clears its threshold', () => {
+    expect(build([])).toEqual([]);
+  });
+});

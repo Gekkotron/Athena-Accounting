@@ -206,6 +206,22 @@ export function buildInsights(
     }
   }
 
+  // budget overruns (independent of the prior month)
+  const over = budgetRows.filter((r) => r.over);
+  if (over.length > 0) {
+    const names = over.map((r) => r.name);
+    const shown = names.slice(0, 3).join(', ') + (names.length > 3 ? '…' : '');
+    const plural = over.length > 1 ? 's' : '';
+    insights.push({
+      key: 'budget-overruns',
+      icon: '⚠️',
+      headline: `${over.length} budget${plural} dépassé${plural} en ${monthLabel(referenceMonth)}`,
+      detail: shown,
+      tone: 'clay',
+      score: 50 + 10 * over.length,
+    });
+  }
+
   insights.sort((a, b) => b.score - a.score); // stable: equal scores keep catalog (push) order
   return insights.slice(0, TOP_N);
 }
