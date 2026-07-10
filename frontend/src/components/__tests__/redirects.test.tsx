@@ -12,12 +12,15 @@ import { PrivacyProvider } from '../../contexts/PrivacyContext';
 vi.mock('../../pages/Login', () => ({ Login: () => <div>login-page</div> }));
 vi.mock('../../pages/Dashboard', () => ({ Dashboard: () => <div>dashboard-page</div> }));
 vi.mock('../../pages/Transactions', () => ({ Transactions: () => <div>transactions-page</div> }));
-vi.mock('../../pages/Tri', () => ({ Tri: () => <div>tri-page</div> }));
-vi.mock('../../pages/Categories', () => ({ Categories: () => <div>categories-page</div> }));
+vi.mock('../../pages/Rules/Tri', () => ({ Tri: () => <div>tri-page</div> }));
+vi.mock('../../pages/Rules/Categories', () => ({ Categories: () => <div>categories-page</div> }));
 vi.mock('../../pages/Budgets', () => ({ Budgets: () => <div>budgets-page</div> }));
 vi.mock('../../pages/Rules', () => ({ Rules: () => <div>rules-page</div> }));
 vi.mock('../../pages/Accounts', () => ({ Accounts: () => <div>accounts-page</div> }));
-vi.mock('../../pages/Imports', () => ({ Imports: () => <div>imports-page</div> }));
+vi.mock('../../pages/Data/Imports', () => ({ Imports: () => <div>imports-page</div> }));
+vi.mock('../../pages/Data/Duplicates', () => ({ Duplicates: () => <div>duplicates-page</div> }));
+vi.mock('../../pages/Data/PdfTemplates', () => ({ PdfTemplates: () => <div>pdf-templates-page</div> }));
+vi.mock('../../pages/Data/Backup', () => ({ Backup: () => <div>backup-page</div> }));
 vi.mock('../../pages/Profile', () => ({ Profile: () => <div>profile-page</div> }));
 vi.mock('../../pages/Settings', () => ({ Settings: () => <div>settings-page</div> }));
 

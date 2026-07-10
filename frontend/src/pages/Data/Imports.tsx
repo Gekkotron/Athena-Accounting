@@ -4,12 +4,9 @@ import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { PdfImportNeedsTemplate, PdfImportImported } from '../../api/pdf-templates';
-import { BackupPanel } from './BackupPanel';
-import { PdfTemplateWizard } from './PdfTemplateWizard';
-import { PdfTemplatesPanel } from './PdfTemplatesPanel';
-import { DuplicatesPanel } from './DuplicatesPanel';
-import { FileImportsList } from './FileImportsList';
-import { UploadForm } from './UploadForm';
+import { PdfTemplateWizard } from '../Imports/PdfTemplateWizard';
+import { FileImportsList } from '../Imports/FileImportsList';
+import { UploadForm } from '../Imports/UploadForm';
 
 export function Imports() {
   const qc = useQueryClient();
@@ -59,14 +56,9 @@ export function Imports() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Imports</h1>
-          <p className="page-subtitle">
-            OFX (Latin-1/UTF-8), CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA) ou PDF relevé bancaire.
-          </p>
-        </div>
-      </div>
+      <p className="page-subtitle">
+        OFX (Latin-1/UTF-8), CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA) ou PDF relevé bancaire.
+      </p>
 
       <UploadForm
         accounts={accountsQ.data?.accounts ?? []}
@@ -121,8 +113,6 @@ export function Imports() {
         </div>
       )}
 
-      <BackupPanel />
-
       <ConfirmDialog
         open={!!pendingDeleteImport}
         title="Supprimer cet import ?"
@@ -147,15 +137,11 @@ export function Imports() {
         onCancel={() => { setPendingDeleteImport(null); setDeleteError(null); }}
       />
 
-      <DuplicatesPanel />
-
       <FileImportsList
         imports={importsQ.data?.imports ?? []}
         accounts={accountsQ.data?.accounts ?? []}
         onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
       />
-
-      <PdfTemplatesPanel />
     </div>
   );
 }

@@ -12,7 +12,10 @@ import { Categories } from './pages/Rules/Categories';
 import { Budgets } from './pages/Budgets';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
-import { Imports } from './pages/Imports';
+import { Imports } from './pages/Data/Imports';
+import { Duplicates } from './pages/Data/Duplicates';
+import { PdfTemplates } from './pages/Data/PdfTemplates';
+import { Backup } from './pages/Data/Backup';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 
@@ -97,7 +100,9 @@ export default function App() {
         <Route path="/donnees" element={<HubLayout title="Données" tabs={DONNEES_TABS} />}>
           <Route index element={<Navigate to="imports" replace />} />
           <Route path="imports" element={<Imports />} />
-          {/* doublons/modeles/sauvegarde added in Task 6 */}
+          <Route path="doublons" element={<Duplicates />} />
+          <Route path="modeles" element={<PdfTemplates />} />
+          <Route path="sauvegarde" element={<Backup />} />
         </Route>
 
         <Route path="/profil" element={<Profile />} />

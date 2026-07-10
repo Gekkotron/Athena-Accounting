@@ -5,15 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Imports } from '../Imports';
 
-vi.mock('../../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
+vi.mock('../../../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
   return {
     ...actual,
     api: vi.fn(),
     apiUpload: vi.fn(),
   };
 });
-import { api, apiUpload } from '../../api/client';
+import { api, apiUpload } from '../../../api/client';
 const apiMock = vi.mocked(api);
 const uploadMock = vi.mocked(apiUpload);
 
@@ -43,19 +43,6 @@ beforeEach(() => {
   uploadMock.mockReset();
 });
 
-// jsdom's File has no .text() method; Imports.tsx's backup-restore handler
-// reads the chosen file via f.text() before JSON.parse-ing it.
-if (!File.prototype.text) {
-  File.prototype.text = function () {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsText(this);
-    });
-  };
-}
-
 const acc = (id: number, name: string) => ({
   id, name, type: 'checking', currency: 'EUR',
   openingBalance: '0.00', openingDate: '2025-01-01',
@@ -74,7 +61,6 @@ describe('Imports page (characterization)', () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: [fileImport(1)] };
-      if (path === '/api/transactions/duplicates') return { groups: [] };
       throw new Error(`unexpected: ${path}`);
     });
 
@@ -91,7 +77,6 @@ describe('Imports page (characterization)', () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: uploaded ? [fileImport(99, { filename: 'new.csv' })] : [] };
-      if (path === '/api/transactions/duplicates') return { groups: [] };
       throw new Error(`unexpected: ${path}`);
     });
     uploadMock.mockImplementation(async () => {
@@ -123,7 +108,6 @@ describe('Imports page (characterization)', () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: [] };
-      if (path === '/api/transactions/duplicates') return { groups: [] };
       throw new Error(`unexpected: ${path}`);
     });
 
@@ -171,7 +155,6 @@ describe('Imports page (characterization)', () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: [] };
-      if (path === '/api/transactions/duplicates') return { groups: [] };
       throw new Error(`unexpected: ${path}`);
     });
 
@@ -202,49 +185,11 @@ describe('Imports page (characterization)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('marks a duplicate group as not-a-duplicate via bulk POST', async () => {
-    let marked = false;
-    const postedBodies: any[] = [];
-    apiMock.mockImplementation(async (path: string, init?: any) => {
-      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
-      if (path === '/api/imports') return { imports: [] };
-      if (path === '/api/transactions/duplicates') {
-        return {
-          groups: marked ? [] : [
-            {
-              accountId: 1, date: '2026-06-15', amount: '-42.30',
-              transactions: [
-                { id: 100, raw_label: 'CB CARREFOUR A', normalized_label: 'carrefour a', source_file_id: null, category_id: null },
-                { id: 101, raw_label: 'CB CARREFOUR B', normalized_label: 'carrefour b', source_file_id: null, category_id: null },
-              ],
-            },
-          ],
-        };
-      }
-      if (path === '/api/transactions/mark-not-duplicate' && init?.method === 'POST') {
-        postedBodies.push(init.json);
-        marked = true;
-        return { updated: 2 };
-      }
-      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
-    });
-
-    const user = userEvent.setup();
-    renderImports();
-    await screen.findByText('CB CARREFOUR A');
-
-    await user.click(screen.getByRole('button', { name: '✓ Pas un doublon' }));
-
-    await waitFor(() => expect(postedBodies).toHaveLength(1));
-    expect(postedBodies[0]).toEqual({ ids: [100, 101] });
-  });
-
   it('deletes a file-import after confirmation', async () => {
     let deleted = false;
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: deleted ? [] : [fileImport(7)] };
-      if (path === '/api/transactions/duplicates') return { groups: [] };
       if (path === '/api/imports/7' && init?.method === 'DELETE') {
         deleted = true;
         return { deleted: { transactions: 8, fileImport: 1 } };
@@ -262,43 +207,5 @@ describe('Imports page (characterization)', () => {
     await user.click(await screen.findByRole('button', { name: 'Supprimer' }));
 
     await waitFor(() => expect(screen.queryByText('file-7.csv')).not.toBeInTheDocument());
-  });
-
-  it('restores a backup after confirming, and shows the restored-counts banner', async () => {
-    const postedBodies: any[] = [];
-    apiMock.mockImplementation(async (path: string, init?: any) => {
-      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
-      if (path === '/api/imports') return { imports: [] };
-      if (path === '/api/transactions/duplicates') return { groups: [] };
-      if (path === '/api/backup/import' && init?.method === 'POST') {
-        postedBodies.push(init.json);
-        return {
-          imported: {
-            accounts: 1, categories: 2, accountFilenamePatterns: 0,
-            rules: 0, transferRules: 0, transactions: 5, fileImports: 1,
-          },
-        };
-      }
-      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
-    });
-
-    const user = userEvent.setup();
-    renderImports();
-    await screen.findByText(/^Fichier\(s\)/);
-
-    // Restore reads the file client-side (FileReader/text(), no upload
-    // mutation) then opens a confirm dialog before firing the POST.
-    const restoreInput = screen.getByText('Importer une sauvegarde…').parentElement!
-      .querySelector('input[type="file"]') as HTMLInputElement;
-    const backupFile = new File(['{"ok":true}'], 'backup.json', { type: 'application/json' });
-    await user.upload(restoreInput, backupFile);
-
-    await user.click(await screen.findByRole('button', { name: 'Effacer et restaurer' }));
-
-    await waitFor(() => expect(postedBodies).toHaveLength(1));
-    expect(postedBodies[0]).toEqual({ ok: true });
-
-    const banner = (await screen.findByText('Sauvegarde restaurée')).closest('div')!.parentElement!;
-    expect(banner.textContent).toContain('5 transaction(s)');
   });
 });
