@@ -109,7 +109,9 @@ below the range picker). Title `Flux · {currency}` in the `section-rule` style.
 - Node colors from `categories.color`; `Autres` uses a neutral `ink-*` token;
   `Épargne` uses `sage`, `Épargne puisée` uses `clay` (Insights tone palette).
 - Ribbons carry the source node's color at reduced opacity.
-- Labels: category name + `formatAmount` + share-of-total %.
+- Labels: category name + `formatAmount`. (Share-of-total % on labels was
+  deferred from v1 — the totals are conveyed by node height; a follow-up may
+  add the percentage.)
 - Small screens: labels sit outside nodes; if cramped, the SVG scrolls
   horizontally inside an `overflow-x-auto` wrapper (never breaks page layout).
   A minimum node-height floor keeps tiny categories legible; anything below the
