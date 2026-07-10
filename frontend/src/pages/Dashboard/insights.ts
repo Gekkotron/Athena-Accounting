@@ -133,6 +133,36 @@ export function buildInsights(
         });
       }
     }
+
+    // savings
+    const income = incomeByMonth[refIdx];
+    const spend = spendByMonth[refIdx];
+    const savings = income - spend;
+    if (savings < 0) {
+      insights.push({
+        key: 'savings',
+        icon: '⚠️',
+        headline: `Vous avez dépensé plus que vos revenus en ${monthLabel(referenceMonth)}`,
+        detail: `Solde : ${formatAmount(savings, currency)}`,
+        tone: 'clay',
+        score: 100,
+      });
+    } else if (income > 0) {
+      const rate = (savings / income) * 100;
+      const avgSavings = avgIncome - avgSpend;
+      const avgRate = avgIncome > 0 ? (avgSavings / avgIncome) * 100 : 0;
+      const dev = Math.abs(rate - avgRate);
+      if (dev >= SAVINGS_DEV_MIN) {
+        insights.push({
+          key: 'savings',
+          icon: '🐷',
+          headline: `Vous avez épargné ${formatAmount(savings, currency)} en ${monthLabel(referenceMonth)} (${Math.round(rate)} % de vos revenus)`,
+          detail: rate > avgRate ? 'Au-dessus de votre taux d’épargne habituel' : 'En-dessous de votre taux d’épargne habituel',
+          tone: tone(true, rate - avgRate),
+          score: dev,
+        });
+      }
+    }
   }
 
   insights.sort((a, b) => b.score - a.score); // stable: equal scores keep catalog (push) order

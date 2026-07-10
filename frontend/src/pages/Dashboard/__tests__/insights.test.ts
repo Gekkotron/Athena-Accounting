@@ -83,3 +83,32 @@ describe('buildInsights — spend/income delta', () => {
     expect(build(rows).length).toBeLessThanOrEqual(4);
   });
 });
+
+describe('buildInsights — savings', () => {
+  it('flags a month where spending exceeded income with the top score', () => {
+    const rows = [
+      row({ category_id: 2, category_name: 'Salaire', month: '2026-06', total: '500.00' }),
+      row({ category_id: 1, category_name: 'Courses', month: '2026-06', total: '-1000.00' }),
+    ];
+    const out = build(rows);
+    const savings = out.find((i) => i.key === 'savings');
+    expect(savings).toBeDefined();
+    expect(savings!.icon).toBe('⚠️');
+    expect(savings!.headline).toContain('plus que vos revenus');
+    expect(savings!.tone).toBe('clay');
+    expect(savings!.score).toBe(100);
+  });
+
+  it('does not emit a savings insight when the rate is near the historical average', () => {
+    // Same 50% savings rate every month → deviation 0 → not notable.
+    const rows = [
+      row({ category_id: 2, month: '2026-04', total: '2000.00' }),
+      row({ category_id: 1, month: '2026-04', total: '-1000.00' }),
+      row({ category_id: 2, month: '2026-05', total: '2000.00' }),
+      row({ category_id: 1, month: '2026-05', total: '-1000.00' }),
+      row({ category_id: 2, month: '2026-06', total: '2000.00' }),
+      row({ category_id: 1, month: '2026-06', total: '-1000.00' }),
+    ];
+    expect(build(rows).some((i) => i.key === 'savings')).toBe(false);
+  });
+});
