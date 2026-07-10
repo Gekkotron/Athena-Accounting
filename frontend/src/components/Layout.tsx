@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { User } from '../api/types';
@@ -7,16 +7,141 @@ import { Logo } from './Logo';
 import { navIcons, type NavIconName } from './NavIcons';
 import { usePrivacy } from '../contexts/PrivacyContext';
 
-const nav: { to: string; label: string; end?: boolean; icon: NavIconName }[] = [
-  { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
-  { to: '/transactions', label: 'Transactions', icon: 'transactions' },
-  { to: '/tri', label: 'Tri', icon: 'tri' },
-  { to: '/categories', label: 'Catégories', icon: 'categories' },
-  { to: '/budgets', label: 'Budgets', icon: 'budgets' },
-  { to: '/rules', label: 'Règles', icon: 'rules' },
-  { to: '/accounts', label: 'Comptes', icon: 'accounts' },
-  { to: '/imports', label: 'Imports / Sauvegarde', icon: 'imports' },
+type NavChild = { to: string; label: string; end?: boolean };
+type NavItem = {
+  to: string;
+  label: string;
+  end?: boolean;
+  icon: NavIconName;
+  children?: NavChild[];
+};
+type NavSection = { title: string; items: NavItem[] };
+
+const nav: NavSection[] = [
+  {
+    title: 'Tous les jours',
+    items: [
+      { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
+      { to: '/transactions', label: 'Transactions', icon: 'transactions' },
+      { to: '/budgets', label: 'Budgets', icon: 'budgets' },
+    ],
+  },
+  {
+    title: 'Classification',
+    items: [
+      {
+        to: '/regles',
+        label: 'Règles',
+        icon: 'rules',
+        children: [
+          { to: '/regles/tri', label: 'Tri' },
+          { to: '/regles/liste', label: 'Règles' },
+          { to: '/regles/categories', label: 'Catégories' },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Structure',
+    items: [
+      {
+        to: '/comptes',
+        label: 'Comptes',
+        end: true,
+        icon: 'accounts',
+        children: [
+          { to: '/comptes', label: 'Comptes', end: true },
+          { to: '/comptes/motifs', label: 'Motifs de fichier' },
+        ],
+      },
+      {
+        to: '/donnees',
+        label: 'Données',
+        icon: 'imports',
+        children: [
+          { to: '/donnees/imports', label: 'Imports' },
+          { to: '/donnees/doublons', label: 'Doublons' },
+          { to: '/donnees/modeles', label: 'Modèles PDF' },
+          { to: '/donnees/sauvegarde', label: 'Sauvegarde' },
+        ],
+      },
+    ],
+  },
 ];
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `relative rounded-lg px-3 py-2 text-sm transition flex items-center gap-3 ${
+    isActive
+      ? 'text-ink-50 bg-ink-850'
+      : 'text-ink-400 hover:text-ink-100 hover:bg-ink-900/70'
+  }`;
+
+function NavTree({
+  sections,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  onNavigate?: () => void;
+}) {
+  const location = useLocation();
+  return (
+    <div className="flex flex-col gap-5">
+      {sections.map((section) => (
+        <div key={section.title}>
+          <div className="label px-2 mb-2">{section.title}</div>
+          <div className="flex flex-col gap-1">
+            {section.items.map((item) => {
+              const Icon = navIcons[item.icon];
+              const isHub = !!item.children?.length;
+              const isActiveHub =
+                isHub &&
+                (location.pathname === item.to ||
+                  location.pathname.startsWith(item.to + '/'));
+              return (
+                <div key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    onClick={onNavigate}
+                    className={navLinkClass}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon className={isActive || isActiveHub ? 'text-sage-300' : 'text-ink-500'} />
+                        <span>{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                  {isHub && isActiveHub && (
+                    <div className="ml-8 mt-1 flex flex-col gap-0.5">
+                      {item.children!.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          end={child.end}
+                          onClick={onNavigate}
+                          className={({ isActive }) =>
+                            `rounded-md px-2 py-1 text-xs transition ${
+                              isActive
+                                ? 'text-ink-100 bg-ink-900/60'
+                                : 'text-ink-500 hover:text-ink-200'
+                            }`
+                          }
+                        >
+                          {child.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Layout({ user }: { user: User }) {
   const navigate = useNavigate();
@@ -30,13 +155,6 @@ export function Layout({ user }: { user: User }) {
       navigate('/login', { replace: true });
     },
   });
-
-  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `relative rounded-lg px-3 py-2 text-sm transition flex items-center gap-3 ${
-      isActive
-        ? 'text-ink-50 bg-ink-850'
-        : 'text-ink-400 hover:text-ink-100 hover:bg-ink-900/70'
-    }`;
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -73,20 +191,8 @@ export function Layout({ user }: { user: User }) {
                 </svg>
               </button>
             </div>
-            <nav className="flex flex-col gap-1">
-              {nav.map((n) => {
-                const Icon = navIcons[n.icon];
-                return (
-                  <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setDrawerOpen(false)} className={navLinkClass}>
-                    {({ isActive }) => (
-                      <>
-                        <Icon className={isActive ? 'text-sage-300' : 'text-ink-500'} />
-                        <span>{n.label}</span>
-                      </>
-                    )}
-                  </NavLink>
-                );
-              })}
+            <nav>
+              <NavTree sections={nav} onNavigate={() => setDrawerOpen(false)} />
             </nav>
             <UserCard user={user} onLogout={() => logout.mutate()} />
           </aside>
@@ -101,20 +207,8 @@ export function Layout({ user }: { user: User }) {
         <div className="mb-10 px-2">
           <Brand />
         </div>
-        <nav className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
-          {nav.map((n) => {
-            const Icon = navIcons[n.icon];
-            return (
-              <NavLink key={n.to} to={n.to} end={n.end} className={navLinkClass}>
-                {({ isActive }) => (
-                  <>
-                    <Icon className={isActive ? 'text-sage-300' : 'text-ink-500'} />
-                    <span>{n.label}</span>
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
+        <nav className="overflow-y-auto flex-1 min-h-0">
+          <NavTree sections={nav} />
         </nav>
         <UserCard user={user} onLogout={() => logout.mutate()} />
       </aside>
@@ -173,7 +267,15 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60">
       <div className="label mb-1">Connecté</div>
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <NavLink to="/profil" className={navLinkClass}>
+        {({ isActive }) => (
+          <>
+            <span className={isActive ? 'text-sage-300' : 'text-ink-500'}>👤</span>
+            <span>Profil</span>
+          </>
+        )}
+      </NavLink>
+      <div className="flex items-center justify-between gap-2 mb-3 mt-1">
         <NavLink
           to="/profile"
           className={({ isActive }) =>
@@ -186,7 +288,7 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
           {user.username}
         </NavLink>
         <NavLink
-          to="/settings"
+          to="/reglages"
           title="Réglages"
           aria-label="Réglages"
           className={({ isActive }) =>

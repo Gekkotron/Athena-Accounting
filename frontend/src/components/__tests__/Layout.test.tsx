@@ -15,11 +15,11 @@ const apiMock = vi.mocked(api);
 
 const user = { id: 1, username: 'julien' };
 
-function renderLayout() {
+function renderLayout(initialEntries: string[] = ['/']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <PrivacyProvider>
           <Layout user={user} />
         </PrivacyProvider>
@@ -31,13 +31,37 @@ function renderLayout() {
 beforeEach(() => { apiMock.mockReset(); });
 
 describe('Layout', () => {
-  it('renders every nav link', () => {
+  it('renders each section header once (desktop sidebar)', () => {
     renderLayout();
-    // Nav labels — some appear twice (mobile drawer + desktop sidebar) but
-    // we only assert presence.
-    for (const label of ['Dashboard', 'Transactions', 'Tri', 'Catégories', 'Règles', 'Comptes', 'Imports / Sauvegarde']) {
+    for (const label of ['Tous les jours', 'Classification', 'Structure']) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
+  });
+
+  it('renders every top-level nav item', () => {
+    renderLayout();
+    for (const label of ['Dashboard', 'Transactions', 'Budgets', 'Règles', 'Comptes', 'Données']) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('exposes the sub-items under Règles as links with the /regles/… href', () => {
+    // The Règles hub expands its sub-nav only while the current route is
+    // inside it — render on a /regles/* route to exercise that.
+    renderLayout(['/regles/tri']);
+    const tri = screen.getAllByRole('link').find((l) => l.getAttribute('href') === '/regles/tri');
+    const liste = screen.getAllByRole('link').find((l) => l.getAttribute('href') === '/regles/liste');
+    const cats = screen.getAllByRole('link').find((l) => l.getAttribute('href') === '/regles/categories');
+    expect(tri).toBeTruthy();
+    expect(liste).toBeTruthy();
+    expect(cats).toBeTruthy();
+  });
+
+  it('exposes /reglages and /profil links in the user card', () => {
+    renderLayout();
+    expect(screen.getByRole('link', { name: /réglages/i })).toHaveAttribute('href', '/reglages');
+    const profileLink = screen.getAllByRole('link').find((l) => l.getAttribute('href') === '/profil');
+    expect(profileLink).toBeTruthy();
   });
 
   it('renders the user card with the username link to /profile', () => {
@@ -80,9 +104,9 @@ describe('Layout', () => {
     );
   });
 
-  it('exposes a Réglages link to /settings from the sidebar user card', () => {
+  it('exposes a Réglages link to /reglages from the sidebar user card', () => {
     renderLayout();
     const link = screen.getByRole('link', { name: /réglages/i });
-    expect(link).toHaveAttribute('href', '/settings');
+    expect(link).toHaveAttribute('href', '/reglages');
   });
 });
