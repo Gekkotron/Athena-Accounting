@@ -58,6 +58,7 @@ describe('ComparatifMensuelSection', () => {
     renderSection();
     expect(await screen.findByText(/Comparatif mensuel/i)).toBeInTheDocument();
     expect(screen.getByText(/mois en cours/i)).toBeInTheDocument();
+    expect(screen.getByText(/juillet vs juin/i)).toBeInTheDocument();
   });
 
   it('renders a category row with current, previous, and delta', async () => {
@@ -104,5 +105,18 @@ describe('ComparatifMensuelSection', () => {
     });
     renderSection();
     expect(await screen.findByText(/Erreur de chargement/i)).toBeInTheDocument();
+  });
+
+  it('renders data when only the colors query fails (report succeeds)', async () => {
+    apiMock.mockImplementation((url: string) => {
+      if (url === '/api/reports/categories') return Promise.resolve({ rows: [
+        { category_id: 1, category_name: 'Courses', category_is_internal_transfer: false, month: '2026-07', total: '-150.00' },
+      ] });
+      if (url === '/api/categories') return Promise.reject(new Error('boom'));
+      return Promise.resolve({});
+    });
+    renderSection();
+    expect(await screen.findByText('Courses')).toBeInTheDocument();
+    expect(screen.queryByText(/Erreur de chargement/i)).not.toBeInTheDocument();
   });
 });

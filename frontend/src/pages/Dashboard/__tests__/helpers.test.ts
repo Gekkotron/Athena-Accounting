@@ -113,6 +113,13 @@ describe('buildComparison', () => {
     const rows = [row({ category_id: null, month: '2026-07', total: '-10.00' })];
     expect(buildComparison(rows, 'expense', CURRENT, MONTHS)[0].name).toBe('Sans catégorie');
   });
+
+  it('ignores rows whose month is outside the window (no phantom row)', () => {
+    const rows = [
+      row({ category_id: 9, category_name: 'Futur', month: '2026-09', total: '-500.00' }), // outside MONTHS
+    ];
+    expect(buildComparison(rows, 'expense', CURRENT, MONTHS)).toHaveLength(0);
+  });
 });
 
 describe('deltaTone', () => {

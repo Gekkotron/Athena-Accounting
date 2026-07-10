@@ -80,6 +80,9 @@ export function buildComparison(
     if (mode === 'expense' && amt >= 0) continue;
     if (mode === 'income' && amt <= 0) continue;
 
+    const idx = monthIndex.get(r.month);
+    if (idx === undefined) continue;
+
     let acc = byCat.get(r.category_id);
     if (!acc) {
       acc = {
@@ -90,8 +93,7 @@ export function buildComparison(
       };
       byCat.set(r.category_id, acc);
     }
-    const idx = monthIndex.get(r.month);
-    if (idx !== undefined) acc.spark[idx] += Math.abs(amt);
+    acc.spark[idx] += Math.abs(amt);
   }
 
   const out: ComparatifRow[] = [];

@@ -90,7 +90,7 @@ export function ComparatifMensuelSection({ currency, accountId }: Props): JSX.El
   }
 
   const prevMonth = months[months.indexOf(currentMonth) - 1] ?? months[months.length - 2];
-  const hasError = reportQ.isError || categoriesQ.isError;
+  const hasError = reportQ.isError;
 
   return (
     <section>
