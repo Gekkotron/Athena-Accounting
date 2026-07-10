@@ -167,7 +167,6 @@ export function Dashboard(): JSX.Element {
       {currencies.length > 0 && (
         <SankeySection range={range} currency={chartCurrency} />
       )}
-
     </div>
   );
 }

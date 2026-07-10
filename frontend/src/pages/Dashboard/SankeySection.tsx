@@ -16,7 +16,7 @@ export function SankeySection({ range, currency }: Props): JSX.Element {
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
   const reportQ = useQuery({
-    queryKey: ['reports', 'categories', { fromDate }],
+    queryKey: ['reports', 'categories', { fromDate: fromDate ?? 'all', accountId: 'all' }],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
         query: fromDate ? { fromDate } : {},
