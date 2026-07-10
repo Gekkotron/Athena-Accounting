@@ -71,4 +71,23 @@ describe('buildSankeyModel', () => {
     const right = m.totalExpense + m.savings;
     expect(left).toBe(right);
   });
+
+  it('excludes groups that net <= 0 (e.g., expense categories dominated by refunds)', () => {
+    // Two expense roots: one positive (included), one that nets negative (excluded)
+    const cats = [
+      cat(1, 'Courses', 'expense'),
+      cat(2, 'Remboursements', 'expense'),
+    ];
+    const rows = [
+      row(1, 'expense', '-500.00'),  // Courses: 500 (positive, included)
+      row(2, 'expense', '-100.00'),  // Remboursements charges: 100
+      row(2, 'expense', '300.00'),   // Remboursements refunds: -300 (net: -200, excluded)
+    ];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    // Only Courses should appear in expenseNodes
+    expect(m.expenseNodes).toHaveLength(1);
+    expect(m.expenseNodes[0]).toMatchObject({ label: 'Courses', amount: 500 });
+    // totalExpense should only count the positive group
+    expect(m.totalExpense).toBe(500);
+  });
 });

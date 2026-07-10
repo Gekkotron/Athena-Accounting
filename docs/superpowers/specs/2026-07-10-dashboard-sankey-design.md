@@ -67,6 +67,10 @@ Edge cases:
 
 - **No income in range:** the pool would be 0 and cannot render meaningfully →
   show an empty-state message ("Pas de revenus sur la période").
+- **Categories with net amount ≤ 0:** Excluded from the diagram and totals.
+  A Sankey ribbon cannot have negative width, so expense groups that net to zero
+  or negative over the period (e.g. categories dominated by refunds) are
+  intentionally filtered out. This is a characterization, not a bug.
 - Expense totals are stored negative → negate to positive for display, same as
   the budget report.
 - Internal transfers already excluded server-side; guard again client-side.

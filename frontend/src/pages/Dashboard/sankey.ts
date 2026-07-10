@@ -39,6 +39,9 @@ function bucketToNodes(
   topN: number,
   keyPrefix: string,
 ): SankeyNode[] {
+  // Exclude groups with net amount <= 0: a Sankey ribbon cannot have negative width,
+  // so categories that net to zero or negative over the period (e.g. expense groups
+  // dominated by refunds) are intentionally excluded from both the node list and totals.
   const sorted = [...groups.values()].filter((g) => g.amount > 0).sort((a, b) => b.amount - a.amount);
   const head = sorted.slice(0, topN);
   const tail = sorted.slice(topN);
