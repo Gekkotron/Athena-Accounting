@@ -4,7 +4,6 @@ import {
   recentMonthKeys,
   buildComparison,
   deltaTone,
-  type ComparatifRow,
 } from '../helpers';
 import type { CategoryReportRow } from '../../../api/types';
 
