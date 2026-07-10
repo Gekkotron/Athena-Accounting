@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from './api/client';
 import type { User } from './api/types';
 import { Layout } from './components/Layout';
+import { HubLayout, type HubTab } from './components/HubLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
@@ -14,6 +15,24 @@ import { Accounts } from './pages/Accounts';
 import { Imports } from './pages/Imports';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
+
+const RULES_TABS: HubTab[] = [
+  { to: '/regles/tri', label: 'Tri' },
+  { to: '/regles/liste', label: 'Règles' },
+  { to: '/regles/categories', label: 'Catégories' },
+];
+
+const COMPTES_TABS: HubTab[] = [
+  { to: '/comptes', label: 'Comptes', end: true },
+  { to: '/comptes/motifs', label: 'Motifs de fichier' },
+];
+
+const DONNEES_TABS: HubTab[] = [
+  { to: '/donnees/imports', label: 'Imports' },
+  { to: '/donnees/doublons', label: 'Doublons' },
+  { to: '/donnees/modeles', label: 'Modèles PDF' },
+  { to: '/donnees/sauvegarde', label: 'Sauvegarde' },
+];
 
 export default function App() {
   const location = useLocation();
@@ -58,14 +77,41 @@ export default function App() {
       <Route element={<Layout user={user} />}>
         <Route index element={<Dashboard />} />
         <Route path="/transactions" element={<Transactions />} />
-        <Route path="/tri" element={<Tri />} />
-        <Route path="/categories" element={<Categories />} />
         <Route path="/budgets" element={<Budgets />} />
-        <Route path="/rules" element={<Rules />} />
-        <Route path="/accounts" element={<Accounts />} />
-        <Route path="/imports" element={<Imports />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
+
+        {/* Règles hub */}
+        <Route path="/regles" element={<HubLayout title="Règles" tabs={RULES_TABS} />}>
+          <Route index element={<Navigate to="tri" replace />} />
+          <Route path="tri" element={<Tri />} />
+          <Route path="liste" element={<Rules />} />
+          <Route path="categories" element={<Categories />} />
+        </Route>
+
+        {/* Comptes hub */}
+        <Route path="/comptes" element={<HubLayout title="Comptes" tabs={COMPTES_TABS} />}>
+          <Route index element={<Accounts />} />
+          {/* motifs added in Task 7 */}
+        </Route>
+
+        {/* Données hub */}
+        <Route path="/donnees" element={<HubLayout title="Données" tabs={DONNEES_TABS} />}>
+          <Route index element={<Navigate to="imports" replace />} />
+          <Route path="imports" element={<Imports />} />
+          {/* doublons/modeles/sauvegarde added in Task 6 */}
+        </Route>
+
+        <Route path="/profil" element={<Profile />} />
+        <Route path="/reglages" element={<Settings />} />
+
+        {/* Legacy redirects */}
+        <Route path="/tri" element={<Navigate to="/regles/tri" replace />} />
+        <Route path="/rules" element={<Navigate to="/regles/liste" replace />} />
+        <Route path="/categories" element={<Navigate to="/regles/categories" replace />} />
+        <Route path="/accounts" element={<Navigate to="/comptes" replace />} />
+        <Route path="/imports" element={<Navigate to="/donnees/imports" replace />} />
+        <Route path="/settings" element={<Navigate to="/reglages" replace />} />
+        <Route path="/profile" element={<Navigate to="/profil" replace />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
