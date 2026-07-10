@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Tri } from '../Tri';
 
-vi.mock('../../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
+vi.mock('../../../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
   return { ...actual, api: vi.fn() };
 });
-import { api } from '../../api/client';
+import { api } from '../../../api/client';
 const apiMock = vi.mocked(api);
 
 const group = (label: string, count: number, category_id: number | null = null) => ({

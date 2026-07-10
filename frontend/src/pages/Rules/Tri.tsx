@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api/client';
-import type { Category, TriGroup } from '../api/types';
-import { formatAmount, formatDate, amountSignClass } from '../lib/format';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { api } from '../../api/client';
+import type { Category, TriGroup } from '../../api/types';
+import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function Tri() {
   const qc = useQueryClient();
