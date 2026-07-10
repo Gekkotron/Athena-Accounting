@@ -132,9 +132,12 @@ describe('layoutSankey', () => {
     for (const l of links) { expect(l.width).toBeGreaterThan(0); expect(l.path).toMatch(/^M/); }
   });
 
-  it('conserves height: left node heights sum ~= right node heights sum', () => {
-    const { nodes } = layoutSankey(model, { width: 600, height: 300, gap: 0, minNodeHeight: 0 });
+  it('conserves height: left node heights sum ~= right node heights sum, even with unequal column node counts', () => {
+    const { nodes } = layoutSankey(model, { width: 600, height: 300 });
     const sum = (col: string) => nodes.filter((n) => n.column === col).reduce((s, n) => s + n.h, 0);
-    expect(Math.abs(sum('left') - sum('right'))).toBeLessThan(0.5);
+    expect(nodes.filter((n) => n.column === 'left')).toHaveLength(1);
+    expect(nodes.filter((n) => n.column === 'right')).toHaveLength(2);
+    expect(Math.abs(sum('left') - sum('right'))).toBeLessThanOrEqual(1);
+    for (const n of nodes) expect(n.h).toBeGreaterThanOrEqual(0);
   });
 });

@@ -136,10 +136,9 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   }
 
   const grandTotal = leftNodes.reduce((s, n) => s + n.amount, 0) || 1;
-  const scale = (col: SankeyNode[]) => {
-    const gaps = Math.max(0, col.length - 1) * gap;
-    return (height - gaps) / grandTotal;
-  };
+  const maxNodes = Math.max(leftNodes.length, rightNodes.length);
+  const gapBudget = Math.max(0, maxNodes - 1) * gap;
+  const pxPerUnit = (height - gapBudget) / grandTotal;
 
   const stack = (col: SankeyNode[], x: number, column: LaidOutNode['column'], pxPerUnit: number): LaidOutNode[] => {
     const out: LaidOutNode[] = [];
@@ -152,10 +151,8 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
     return out;
   };
 
-  const leftScale = scale(leftNodes);
-  const rightScale = scale(rightNodes);
-  const left = stack(leftNodes, 0, 'left', leftScale);
-  const right = stack(rightNodes, width - nodeWidth, 'right', rightScale);
+  const left = stack(leftNodes, 0, 'left', pxPerUnit);
+  const right = stack(rightNodes, width - nodeWidth, 'right', pxPerUnit);
 
   // Center pool spans the full height (its amount == grandTotal).
   const pool: LaidOutNode = {
