@@ -259,6 +259,37 @@ describe.skipIf(!RUN)('/api/reports', () => {
     expect(row.over).toBe(false);
   });
 
+  it('GET /api/reports/budget rolls up child spending into a parent budget', async () => {
+    // Create Courses (parent) + Alimentation (child) + an expense on each.
+    const parent = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Courses', kind: 'expense' },
+    });
+    const parentId = parent.json().category.id;
+    const child = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Alimentation', kind: 'expense', parentId },
+    });
+    const childId = child.json().category.id;
+
+    await makeTx({ accountId: accountEURId, date: '2026-06-15', amount: '-50.00', rawLabel: 'p', categoryId: parentId });
+    await makeTx({ accountId: accountEURId, date: '2026-06-15', amount: '-30.00', rawLabel: 'c', categoryId: childId });
+
+    await app.inject({
+      method: 'POST', url: '/api/budgets', headers: { cookie },
+      payload: { categoryId: parentId, monthlyLimit: '100.00' },
+    });
+
+    const res = await app.inject({
+      method: 'GET', url: '/api/reports/budget?month=2026-06', headers: { cookie },
+    });
+    expect(res.statusCode).toBe(200);
+    const row = res.json().rows.find((r: { categoryId: number }) => r.categoryId === parentId);
+    expect(row.spent).toBe('80.00');
+    expect(row.over).toBe(false);
+    expect(row.pct).toBe(80);
+  });
+
   it('GET /api/reports/budget rejects a malformed month with 400', async () => {
     const res = await app.inject({
       method: 'GET', url: '/api/reports/budget?month=2025-3', headers: { cookie },

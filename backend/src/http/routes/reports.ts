@@ -221,6 +221,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   // per split-category and internal transfers are excluded. Only categories
   // that have a budget row appear. spent = -SUM(amount) (expenses are stored
   // negative); a budgeted category with no spend that month returns "0.00".
+  // Parent budgets roll up own + direct children (depth cap = 2).
   app.get('/api/reports/budget', async (req, reply) => {
     const uid = userId(req);
     const parsed = BudgetQuery.safeParse(req.query);
@@ -248,7 +249,13 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       FROM category_budgets b
       JOIN categories c ON c.id = b.category_id AND c.user_id = ${uid}
       LEFT JOIN tx_effective e
-        ON e.category_id = b.category_id
+        ON (
+          e.category_id = b.category_id
+          OR e.category_id IN (
+            SELECT cc.id FROM categories cc
+            WHERE cc.parent_id = b.category_id AND cc.user_id = ${uid}
+          )
+        )
        AND e.user_id = ${uid}
        AND e.transfer_group_id IS NULL
        AND to_char(date_trunc('month', e.date::timestamp), 'YYYY-MM') = ${month}
