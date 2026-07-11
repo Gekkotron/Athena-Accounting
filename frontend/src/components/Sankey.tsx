@@ -196,7 +196,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
                 />
                 <text
                   x={labelX}
-                  y={n.y + n.h / 2 - 1}
+                  y={n.y + n.h / 2 - 2}
                   textAnchor={anchor}
                   dominantBaseline="text-after-edge"
                   className="fill-ink-100 text-[11px]"
@@ -205,7 +205,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
                 </text>
                 <text
                   x={labelX}
-                  y={n.y + n.h / 2 + 3}
+                  y={n.y + n.h / 2 + 2}
                   textAnchor={anchor}
                   dominantBaseline="text-before-edge"
                   className={`text-[11px] tabular-nums ${

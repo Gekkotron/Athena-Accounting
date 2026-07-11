@@ -186,7 +186,7 @@ describe('layoutSankey', () => {
     const layout = layoutSankey(m, { width: 720, height: 360 });
     for (const n of layout.nodes) {
       if (n.key === 'pool') continue;
-      expect(n.h).toBeGreaterThanOrEqual(24);
+      expect(n.h).toBeGreaterThanOrEqual(28);
     }
   });
 
