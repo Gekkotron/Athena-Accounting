@@ -127,6 +127,15 @@ export function Budgets(): JSX.Element {
     });
   };
 
+  const handleSave = (id: number, limit: string) => update.mutate({ id, monthlyLimit: limit }, {
+    onSuccess: () => setMutationError(null),
+    onError: (err) => setMutationError(mutationErrorMessage(err)),
+  });
+  const handleDelete = (id: number) => remove.mutate(id, {
+    onSuccess: () => setMutationError(null),
+    onError: (err) => setMutationError(mutationErrorMessage(err)),
+  });
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-center justify-between">
@@ -175,14 +184,8 @@ export function Budgets(): JSX.Element {
                   row={rootRow}
                   depth={0}
                   budgetId={budgets.find((b) => b.categoryId === r.id)?.id}
-                  onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
-                    onSuccess: () => setMutationError(null),
-                    onError: (err) => setMutationError(mutationErrorMessage(err)),
-                  })}
-                  onDelete={(id) => remove.mutate(id, {
-                    onSuccess: () => setMutationError(null),
-                    onError: (err) => setMutationError(mutationErrorMessage(err)),
-                  })}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
                 />,
               );
             } else {
@@ -202,14 +205,8 @@ export function Budgets(): JSX.Element {
                   row={row}
                   depth={1}
                   budgetId={budgets.find((b) => b.categoryId === c.id)?.id}
-                  onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
-                    onSuccess: () => setMutationError(null),
-                    onError: (err) => setMutationError(mutationErrorMessage(err)),
-                  })}
-                  onDelete={(id) => remove.mutate(id, {
-                    onSuccess: () => setMutationError(null),
-                    onError: (err) => setMutationError(mutationErrorMessage(err)),
-                  })}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
                 />,
               );
             }
@@ -224,14 +221,8 @@ export function Budgets(): JSX.Element {
                 row={r}
                 depth={0}
                 budgetId={budgets.find((b) => b.categoryId === r.categoryId)?.id}
-                onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
-                  onSuccess: () => setMutationError(null),
-                  onError: (err) => setMutationError(mutationErrorMessage(err)),
-                })}
-                onDelete={(id) => remove.mutate(id, {
-                  onSuccess: () => setMutationError(null),
-                  onError: (err) => setMutationError(mutationErrorMessage(err)),
-                })}
+                onSave={handleSave}
+                onDelete={handleDelete}
               />
             ))}
         </ul>
