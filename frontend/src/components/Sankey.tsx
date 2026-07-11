@@ -199,7 +199,9 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
                   y={n.y + n.h / 2 + 3}
                   textAnchor={anchor}
                   dominantBaseline="text-before-edge"
-                  className="fill-ink-500 text-[10px] tabular-nums"
+                  className={`text-[11px] tabular-nums ${
+                    isHi ? 'fill-ink-50' : 'fill-ink-300'
+                  }`}
                 >
                   {formatAmount(n.amount, model.currency)}
                 </text>
