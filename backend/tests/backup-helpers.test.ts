@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeCategoryKind,
-  planCategoryParentLinks,
+  resolveCategoryRef,
   resolveNameToId,
 } from '../src/http/routes/backup/helpers.js';
 import { fileImportKey } from '../src/http/routes/backup/schema.js';
@@ -43,53 +43,56 @@ describe('normalizeCategoryKind', () => {
   });
 });
 
-describe('planCategoryParentLinks', () => {
-  const commonDump = [
-    { name: 'Root',   kind: 'neutral' as const, isDefault: false },
-    { name: 'Child',  kind: 'expense' as const, isDefault: false, parent: 'Root' },
-    { name: 'GChild', kind: 'expense' as const, isDefault: false, parent: 'Child' },
-  ];
+describe('resolveCategoryRef', () => {
+  // Two 'Restaurant' children under two different parents, plus a top-level
+  // 'Restaurant' — the shape that motivated this helper.
+  const byPath = new Map<string, number>([
+    ['::Loisirs', 1],
+    ['::Voyages', 2],
+    ['Loisirs::Restaurant', 3],
+    ['Voyages::Restaurant', 4],
+    ['::Restaurant', 5],
+  ]);
+  const idsByName = new Map<string, number[]>([
+    ['Loisirs', [1]],
+    ['Voyages', [2]],
+    ['Restaurant', [3, 4, 5]],
+  ]);
 
-  it('returns an empty batch when no category has a parent', () => {
-    const dump = [
-      { name: 'A', kind: 'expense' as const, isDefault: false },
-      { name: 'B', kind: 'income'  as const, isDefault: false, parent: null },
-    ];
-    const idByName = new Map([['A', 10], ['B', 20]]);
-    expect(planCategoryParentLinks(dump, idByName)).toEqual([]);
+  it('resolves by (parent, name) path when both are supplied', () => {
+    expect(resolveCategoryRef('Restaurant', 'Loisirs', byPath, idsByName)).toBe(3);
+    expect(resolveCategoryRef('Restaurant', 'Voyages', byPath, idsByName)).toBe(4);
   });
 
-  it('wires each parent when both child and parent are in the id map', () => {
-    const idByName = new Map([['Root', 1], ['Child', 2], ['GChild', 3]]);
-    expect(planCategoryParentLinks(commonDump, idByName)).toEqual([
-      { childId: 2, parentId: 1 },
-      { childId: 3, parentId: 2 },
-    ]);
+  it('resolves a root category when parent is explicitly null', () => {
+    expect(resolveCategoryRef('Loisirs', null, byPath, idsByName)).toBe(1);
   });
 
-  it('skips a category whose parent is not in the id map', () => {
-    const idByName = new Map([['Child', 2]]);   // Root missing
-    expect(planCategoryParentLinks(commonDump, idByName)).toEqual([]);
+  it('falls back to name lookup when the path misses on a v4-shaped ref', () => {
+    expect(resolveCategoryRef('Restaurant', 'Unknown Parent', byPath, idsByName)).toBe(5);
   });
 
-  it('skips a category that is not itself in the id map', () => {
-    // Root and GChild present, Child missing — GChild's parent (Child) is
-    // absent, so no link for it either.
-    const idByName = new Map([['Root', 1], ['GChild', 3]]);
-    expect(planCategoryParentLinks(commonDump, idByName)).toEqual([]);
+  it('resolves by name only (v3 dump, parent undefined) when the name is unambiguous', () => {
+    expect(resolveCategoryRef('Loisirs', undefined, byPath, idsByName)).toBe(1);
   });
 
-  it('preserves dump order in the emitted batch', () => {
-    const orderedDump = [
-      { name: 'C1', kind: 'expense' as const, isDefault: false, parent: 'Root' },
-      { name: 'Root', kind: 'neutral' as const, isDefault: false },
-      { name: 'C2', kind: 'expense' as const, isDefault: false, parent: 'Root' },
-    ];
-    const idByName = new Map([['Root', 100], ['C1', 101], ['C2', 102]]);
-    expect(planCategoryParentLinks(orderedDump, idByName)).toEqual([
-      { childId: 101, parentId: 100 },
-      { childId: 102, parentId: 100 },
-    ]);
+  it('prefers the top-level match when a name-only lookup is ambiguous', () => {
+    expect(resolveCategoryRef('Restaurant', undefined, byPath, idsByName)).toBe(5);
+  });
+
+  it('falls back to the first-inserted candidate when ambiguous with no top-level match', () => {
+    const noRootIdsByName = new Map([['Restaurant', [3, 4]]]);
+    const noRootByPath = new Map([['Loisirs::Restaurant', 3], ['Voyages::Restaurant', 4]]);
+    expect(resolveCategoryRef('Restaurant', undefined, noRootByPath, noRootIdsByName)).toBe(3);
+  });
+
+  it('returns null when the name is unresolvable', () => {
+    expect(resolveCategoryRef('Missing', undefined, byPath, idsByName)).toBeNull();
+  });
+
+  it('returns null when name is null or undefined', () => {
+    expect(resolveCategoryRef(null, undefined, byPath, idsByName)).toBeNull();
+    expect(resolveCategoryRef(undefined, undefined, byPath, idsByName)).toBeNull();
   });
 });
 

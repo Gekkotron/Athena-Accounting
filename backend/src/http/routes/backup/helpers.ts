@@ -27,27 +27,30 @@ export function normalizeCategoryKind(
   return kind === 'transfer' ? 'neutral' : kind;
 }
 
-// Second-pass parent-linking for the category tree. First pass inserts every
-// category flat (parent=null). This pass returns the update batch that wires
-// parent references, computed purely from the dump's natural keys plus the
-// name→id map the first pass produced.
-//
-// Categories whose parent name is missing (self-orphans, references to
-// categories that failed to insert) are silently skipped — the parent stays
-// null. That's intentional: a category with a broken parent is still a
-// usable category, just top-level.
-export function planCategoryParentLinks(
-  dumpCategories: BackupDump['categories'],
-  idByName: Map<string, number>,
-): Array<{ childId: number; parentId: number }> {
-  const links: Array<{ childId: number; parentId: number }> = [];
-  for (const c of dumpCategories) {
-    if (!c.parent) continue;
-    const childId = idByName.get(c.name);
-    const parentId = idByName.get(c.parent);
-    if (childId && parentId) {
-      links.push({ childId, parentId });
-    }
+// Resolve a downstream category reference from a restored dump.
+//   - v4 dumps carry (name, categoryParent) → look up by path.
+//   - v3 and older dumps carry only (name) → fall back to name-only,
+//     preferring the top-level match when the leaf name is ambiguous.
+export function resolveCategoryRef(
+  name: string | null | undefined,
+  parentName: string | null | undefined,
+  byPath: Map<string, number>,
+  idsByName: Map<string, number[]>,
+): number | null {
+  if (name == null) return null;
+  if (parentName !== undefined) {
+    // v4 signal is present (even if parentName is null → root); prefer path lookup.
+    const key = `${parentName ?? ''}::${name}`;
+    const hit = byPath.get(key);
+    if (hit != null) return hit;
+    // Path miss on a v4 dump: fall through to name lookup as a last resort.
   }
-  return links;
+  const candidates = idsByName.get(name) ?? [];
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0]!;
+  // Ambiguous: prefer a top-level candidate (byPath key `::name`).
+  const topLevel = byPath.get(`::${name}`);
+  if (topLevel != null && candidates.includes(topLevel)) return topLevel;
+  // No top-level, none preferred: deterministic first-inserted.
+  return candidates[0]!;
 }

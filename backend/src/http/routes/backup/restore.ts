@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import {
   accounts,
@@ -17,7 +17,7 @@ import { userId } from '../../plugins/auth.js';
 import { BackupBody, fileImportKey } from './schema.js';
 import {
   normalizeCategoryKind,
-  planCategoryParentLinks,
+  resolveCategoryRef,
   resolveNameToId,
 } from './helpers.js';
 
@@ -76,9 +76,16 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         if (inserted) accountIdByName.set(a.name, inserted.id);
       }
 
-      const categoryIdByName = new Map<string, number>();
+      // Category ids: keyed by path so same-name-under-different-parents doesn't collide.
+      // Also keep a name→ids[] map for backward-compat resolution of v3 downstream refs.
+      const categoryIdByPath = new Map<string, number>();
+      const categoryIdsByName = new Map<string, number[]>();
       let defaultId: number | null = null;
-      for (const c of dump.categories) {
+
+      const rootRows = dump.categories.filter((c) => !c.parent);
+      const childRows = dump.categories.filter((c) => !!c.parent);
+
+      for (const c of rootRows) {
         const [inserted] = await tx
           .insert(categories)
           .values({
@@ -92,16 +99,42 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           })
           .returning({ id: categories.id });
         if (inserted) {
-          categoryIdByName.set(c.name, inserted.id);
+          categoryIdByPath.set(`::${c.name}`, inserted.id);
+          const arr = categoryIdsByName.get(c.name) ?? [];
+          arr.push(inserted.id);
+          categoryIdsByName.set(c.name, arr);
           if (c.isDefault) defaultId = inserted.id;
         }
       }
-      for (const link of planCategoryParentLinks(dump.categories, categoryIdByName)) {
-        await tx
-          .update(categories)
-          .set({ parentId: link.parentId })
-          .where(and(eq(categories.id, link.childId), eq(categories.userId, uid)));
+
+      for (const c of childRows) {
+        const parentId = categoryIdByPath.get(`::${c.parent!}`);
+        if (parentId == null) {
+          // Parent didn't restore (self-orphan or missing) — skip this child;
+          // its downstream refs will fall through to the name-only fallback.
+          continue;
+        }
+        const [inserted] = await tx
+          .insert(categories)
+          .values({
+            userId: uid,
+            name: c.name,
+            kind: normalizeCategoryKind(c.kind),
+            color: c.color ?? null,
+            parentId,
+            isDefault: c.isDefault,
+            isInternalTransfer: c.isInternalTransfer ?? false,
+          })
+          .returning({ id: categories.id });
+        if (inserted) {
+          categoryIdByPath.set(`${c.parent!}::${c.name}`, inserted.id);
+          const arr = categoryIdsByName.get(c.name) ?? [];
+          arr.push(inserted.id);
+          categoryIdsByName.set(c.name, arr);
+          if (c.isDefault) defaultId = inserted.id;
+        }
       }
+
       // Seed Divers if the dump didn't bring its own default.
       if (defaultId === null) {
         const [inserted] = await tx
@@ -110,7 +143,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           .returning({ id: categories.id });
         if (inserted) {
           defaultId = inserted.id;
-          categoryIdByName.set('Divers', inserted.id);
+          categoryIdByPath.set('::Divers', inserted.id);
+          categoryIdsByName.set('Divers', [inserted.id]);
         }
       }
 
@@ -127,7 +161,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
       let rulesInserted = 0;
       for (const r of dump.rules) {
-        const catId = resolveNameToId(r.category, categoryIdByName);
+        const catId = resolveCategoryRef(r.category, r.categoryParent, categoryIdByPath, categoryIdsByName);
         if (catId === null) continue;
         await tx.insert(rules).values({
           userId: uid,
@@ -172,7 +206,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
 
       let budgetsInserted = 0;
       for (const b of dump.budgets ?? []) {
-        const catId = resolveNameToId(b.category, categoryIdByName);
+        const catId = resolveCategoryRef(b.category, b.categoryParent, categoryIdByPath, categoryIdsByName);
         if (catId === null) continue;
         await tx.insert(categoryBudgets).values({
           userId: uid,
@@ -215,7 +249,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       for (const t of dump.transactions) {
         const accId = resolveNameToId(t.account, accountIdByName);
         if (accId === null) continue;
-        const catId = resolveNameToId(t.category, categoryIdByName);
+        const catId = resolveCategoryRef(t.category, t.categoryParent, categoryIdByPath, categoryIdsByName);
         const srcId = resolveNameToId(t.sourceFileKey, fileImportIdByKey);
         const [insertedTx] = await tx.insert(transactions).values({
           userId: uid,
@@ -244,7 +278,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         if (insertedTx && t.splits && t.splits.length > 0) {
           const rows = t.splits.map((s) => ({
             transactionId: insertedTx.id,
-            categoryId: resolveNameToId(s.category, categoryIdByName),
+            categoryId: resolveCategoryRef(s.category, s.categoryParent, categoryIdByPath, categoryIdsByName),
             amount: s.amount,
             memo: s.memo ?? null,
           }));
@@ -255,7 +289,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       return {
         imported: {
           accounts: accountIdByName.size,
-          categories: categoryIdByName.size,
+          categories: categoryIdByPath.size,
           accountFilenamePatterns: dump.accountFilenamePatterns.length,
           rules: rulesInserted,
           transferRules: transferRulesInserted,

@@ -237,6 +237,76 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(budgets[0].monthlyLimit).toBe('150.00');
     });
 
+    it('round-trips a dump with same-name children under two different parents', async () => {
+      // First: export the current empty user's dump so we have a valid v3+
+      // envelope to base the test payload on.
+      const dump = {
+        version: 4,
+        accounts: [{ name: 'Cur', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2026-01-01' }],
+        categories: [
+          { name: 'Loisirs', kind: 'expense', parent: null, isDefault: false, isInternalTransfer: false },
+          { name: 'Voyages', kind: 'expense', parent: null, isDefault: false, isInternalTransfer: false },
+          { name: 'Restaurant', kind: 'expense', parent: 'Loisirs', isDefault: false, isInternalTransfer: false },
+          { name: 'Restaurant', kind: 'expense', parent: 'Voyages', isDefault: false, isInternalTransfer: false },
+        ],
+        accountFilenamePatterns: [],
+        rules: [],
+        transactions: [
+          { account: 'Cur', date: '2026-06-01', amount: '-20.00', rawLabel: 'r1', normalizedLabel: 'r1',
+            dedupKey: 'k1', category: 'Restaurant', categoryParent: 'Loisirs', categorySource: 'manual' },
+          { account: 'Cur', date: '2026-06-02', amount: '-30.00', rawLabel: 'r2', normalizedLabel: 'r2',
+            dedupKey: 'k2', category: 'Restaurant', categoryParent: 'Voyages', categorySource: 'manual' },
+        ],
+      };
+      const res = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: dump,
+      });
+      expect(res.statusCode).toBe(200);
+
+      // Both categories persisted, correctly parented.
+      const cats = await app.inject({ method: 'GET', url: '/api/categories', headers: { cookie } });
+      const catList = cats.json().categories as Array<{ id: number; name: string; parentId: number | null }>;
+      const loisirsId = catList.find((c) => c.name === 'Loisirs')!.id;
+      const voyagesId = catList.find((c) => c.name === 'Voyages')!.id;
+      const restaurantIds = catList.filter((c) => c.name === 'Restaurant');
+      expect(restaurantIds).toHaveLength(2);
+      expect(restaurantIds.some((c) => c.parentId === loisirsId)).toBe(true);
+      expect(restaurantIds.some((c) => c.parentId === voyagesId)).toBe(true);
+
+      // Each transaction landed on the correct child (not collapsed).
+      const txs = await app.inject({ method: 'GET', url: '/api/transactions', headers: { cookie } });
+      const txList = txs.json().transactions as Array<{ amount: string; categoryId: number | null }>;
+      const restaurantLoisirs = restaurantIds.find((c) => c.parentId === loisirsId)!.id;
+      const restaurantVoyages = restaurantIds.find((c) => c.parentId === voyagesId)!.id;
+      expect(txList.find((t) => t.amount === '-20.00')!.categoryId).toBe(restaurantLoisirs);
+      expect(txList.find((t) => t.amount === '-30.00')!.categoryId).toBe(restaurantVoyages);
+    });
+
+    it('still restores a v3 dump (backward compatibility) where refs use name only', async () => {
+      const dump = {
+        version: 3,
+        accounts: [{ name: 'Cur', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2026-01-01' }],
+        categories: [
+          { name: 'Loisirs', kind: 'expense', parent: null, isDefault: false, isInternalTransfer: false },
+          { name: 'Restaurant', kind: 'expense', parent: 'Loisirs', isDefault: false, isInternalTransfer: false },
+        ],
+        accountFilenamePatterns: [],
+        rules: [],
+        transactions: [
+          { account: 'Cur', date: '2026-06-01', amount: '-20.00', rawLabel: 'r1', normalizedLabel: 'r1',
+            dedupKey: 'k1', category: 'Restaurant', categorySource: 'manual' },
+        ],
+      };
+      const res = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: dump,
+      });
+      expect(res.statusCode).toBe(200);
+      const txs = await app.inject({ method: 'GET', url: '/api/transactions', headers: { cookie } });
+      const t = (txs.json().transactions as Array<{ amount: string; categoryId: number | null }>)
+        .find((t) => t.amount === '-20.00')!;
+      expect(t.categoryId).not.toBeNull(); // resolved to the sole "Restaurant"
+    });
+
     it('coerces legacy kind=transfer categories to neutral', async () => {
       // Craft a minimal legacy-shaped dump: single category with kind:'transfer'.
       const payload = {

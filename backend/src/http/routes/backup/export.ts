@@ -45,6 +45,15 @@ export function registerExportRoute(app: FastifyInstance): void {
     const accountById = new Map(accs.map((a) => [a.id, a]));
     const categoryById = new Map(cats.map((c) => [c.id, c]));
     const fileImportById = new Map(fimps.map((f) => [f.id, f]));
+
+    // Disambiguates same-name sub-categories under different parents in the
+    // downstream refs below (rules/transactions/splits/budgets).
+    function categoryParentName(catId: number | null): string | null {
+      if (catId == null) return null;
+      const c = categoryById.get(catId);
+      if (!c || c.parentId == null) return null;
+      return categoryById.get(c.parentId)?.name ?? null;
+    }
     const splitsByTx = new Map<number, Array<typeof splits[number]>>();
     for (const s of splits) {
       const arr = splitsByTx.get(s.transactionId) ?? [];
@@ -91,6 +100,7 @@ export function registerExportRoute(app: FastifyInstance): void {
       rules: rls.map((r) => ({
         keyword: r.keyword,
         category: categoryById.get(r.categoryId)?.name ?? null,
+        categoryParent: categoryParentName(r.categoryId),
         signConstraint: r.signConstraint,
         matchMode: r.matchMode,
         priority: r.priority,
@@ -110,6 +120,7 @@ export function registerExportRoute(app: FastifyInstance): void {
           fitid: t.fitid,
           dedupKey: t.dedupKey,
           category: t.categoryId ? categoryById.get(t.categoryId)?.name ?? null : null,
+          categoryParent: categoryParentName(t.categoryId),
           categorySource: t.categorySource,
           transferGroupId: t.transferGroupId,
           sourceFileKey: src ? fileImportKey(src.filename, src.importedAt.toISOString()) : null,
@@ -117,6 +128,7 @@ export function registerExportRoute(app: FastifyInstance): void {
           lockYears: t.lockYears,
           splits: rows.length === 0 ? undefined : rows.map((s) => ({
             category: s.categoryId ? categoryById.get(s.categoryId)?.name ?? null : null,
+            categoryParent: categoryParentName(s.categoryId),
             amount: s.amount,
             memo: s.memo,
           })),
@@ -141,6 +153,7 @@ export function registerExportRoute(app: FastifyInstance): void {
       })),
       budgets: budgets.map((b) => ({
         category: categoryById.get(b.categoryId)?.name ?? null,
+        categoryParent: categoryParentName(b.categoryId),
         monthlyLimit: b.monthlyLimit,
         currency: b.currency,
       })),

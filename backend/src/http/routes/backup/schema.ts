@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Versioned envelope. Bump `version` when the shape changes in a non-additive
 // way — the importer refuses unknown versions outright.
-export const VERSION = 3;
+export const VERSION = 4;
 
 const categoryKind = z.enum(['expense', 'income', 'transfer', 'neutral']);
 const signConstraint = z.enum(['positive', 'negative', 'any']);
@@ -11,7 +11,7 @@ const categorySource = z.enum(['manual', 'auto', 'default', 'llm']);
 const transferDirection = z.enum(['outgoing', 'incoming']);
 
 export const BackupBody = z.object({
-  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   accounts: z.array(
     z.object({
       name: z.string(),
@@ -53,6 +53,10 @@ export const BackupBody = z.object({
     z.object({
       keyword: z.string(),
       category: z.string().nullable(),
+      // Disambiguates same-name sub-categories under different parents
+      // (migration 0019's unique index scopes on parent). Absent on v3 and
+      // older dumps; null means "root category" on v4+ dumps.
+      categoryParent: z.string().nullable().optional(),
       signConstraint,
       matchMode,
       priority: z.number().int(),
@@ -93,6 +97,8 @@ export const BackupBody = z.object({
       fitid: z.string().nullable().optional(),
       dedupKey: z.string(),
       category: z.string().nullable().optional(),
+      // See `rules[].categoryParent` above.
+      categoryParent: z.string().nullable().optional(),
       categorySource,
       transferGroupId: z.string().nullable().optional(),
       // Natural-key reference to a fileImports row in the same backup.
@@ -109,6 +115,8 @@ export const BackupBody = z.object({
       splits: z.array(
         z.object({
           category: z.string().nullable(),
+          // See `rules[].categoryParent` above.
+          categoryParent: z.string().nullable().optional(),
           amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
           memo: z.string().nullable().optional(),
         }),
@@ -136,6 +144,8 @@ export const BackupBody = z.object({
   budgets: z.array(
     z.object({
       category: z.string().nullable(),
+      // See `rules[].categoryParent` above.
+      categoryParent: z.string().nullable().optional(),
       monthlyLimit: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((s) => Number(s) > 0, 'must be greater than 0'),
       currency: z.string(),
     }),
