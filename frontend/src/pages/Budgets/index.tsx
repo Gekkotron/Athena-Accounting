@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
-import type { Category } from '../../api/types';
+import type { Category, BudgetReportRow } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
 import { formatAmount } from '../../lib/format';
-import { formatCategoryPath } from '../../lib/categories';
+import { formatCategoryPath, groupCategories } from '../../lib/categories';
 
 function currentMonth(): string {
   const d = new Date();
@@ -30,6 +30,44 @@ function isValidLimit(v: string): boolean {
   return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
 }
 
+// The server-side `totals.spent` is a naive sum across all budgeted rows. When
+// a user budgets both a parent AND one of its children, the parent's `spent`
+// already rolls up the child's spend (Task 3), so summing both double-counts
+// it. Rebuild the total client-side: for each visible root, count the root's
+// own (rolled-up) spent if it has a budget, otherwise fall back to summing its
+// budgeted children individually. Rows that fall outside any visible
+// root/child group (orphan edge case) are added once, unconditionally.
+function correctedSpentTotal(
+  visibleRoots: Category[],
+  rowsByCategory: Map<number, BudgetReportRow>,
+  childrenByParent: Map<number, Category[]>,
+  rows: BudgetReportRow[],
+): number {
+  let sum = 0;
+  const counted = new Set<number>();
+  for (const root of visibleRoots) {
+    const rootRow = rowsByCategory.get(root.id);
+    const children = childrenByParent.get(root.id) ?? [];
+    if (rootRow) {
+      sum += Number(rootRow.spent);
+      counted.add(root.id);
+      for (const c of children) counted.add(c.id);
+    } else {
+      for (const c of children) {
+        const childRow = rowsByCategory.get(c.id);
+        if (childRow) {
+          sum += Number(childRow.spent);
+          counted.add(c.id);
+        }
+      }
+    }
+  }
+  for (const row of rows) {
+    if (!counted.has(row.categoryId)) sum += Number(row.spent);
+  }
+  return sum;
+}
+
 const MUTATION_ERROR_FALLBACK = "Impossible d'enregistrer le budget.";
 
 function mutationErrorMessage(err: unknown): string {
@@ -46,8 +84,27 @@ export function Budgets(): JSX.Element {
     queryKey: ['categories'],
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
+  const cats = categoriesQ.data?.categories ?? [];
+  const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
+  const rowsByCategory = useMemo(
+    () => new Map(rows.map((r) => [r.categoryId, r] as const)),
+    [rows],
+  );
+  const visibleRoots = useMemo(
+    () => roots.filter((r) => {
+      if (rowsByCategory.has(r.id)) return true;
+      const children = childrenByParent.get(r.id) ?? [];
+      return children.some((c) => rowsByCategory.has(c.id));
+    }),
+    [roots, childrenByParent, rowsByCategory],
+  );
+  const correctedSpent = useMemo(
+    () => correctedSpentTotal(visibleRoots, rowsByCategory, childrenByParent, rows),
+    [visibleRoots, rowsByCategory, childrenByParent, rows],
+  );
+
   const budgetedIds = useMemo(() => new Set(budgets.map((b) => b.categoryId)), [budgets]);
-  const allCategories = categoriesQ.data?.categories ?? [];
+  const allCategories = cats;
   const byId = useMemo(
     () => new Map(allCategories.map((c) => [c.id, c] as const)),
     [allCategories],
@@ -96,7 +153,7 @@ export function Budgets(): JSX.Element {
         <div className="surface p-4 flex items-center justify-between text-sm">
           <span className="text-ink-400">Total ce mois-ci</span>
           <span className="tabular-nums private">
-            {formatAmount(report.data.totals.spent)} / {formatAmount(report.data.totals.limit)}
+            {formatAmount(correctedSpent)} / {formatAmount(report.data.totals.limit)}
           </span>
         </div>
       )}
@@ -108,44 +165,75 @@ export function Budgets(): JSX.Element {
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
-          {rows.map((r) => {
-            const pctClamped = Math.min(Math.max(r.pct, 0), 100);
-            return (
-              <li key={r.categoryId} className="surface p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">{r.name}</span>
-                  <span className="text-sm tabular-nums private">
-                    {formatAmount(r.spent, r.currency)} / {formatAmount(r.limit, r.currency)}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-ink-800 overflow-hidden">
-                  <div className={`h-full ${barColor(r.pct, r.over)}`} style={{ width: `${pctClamped}%` }} />
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`text-xs ${r.over ? 'text-clay-300' : 'text-ink-400'}`}>
-                    {r.over ? 'Dépassé de ' : 'Reste '}
-                    <span className="private">
-                      {r.over
-                        ? formatAmount((-Number(r.remaining)).toFixed(2), r.currency)
-                        : formatAmount(r.remaining, r.currency)}
-                    </span>
-                  </span>
-                  <BudgetRowActions
-                    id={budgets.find((b) => b.categoryId === r.categoryId)?.id}
-                    currentLimit={r.limit}
-                    onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
-                      onSuccess: () => setMutationError(null),
-                      onError: (err) => setMutationError(mutationErrorMessage(err)),
-                    })}
-                    onDelete={(id) => remove.mutate(id, {
-                      onSuccess: () => setMutationError(null),
-                      onError: (err) => setMutationError(mutationErrorMessage(err)),
-                    })}
-                  />
-                </div>
-              </li>
-            );
+          {visibleRoots.flatMap((r) => {
+            const rootRow = rowsByCategory.get(r.id);
+            const nodes: JSX.Element[] = [];
+            if (rootRow) {
+              nodes.push(
+                <BudgetLine
+                  key={`root-${r.id}`}
+                  row={rootRow}
+                  depth={0}
+                  budgetId={budgets.find((b) => b.categoryId === r.id)?.id}
+                  onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
+                    onSuccess: () => setMutationError(null),
+                    onError: (err) => setMutationError(mutationErrorMessage(err)),
+                  })}
+                  onDelete={(id) => remove.mutate(id, {
+                    onSuccess: () => setMutationError(null),
+                    onError: (err) => setMutationError(mutationErrorMessage(err)),
+                  })}
+                />,
+              );
+            } else {
+              // Parent has no budget of its own but has budgeted children — slim header.
+              nodes.push(
+                <li key={`header-${r.id}`} data-role="budget-row" data-depth={0} className="px-4 py-2 text-sm text-ink-500">
+                  {r.name}
+                </li>,
+              );
+            }
+            for (const c of childrenByParent.get(r.id) ?? []) {
+              const row = rowsByCategory.get(c.id);
+              if (!row) continue;
+              nodes.push(
+                <BudgetLine
+                  key={`child-${c.id}`}
+                  row={row}
+                  depth={1}
+                  budgetId={budgets.find((b) => b.categoryId === c.id)?.id}
+                  onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
+                    onSuccess: () => setMutationError(null),
+                    onError: (err) => setMutationError(mutationErrorMessage(err)),
+                  })}
+                  onDelete={(id) => remove.mutate(id, {
+                    onSuccess: () => setMutationError(null),
+                    onError: (err) => setMutationError(mutationErrorMessage(err)),
+                  })}
+                />,
+              );
+            }
+            return nodes;
           })}
+          {/* Also render any budgeted category whose parent isn't visible (orphaned leaf edge case). */}
+          {rows
+            .filter((r) => !visibleRoots.some((vr) => vr.id === r.categoryId || (childrenByParent.get(vr.id) ?? []).some((c) => c.id === r.categoryId)))
+            .map((r) => (
+              <BudgetLine
+                key={`orphan-${r.categoryId}`}
+                row={r}
+                depth={0}
+                budgetId={budgets.find((b) => b.categoryId === r.categoryId)?.id}
+                onSave={(id, limit) => update.mutate({ id, monthlyLimit: limit }, {
+                  onSuccess: () => setMutationError(null),
+                  onError: (err) => setMutationError(mutationErrorMessage(err)),
+                })}
+                onDelete={(id) => remove.mutate(id, {
+                  onSuccess: () => setMutationError(null),
+                  onError: (err) => setMutationError(mutationErrorMessage(err)),
+                })}
+              />
+            ))}
         </ul>
       )}
 
@@ -175,6 +263,50 @@ export function Budgets(): JSX.Element {
         )}
       </div>
     </div>
+  );
+}
+
+function BudgetLine(props: {
+  row: BudgetReportRow;
+  depth: 0 | 1;
+  budgetId: number | undefined;
+  onSave: (id: number, limit: string) => void;
+  onDelete: (id: number) => void;
+}): JSX.Element {
+  const { row: r, depth, budgetId, onSave, onDelete } = props;
+  const pctClamped = Math.min(Math.max(r.pct, 0), 100);
+  return (
+    <li
+      data-role="budget-row"
+      data-depth={depth}
+      className={`surface p-4 ${depth === 1 ? 'ml-8 bg-ink-900/20' : ''}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-medium">{r.name}</span>
+        <span className="text-sm tabular-nums private">
+          {formatAmount(r.spent, r.currency)} / {Number(r.limit) > 0 ? formatAmount(r.limit, r.currency) : '—'}
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-ink-800 overflow-hidden">
+        <div className={`h-full ${barColor(r.pct, r.over)}`} style={{ width: `${pctClamped}%` }} />
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <span className={`text-xs ${r.over ? 'text-clay-300' : 'text-ink-400'}`}>
+          {r.over ? 'Dépassé de ' : 'Reste '}
+          <span className="private">
+            {r.over
+              ? formatAmount((-Number(r.remaining)).toFixed(2), r.currency)
+              : formatAmount(r.remaining, r.currency)}
+          </span>
+        </span>
+        <BudgetRowActions
+          id={budgetId}
+          currentLimit={r.limit}
+          onSave={onSave}
+          onDelete={onDelete}
+        />
+      </div>
+    </li>
   );
 }
 

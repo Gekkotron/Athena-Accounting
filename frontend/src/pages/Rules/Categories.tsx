@@ -3,29 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
-import { KIND_LABEL, kindBadgeClass } from '../../lib/categories';
+import { KIND_LABEL, kindBadgeClass, groupCategories } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-
-function groupCategories(cats: Category[]): {
-  roots: Category[];
-  childrenByParent: Map<number, Category[]>;
-} {
-  const roots: Category[] = [];
-  const childrenByParent = new Map<number, Category[]>();
-  for (const c of cats) {
-    if (c.parentId == null) roots.push(c);
-    else {
-      const list = childrenByParent.get(c.parentId) ?? [];
-      list.push(c);
-      childrenByParent.set(c.parentId, list);
-    }
-  }
-  for (const list of childrenByParent.values()) {
-    list.sort((a, b) => a.name.localeCompare(b.name));
-  }
-  return { roots, childrenByParent };
-}
 
 export function Categories() {
   const qc = useQueryClient();

@@ -31,3 +31,26 @@ export function formatCategoryPath(
   const parent = byId.get(cat.parentId);
   return parent ? `${parent.name} › ${cat.name}` : cat.name;
 }
+
+// Splits a flat category list into root categories and a lookup of children
+// keyed by parent id (children sorted alphabetically). Used by pages that
+// render a two-level parent/child grouping (Categories, Budgets).
+export function groupCategories(cats: Category[]): {
+  roots: Category[];
+  childrenByParent: Map<number, Category[]>;
+} {
+  const roots: Category[] = [];
+  const childrenByParent = new Map<number, Category[]>();
+  for (const c of cats) {
+    if (c.parentId == null) roots.push(c);
+    else {
+      const list = childrenByParent.get(c.parentId) ?? [];
+      list.push(c);
+      childrenByParent.set(c.parentId, list);
+    }
+  }
+  for (const list of childrenByParent.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return { roots, childrenByParent };
+}
