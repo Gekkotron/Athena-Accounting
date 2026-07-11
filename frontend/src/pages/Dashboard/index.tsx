@@ -104,12 +104,9 @@ export function Dashboard(): JSX.Element {
         </section>
       )}
 
-      {primary && <MoyennesMensuellesSection currency={primary.currency} />}
-      {primary && <InsightsSection currency={primary.currency} />}
-
       {/* Dashboard filters — account scope drives the balance chart; range
-          drives the balance chart and the donut. Local changes stay in this
-          session only; the persistent defaults live in Réglages. */}
+          drives the balance chart, the donut and the Sankey. Local changes
+          stay in this session only; the persistent defaults live in Réglages. */}
       {currencies.length > 0 && (
         <section className="surface p-4 md:p-5 flex flex-col gap-3">
           <select
@@ -132,6 +129,9 @@ export function Dashboard(): JSX.Element {
           </div>
         </section>
       )}
+
+      {primary && <MoyennesMensuellesSection currency={primary.currency} />}
+      {primary && <InsightsSection currency={primary.currency} />}
 
       {/* Time series */}
       {currencies.length > 0 && (
