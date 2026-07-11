@@ -216,4 +216,156 @@ describe.skipIf(!RUN)('/api/categories', () => {
     const res = await app.inject({ method: 'GET', url: '/api/categories' });
     expect(res.statusCode).toBe(401);
   });
+
+  it('POST rejects a parent that does not exist', async () => {
+    const res = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Enfant', kind: 'expense', parentId: 999999 },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('parent not found');
+  });
+
+  it('POST rejects a grandchild (only 2 levels)', async () => {
+    const p = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Racine', kind: 'expense' },
+    });
+    const c = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Enfant', kind: 'expense', parentId: p.json().category.id },
+    });
+    const gc = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'PetitEnfant', kind: 'expense', parentId: c.json().category.id },
+    });
+    expect(gc.statusCode).toBe(400);
+    expect(gc.json().error).toBe('only 2 levels supported');
+  });
+
+  it('POST coerces child kind to the parent kind', async () => {
+    const p = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Depenses', kind: 'expense' },
+    });
+    const c = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Loyer', kind: 'income', parentId: p.json().category.id },
+    });
+    expect(c.statusCode).toBe(201);
+    expect(c.json().category.kind).toBe('expense');
+  });
+
+  it('PUT rejects self-parent', async () => {
+    const r = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Solo', kind: 'expense' },
+    });
+    const id = r.json().category.id;
+    const res = await app.inject({
+      method: 'PUT', url: `/api/categories/${id}`, headers: { cookie },
+      payload: { parentId: id },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('cannot self-parent');
+  });
+
+  it('PUT rejects nesting a category that has children', async () => {
+    const a = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'A', kind: 'expense' },
+    });
+    const b = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'B', kind: 'expense' },
+    });
+    await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Bchild', kind: 'expense', parentId: b.json().category.id },
+    });
+    // now try to nest B under A — but B already has a child.
+    const res = await app.inject({
+      method: 'PUT', url: `/api/categories/${b.json().category.id}`, headers: { cookie },
+      payload: { parentId: a.json().category.id },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('cannot nest a category that has children');
+  });
+
+  it('PUT coerces kind when parentId is set (protects backup restore)', async () => {
+    const p = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Salaires', kind: 'income' },
+    });
+    const orphan = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'PrimeAnnuelle', kind: 'expense' },
+    });
+    const res = await app.inject({
+      method: 'PUT', url: `/api/categories/${orphan.json().category.id}`, headers: { cookie },
+      payload: { parentId: p.json().category.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().category.kind).toBe('income');
+    expect(res.json().category.parentId).toBe(p.json().category.id);
+  });
+
+  it('PUT cascades kind change on a parent to its children', async () => {
+    const p = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Groupe', kind: 'expense' },
+    });
+    const c1 = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Enf1', kind: 'expense', parentId: p.json().category.id },
+    });
+    const c2 = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Enf2', kind: 'expense', parentId: p.json().category.id },
+    });
+    const res = await app.inject({
+      method: 'PUT', url: `/api/categories/${p.json().category.id}`, headers: { cookie },
+      payload: { kind: 'neutral' },
+    });
+    expect(res.statusCode).toBe(200);
+    const list = await app.inject({ method: 'GET', url: '/api/categories', headers: { cookie } });
+    const byId = new Map<number, { kind: string }>(list.json().categories.map((c: { id: number; kind: string }) => [c.id, c]));
+    expect(byId.get(c1.json().category.id)!.kind).toBe('neutral');
+    expect(byId.get(c2.json().category.id)!.kind).toBe('neutral');
+  });
+
+  it('PUT rejects a bare kind change on a child that would deviate', async () => {
+    const p = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Depenses2', kind: 'expense' },
+    });
+    const c = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Loyer2', kind: 'expense', parentId: p.json().category.id },
+    });
+    const res = await app.inject({
+      method: 'PUT', url: `/api/categories/${c.json().category.id}`, headers: { cookie },
+      payload: { kind: 'income' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('child kind is inherited from parent');
+  });
+
+  it('DELETE parent promotes children to top-level', async () => {
+    const p = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'DoomedParent', kind: 'expense' },
+    });
+    const c = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Survivor', kind: 'expense', parentId: p.json().category.id },
+    });
+    const del = await app.inject({
+      method: 'DELETE', url: `/api/categories/${p.json().category.id}`, headers: { cookie },
+    });
+    expect(del.statusCode).toBe(200);
+    const list = await app.inject({ method: 'GET', url: '/api/categories', headers: { cookie } });
+    const survivor = list.json().categories.find((x: { id: number }) => x.id === c.json().category.id);
+    expect(survivor.parentId).toBe(null);
+  });
 });

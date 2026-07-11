@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { categories } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
@@ -54,8 +54,20 @@ export async function categoriesRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
+    let payload = parsed.data;
+    if (payload.parentId != null) {
+      const [parent] = await db
+        .select()
+        .from(categories)
+        .where(and(eq(categories.id, payload.parentId), eq(categories.userId, uid)));
+      if (!parent) return reply.code(400).send({ error: 'parent not found' });
+      if (parent.parentId != null) {
+        return reply.code(400).send({ error: 'only 2 levels supported' });
+      }
+      payload = { ...payload, kind: parent.kind as z.infer<typeof kindEnum> };
+    }
     try {
-      const [created] = await db.insert(categories).values({ ...parsed.data, userId: uid }).returning();
+      const [created] = await db.insert(categories).values({ ...payload, userId: uid }).returning();
       return reply.code(201).send({ category: created });
     } catch (err) {
       if (isPgError(err) && err.code === '23505') {
@@ -76,12 +88,78 @@ export async function categoriesRoutes(app: FastifyInstance): Promise<void> {
     if (Object.keys(parsed.data).length === 0) {
       return reply.code(400).send({ error: 'no fields to update' });
     }
+
+    const [current] = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.id, id), eq(categories.userId, uid)));
+    if (!current) return reply.code(404).send({ error: 'not found' });
+
+    const touchesParent = Object.prototype.hasOwnProperty.call(parsed.data, 'parentId');
+    let payload = { ...parsed.data };
+
+    if (touchesParent) {
+      const nextParentId = parsed.data.parentId ?? null;
+      if (nextParentId !== null) {
+        if (nextParentId === id) {
+          return reply.code(400).send({ error: 'cannot self-parent' });
+        }
+        // Does this row already have children? If so, nesting it would create a 3-level chain (or cycle).
+        const [child] = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(and(eq(categories.parentId, id), eq(categories.userId, uid)))
+          .limit(1);
+        if (child) {
+          return reply
+            .code(400)
+            .send({ error: 'cannot nest a category that has children' });
+        }
+        const [parent] = await db
+          .select()
+          .from(categories)
+          .where(and(eq(categories.id, nextParentId), eq(categories.userId, uid)));
+        if (!parent) return reply.code(400).send({ error: 'parent not found' });
+        if (parent.parentId != null) {
+          return reply.code(400).send({ error: 'only 2 levels supported' });
+        }
+        payload.kind = parent.kind as z.infer<typeof kindEnum>;
+      }
+    } else if (parsed.data.kind && current.parentId != null) {
+      // Bare kind change on a child. Allowed only if it stays equal to the parent's kind.
+      const [parent] = await db
+        .select({ kind: categories.kind })
+        .from(categories)
+        .where(and(eq(categories.id, current.parentId), eq(categories.userId, uid)));
+      if (parent && parsed.data.kind !== parent.kind) {
+        return reply
+          .code(400)
+          .send({ error: 'child kind is inherited from parent' });
+      }
+    }
+
     try {
-      const [updated] = await db
-        .update(categories)
-        .set(parsed.data)
-        .where(and(eq(categories.id, id), eq(categories.userId, uid)))
-        .returning();
+      const updated = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(categories)
+          .set(payload)
+          .where(and(eq(categories.id, id), eq(categories.userId, uid)))
+          .returning();
+        // If we changed kind on a row that itself has children, cascade to them.
+        if (row && payload.kind && current.parentId == null) {
+          await tx
+            .update(categories)
+            .set({ kind: payload.kind })
+            .where(
+              and(
+                eq(categories.userId, uid),
+                eq(categories.parentId, id),
+                ne(categories.kind, payload.kind),
+              ),
+            );
+        }
+        return row;
+      });
       if (!updated) return reply.code(404).send({ error: 'not found' });
       return { category: updated };
     } catch (err) {
