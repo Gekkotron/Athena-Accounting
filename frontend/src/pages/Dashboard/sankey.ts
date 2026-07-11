@@ -132,10 +132,12 @@ function ribbonPath(
 
 export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyLayout {
   const width = opts.width ?? 640;
-  const height = opts.height ?? 320;
+  const requestedHeight = opts.height ?? 320;
   const nodeWidth = opts.nodeWidth ?? 14;
   const gap = opts.gap ?? 6;
-  const minNodeHeight = opts.minNodeHeight ?? 2;
+  // Room for the two-line label (name + amount) rendered inside each node.
+  // Any smaller and adjacent labels crash into one another on thin ribbons.
+  const minNodeHeight = opts.minNodeHeight ?? 24;
 
   // Left = income sources (+ deficit source); right = expenses (+ savings).
   const leftNodes: SankeyNode[] = [...model.incomeNodes];
@@ -150,34 +152,49 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   const grandTotal = leftNodes.reduce((s, n) => s + n.amount, 0) || 1;
   const leftGapBudget = Math.max(0, leftNodes.length - 1) * gap;
   const rightGapBudget = Math.max(0, rightNodes.length - 1) * gap;
-  // Use the larger gap budget so both columns share the same pxPerUnit —
-  // preserving flow conservation (left node heights sum ≈ right node heights sum).
   const maxGapBudget = Math.max(leftGapBudget, rightGapBudget);
-  const pxPerUnit = (height - maxGapBudget) / grandTotal;
-  // The pool's ribbon face packs contiguously (no gaps between amounts),
-  // so its total span is the "flow height" — smaller than either column's
-  // total stack (which does interleave gaps). Center both vertically.
-  const flowHeight = grandTotal * pxPerUnit;
-  const poolFlowTop = (height - flowHeight) / 2;
+  // Scale factor: how many px per unit of amount at the requested height,
+  // before any min-floor bumps. Large nodes stay proportional; small nodes
+  // may get bumped to `minNodeHeight`, and the layout grows to fit.
+  const pxPerUnit = (requestedHeight - maxGapBudget) / grandTotal;
 
-  const stack = (col: SankeyNode[], x: number, column: LaidOutNode['column'], gapBudget: number): LaidOutNode[] => {
-    const totalStack = col.reduce((s, n) => s + Math.max(minNodeHeight, n.amount * pxPerUnit), 0) + gapBudget;
+  const heightsFor = (nodes: SankeyNode[]) =>
+    nodes.map((n) => Math.max(minNodeHeight, n.amount * pxPerUnit));
+
+  const leftHeights = heightsFor(leftNodes);
+  const rightHeights = heightsFor(rightNodes);
+  const leftStackH = leftHeights.reduce((s, h) => s + h, 0);
+  const rightStackH = rightHeights.reduce((s, h) => s + h, 0);
+  const requiredHeight = Math.max(leftStackH + leftGapBudget, rightStackH + rightGapBudget);
+  // Grow the canvas if the min-floor bumps pushed a column past the
+  // requested height — the SVG viewBox tracks this so the chart just
+  // becomes a bit taller instead of the labels overlapping again.
+  const height = Math.max(requestedHeight, requiredHeight);
+
+  const stack = (col: SankeyNode[], heights: number[], x: number, column: LaidOutNode['column'], gapBudget: number): LaidOutNode[] => {
+    const totalStack = heights.reduce((s, h) => s + h, 0) + gapBudget;
     const yStart = Math.max(0, (height - totalStack) / 2);
     const out: LaidOutNode[] = [];
     let y = yStart;
-    for (const n of col) {
-      const h = Math.max(minNodeHeight, n.amount * pxPerUnit);
+    for (let i = 0; i < col.length; i++) {
+      const n = col[i]!;
+      const h = heights[i]!;
       out.push({ ...n, column, x, y, w: nodeWidth, h });
       y += h + gap;
     }
     return out;
   };
 
-  const left = stack(leftNodes, 0, 'left', leftGapBudget);
-  const right = stack(rightNodes, width - nodeWidth, 'right', rightGapBudget);
+  const left = stack(leftNodes, leftHeights, 0, 'left', leftGapBudget);
+  const right = stack(rightNodes, rightHeights, width - nodeWidth, 'right', rightGapBudget);
 
-  // Center pool: reported height stays `height` for flow-conservation semantics.
-  // Rendering treats the pool as a thin spine over the flow y-range only.
+  // Ribbons pack contiguously on the pool (no per-node gaps on that face),
+  // so each side has its own flow-face height. Center each side's ribbon
+  // stack vertically — if left and right totals differ (min-floor asymmetry),
+  // the spine ends up spanning the union of the two ranges (see Sankey.tsx).
+  const leftPoolFlowTop = (height - leftStackH) / 2;
+  const rightPoolFlowTop = (height - rightStackH) / 2;
+
   const pool: LaidOutNode = {
     key: 'pool', label: 'Revenus', amount: model.totalIncome, color: null, tone: 'category',
     column: 'center', x: (width - nodeWidth) / 2, y: 0, w: nodeWidth, h: height,
@@ -185,11 +202,8 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
 
   const nodes = [...left, pool, ...right];
 
-  // Links: filled ribbons whose top/bottom curves stack contiguously on the
-  // pool's edges (no gaps in the middle) — the visual expansion between the
-  // spread-out column stacks and the tight pool is what makes it a Sankey.
   const links: LaidOutLink[] = [];
-  let leftCursor = poolFlowTop;
+  let leftCursor = leftPoolFlowTop;
   for (const n of left) {
     links.push({
       key: `${n.key}->pool`, sourceKey: n.key, targetKey: 'pool',
@@ -198,7 +212,7 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
     });
     leftCursor += n.h;
   }
-  let rightCursor = poolFlowTop;
+  let rightCursor = rightPoolFlowTop;
   for (const n of right) {
     links.push({
       key: `pool->${n.key}`, sourceKey: 'pool', targetKey: n.key,

@@ -54,13 +54,22 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
     return map;
   }, [layout.nodes]);
 
-  // The pool's visible y-range on screen is the union of ribbon widths on
-  // either side (both sum to `flowHeight`). Recovering it from the links
-  // avoids re-exporting `flowHeight` from the layout.
+  // The pool's visible y-range on screen is the union of the left and right
+  // ribbon stacks. Sizes can differ when min-floor bumps hit one side more
+  // than the other — the spine must cover the union so ribbons never render
+  // past its ends.
   const flowSpan = useMemo(() => {
-    const rightLinks = layout.links.filter((l) => l.sourceKey === 'pool');
-    const flowHeight = rightLinks.reduce((s, l) => s + l.width, 0);
-    return { yTop: (layout.height - flowHeight) / 2, height: flowHeight };
+    const rightHeight = layout.links
+      .filter((l) => l.sourceKey === 'pool')
+      .reduce((s, l) => s + l.width, 0);
+    const leftHeight = layout.links
+      .filter((l) => l.targetKey === 'pool')
+      .reduce((s, l) => s + l.width, 0);
+    const rightTop = (layout.height - rightHeight) / 2;
+    const leftTop = (layout.height - leftHeight) / 2;
+    const yTop = Math.min(rightTop, leftTop);
+    const yBot = Math.max(rightTop + rightHeight, leftTop + leftHeight);
+    return { yTop, height: yBot - yTop };
   }, [layout.links, layout.height]);
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
@@ -107,7 +116,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
       <svg
         role="img"
         aria-label={ariaLabel}
-        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        viewBox={`0 0 ${VIEW_W} ${layout.height}`}
         preserveAspectRatio="xMidYMid meet"
         className="w-full min-w-[520px]"
       >

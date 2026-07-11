@@ -155,10 +155,63 @@ describe('layoutSankey', () => {
       [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')],
       'EUR',
     );
-    const { nodes } = layoutSankey(deficitModel, { width: 600, height: 300 });
-    const pool = nodes.find((n) => n.key === 'pool')!;
+    const layout = layoutSankey(deficitModel, { width: 600, height: 300 });
+    const pool = layout.nodes.find((n) => n.key === 'pool')!;
     expect(pool.amount).toBe(deficitModel.totalIncome);
     expect(pool.amount).not.toBe(deficitModel.totalIncome + deficitModel.deficit);
-    expect(pool.h).toBe(300);
+    // Pool height tracks the layout height (which may have grown to accommodate
+    // the min-floor on tiny nodes — here it stays at the requested 300).
+    expect(pool.h).toBe(layout.height);
+  });
+
+  it('floors every non-pool node height to at least minNodeHeight so labels have room', () => {
+    // Five expense categories, one at 1 % of income → naturally below min-floor.
+    const cats = [
+      cat(1, 'Salaire', 'income'),
+      cat(2, 'Loyer', 'expense'),
+      cat(3, 'Courses', 'expense'),
+      cat(4, 'Transports', 'expense'),
+      cat(5, 'Cadeaux', 'expense'),
+      cat(6, 'Cafés', 'expense'),
+    ];
+    const rows = [
+      row(1, 'income', '10000'),
+      row(2, 'expense', '-5000'),
+      row(3, 'expense', '-3000'),
+      row(4, 'expense', '-1500'),
+      row(5, 'expense', '-400'),
+      row(6, 'expense', '-100'), // ~1 %, would be ~3 px without the floor
+    ];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    const layout = layoutSankey(m, { width: 720, height: 360 });
+    for (const n of layout.nodes) {
+      if (n.key === 'pool') continue;
+      expect(n.h).toBeGreaterThanOrEqual(24);
+    }
+  });
+
+  it('grows layout.height when the min-floor bumps push a column past the requested height', () => {
+    // Six thin expense nodes each get floored to 24 → 6*24 + 5*6 gaps = 174.
+    // Plus the savings node. Requested height is small (100) — layout grows.
+    const cats = [
+      cat(1, 'Salaire', 'income'),
+      ...Array.from({ length: 6 }, (_, i) => cat(2 + i, `Cat${i}`, 'expense' as const)),
+    ];
+    const rows = [
+      row(1, 'income', '10000'),
+      ...Array.from({ length: 6 }, (_, i) => row(2 + i, 'expense' as const, '-100')),
+    ];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    const layout = layoutSankey(m, { width: 720, height: 100 });
+    expect(layout.height).toBeGreaterThan(100);
+  });
+
+  it('keeps layout.height at the requested value when no node needs the floor', () => {
+    // Two chunky nodes on each side, all well above 24 px at requested height.
+    const cats = [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')];
+    const rows = [row(1, 'income', '3000'), row(2, 'expense', '-1000')];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    const layout = layoutSankey(m, { width: 720, height: 360 });
+    expect(layout.height).toBe(360);
   });
 });
