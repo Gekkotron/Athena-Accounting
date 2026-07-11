@@ -295,17 +295,9 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60">
       <div className="label mb-1">Connecté</div>
-      <NavLink to="/profil" className={navLinkClass}>
-        {({ isActive }) => (
-          <>
-            <span className={isActive ? 'text-sage-300' : 'text-ink-500'}>👤</span>
-            <span>Profil</span>
-          </>
-        )}
-      </NavLink>
-      <div className="flex items-center justify-between gap-2 mb-3 mt-1">
+      <div className="flex items-center justify-between gap-2 mb-3">
         <NavLink
-          to="/profile"
+          to="/profil"
           className={({ isActive }) =>
             `block text-sm truncate font-medium underline-offset-2 hover:underline flex-1 min-w-0 ${
               isActive ? 'text-sage-300' : 'text-ink-100 hover:text-ink-50'

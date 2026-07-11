@@ -57,17 +57,15 @@ describe('Layout', () => {
     expect(cats).toBeTruthy();
   });
 
-  it('exposes /reglages and /profil links in the user card', () => {
+  it('exposes /reglages in the user card', () => {
     renderLayout();
     expect(screen.getByRole('link', { name: /réglages/i })).toHaveAttribute('href', '/reglages');
-    const profileLink = screen.getAllByRole('link').find((l) => l.getAttribute('href') === '/profil');
-    expect(profileLink).toBeTruthy();
   });
 
-  it('renders the user card with the username link to /profile', () => {
+  it('renders the user card with the username link to /profil', () => {
     renderLayout();
     const link = screen.getByRole('link', { name: user.username });
-    expect(link).toHaveAttribute('href', '/profile');
+    expect(link).toHaveAttribute('href', '/profil');
   });
 
   it('logout POSTs to /api/auth/logout', async () => {
