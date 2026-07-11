@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Category, TransactionSplit } from '../../api/types';
+import { formatCategoryPath } from '../../lib/categories';
 
 export type DraftSplit = {
   key: string;
@@ -58,6 +59,10 @@ export function SplitEditor({
   onChange: (splits: DraftSplit[]) => void;
 }) {
   const [rows, setRows] = useState<DraftSplit[]>(() => fromInitial(initial));
+  const byId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
 
   // Rehydrate only when resetKey changes, not on every render.
   const lastResetKeyRef = useRef(resetKey);
@@ -189,9 +194,15 @@ export function SplitEditor({
               onChange={(e) => editRow(i, { categoryId: e.target.value ? Number(e.target.value) : '' })}
             >
               <option value="">— catégorie</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {[...categories]
+                .sort((a, b) => {
+                  const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                  const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                  return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                })
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+                ))}
             </select>
             <input
               className="input flex-1"

@@ -4,6 +4,7 @@ import { api, ApiError } from '../../api/client';
 import type { Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
 import { formatAmount } from '../../lib/format';
+import { formatCategoryPath } from '../../lib/categories';
 
 function currentMonth(): string {
   const d = new Date();
@@ -46,7 +47,12 @@ export function Budgets(): JSX.Element {
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
   const budgetedIds = useMemo(() => new Set(budgets.map((b) => b.categoryId)), [budgets]);
-  const addable = (categoriesQ.data?.categories ?? []).filter(
+  const allCategories = categoriesQ.data?.categories ?? [];
+  const byId = useMemo(
+    () => new Map(allCategories.map((c) => [c.id, c] as const)),
+    [allCategories],
+  );
+  const addable = allCategories.filter(
     (c) => c.kind === 'expense' && !budgetedIds.has(c.id),
   );
 
@@ -151,7 +157,13 @@ export function Budgets(): JSX.Element {
           <div className="flex items-end gap-2 flex-wrap">
             <select className="input" aria-label="Catégorie" value={newCatId} onChange={(e) => setNewCatId(e.target.value)}>
               <option value="">Choisir une catégorie…</option>
-              {addable.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {[...addable]
+                .sort((a, b) => {
+                  const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                  const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                  return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                })
+                .map((c) => <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>)}
             </select>
             <input
               className="input w-28" type="number" min="0" step="0.01"

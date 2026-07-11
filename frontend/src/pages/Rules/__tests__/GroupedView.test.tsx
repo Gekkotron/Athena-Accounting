@@ -43,9 +43,11 @@ const rule = (id: number, categoryId: number, keyword: string): Rule => ({
 function renderView(grouped: GroupedEntry[]) {
   const createBatch = makeMutation<number, CreateBatchVars>();
   const updateRule = makeMutation<unknown, { id: number; patch: Partial<Rule> }>();
+  const byId = new Map<number, Category>(grouped.map((g) => [g.category.id, g.category]));
   render(
     <GroupedView
       grouped={grouped}
+      byId={byId}
       createBatch={createBatch}
       updateRule={updateRule}
       onRequestDelete={vi.fn()}

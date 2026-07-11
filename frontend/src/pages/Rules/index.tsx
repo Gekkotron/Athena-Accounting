@@ -93,30 +93,40 @@ export function Rules() {
 
   const cats = catQ.data?.categories ?? [];
   const rules = rulesQ.data?.rules ?? [];
+  const byId = useMemo(
+    () => new Map(cats.map((c) => [c.id, c] as const)),
+    [cats],
+  );
 
   // Group rules by category. Include every category even if it has no rule
   // yet — they all get a "+ ajouter" affordance, which makes the page useful
   // as a directory.
   const grouped = useMemo<GroupedEntry[]>(() => {
-    const byId = new Map<number, GroupedEntry>();
-    for (const c of cats) byId.set(c.id, { category: c, rules: [] });
+    const entryById = new Map<number, GroupedEntry>();
+    for (const c of cats) entryById.set(c.id, { category: c, rules: [] });
     for (const r of rules) {
-      const g = byId.get(r.categoryId);
+      const g = entryById.get(r.categoryId);
       if (g) g.rules.push(r);
     }
-    for (const g of byId.values()) {
+    for (const g of entryById.values()) {
       g.rules.sort(
         (a, b) => b.priority - a.priority || a.keyword.localeCompare(b.keyword),
       );
     }
-    return Array.from(byId.values()).sort((a, b) => {
+    return Array.from(entryById.values()).sort((a, b) => {
       // Categories with rules first, then alphabetical.
       if ((b.rules.length > 0 ? 1 : 0) !== (a.rules.length > 0 ? 1 : 0)) {
         return (b.rules.length > 0 ? 1 : 0) - (a.rules.length > 0 ? 1 : 0);
       }
-      return a.category.name.localeCompare(b.category.name);
+      const aPath = a.category.parentId != null
+        ? (byId.get(a.category.parentId)?.name ?? '') + ' › ' + a.category.name
+        : a.category.name;
+      const bPath = b.category.parentId != null
+        ? (byId.get(b.category.parentId)?.name ?? '') + ' › ' + b.category.name
+        : b.category.name;
+      return aPath.localeCompare(bPath);
     });
-  }, [rules, cats]);
+  }, [rules, cats, byId]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -178,6 +188,7 @@ export function Rules() {
       {view === 'grouped' ? (
         <GroupedView
           grouped={grouped}
+          byId={byId}
           createBatch={createBatch}
           updateRule={updateRule}
           onRequestDelete={(rule) => {

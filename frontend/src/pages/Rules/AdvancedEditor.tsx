@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
+import { formatCategoryPath } from '../../lib/categories';
 
 export function AdvancedEditor({
   rule,
@@ -14,6 +15,10 @@ export function AdvancedEditor({
   onSave: (patch: Partial<Rule>) => void;
   onDelete: () => void;
 }) {
+  const byId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
   const [keyword, setKeyword] = useState(rule.keyword);
   const [categoryId, setCategoryId] = useState(rule.categoryId);
   const [signConstraint, setSignConstraint] = useState<SignConstraint>(rule.signConstraint);
@@ -77,9 +82,15 @@ export function AdvancedEditor({
               value={categoryId}
               onChange={(e) => setCategoryId(Number(e.target.value))}
             >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {[...categories]
+                .sort((a, b) => {
+                  const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                  const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                  return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                })
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+                ))}
             </select>
           </div>
           <div>

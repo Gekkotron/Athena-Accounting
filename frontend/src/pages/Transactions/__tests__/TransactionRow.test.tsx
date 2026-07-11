@@ -15,6 +15,8 @@ const acc: Account = {
 const cats: Category[] = [
   { id: 10, name: 'Livres', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
   { id: 11, name: 'Électro', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+  { id: 41, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+  { id: 42, name: 'Alimentation', kind: 'expense', color: null, parentId: 41, isDefault: false, isInternalTransfer: false },
 ];
 const t: Transaction = {
   id: 1,
@@ -56,6 +58,10 @@ const splitTx: Transaction = {
     { id: 2, transactionId: 42, categoryId: 11, amount: '-40.00', memo: null },
   ],
 };
+
+function txWithCategory(categoryId: number): Transaction {
+  return { ...t, categoryId };
+}
 
 function renderRow(
   overrides: Partial<{
@@ -204,6 +210,16 @@ describe('TransactionRow', () => {
     renderRow({ tx: splitTx, expanded: false, onToggleExpanded: onToggle });
     await user.click(screen.getByRole('button', { name: /Ventilée \(2\)/ }));
     expect(onToggle).toHaveBeenCalledWith(splitTx.id);
+  });
+
+  it('renders a nested category as "Parent › Leaf"', async () => {
+    renderRow({ tx: txWithCategory(42) });
+    expect(await screen.findByText('Courses › Alimentation')).toBeInTheDocument();
+  });
+
+  it('renders a root category with just its name', async () => {
+    renderRow({ tx: txWithCategory(41) });
+    expect(await screen.findByText('Courses')).toBeInTheDocument();
   });
 });
 

@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import type { Account, Category } from '../../api/types';
 import type { Filters } from './index';
 import { parseAmountQuery } from './parseAmountQuery';
+import { formatCategoryPath } from '../../lib/categories';
 
 export function FiltersBar({
   filters,
@@ -20,6 +22,10 @@ export function FiltersBar({
   onFilterChange: (patch: Partial<Filters>) => void;
   onSearchInputChange: (value: string) => void;
 }) {
+  const byId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
   const parsedAmount = searchInput.trim() === '' ? null : parseAmountQuery(searchInput);
   const searchIsAmount = parsedAmount !== null;
   // A bare integer widens to the whole euro server-side (19 -> 19,00–19,99).
@@ -80,11 +86,17 @@ export function FiltersBar({
             }
           >
             <option value="">Toutes</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {[...categories]
+              .sort((a, b) => {
+                const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+              })
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatCategoryPath(c, byId)}
+                </option>
+              ))}
           </select>
         </div>
         <div className="flex flex-col gap-1.5 w-[48%] sm:w-36">

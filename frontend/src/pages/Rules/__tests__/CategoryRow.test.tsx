@@ -50,9 +50,11 @@ function renderRow(group: GroupedEntry, overrides: Partial<{
   const updateRule = makeMutation<unknown, { id: number; patch: Partial<Rule> }>();
   const onRequestDelete = overrides.onRequestDelete ?? vi.fn();
   const onEdit = overrides.onEdit ?? vi.fn();
+  const byId = new Map<number, Category>([[group.category.id, group.category]]);
   render(
     <CategoryRow
       group={group}
+      byId={byId}
       createBatch={createBatch}
       updateRule={updateRule}
       onRequestDelete={onRequestDelete}

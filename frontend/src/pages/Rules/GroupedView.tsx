@@ -1,16 +1,18 @@
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { MatchMode, Rule, SignConstraint } from '../../api/types';
+import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { CategoryRow } from './CategoryRow';
 import type { GroupedEntry } from './types';
 
 export function GroupedView({
   grouped,
+  byId,
   createBatch,
   updateRule,
   onRequestDelete,
   onEdit,
 }: {
   grouped: GroupedEntry[];
+  byId: Map<number, Category>;
   createBatch: UseMutationResult<
     number,
     Error,
@@ -41,6 +43,7 @@ export function GroupedView({
           <CategoryRow
             key={g.category.id}
             group={g}
+            byId={byId}
             createBatch={createBatch}
             updateRule={updateRule}
             onRequestDelete={onRequestDelete}

@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseUserDate } from '../../lib/format';
+import { formatCategoryPath } from '../../lib/categories';
 import { SplitEditor, type DraftSplit, parseMagnitudeCents, fromInitial } from './SplitEditor';
 
 export function TransactionModal({
@@ -24,6 +25,10 @@ export function TransactionModal({
   // ISO only at submit time. This lets the user paste "14/07/2025"
   // straight from a bank statement without fighting the picker.
   const isEdit = !!transaction;
+  const byId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
 
   const [accountId, setAccountId] = useState<number | ''>('');
   // Blank by default in create mode: pre-filling today's date silently
@@ -375,11 +380,17 @@ export function TransactionModal({
               onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
             >
               <option value="">— (auto via règles)</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {[...categories]
+                .sort((a, b) => {
+                  const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                  const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                  return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                })
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {formatCategoryPath(c, byId)}
+                  </option>
+                ))}
             </select>
           </div>
           <div>

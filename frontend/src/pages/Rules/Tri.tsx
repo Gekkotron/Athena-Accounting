@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Category, TriGroup } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
+import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function Tri() {
@@ -29,6 +30,10 @@ export function Tri() {
   const groups = groupsQ.data?.groups ?? [];
   const total = groupsQ.data?.pagination.total ?? groups.length;
   const categories = categoriesQ.data?.categories ?? [];
+  const byId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
 
   const toggle = (label: string) =>
     setSelected((prev) => {
@@ -146,9 +151,15 @@ export function Tri() {
             onChange={(e) => setBulkCategoryId(e.target.value ? Number(e.target.value) : '')}
           >
             <option value="">—</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            {[...categories]
+              .sort((a, b) => {
+                const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+              })
+              .map((c) => (
+                <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+              ))}
           </select>
         </div>
         <label className="flex items-center gap-2 text-sm text-ink-300 cursor-pointer">
@@ -246,9 +257,15 @@ export function Tri() {
                           }
                         >
                           <option value="">—</option>
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
+                          {[...categories]
+                            .sort((a, b) => {
+                              const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                              const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                              return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                            })
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+                            ))}
                         </select>
                       </td>
                       <td className="px-4 py-2.5 text-right">

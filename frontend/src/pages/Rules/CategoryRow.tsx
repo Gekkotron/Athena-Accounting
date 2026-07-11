@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { MatchMode, Rule, SignConstraint } from '../../api/types';
-import { KIND_LABEL, kindBadgeClass } from '../../lib/categories';
+import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
+import { KIND_LABEL, kindBadgeClass, formatCategoryPath } from '../../lib/categories';
 import { Chip } from './Chip';
 import type { GroupedEntry } from './types';
 
 export function CategoryRow({
   group,
+  byId,
   createBatch,
   updateRule,
   onRequestDelete,
   onEdit,
 }: {
   group: GroupedEntry;
+  byId: Map<number, Category>;
   createBatch: UseMutationResult<
     number,
     Error,
@@ -52,7 +54,7 @@ export function CategoryRow({
               style={{ backgroundColor: category.color }}
             />
           )}
-          <span className="font-medium text-ink-100 truncate">{category.name}</span>
+          <span className="font-medium text-ink-100 truncate">{formatCategoryPath(category, byId)}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
           <span className={kindBadgeClass(category.kind)}>{KIND_LABEL[category.kind]}</span>

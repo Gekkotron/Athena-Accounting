@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import type { Category, MatchMode, SignConstraint } from '../../api/types';
+import { formatCategoryPath } from '../../lib/categories';
 import { NormalizationHint } from './NormalizationHint';
 
 export function RuleCreateForm({
@@ -27,6 +28,10 @@ export function RuleCreateForm({
   const [signConstraint, setSignConstraint] = useState<SignConstraint>('any');
   const [matchMode, setMatchMode] = useState<MatchMode>('word');
   const [priority, setPriority] = useState(0);
+  const byId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
 
   // Preserve the pre-extraction "clear only on success" semantic:
   // setKeyword('') originally lived in createBatch.onSuccess (index.tsx).
@@ -73,9 +78,15 @@ export function RuleCreateForm({
           required
         >
           <option value="">—</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
+          {[...categories]
+            .sort((a, b) => {
+              const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+              const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+              return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+            })
+            .map((c) => (
+              <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+            ))}
         </select>
       </div>
       <div>

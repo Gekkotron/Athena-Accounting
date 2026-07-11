@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
+import { formatCategoryPath } from '../../lib/categories';
 
 export function FlatTable({
   rules,
@@ -12,6 +14,10 @@ export function FlatTable({
   updateRule: UseMutationResult<unknown, Error, { id: number; patch: Partial<Rule> }>;
   onRequestDelete: (rule: Rule) => void;
 }) {
+  const byId = useMemo(
+    () => new Map(cats.map((c) => [c.id, c] as const)),
+    [cats],
+  );
   return (
     <div className="surface overflow-hidden">
       <div className="table-scroll">
@@ -62,9 +68,15 @@ export function FlatTable({
                         updateRule.mutate({ id: r.id, patch: { categoryId: Number(e.target.value) } })
                       }
                     >
-                      {cats.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      {[...cats]
+                        .sort((a, b) => {
+                          const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                          const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                          return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                        })
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+                        ))}
                     </select>
                   </td>
                   <td className="px-4 py-2.5 hidden md:table-cell">

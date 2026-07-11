@@ -1,5 +1,6 @@
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
+import { formatCategoryPath } from '../../lib/categories';
 
 export function TransactionRow({
   tx,
@@ -85,11 +86,17 @@ export function TransactionRow({
                 }
               >
                 <option value="">—</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {[...categories]
+                  .sort((a, b) => {
+                    const pa = a.parentId != null ? catById.get(a.parentId)?.name ?? '' : a.name;
+                    const pb = b.parentId != null ? catById.get(b.parentId)?.name ?? '' : b.name;
+                    return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                  })
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {formatCategoryPath(c, catById)}
+                    </option>
+                  ))}
               </select>
               {tx.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">manuel</div>}
             </>
