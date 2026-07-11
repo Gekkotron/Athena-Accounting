@@ -1,4 +1,4 @@
-import type { CategoryKind } from '../api/types';
+import type { Category, CategoryKind } from '../api/types';
 
 export const KIND_LABEL: Record<CategoryKind, string> = {
   expense: 'Dépense',
@@ -16,4 +16,18 @@ export function kindBadgeClass(kind: CategoryKind): string {
     neutral: 'bg-ink-800/60 text-ink-400 border-ink-700/50',
   };
   return `${base} ${tone[kind]}`;
+}
+
+// Renders a category name with its parent path when nested:
+//   root      -> "Courses"
+//   nested    -> "Courses › Alimentation"
+//   orphaned  -> "Alimentation"  (parent missing from the local map)
+// The '›' glyph is U+203A; the same used in the design mocks.
+export function formatCategoryPath(
+  cat: Category,
+  byId: Map<number, Category>,
+): string {
+  if (cat.parentId == null) return cat.name;
+  const parent = byId.get(cat.parentId);
+  return parent ? `${parent.name} › ${cat.name}` : cat.name;
 }
