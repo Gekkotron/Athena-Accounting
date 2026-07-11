@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Categories } from '../Categories';
@@ -16,8 +17,38 @@ function renderPage() {
   return render(<QueryClientProvider client={client}><Categories /></QueryClientProvider>);
 }
 
+function withProviders({ children }: { children: ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
 const cat = (id: number, name: string, kind: 'expense' | 'income' | 'neutral' = 'expense', overrides: any = {}) =>
   ({ id, name, kind, color: null, parentId: null, isDefault: false, ...overrides });
+
+// Nested pair used by the grouped-rows tests: Courses (root) + Alimentation (child).
+const nestedCats = () => [
+  cat(20, 'Courses', 'expense'),
+  cat(21, 'Alimentation', 'expense', { parentId: 20 }),
+];
+
+function mockNestedCategories() {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: nestedCats() };
+    if (path === '/api/reports/categories') return { rows: [] };
+    throw new Error(`unexpected: ${path}`);
+  });
+}
+
+// A root category's name can also show up as the *selected* option inside a
+// child row's Parent <select> (e.g. Alimentation's Parent select shows
+// "Courses" as selected) — findByDisplayValue alone would then be ambiguous.
+// Scope to the actual name <input> to get the row unambiguously.
+async function findCategoryNameInput(name: string): Promise<HTMLElement> {
+  const matches = await screen.findAllByDisplayValue(name);
+  const input = matches.find((el) => el.tagName === 'INPUT');
+  if (!input) throw new Error(`no name input found for "${name}"`);
+  return input;
+}
 
 beforeEach(() => { apiMock.mockReset(); });
 
@@ -136,5 +167,63 @@ describe('Categories page', () => {
     // Only one "supprimer" button visible — the one for Loisirs.
     const dels = screen.getAllByRole('button', { name: /^supprimer$/i });
     expect(dels).toHaveLength(1);
+  });
+
+  it('renders a child row indented beneath its parent', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const parent = await findCategoryNameInput('Courses');
+    const child = await findCategoryNameInput('Alimentation');
+    const parentRow = parent.closest('tr')!;
+    const childRow = child.closest('tr')!;
+    // Child row appears immediately after its parent row.
+    expect(parentRow.nextElementSibling).toBe(childRow);
+    // Child row has a data-depth attribute we set for indentation styling.
+    expect(childRow.getAttribute('data-depth')).toBe('1');
+  });
+
+  it('disables the kind picker on a child row', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const child = await findCategoryNameInput('Alimentation');
+    const childRow = child.closest('tr')!;
+    const kindSelect = within(childRow).getByRole('combobox', { name: /type/i });
+    expect(kindSelect).toBeDisabled();
+    expect(kindSelect).toHaveAttribute('title', expect.stringContaining('hérité'));
+  });
+
+  it('disables the parent selector on a category that already has children', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const parent = await findCategoryNameInput('Courses');
+    const parentRow = parent.closest('tr')!;
+    const parentSelect = within(parentRow).getByRole('combobox', { name: /parent/i });
+    expect(parentSelect).toBeDisabled();
+  });
+
+  it('locks kind in the create form when a parent is selected', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    // Wait for categories to load so the Parent select actually has a
+    // "Courses" option before we try to select it.
+    await findCategoryNameInput('Courses');
+    const parentInCreate = screen.getByRole('combobox', { name: /parent \(optionnel\)/i });
+    // The create form's own Kind select — scoped by id since row selects
+    // also carry an accessible name of "Type" once categories render.
+    const kindInCreate = document.getElementById('cat-create-kind') as HTMLSelectElement;
+    fireEvent.change(parentInCreate, { target: { value: '20' } }); // Courses id
+    expect(kindInCreate).toBeDisabled();
+    expect(kindInCreate).toHaveValue('expense');
+  });
+
+  it('appends the "sous-catégories deviendront racines" line to the delete confirm for a parent', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const parent = await findCategoryNameInput('Courses');
+    const parentRow = parent.closest('tr')!;
+    fireEvent.click(within(parentRow).getByText('supprimer'));
+    expect(
+      await screen.findByText(/sous-catégories deviendront des catégories racine/i),
+    ).toBeInTheDocument();
   });
 });
