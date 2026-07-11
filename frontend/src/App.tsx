@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { api, ApiError } from './api/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
@@ -40,6 +41,18 @@ const DONNEES_TABS: HubTab[] = [
 
 export default function App() {
   const location = useLocation();
+  const qc = useQueryClient();
+
+  // Global session-expiry redirect: any 401 from a non-auth-me endpoint
+  // clears the cache and sets me to a null user, which triggers the redirect
+  // to /login on the next render (same path as an explicit logout).
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      qc.clear();
+      qc.setQueryData(['me'], { user: null });
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [qc]);
 
   const me = useQuery({
     queryKey: ['me'],

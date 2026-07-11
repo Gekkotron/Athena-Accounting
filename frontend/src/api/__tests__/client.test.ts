@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { api, apiUpload, ApiError } from '../client';
+import { api, apiUpload, ApiError, setUnauthorizedHandler } from '../client';
 
 const originalFetch = globalThis.fetch;
 
@@ -114,5 +114,58 @@ describe('apiUpload()', () => {
       status: 400,
       message: 'account not found',
     });
+  });
+});
+
+describe('401 unauthorized handler', () => {
+  afterEach(() => setUnauthorizedHandler(null));
+
+  it('fires the registered handler on a 401 from a non-auth-me endpoint', async () => {
+    mockFetch(() => jsonRes({ error: 'unauthorized' }, 401));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    await expect(api('/api/transactions')).rejects.toBeInstanceOf(ApiError);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('does NOT fire the handler on a 401 from /api/auth/me (initial auth probe)', async () => {
+    mockFetch(() => jsonRes({ error: 'unauthorized' }, 401));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    await expect(api('/api/auth/me')).rejects.toBeInstanceOf(ApiError);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('does not fire the handler on a 2xx response', async () => {
+    mockFetch(() => jsonRes({ ok: true }, 200));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    await api('/api/transactions');
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('does not fire the handler on other 4xx statuses', async () => {
+    mockFetch(() => jsonRes({ error: 'nope' }, 403));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    await expect(api('/api/transactions')).rejects.toBeInstanceOf(ApiError);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('fires the handler on a 401 from apiUpload too', async () => {
+    mockFetch(() => jsonRes({ error: 'unauthorized' }, 401));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    await expect(apiUpload('/api/imports', new File(['x'], 'x.csv'))).rejects.toBeInstanceOf(ApiError);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('passing null unregisters the handler', async () => {
+    mockFetch(() => jsonRes({ error: 'unauthorized' }, 401));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    setUnauthorizedHandler(null);
+    await expect(api('/api/transactions')).rejects.toBeInstanceOf(ApiError);
+    expect(handler).not.toHaveBeenCalled();
   });
 });

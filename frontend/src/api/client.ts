@@ -1,3 +1,21 @@
+// Global 401 hook: fires when any request except /api/auth/me returns 401,
+// so App can drop cached data and redirect to /login when the session
+// silently expires mid-session. Consumers register via
+// setUnauthorizedHandler; passing null unregisters. Registration is a
+// module-level singleton because api() must reach the app-level
+// QueryClient without threading it through every call site.
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler;
+}
+function reportUnauthorized(path: string): void {
+  // The initial auth-me probe returning 401 is the "not logged in" signal
+  // App is designed to handle by itself — don't recurse it through the
+  // global handler.
+  if (path === '/api/auth/me') return;
+  if (onUnauthorized) onUnauthorized();
+}
+
 // Thin fetch wrapper. The frontend is served from the same origin as /api (via
 // nginx proxy in prod, vite proxy in dev) so we can use a relative base path
 // and rely on the session cookie traveling automatically.
@@ -27,6 +45,7 @@ export async function api<T>(
   const text = await res.text();
   const data = text ? safeParse(text) : null;
   if (!res.ok) {
+    if (res.status === 401) reportUnauthorized(path);
     const message =
       (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
         ? (data as { error: string }).error
@@ -74,6 +93,7 @@ export async function apiUpload<T>(
   const text = await res.text();
   const data = text ? safeParse(text) : null;
   if (!res.ok) {
+    if (res.status === 401) reportUnauthorized(path);
     const message =
       (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
         ? (data as { error: string }).error
