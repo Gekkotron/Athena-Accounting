@@ -69,6 +69,46 @@ describe.skipIf(!RUN)('/api/categories', () => {
     expect(dup.statusCode).toBe(409);
   });
 
+  it('accepts the same name under two different parents', async () => {
+    const parentA = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Loisirs', kind: 'expense' },
+    });
+    const parentB = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Voyages', kind: 'expense' },
+    });
+    expect(parentA.statusCode).toBe(201);
+    expect(parentB.statusCode).toBe(201);
+
+    const childA = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Restaurant', kind: 'expense', parentId: parentA.json().category.id },
+    });
+    const childB = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Restaurant', kind: 'expense', parentId: parentB.json().category.id },
+    });
+    expect(childA.statusCode).toBe(201);
+    expect(childB.statusCode).toBe(201);
+  });
+
+  it('still rejects a duplicate name under the same parent', async () => {
+    const parent = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Courses', kind: 'expense' },
+    });
+    await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Alimentation', kind: 'expense', parentId: parent.json().category.id },
+    });
+    const dup = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Alimentation', kind: 'expense', parentId: parent.json().category.id },
+    });
+    expect(dup.statusCode).toBe(409);
+  });
+
   it('rejects an invalid kind with 400', async () => {
     const res = await app.inject({
       method: 'POST', url: '/api/categories',

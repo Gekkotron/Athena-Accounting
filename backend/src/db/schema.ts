@@ -141,7 +141,11 @@ export const categories = pgTable(
     isInternalTransfer: boolean('is_internal_transfer').notNull().default(false),
   },
   (t) => ({
-    uqUserName: uniqueIndex('categories_user_name_idx').on(t.userId, t.name),
+    uqUserParentName: uniqueIndex('categories_user_parent_name_idx').on(
+      t.userId,
+      sql`COALESCE(${t.parentId}, 0)`,
+      t.name,
+    ),
   }),
 );
 
