@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
@@ -37,7 +38,7 @@ export function TransactionRow({
   checkpointPending: boolean;
   onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
 }) {
-  const catById = new Map(categories.map((c) => [c.id, c]));
+  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   return (
     <>
       <tr className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''}`}>
@@ -177,7 +178,7 @@ export function TransactionRow({
               <td />
               <td className="hidden sm:table-cell" />
               <td className="px-4 py-1.5 pl-8 text-ink-300 text-xs">
-                ⤷ {cat?.name ?? '—'}
+                ⤷ {cat ? formatCategoryPath(cat, catById) : '—'}
                 {s.memo && <span className="text-ink-500 ml-2">· {s.memo}</span>}
               </td>
               <td />
