@@ -1,6 +1,8 @@
 import { it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { RangeKey } from '../../../components/RangePicker';
 import { SankeySection } from '../SankeySection';
 
 vi.mock('../../../api/client', async () => {
@@ -10,13 +12,19 @@ vi.mock('../../../api/client', async () => {
 import { api } from '../../../api/client';
 const apiMock = vi.mocked(api);
 
-function renderSection() {
+function renderSection(opts: { range?: RangeKey; onRangeChange?: (r: RangeKey) => void } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const onRangeChange = opts.onRangeChange ?? vi.fn();
+  const utils = render(
     <QueryClientProvider client={client}>
-      <SankeySection range="12m" currency="EUR" />
+      <SankeySection
+        range={opts.range ?? '12m'}
+        onRangeChange={onRangeChange}
+        currency="EUR"
+      />
     </QueryClientProvider>,
   );
+  return { ...utils, onRangeChange };
 }
 
 beforeEach(() => apiMock.mockReset());
@@ -46,4 +54,44 @@ it('shows an empty state when there is no income', async () => {
   });
   renderSection();
   await waitFor(() => expect(screen.getByText(/Pas de revenus/i)).toBeInTheDocument());
+});
+
+it('renders the header suffix based on the range prop', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  renderSection({ range: '30d' });
+  expect(await screen.findByText(/sur 30 jours/i)).toBeInTheDocument();
+});
+
+it('clicking the "longer range" chevron calls onRangeChange with the next-longer range', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  const { onRangeChange } = renderSection({ range: '6m' });
+  const u = userEvent.setup();
+  await u.click(await screen.findByRole('button', { name: /période plus longue/i }));
+  expect(onRangeChange).toHaveBeenCalledWith('12m');
+});
+
+it('disables the "longer" chevron on `all`', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  renderSection({ range: 'all' });
+  const longer = await screen.findByRole('button', { name: /période plus longue/i });
+  expect(longer).toBeDisabled();
+});
+
+it('disables the "shorter" chevron on `30d`', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  renderSection({ range: '30d' });
+  const shorter = await screen.findByRole('button', { name: /période plus courte/i });
+  expect(shorter).toBeDisabled();
 });

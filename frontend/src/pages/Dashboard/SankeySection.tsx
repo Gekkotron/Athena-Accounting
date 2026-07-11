@@ -2,13 +2,22 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Category, CategoryReportRow } from '../../api/types';
-import { fromDateFor, type RangeKey } from '../../components/RangePicker';
+import {
+  RANGES,
+  fromDateFor,
+  rangeSuffixLabel,
+  type RangeKey,
+} from '../../components/RangePicker';
 import { buildSankeyModel } from './sankey';
 import { Sankey } from '../../components/Sankey';
 
-interface Props { range: RangeKey; currency: string; }
+interface Props {
+  range: RangeKey;
+  onRangeChange: (r: RangeKey) => void;
+  currency: string;
+}
 
-export function SankeySection({ range, currency }: Props): JSX.Element {
+export function SankeySection({ range, onRangeChange, currency }: Props): JSX.Element {
   const fromDate = fromDateFor(range);
 
   const catListQ = useQuery({
@@ -31,9 +40,48 @@ export function SankeySection({ range, currency }: Props): JSX.Element {
   const isLoading = catListQ.isLoading || reportQ.isLoading;
   const isError = catListQ.isError || reportQ.isError;
 
+  // Order (short → long) matches the RangePicker segmented control.
+  // ‹ steps to a LONGER range (further back in time), › to a SHORTER one —
+  // same directional convention as Insights' month arrows.
+  const rangeIndex = RANGES.findIndex((r) => r.key === range);
+  const canLonger = rangeIndex >= 0 && rangeIndex < RANGES.length - 1;
+  const canShorter = rangeIndex > 0;
+  const stepLonger = () => {
+    if (canLonger) onRangeChange(RANGES[rangeIndex + 1]!.key);
+  };
+  const stepShorter = () => {
+    if (canShorter) onRangeChange(RANGES[rangeIndex - 1]!.key);
+  };
+
   return (
     <section className="surface p-5 md:p-6">
-      <div className="section-rule mb-4">Flux · {currency}</div>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="section-rule">
+          Flux · {currency}{' '}
+          <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
+            — {rangeSuffixLabel(range)}
+          </span>
+        </div>
+        <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
+          <button
+            onClick={stepLonger}
+            disabled={!canLonger}
+            className="px-2.5 py-1.5 rounded-md text-ink-400 transition hover:text-ink-100 disabled:opacity-30 disabled:hover:text-ink-400"
+            aria-label="Période plus longue"
+          >
+            ‹
+          </button>
+          <button
+            onClick={stepShorter}
+            disabled={!canShorter}
+            className="px-2.5 py-1.5 rounded-md text-ink-400 transition hover:text-ink-100 disabled:opacity-30 disabled:hover:text-ink-400"
+            aria-label="Période plus courte"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
       ) : isError ? (
