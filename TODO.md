@@ -35,8 +35,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 - Vue "Comparatif mensuel" : ce mois-ci vs le mois dernier par catégorie,
   avec delta et sparkline. Bâti sur `/api/reports/categories` qui expose
   déjà les mois.
-- Sankey diagram sur le dashboard (revenus → dépenses par catégorie),
-  D3-flavoured et intégré au design tokens du reste de l'app.
 - Undo (fenêtre ~5s) après une suppression de transaction ou d'import. Toast
   en bas de l'écran avec bouton "Annuler".
 - Raccourcis clavier sur la page Transactions : `j`/`k` naviguer, `e`
@@ -282,6 +280,34 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   CRUD endpoints with 409/400 rules, `/api/reports/budget` for
   planned-vs-actual, and a dedicated Budgets page with month picker,
   per-category bars, and red overflow indicator.
+- **Sous-catégories (hiérarchie 2 niveaux)** : `parent_id` désormais
+  exploité de bout en bout. Migration 0019 (index unique
+  `(user_id, COALESCE(parent_id, 0), name)`), invariants serveur (cap
+  2 niveaux, héritage du `kind`, coercion à la mise en place d'un
+  parent, cascade à la mutation du `kind` d'un parent, cycle
+  prevention). Page Catégories groupée (parent + enfants indentés) +
+  sélecteur Parent. Format `Parent › Leaf` partout où une catégorie
+  apparaît en ligne (Transactions, modales, splits, Tri, Doublons,
+  filtres, Règles). Budgets : `/api/reports/budget` roule sur les
+  descendants ; page Budgets groupée + correction du total agrégé
+  quand parent + enfant sont tous deux budgétés. Insights : le
+  classement des plus grosses variations remonte à la racine.
+  Sauvegarde v4 : chaque référence en aval (rules, transactions,
+  splits, budgets) porte un `categoryParent` optionnel ; restore
+  topologique + `resolveCategoryRef` (chemin puis fallback nom seul).
+- **Panneau Insights sur le Dashboard** : section mensuelle (revenus,
+  dépenses, épargne, catégorie dominante) avec month stepper. Les
+  revenus ne comptent que les catégories `kind = income` pour éviter
+  de gonfler le total avec des transferts internes.
+- **Sankey cash-flow sur le Dashboard** : diagramme SVG maison (rubans
+  pleins, hover, header aligné avec Insights via suffix + arrow chip)
+  reliant revenus → catégories de dépense. Partage le cache
+  `/api/reports/categories` avec le donut.
+- **Nettoyage sélecteur/explainer d'import** : suppression du
+  paragraphe "À l'import, le compte cible est déduit du nom du
+  fichier…" sur la section Motifs et remplacement du placeholder
+  "Auto (via nom du fichier)" par "—" dans le sélecteur de compte à
+  l'import.
 
 ---
 
