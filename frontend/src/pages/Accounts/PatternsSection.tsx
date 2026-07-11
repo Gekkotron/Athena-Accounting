@@ -33,10 +33,6 @@ export function PatternsSection({
   return (
     <section>
       <div className="section-rule mb-2">Fichier → compte</div>
-      <p className="text-xs text-ink-500 mb-4 max-w-xl">
-        À l'import, le compte cible est déduit du nom du fichier via ces motifs (priorité la plus haute d'abord).
-        <span className="display-italic"> Exemple :</span> motif « compte_courant » → Compte courant.
-      </p>
       <div className="surface p-4 mb-3 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px]">
           <label className="label mb-1.5 block">Motif</label>

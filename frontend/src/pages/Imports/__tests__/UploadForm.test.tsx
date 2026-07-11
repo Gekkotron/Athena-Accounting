@@ -123,7 +123,7 @@ describe('UploadForm', () => {
     const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
     const file = new File(['%PDF'], 'a.pdf', { type: 'application/pdf' });
     await user.upload(fileInput, file);
-    // Leave account = "Auto (via nom du fichier)" (empty).
+    // Leave account empty (the "—" placeholder).
     await user.click(screen.getByRole('button', { name: 'Importer' }));
 
     // Neither submitPdf nor apiUpload should fire.

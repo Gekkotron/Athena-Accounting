@@ -216,7 +216,7 @@ export function UploadForm({
               onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
               disabled={pending}
             >
-              <option value="">Auto (via nom du fichier)</option>
+              <option value="">—</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
