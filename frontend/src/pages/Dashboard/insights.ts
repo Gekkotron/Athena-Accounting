@@ -1,4 +1,4 @@
-import type { CategoryReportRow, BudgetReportRow } from '../../api/types';
+import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
 
 export type InsightTone = 'sage' | 'clay' | 'neutral';
@@ -49,8 +49,22 @@ function tone(favorableWhenUp: boolean, delta: number): InsightTone {
   return favorable ? 'sage' : 'clay';
 }
 
+// Walks the parentId chain to the top-most ancestor. Cycle-guarded: if a
+// parentId loop somehow exists, the walk stops instead of looping forever.
+// A category missing from `byId` (or with no parent) is its own root.
+function rootIdOf(catId: number, byId: Map<number, Category>): number {
+  const seen = new Set<number>();
+  let cur = byId.get(catId);
+  while (cur && cur.parentId != null && byId.has(cur.parentId) && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    cur = byId.get(cur.parentId)!;
+  }
+  return cur ? cur.id : catId;
+}
+
 export function buildInsights(
   categoryRows: CategoryReportRow[],
+  categories: Category[],
   budgetRows: BudgetReportRow[],
   months: string[],
   referenceMonth: string,
@@ -60,9 +74,12 @@ export function buildInsights(
   const refIdx = idxOf.get(referenceMonth) ?? -1;
   const prevIdx = refIdx - 1;
   const prevMonth = prevIdx >= 0 ? months[prevIdx] : null;
+  const byId = new Map(categories.map((c) => [c.id, c] as const));
 
   const spendByMonth = new Array(months.length).fill(0) as number[];
   const incomeByMonth = new Array(months.length).fill(0) as number[];
+  // Keyed by root category id (a flat category is its own root), so the
+  // top-mover ranking below rolls leaf spending up to its ancestor.
   const catSpend = new Map<number | null, { name: string; spark: number[] }>();
 
   for (const r of categoryRows) {
@@ -78,10 +95,12 @@ export function buildInsights(
       incomeByMonth[i] += amt;
     } else if (amt < 0) {
       spendByMonth[i] += -amt;
-      let c = catSpend.get(r.category_id);
+      const rootId = r.category_id != null ? rootIdOf(r.category_id, byId) : r.category_id;
+      let c = catSpend.get(rootId);
       if (!c) {
-        c = { name: r.category_name ?? 'Sans catégorie', spark: new Array(months.length).fill(0) };
-        catSpend.set(r.category_id, c);
+        const rootName = rootId != null ? byId.get(rootId)?.name : null;
+        c = { name: rootName ?? r.category_name ?? 'Sans catégorie', spark: new Array(months.length).fill(0) };
+        catSpend.set(rootId, c);
       }
       c.spark[i] += -amt;
     }

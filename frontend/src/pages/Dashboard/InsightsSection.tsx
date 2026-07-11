@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { CategoryReportRow, BudgetReportRow } from '../../api/types';
+import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/types';
 import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { buildInsights, monthLabel, type InsightTone } from './insights';
@@ -47,17 +47,22 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
     queryFn: () =>
       api<{ rows: BudgetReportRow[] }>('/api/reports/budget', { query: { month: referenceMonth } }),
   });
+  const categoriesQ = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
+  });
 
   const insights = useMemo(
     () =>
       buildInsights(
         catQ.data?.rows ?? [],
+        categoriesQ.data?.categories ?? [],
         budgetQ.data?.rows ?? [],
         months,
         referenceMonth,
         currency,
       ),
-    [catQ.data, budgetQ.data, months, referenceMonth, currency],
+    [catQ.data, categoriesQ.data, budgetQ.data, months, referenceMonth, currency],
   );
 
   if (catQ.isLoading) {

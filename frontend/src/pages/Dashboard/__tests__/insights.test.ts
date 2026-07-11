@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildInsights, monthLabel } from '../insights';
-import type { CategoryReportRow, BudgetReportRow } from '../../../api/types';
+import type { Category, CategoryReportRow, BudgetReportRow } from '../../../api/types';
 
 function row(p: Partial<CategoryReportRow>): CategoryReportRow {
   return {
@@ -18,8 +18,8 @@ function row(p: Partial<CategoryReportRow>): CategoryReportRow {
 const MONTHS = ['2026-04', '2026-05', '2026-06'];
 const REF = '2026-06';
 
-function build(rows: CategoryReportRow[], budgets: BudgetReportRow[] = []) {
-  return buildInsights(rows, budgets, MONTHS, REF, 'EUR');
+function build(rows: CategoryReportRow[], budgets: BudgetReportRow[] = [], categories: Category[] = []) {
+  return buildInsights(rows, categories, budgets, MONTHS, REF, 'EUR');
 }
 
 describe('monthLabel', () => {
@@ -167,6 +167,28 @@ describe('buildInsights — category movers', () => {
       row({ category_id: 4, category_name: 'Café', month: '2026-06', total: '-45.00' }), // +35 (>30% but < 50€ floor)
     ];
     expect(build(rows).some((i) => i.key === 'top-increase')).toBe(false);
+  });
+
+  it('ranks top category movers at the root level', () => {
+    const cats: Category[] = [
+      { id: 1, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+      { id: 2, name: 'Alimentation', kind: 'expense', color: null, parentId: 1, isDefault: false, isInternalTransfer: false },
+      { id: 3, name: 'Ménage', kind: 'expense', color: null, parentId: 1, isDefault: false, isInternalTransfer: false },
+      { id: 4, name: 'Loisirs', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+    ];
+    // Two leaves of Courses both went up modestly. Loisirs went up a bit more than either
+    // leaf alone, but less than Courses's rollup — so Courses should be the top mover.
+    const rows = [
+      row({ category_id: 2, category_kind: 'expense', month: '2026-05', total: '-300' }),
+      row({ category_id: 3, category_kind: 'expense', month: '2026-05', total: '-100' }),
+      row({ category_id: 2, category_kind: 'expense', month: '2026-06', total: '-400' }),
+      row({ category_id: 3, category_kind: 'expense', month: '2026-06', total: '-200' }),
+      row({ category_id: 4, category_kind: 'expense', month: '2026-05', total: '-500' }),
+      row({ category_id: 4, category_kind: 'expense', month: '2026-06', total: '-650' }),
+    ];
+    const insights = build(rows, [], cats);
+    const topMover = insights.find((i) => i.headline?.startsWith('Plus forte hausse'));
+    expect(topMover?.headline).toBe('Plus forte hausse : Courses');
   });
 });
 
