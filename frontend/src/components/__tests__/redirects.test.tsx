@@ -53,14 +53,9 @@ function renderAt(url: string) {
 }
 
 // [from, to, marker rendered once the redirect lands on `to`]
+// Only hub-index defaults — the app is pre-release, no external bookmarks,
+// so English-slug legacy redirects were dropped.
 const cases: Array<[string, string, string]> = [
-  ['/tri', '/regles/tri', 'tri-page'],
-  ['/rules', '/regles/liste', 'rules-page'],
-  ['/categories', '/regles/categories', 'categories-page'],
-  ['/accounts', '/comptes', 'accounts-page'],
-  ['/imports', '/donnees/imports', 'imports-page'],
-  ['/settings', '/reglages', 'settings-page'],
-  ['/profile', '/profil', 'profile-page'],
   ['/regles', '/regles/tri', 'tri-page'],
   ['/comptes/', '/comptes', 'accounts-page'],
   ['/donnees', '/donnees/imports', 'imports-page'],

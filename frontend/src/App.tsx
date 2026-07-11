@@ -109,15 +109,6 @@ export default function App() {
         <Route path="/profil" element={<Profile />} />
         <Route path="/reglages" element={<Settings />} />
 
-        {/* Legacy redirects */}
-        <Route path="/tri" element={<Navigate to="/regles/tri" replace />} />
-        <Route path="/rules" element={<Navigate to="/regles/liste" replace />} />
-        <Route path="/categories" element={<Navigate to="/regles/categories" replace />} />
-        <Route path="/accounts" element={<Navigate to="/comptes" replace />} />
-        <Route path="/imports" element={<Navigate to="/donnees/imports" replace />} />
-        <Route path="/settings" element={<Navigate to="/reglages" replace />} />
-        <Route path="/profile" element={<Navigate to="/profil" replace />} />
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
