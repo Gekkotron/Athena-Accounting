@@ -163,12 +163,13 @@ export function Dashboard(): JSX.Element {
         </section>
       )}
 
-      {/* Cash-flow Sankey — follows the page range */}
+      {/* Cash-flow Sankey — follows the page range and account scope */}
       {currencies.length > 0 && (
         <SankeySection
           range={range}
           onRangeChange={setRange}
-          currency={primary?.currency ?? chartCurrency}
+          currency={chartCurrency}
+          accountId={chartScope}
         />
       )}
     </div>

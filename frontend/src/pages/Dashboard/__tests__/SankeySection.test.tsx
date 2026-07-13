@@ -12,7 +12,11 @@ vi.mock('../../../api/client', async () => {
 import { api } from '../../../api/client';
 const apiMock = vi.mocked(api);
 
-function renderSection(opts: { range?: RangeKey; onRangeChange?: (r: RangeKey) => void } = {}) {
+function renderSection(opts: {
+  range?: RangeKey;
+  onRangeChange?: (r: RangeKey) => void;
+  accountId?: number | 'all';
+} = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onRangeChange = opts.onRangeChange ?? vi.fn();
   const utils = render(
@@ -21,6 +25,7 @@ function renderSection(opts: { range?: RangeKey; onRangeChange?: (r: RangeKey) =
         range={opts.range ?? '12m'}
         onRangeChange={onRangeChange}
         currency="EUR"
+        accountId={opts.accountId}
       />
     </QueryClientProvider>,
   );
@@ -84,6 +89,32 @@ it('disables the "longer" chevron on `all`', async () => {
   renderSection({ range: 'all' });
   const longer = await screen.findByRole('button', { name: /période plus longue/i });
   expect(longer).toBeDisabled();
+});
+
+it('forwards accountId to /api/reports/categories when a specific account is scoped', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  renderSection({ accountId: 42 });
+  await waitFor(() => {
+    const call = apiMock.mock.calls.find(([p]) => p === '/api/reports/categories');
+    expect(call).toBeDefined();
+    expect(call![1]?.query).toMatchObject({ accountId: 42 });
+  });
+});
+
+it('omits accountId when scope is "all"', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  renderSection({ accountId: 'all' });
+  await waitFor(() => {
+    const call = apiMock.mock.calls.find(([p]) => p === '/api/reports/categories');
+    expect(call).toBeDefined();
+    expect(call![1]?.query).not.toHaveProperty('accountId');
+  });
 });
 
 it('disables the "shorter" chevron on `30d`', async () => {

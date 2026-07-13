@@ -15,20 +15,32 @@ interface Props {
   range: RangeKey;
   onRangeChange: (r: RangeKey) => void;
   currency: string;
+  /** When set to a specific account id, the report is filtered server-side
+      to that account only. 'all' or undefined aggregates across every
+      account the user owns. Mirrors the CategoryBreakdown contract. */
+  accountId?: number | 'all';
 }
 
-export function SankeySection({ range, onRangeChange, currency }: Props): JSX.Element {
+export function SankeySection({ range, onRangeChange, currency, accountId }: Props): JSX.Element {
   const fromDate = fromDateFor(range);
+  const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
 
   const catListQ = useQuery({
     queryKey: ['categories'],
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
   const reportQ = useQuery({
-    queryKey: ['reports', 'categories', { fromDate: fromDate ?? 'all', accountId: 'all' }],
+    queryKey: [
+      'reports',
+      'categories',
+      { fromDate: fromDate ?? 'all', accountId: scopedAccountId ?? 'all' },
+    ],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
-        query: fromDate ? { fromDate } : {},
+        query: {
+          ...(fromDate ? { fromDate } : {}),
+          ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
+        },
       }),
   });
 
