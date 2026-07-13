@@ -197,12 +197,18 @@ function budgetRow(p: Partial<BudgetReportRow>): BudgetReportRow {
     categoryId: 1,
     name: 'Cat',
     color: null,
+    accountId: null,
+    period: 'monthly',
     limit: '100.00',
     currency: 'EUR',
     spent: '0.00',
     remaining: '100.00',
     pct: 0,
     over: false,
+    projected: null,
+    history: null,
+    anomaly: false,
+    suggestedLimit: null,
     ...p,
   };
 }

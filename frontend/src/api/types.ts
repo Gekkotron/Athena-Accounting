@@ -158,27 +158,45 @@ export interface BalanceCheckpoint {
   createdAt: string;
 }
 
+export type BudgetPeriod = 'monthly' | 'yearly';
+
 export type Budget = {
   id: number;
   categoryId: number;
   monthlyLimit: string;
   currency: string;
+  period: BudgetPeriod;
+  accountId: number | null;
 };
 
 export type BudgetReportRow = {
   categoryId: number;
   name: string;
   color: string | null;
+  accountId: number | null;
+  period: BudgetPeriod;
   limit: string;
   currency: string;
   spent: string;
   remaining: string;
   pct: number;
   over: boolean;
+  projected: string | null;
+  history: { values: string[]; average: string; median: string } | null;
+  anomaly: boolean;
+  suggestedLimit: string | null;
 };
 
 export type BudgetReport = {
-  month: string;
+  period: BudgetPeriod;
+  month?: string;
+  year?: string;
+  windowDays: number;
+  elapsedDays: number;
   rows: BudgetReportRow[];
-  totals: { limit: string; spent: string };
+  totals: { limit: string; spent: string; remaining: string; projected: string | null };
+  unbudgetedCandidates: {
+    categoryId: number; name: string; color: string | null;
+    parentId: number | null; average: string;
+  }[];
 };

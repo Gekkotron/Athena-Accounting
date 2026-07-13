@@ -77,7 +77,7 @@ function mutationErrorMessage(err: unknown): string {
 export function Budgets(): JSX.Element {
   const [month, setMonth] = useState(currentMonth());
   const { budgets, create, update, remove } = useBudgets();
-  const report = useBudgetReport(month);
+  const report = useBudgetReport({ period: 'monthly', month });
   const rows = report.data?.rows ?? [];
 
   const categoriesQ = useQuery({
