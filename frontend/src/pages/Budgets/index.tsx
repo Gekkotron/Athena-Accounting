@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
@@ -10,6 +10,7 @@ import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
 import { BudgetRow } from './BudgetRow';
 import { SuggestionCard } from './SuggestionCard';
+import { UnbudgetedSection } from './UnbudgetedSection';
 import { topLevelRows } from './budget-math';
 
 function currentMonth(): string {
@@ -123,6 +124,14 @@ export function Budgets(): JSX.Element {
   const [newCatId, setNewCatId] = useState('');
   const [newLimit, setNewLimit] = useState('');
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<{ categoryId: number; suggested: string } | null>(null);
+
+  useEffect(() => {
+    if (prefill) {
+      setNewCatId(String(prefill.categoryId));
+      setNewLimit(prefill.suggested);
+    }
+  }, [prefill]);
 
   const submitNew = () => {
     const categoryId = Number(newCatId);
@@ -279,7 +288,18 @@ export function Budgets(): JSX.Element {
         </ul>
       )}
 
-      <div className="surface p-4 flex flex-col gap-3">
+      {report.data && (
+        <UnbudgetedSection
+          candidates={report.data.unbudgetedCandidates}
+          period={period}
+          onDefineBudget={(categoryId, suggested) => {
+            setPrefill({ categoryId, suggested });
+            document.getElementById('budgets-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }}
+        />
+      )}
+
+      <div id="budgets-add-form" className="surface p-4 flex flex-col gap-3">
         <div className="label">Ajouter un budget</div>
         {addable.length === 0 ? (
           <p className="text-sm text-ink-500">Toutes vos catégories de dépense ont déjà un plafond.</p>
