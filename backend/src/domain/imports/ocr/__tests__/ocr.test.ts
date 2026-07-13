@@ -24,6 +24,8 @@ describe('ocrPngPages', () => {
     expect(page!.meanConfidence).toBeGreaterThan(0.4);
     expect(page!.words[0]!.confidence).toBeGreaterThanOrEqual(0);
     expect(page!.words[0]!.confidence).toBeLessThanOrEqual(1);
+    expect(page!.widthPx).toBe(400);
+    expect(page!.heightPx).toBe(60);
   }, 60_000); // Tesseract cold-start is slow: worker init + fra+eng load.
 
   it('emits an empty word list for a blank page', async () => {

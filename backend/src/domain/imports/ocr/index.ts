@@ -1,4 +1,5 @@
 import { createWorker, type Worker } from 'tesseract.js';
+import { loadImage } from '@napi-rs/canvas';
 
 export interface OcrWord {
   pageIndex: number; str: string;
@@ -18,12 +19,22 @@ export async function ocrPngPages(
   } = {},
 ): Promise<OcrPage[]> {
   const lang = opts.lang ?? 'fra+eng';
-  const worker: Worker = await createWorker(lang);
+  // In LAN-only/offline deploy, set OCR_LANG_PATH to a directory containing
+  // fra.traineddata and eng.traineddata (both ~30 MB). Without it, tesseract.js
+  // fetches from a CDN on first use — acceptable for dev, breaks in prod.
+  const worker: Worker = await createWorker(
+    lang,
+    1,
+    process.env.OCR_LANG_PATH ? { langPath: process.env.OCR_LANG_PATH } : undefined,
+  );
   try {
     const out: OcrPage[] = [];
     for (let i = 0; i < pngBase64Pages.length; i++) {
       const b64 = pngBase64Pages[i]!;
       const buf = Buffer.from(b64, 'base64');
+      const img = await loadImage(buf);
+      const widthPx = img.width;
+      const heightPx = img.height;
       const { data } = await worker.recognize(buf);
       // tesseract.js v5 result: data.words = [{ text, bbox: { x0, y0, x1, y1 }, confidence }]
       const words: OcrWord[] = [];
@@ -46,9 +57,6 @@ export async function ocrPngPages(
         confSum += (w.confidence ?? 0) / 100;
         confCount += 1;
       }
-      // Read page dims from data.imageWidth / imageHeight (populated in v5 output).
-      const widthPx = (data as { imageWidth?: number }).imageWidth ?? 0;
-      const heightPx = (data as { imageHeight?: number }).imageHeight ?? 0;
       out.push({
         pageIndex: i, widthPx, heightPx, words,
         meanConfidence: confCount === 0 ? 0 : confSum / confCount,

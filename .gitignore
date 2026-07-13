@@ -13,3 +13,9 @@ coverage/
 
 # vitest cache
 .vite/
+
+# tesseract.js trained-language cache files (written to cwd during OCR tests)
+*.traineddata
+
+# Claude Code personal settings (never committed)
+.claude/settings.local.json
