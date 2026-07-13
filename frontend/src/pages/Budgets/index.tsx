@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
-import type { Category, BudgetReportRow } from '../../api/types';
+import type { Account, BudgetPeriod, Category, BudgetReportRow } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
 import { formatAmount } from '../../lib/format';
 import { formatCategoryPath, groupCategories } from '../../lib/categories';
+import { PeriodSelector } from './PeriodSelector';
+import { AccountFilter } from './AccountFilter';
 
 function currentMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split('-').map(Number);
-  const d = new Date(y!, m! - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+function currentYear(): string {
+  return String(new Date().getFullYear());
 }
 
 // Over budget is red (authoritative: server flags `over` as spent > limit, which
@@ -30,43 +31,11 @@ function isValidLimit(v: string): boolean {
   return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
 }
 
-// The server-side `totals.spent` is a naive sum across all budgeted rows. When
-// a user budgets both a parent AND one of its children, the parent's `spent`
-// already rolls up the child's spend (Task 3), so summing both double-counts
-// it. Rebuild the total client-side: for each visible root, count the root's
-// own (rolled-up) spent if it has a budget, otherwise fall back to summing its
-// budgeted children individually. Rows that fall outside any visible
-// root/child group (orphan edge case) are added once, unconditionally.
-function correctedSpentTotal(
-  visibleRoots: Category[],
-  rowsByCategory: Map<number, BudgetReportRow>,
-  childrenByParent: Map<number, Category[]>,
-  rows: BudgetReportRow[],
-): number {
-  let sum = 0;
-  const counted = new Set<number>();
-  for (const root of visibleRoots) {
-    const rootRow = rowsByCategory.get(root.id);
-    const children = childrenByParent.get(root.id) ?? [];
-    if (rootRow) {
-      sum += Number(rootRow.spent);
-      counted.add(root.id);
-      for (const c of children) counted.add(c.id);
-    } else {
-      for (const c of children) {
-        const childRow = rowsByCategory.get(c.id);
-        if (childRow) {
-          sum += Number(childRow.spent);
-          counted.add(c.id);
-        }
-      }
-    }
-  }
-  for (const row of rows) {
-    if (!counted.has(row.categoryId)) sum += Number(row.spent);
-  }
-  return sum;
-}
+// NOTE: the client-side "double-counted parent+child spend" correction that
+// used to live here (`correctedSpentTotal`) drove the removed one-line total
+// block. It has no caller left in this shell — Task 7's SummaryCard reimplements
+// the corrected total (likely via budget-math.ts) alongside the richer summary
+// UI, so it isn't ported forward as dead code.
 
 const MUTATION_ERROR_FALLBACK = "Impossible d'enregistrer le budget.";
 
@@ -75,10 +44,41 @@ function mutationErrorMessage(err: unknown): string {
 }
 
 export function Budgets(): JSX.Element {
-  const [month, setMonth] = useState(currentMonth());
+  const [params, setParams] = useSearchParams();
+  const period = (params.get('period') ?? 'monthly') as BudgetPeriod;
+  const monthOrYear = params.get(period === 'monthly' ? 'month' : 'year')
+    ?? (period === 'monthly' ? currentMonth() : currentYear());
+  const accountIdParam = params.get('account');
+  const accountId = accountIdParam ? Number(accountIdParam) : null;
+
+  const setPeriodState = (v: { period: BudgetPeriod; monthOrYear: string }) => {
+    const next = new URLSearchParams(params);
+    next.set('period', v.period);
+    if (v.period === 'monthly') { next.set('month', v.monthOrYear); next.delete('year'); }
+    else { next.set('year', v.monthOrYear); next.delete('month'); }
+    setParams(next, { replace: true });
+  };
+
+  const setAccountFilter = (id: number | null) => {
+    const next = new URLSearchParams(params);
+    if (id == null) next.delete('account'); else next.set('account', String(id));
+    setParams(next, { replace: true });
+  };
+
   const { budgets, create, update, remove } = useBudgets();
-  const report = useBudgetReport({ period: 'monthly', month });
+  const report = useBudgetReport({
+    period,
+    month: period === 'monthly' ? monthOrYear : undefined,
+    year: period === 'yearly' ? monthOrYear : undefined,
+    accountId,
+  });
   const rows = report.data?.rows ?? [];
+
+  const accountsQ = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
+  });
+  const accounts = accountsQ.data?.accounts ?? [];
 
   const categoriesQ = useQuery({
     queryKey: ['categories'],
@@ -98,11 +98,6 @@ export function Budgets(): JSX.Element {
     }),
     [roots, childrenByParent, rowsByCategory],
   );
-  const correctedSpent = useMemo(
-    () => correctedSpentTotal(visibleRoots, rowsByCategory, childrenByParent, rows),
-    [visibleRoots, rowsByCategory, childrenByParent, rows],
-  );
-
   const budgetedIds = useMemo(() => new Set(budgets.map((b) => b.categoryId)), [budgets]);
   const allCategories = cats;
   const byId = useMemo(
@@ -142,14 +137,10 @@ export function Budgets(): JSX.Element {
         <div>
           <h1 className="display text-2xl text-ink-50">Budgets</h1>
           <p className="text-sm text-ink-400 mt-1">
-            Plafond mensuel par catégorie de dépense. Seules les catégories avec un plafond apparaissent ici.
+            Plafond par catégorie de dépense.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="btn-ghost !py-1 !px-2" aria-label="Mois précédent" onClick={() => setMonth((m) => shiftMonth(m, -1))}>‹</button>
-          <span className="text-sm tabular-nums w-20 text-center">{month}</span>
-          <button className="btn-ghost !py-1 !px-2" aria-label="Mois suivant" onClick={() => setMonth((m) => shiftMonth(m, 1))}>›</button>
-        </div>
+        <PeriodSelector period={period} monthOrYear={monthOrYear} onChange={setPeriodState} />
       </div>
 
       {mutationError && (
@@ -158,14 +149,14 @@ export function Budgets(): JSX.Element {
         </div>
       )}
 
-      {report.data && rows.length > 0 && (
-        <div className="surface p-4 flex items-center justify-between text-sm">
-          <span className="text-ink-400">Total ce mois-ci</span>
-          <span className="tabular-nums private">
-            {formatAmount(correctedSpent)} / {formatAmount(report.data.totals.limit)}
-          </span>
-        </div>
+      {accounts.length > 1 && (
+        <AccountFilter accountId={accountId} accounts={accounts} onChange={setAccountFilter} />
       )}
+
+      {/* Summary card + Row list + Suggestions + Unbudgeted + Add form
+          — placeholders for Tasks 7–11. For this task, keep the existing
+          per-row rendering, sourced from the new `report.data.rows` shape
+          (a strict superset of the old one).                             */}
 
       {rows.length === 0 ? (
         <div className="surface p-8 text-center text-ink-400">
