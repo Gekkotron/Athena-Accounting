@@ -356,6 +356,41 @@ describe.skipIf(!RUN)('/api/imports', () => {
       expect(res.statusCode).toBe(201);
       expect(res.json().result.insertedCount).toBe(2);
     });
+
+    it('returns 410 draft_expired when the draft belongs to another user', async () => {
+      const { db } = await import('../src/db/client.js');
+      const { pdfImportDrafts, users, accounts } = await import('../src/db/schema.js');
+      const [foreignUser] = await db.insert(users).values({
+        username: `foreign-apply-${Date.now()}`,
+        passwordHash: 'not-a-real-hash',
+      }).returning();
+      const [foreignAccount] = await db.insert(accounts).values({
+        userId: foreignUser!.id, name: 'Foreign', type: 'checking', openingDate: '2025-01-01',
+      }).returning();
+      const [draft] = await db.insert(pdfImportDrafts).values({
+        userId: foreignUser!.id,
+        accountId: foreignAccount!.id,
+        pdfBytes: '', textItems: [], fingerprint: 'foreign-apply-test',
+        sourceKind: 'pdf', ocrStatus: 'ready', ocrTotal: 1, ocrProgress: 1,
+      }).returning();
+      const before = await countTransactions();
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/imports/pdf/templates',
+        headers: { cookie, 'content-type': 'application/json' },
+        payload: JSON.stringify({
+          draftId: draft!.id,
+          label: 'attacker-import',
+          zones: validZones,
+          override_rows: [
+            { date: '2026-06-14', label: 'ATTACKER-CONTROLLED', amount: '-999.99' },
+          ],
+        }),
+      });
+      expect(res.statusCode).toBe(410);
+      expect(res.json().code).toBe('draft_expired');
+      expect(await countTransactions()).toBe(before);
+    });
   });
 
   describe('POST /api/imports/pdf/templates/preview', () => {

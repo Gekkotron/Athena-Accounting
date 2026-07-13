@@ -159,6 +159,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
         label: body.label,
         zones: body.zones,
         overrideRows,
+        userId: userId(req),
       });
       return reply.code(201).send(r);
     } catch (err: any) {

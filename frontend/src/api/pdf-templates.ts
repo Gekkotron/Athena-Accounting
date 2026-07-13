@@ -37,6 +37,7 @@ export interface PreviewParsedRow {
   rawLabel: string;
   memo: string | null;
   fitid: string | null;
+  confidence?: number;
 }
 
 export interface PreviewResult {

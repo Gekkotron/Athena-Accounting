@@ -6,8 +6,18 @@ import { isBalanceLine, isFooterLine, mergeContinuationLabel, truncateLabel } fr
 import { pageContainsAnchor, firstOtherAnchorY } from './page-anchor.js';
 
 export interface ApplyResult {
-  rows: ParsedTransaction[];
+  // Optional confidence carries through only when the row's cells came from
+  // OCR (see PdfTextItem.confidence); undefined for text-layer PDFs.
+  rows: Array<ParsedTransaction & { confidence?: number }>;
   skippedRows: Array<{ rowText: string; reason: string }>;
+}
+
+// Row confidence = the weakest cell in the row (min across its items), so a
+// single misread word drags the whole row's severity down. Stays undefined
+// when none of the row's items came from OCR (text-layer PDFs).
+function rowConfidence(items: PdfTextItem[]): number | undefined {
+  if (!items.some((i) => i.confidence !== undefined)) return undefined;
+  return Math.min(...items.map((i) => i.confidence ?? 1));
 }
 
 const ROW_Y_TOLERANCE_PT = 2;
@@ -160,12 +170,14 @@ export function applyTemplate(pages: PdfPageText[], zones: TemplateZones): Apply
         throw new Error('template: invalid amount column configuration');
       }
 
-      const newRow: ParsedTransaction = {
+      const confidence = rowConfidence(r.items);
+      const newRow: ParsedTransaction & { confidence?: number } = {
         date,
         amount,
         rawLabel: truncateLabel(descText),
         memo: null,
         fitid: null,
+        ...(confidence !== undefined ? { confidence } : {}),
       };
       rows.push(newRow);
       pageLastRow = newRow;

@@ -10,6 +10,9 @@ export interface PdfTextItem {
   yTop: number;
   width: number;
   height: number;
+  // Only present for items merged in from OCR (see OcrWord); text-layer
+  // items extracted directly from a PDF have no confidence score.
+  confidence?: number;
 }
 
 export interface PdfPageText {

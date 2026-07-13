@@ -239,10 +239,11 @@ export async function applyTemplateAndImport(opts: {
   label: string;
   zones: TemplateZones;
   overrideRows?: Array<{ date: string; label: string; amount: string }>;
+  userId: number;
 }): Promise<ApplyTemplateImportedResult> {
   validateZones(opts.zones);
   const [draft] = await db.select().from(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));
-  if (!draft) {
+  if (!draft || draft.userId !== opts.userId) {
     const err = new Error('draft_expired');
     (err as any).code = 'draft_expired';
     throw err;
@@ -358,7 +359,9 @@ export async function applyTemplateAndImport(opts: {
 }
 
 export interface PreviewTemplateResult {
-  rows: import('../ofx-parser.js').ParsedTransaction[];
+  // Optional confidence (0..1) per row, populated only when the row's cells
+  // came from OCR text_items — see applyTemplate's rowConfidence.
+  rows: Array<import('../ofx-parser.js').ParsedTransaction & { confidence?: number }>;
   skippedRows: Array<{ rowText: string; reason: string }>;
 }
 

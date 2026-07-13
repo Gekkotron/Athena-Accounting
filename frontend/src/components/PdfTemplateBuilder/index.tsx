@@ -112,7 +112,9 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   useEffect(() => {
     if (!isOcrSource) return;
     setEditableRows(
-      previewRows ? previewRows.map((r) => ({ date: r.date, label: r.rawLabel, amount: r.amount })) : [],
+      previewRows
+        ? previewRows.map((r) => ({ date: r.date, label: r.rawLabel, amount: r.amount, confidence: r.confidence }))
+        : [],
     );
   }, [previewRows, isOcrSource]);
   // Guards against a stale in-flight preview response landing after the
