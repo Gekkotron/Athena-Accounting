@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
-import type { Account, BudgetPeriod, Category, BudgetReportRow } from '../../api/types';
+import type { Account, BudgetPeriod, Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
-import { formatAmount } from '../../lib/format';
 import { formatCategoryPath, groupCategories } from '../../lib/categories';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
+import { BudgetRow } from './BudgetRow';
 import { topLevelRows } from './budget-math';
 
 function currentMonth(): string {
@@ -18,15 +18,6 @@ function currentMonth(): string {
 
 function currentYear(): string {
   return String(new Date().getFullYear());
-}
-
-// Over budget is red (authoritative: server flags `over` as spent > limit, which
-// survives pct rounding — e.g. 1004/1000 rounds to pct 100 but is still over).
-// Otherwise amber from 80%, green below.
-function barColor(pct: number, over: boolean): string {
-  if (over) return 'bg-clay-500';
-  if (pct >= 80) return 'bg-amber-500';
-  return 'bg-sage-500';
 }
 
 function isValidLimit(v: string): boolean {
@@ -199,7 +190,7 @@ export function Budgets(): JSX.Element {
             const nodes: JSX.Element[] = [];
             if (rootRow) {
               nodes.push(
-                <BudgetLine
+                <BudgetRow
                   key={`root-${r.id}`}
                   row={rootRow}
                   depth={0}
@@ -220,7 +211,7 @@ export function Budgets(): JSX.Element {
               const row = rowsByCategory.get(c.id);
               if (!row) continue;
               nodes.push(
-                <BudgetLine
+                <BudgetRow
                   key={`child-${c.id}`}
                   row={row}
                   depth={1}
@@ -236,7 +227,7 @@ export function Budgets(): JSX.Element {
           {rows
             .filter((r) => !visibleRoots.some((vr) => vr.id === r.categoryId || (childrenByParent.get(vr.id) ?? []).some((c) => c.id === r.categoryId)))
             .map((r) => (
-              <BudgetLine
+              <BudgetRow
                 key={`orphan-${r.categoryId}`}
                 row={r}
                 depth={0}
@@ -274,81 +265,5 @@ export function Budgets(): JSX.Element {
         )}
       </div>
     </div>
-  );
-}
-
-function BudgetLine(props: {
-  row: BudgetReportRow;
-  depth: 0 | 1;
-  budgetId: number | undefined;
-  onSave: (id: number, limit: string) => void;
-  onDelete: (id: number) => void;
-}): JSX.Element {
-  const { row: r, depth, budgetId, onSave, onDelete } = props;
-  const pctClamped = Math.min(Math.max(r.pct, 0), 100);
-  return (
-    <li
-      data-role="budget-row"
-      data-depth={depth}
-      className={`surface p-4 ${depth === 1 ? 'ml-8 bg-ink-900/20' : ''}`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-medium">{r.name}</span>
-        <span className="text-sm tabular-nums private">
-          {formatAmount(r.spent, r.currency)} / {Number(r.limit) > 0 ? formatAmount(r.limit, r.currency) : '—'}
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-ink-800 overflow-hidden">
-        <div className={`h-full ${barColor(r.pct, r.over)}`} style={{ width: `${pctClamped}%` }} />
-      </div>
-      <div className="flex items-center justify-between mt-2">
-        <span className={`text-xs ${r.over ? 'text-clay-300' : 'text-ink-400'}`}>
-          {r.over ? 'Dépassé de ' : 'Reste '}
-          <span className="private">
-            {r.over
-              ? formatAmount((-Number(r.remaining)).toFixed(2), r.currency)
-              : formatAmount(r.remaining, r.currency)}
-          </span>
-        </span>
-        <BudgetRowActions
-          id={budgetId}
-          currentLimit={r.limit}
-          onSave={onSave}
-          onDelete={onDelete}
-        />
-      </div>
-    </li>
-  );
-}
-
-function BudgetRowActions(props: {
-  id: number | undefined;
-  currentLimit: string;
-  onSave: (id: number, limit: string) => void;
-  onDelete: (id: number) => void;
-}) {
-  const { id, currentLimit, onSave, onDelete } = props;
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(currentLimit);
-  if (id === undefined) return null;
-  if (editing) {
-    return (
-      <span className="flex items-center gap-1">
-        <input
-          className="input w-24 !py-1" type="number" min="0" step="0.01"
-          aria-label="Modifier le plafond" value={value} onChange={(e) => setValue(e.target.value)}
-        />
-        <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => {
-          if (isValidLimit(value)) { onSave(id, value); setEditing(false); }
-        }}>OK</button>
-        <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => { setValue(currentLimit); setEditing(false); }}>Annuler</button>
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-2">
-      <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => setEditing(true)}>Modifier</button>
-      <button className="btn-ghost !py-1 !px-2 text-xs text-clay-300" onClick={() => onDelete(id)}>Supprimer</button>
-    </span>
   );
 }
