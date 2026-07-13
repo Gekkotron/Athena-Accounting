@@ -178,9 +178,17 @@ export async function runOcrJob(draftId: number, pngBase64Pages: string[]): Prom
   try {
     const pages = await ocrPngPages(pngBase64Pages, {
       onPageDone: async (i) => {
-        await db.update(pdfImportDrafts)
-          .set({ ocrProgress: i + 1 })
-          .where(eq(pdfImportDrafts.id, draftId));
+        // Fire-and-forget: ocrPngPages doesn't await this callback, so any thrown
+        // promise here would be an UnhandledRejection and crash the Node process.
+        // A stuck progress counter is recoverable via the 24h draft sweeper.
+        try {
+          await db.update(pdfImportDrafts)
+            .set({ ocrProgress: i + 1 })
+            .where(eq(pdfImportDrafts.id, draftId));
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[ocr] progress update failed', { draftId, page: i, err });
+        }
       },
     });
     // Merge OCR words into text_items so parseStatementRows works unchanged.
