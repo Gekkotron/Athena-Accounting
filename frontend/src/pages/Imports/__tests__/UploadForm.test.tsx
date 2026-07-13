@@ -231,7 +231,7 @@ describe('UploadForm', () => {
     const jpeg = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], 'st.jpg', { type: 'image/jpeg' });
     const photoInput = screen.getByLabelText(/photo/i) as HTMLInputElement;
     await user.upload(photoInput, jpeg);
-    const accountSelect = screen.getByLabelText(/compte cible/i);
+    const accountSelect = screen.getByLabelText(/^compte$/i);
     await user.selectOptions(accountSelect, '1');
     await user.click(screen.getByRole('button', { name: /importer/i }));
 

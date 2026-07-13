@@ -1,5 +1,4 @@
 import { createWorker, type Worker } from 'tesseract.js';
-import { loadImage } from '@napi-rs/canvas';
 
 export interface OcrWord {
   pageIndex: number; str: string;
@@ -9,6 +8,18 @@ export interface OcrWord {
 export interface OcrPage {
   pageIndex: number; widthPx: number; heightPx: number;
   words: OcrWord[]; meanConfidence: number;
+}
+
+function readPngDims(buf: Buffer): { widthPx: number; heightPx: number } {
+  // PNG signature check
+  if (buf.length < 24 || buf.readUInt32BE(0) !== 0x89504e47 || buf.readUInt32BE(4) !== 0x0d0a1a0a) {
+    throw new Error('OCR input is not a PNG');
+  }
+  // IHDR chunk starts at byte 8; type at bytes 12-15 must be 'IHDR' = 0x49484452
+  if (buf.readUInt32BE(12) !== 0x49484452) {
+    throw new Error('OCR input PNG missing IHDR chunk');
+  }
+  return { widthPx: buf.readUInt32BE(16), heightPx: buf.readUInt32BE(20) };
 }
 
 export async function ocrPngPages(
@@ -32,9 +43,7 @@ export async function ocrPngPages(
     for (let i = 0; i < pngBase64Pages.length; i++) {
       const b64 = pngBase64Pages[i]!;
       const buf = Buffer.from(b64, 'base64');
-      const img = await loadImage(buf);
-      const widthPx = img.width;
-      const heightPx = img.height;
+      const { widthPx, heightPx } = readPngDims(buf);
       const { data } = await worker.recognize(buf);
       // tesseract.js v5 result: data.words = [{ text, bbox: { x0, y0, x1, y1 }, confidence }]
       const words: OcrWord[] = [];

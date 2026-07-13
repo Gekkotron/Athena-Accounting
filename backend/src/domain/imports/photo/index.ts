@@ -27,14 +27,21 @@ export function detectImageMime(buf: Buffer): string | null {
 
 export async function transcodeHeicToJpeg(buf: Buffer, mime: string): Promise<Buffer> {
   if (mime !== 'image/heic') return buf;
-  return await sharp(buf).jpeg().toBuffer();
+  try {
+    return await sharp(buf).jpeg().toBuffer();
+  } catch (err) {
+    // sharp without libheif throws a cryptic "unsupported image format" here.
+    // Surface it as our own typed error so the route can map it to 400 with
+    // a French user-facing message.
+    throw new PhotoUnsupportedMimeError('format HEIC non supporté par cette installation de sharp');
+  }
 }
 
 export class PhotoTooLargeError extends Error {
   constructor(size: number) { super(`photo exceeds ${MAX_PHOTO_BYTES} bytes (got ${size})`); }
 }
 export class PhotoUnsupportedMimeError extends Error {
-  constructor() { super('unsupported image format'); }
+  constructor(detail?: string) { super(detail ?? "format d'image non supporté"); }
 }
 
 export async function importPhoto(opts: {

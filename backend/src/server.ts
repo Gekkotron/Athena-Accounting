@@ -98,6 +98,7 @@ if (env.NODE_ENV !== 'test') {
 
   try {
     await runMigrations();
+    if (!process.env.OCR_LANG_PATH) app.log.warn('OCR_LANG_PATH not set — first OCR run will attempt CDN fetch (fine for dev, fails on LAN-only deploy).');
     await app.listen({ host: '0.0.0.0', port: env.PORT });
   } catch (err) {
     app.log.error(err);

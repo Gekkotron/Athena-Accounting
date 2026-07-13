@@ -241,7 +241,7 @@ export function UploadForm({
             <label className="label">Compte</label>
             <select
               className="input"
-              aria-label="Compte cible"
+              aria-label="Compte"
               value={accountId}
               onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
               disabled={pending}

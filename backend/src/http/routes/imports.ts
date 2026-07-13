@@ -121,7 +121,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(200).send(result);
     } catch (err) {
       if (err instanceof PhotoTooLargeError) return reply.code(400).send({ error: 'photo too large (max 25 MB)' });
-      if (err instanceof PhotoUnsupportedMimeError) return reply.code(400).send({ error: 'unsupported image format' });
+      if (err instanceof PhotoUnsupportedMimeError) return reply.code(400).send({ error: err.message });
       app.log.error({ err, filename }, 'photo import failed');
       throw err;
     }

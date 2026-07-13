@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
-import { detectImageMime, transcodeHeicToJpeg } from '../index.js';
+import { detectImageMime, transcodeHeicToJpeg, PhotoUnsupportedMimeError } from '../index.js';
 
 describe('detectImageMime', () => {
   it('recognizes JPEG', async () => {
@@ -46,5 +46,10 @@ describe('transcodeHeicToJpeg', () => {
     const out = await transcodeHeicToJpeg(heic, 'image/heic');
     const meta = await sharp(out).metadata();
     expect(meta.format).toBe('jpeg');
+  });
+
+  it('throws PhotoUnsupportedMimeError when sharp cannot decode a HEIC-declared buffer', async () => {
+    const garbage = Buffer.from('not a real image', 'utf8');
+    await expect(transcodeHeicToJpeg(garbage, 'image/heic')).rejects.toThrow(PhotoUnsupportedMimeError);
   });
 });
