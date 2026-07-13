@@ -246,6 +246,29 @@ describe.skipIf(!RUN)('/api/imports', () => {
     expect(res.json().fileImport.statedBalanceDate).toBeNull();
   });
 
+  it('GET /api/imports/pdf/drafts/:id/ocr-status returns 404 for unknown draft', async () => {
+    const res = await app.inject({
+      method: 'GET', url: '/api/imports/pdf/drafts/999999/ocr-status', headers: { cookie },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('GET /api/imports/pdf/drafts/:id/ocr-status reflects ocr_status', async () => {
+    // Insert a draft directly to bypass the OCR async job for this test.
+    const { db } = await import('../src/db/client.js');
+    const { pdfImportDrafts } = await import('../src/db/schema.js');
+    const uid = await getUid();
+    const [draft] = await db.insert(pdfImportDrafts).values({
+      userId: uid, accountId, pdfBytes: '', textItems: [], fingerprint: '',
+      sourceKind: 'pdf', ocrStatus: 'pending', ocrTotal: 3, ocrProgress: 1,
+    }).returning();
+    const res = await app.inject({
+      method: 'GET', url: `/api/imports/pdf/drafts/${draft!.id}/ocr-status`, headers: { cookie },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'pending', progress: 1, total: 3 });
+  });
+
   async function countTransactions(): Promise<number> {
     const { db } = await import('../src/db/client.js');
     const { transactions } = await import('../src/db/schema.js');

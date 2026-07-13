@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { and, desc, eq, lte, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { accounts, fileImports, transactions } from '../../db/schema.js';
+import { accounts, fileImports, pdfImportDrafts, transactions } from '../../db/schema.js';
 import {
   inferFormat,
   resolveAccountFromFilename,
@@ -157,6 +157,33 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
     return { fileImport: await enrichImport(row) };
+  });
+
+  app.get('/api/imports/pdf/drafts/:id/ocr-status', async (req, reply) => {
+    const uid = userId(req);
+    const id = Number((req.params as { id?: string }).id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return reply.code(400).send({ error: 'invalid id' });
+    }
+    const [row] = await db
+      .select({
+        status: pdfImportDrafts.ocrStatus,
+        progress: pdfImportDrafts.ocrProgress,
+        total: pdfImportDrafts.ocrTotal,
+        error: pdfImportDrafts.ocrError,
+        userId: pdfImportDrafts.userId,
+      })
+      .from(pdfImportDrafts)
+      .where(eq(pdfImportDrafts.id, id));
+    // 404 on both "not found" and "belongs to another user" (project's
+    // non-enumeration convention — matches how other draft endpoints behave).
+    if (!row || row.userId !== uid) return reply.code(404).send({ error: 'not found' });
+    return {
+      status: row.status,
+      progress: row.progress,
+      total: row.total,
+      error: row.error ?? undefined,
+    };
   });
 
   // Cascading delete: removes the file_imports row AND every transaction whose

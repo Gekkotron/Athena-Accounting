@@ -10,6 +10,7 @@ import { renderPagesToPng, type RenderedPage } from './render.js';
 import { validateZones, type TemplateZones } from './zones.js';
 import { runImport, type ImportResult } from '../import-service.js';
 import { parseStatementRows } from './parse-rows.js';
+import { ocrPngPages } from '../ocr/index.js';
 
 const HEURISTIC_AUTO_THRESHOLD = 0.9;
 const HEURISTIC_SUGGEST_THRESHOLD = 0.5;
@@ -32,6 +33,9 @@ export type ImportPdfResult =
       // (only set when reason === 'template_stale'). The UI surfaces this
       // as a banner above the wizard so the user knows what to fix.
       staleDiagnostic?: string;
+      sourceKind: 'pdf' | 'photo';
+      ocrStatus: 'not_needed' | 'pending';
+      ocrTotal: number;
     };
 
 function flattenItems(pages: PdfPageText[]): PdfTextItem[] {
@@ -132,14 +136,26 @@ async function parkDraft(
 ): Promise<ImportPdfResult> {
   const rendered = await renderPagesToPng(opts.buffer);
   const textItems = flattenItems(pages);
+  const willOcr = reason === 'no_text_layer';
   const [draft] = await db.insert(pdfImportDrafts).values({
     userId: opts.userId,
     accountId: opts.accountId,
     pdfBytes: opts.buffer.toString('base64'),
     textItems,
     fingerprint,
+    sourceKind: 'pdf',
+    ocrStatus: willOcr ? 'pending' : 'not_needed',
+    ocrTotal: willOcr ? rendered.length : 0,
+    ocrProgress: 0,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   }).returning();
+  if (willOcr && draft) {
+    // Kick off the background OCR job. queueMicrotask lets the HTTP response
+    // return immediately; the job continues after the response is sent.
+    queueMicrotask(() => {
+      void runOcrJob(draft.id, rendered.map((p) => p.pngBase64));
+    });
+  }
   return {
     kind: 'needs_template',
     draftId: draft!.id,
@@ -149,7 +165,39 @@ async function parkDraft(
     suggestedZones,
     reason,
     ...(staleDiagnostic ? { staleDiagnostic } : {}),
+    sourceKind: 'pdf',
+    ocrStatus: willOcr ? 'pending' : 'not_needed',
+    ocrTotal: willOcr ? rendered.length : 0,
   };
+}
+
+// Runs OCR on a draft's rendered pages, streaming progress into the draft
+// row. Any thrown error transitions the draft to ocr_status = 'error' with
+// a human-readable message; downstream polling picks that up.
+export async function runOcrJob(draftId: number, pngBase64Pages: string[]): Promise<void> {
+  try {
+    const pages = await ocrPngPages(pngBase64Pages, {
+      onPageDone: async (i) => {
+        await db.update(pdfImportDrafts)
+          .set({ ocrProgress: i + 1 })
+          .where(eq(pdfImportDrafts.id, draftId));
+      },
+    });
+    // Merge OCR words into text_items so parseStatementRows works unchanged.
+    const items = pages.flatMap((p) => p.words);
+    await db.update(pdfImportDrafts)
+      .set({
+        textItems: items,
+        ocrStatus: 'ready',
+        ocrProgress: pages.length,
+      })
+      .where(eq(pdfImportDrafts.id, draftId));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown OCR error';
+    await db.update(pdfImportDrafts)
+      .set({ ocrStatus: 'error', ocrError: message })
+      .where(eq(pdfImportDrafts.id, draftId));
+  }
 }
 
 // Explain in one short French sentence WHY the saved template produced 0
