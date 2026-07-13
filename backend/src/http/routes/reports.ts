@@ -342,6 +342,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       category_id: number;
       name: string;
       color: string | null;
+      parent_id: number | null;
       limit: string;
       currency: string;
       period: string;
@@ -354,6 +355,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         b.category_id                               AS category_id,
         c.name                                      AS name,
         c.color                                     AS color,
+        c.parent_id                                 AS parent_id,
         b.monthly_limit::text                       AS limit,
         b.currency                                  AS currency,
         b.period                                    AS period,
@@ -373,6 +375,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
        AND e.transfer_group_id IS NULL
        AND e.date >= ${startIso}::date
        AND e.date <  ${endIso}::date
+       AND (b.account_id IS NULL OR e.account_id = b.account_id)
        AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
       WHERE b.user_id = ${uid}
         AND b.period = ${period}
@@ -381,7 +384,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
           OR (${accountId ?? null}::int IS NULL AND b.account_id IS NOT NULL)
           OR b.account_id = ${accountId ?? null}::int
         )
-      GROUP BY b.id, b.category_id, c.name, c.color, b.monthly_limit, b.currency, b.period, b.account_id
+      GROUP BY b.id, b.category_id, c.name, c.color, c.parent_id, b.monthly_limit, b.currency, b.period, b.account_id
       ORDER BY c.name ASC
     `);
 
@@ -428,6 +431,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
        AND e.transfer_group_id IS NULL
        AND e.date >= ${historyStart.toISOString().slice(0, 10)}::date
        AND e.date <  ${startIso}::date
+       AND (b.account_id IS NULL OR e.account_id = b.account_id)
        AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
       WHERE b.user_id = ${uid}
         AND b.period = ${period}
@@ -445,18 +449,30 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       inner.set(r.period_key, r.spent);
     }
 
+    // Rows whose parent category is ALSO budgeted must be excluded from the
+    // totals: the parent's rolled-up spend/limit already includes this row's,
+    // so summing both double-counts it. This is the backend counterpart of
+    // the frontend's client-side `topLevelRows` filter — both are kept
+    // (defense-in-depth) so a future change to either side can't silently
+    // reintroduce the double-count.
+    const budgetedCategoryIds = new Set(rowsFiltered.map((r) => r.category_id));
+
     let totalLimit = 0;
     let totalSpent = 0;
     let totalProjected: number | null = 0;
     const rows = rowsFiltered.map((r) => {
       const limit = Number(r.limit);
       const spent = Number(r.spent);
-      totalLimit += limit;
-      totalSpent += spent;
       const projected = computeProjected(spent, elapsedDays, windowDays, periodEndExclusive, now);
-      if (totalProjected !== null) {
-        if (projected == null) totalProjected = null;
-        else totalProjected += Number(projected);
+
+      const includeInTotals = r.parent_id == null || !budgetedCategoryIds.has(r.parent_id);
+      if (includeInTotals) {
+        totalLimit += limit;
+        totalSpent += spent;
+        if (totalProjected !== null) {
+          if (projected == null) totalProjected = null;
+          else totalProjected += Number(projected);
+        }
       }
 
       const priorKeys = priorPeriodKeys(period, periodStart);
@@ -486,14 +502,25 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       const underHalfCount = limit > 0
         ? historyValuesNum.filter((v) => v < limit * 0.5).length
         : 0;
-      const suggestedLimit = (overCount >= 3 || underHalfCount >= 3)
-        ? median(historyValuesNum).toFixed(2)
+      // Gate on `history !== null` (>= 2 non-zero completed periods) so a
+      // brand-new budget with an all-zero history never suggests "0.00" —
+      // the frontend's guard is `!= null`, so a "0.00" suggestion would
+      // render an "Ajuster à 0,00 €" button that the PUT positiveDecimal
+      // guard rejects with a 400. Also clamp to > 0 defensively in case the
+      // median itself rounds to zero even with qualifying history.
+      const medianValue = median(historyValuesNum);
+      const suggestedLimit = history !== null
+        && medianValue > 0
+        && (overCount >= 3 || underHalfCount >= 3)
+        ? medianValue.toFixed(2)
         : null;
 
       return {
+        id: r.id,
         categoryId: r.category_id,
         name: r.name,
         color: r.color,
+        parentId: r.parent_id,
         accountId: r.account_id,
         period: r.period as 'monthly' | 'yearly',
         limit: r.limit,
@@ -539,8 +566,8 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
 
     // Unbudgeted candidates: expense categories with no active budget in the
     // current period AND positive average spend over the last 3 completed
-    // periods (same period-type as the request).
-    const budgetedCategoryIds = new Set(rowsFiltered.map((r) => r.category_id));
+    // periods (same period-type as the request). Reuses `budgetedCategoryIds`
+    // computed above for the totals-double-count fix.
     const candidateHistoryStart = period === 'monthly'
       ? new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() - 3, 1))
       : new Date(Date.UTC(periodStart.getUTCFullYear() - 3, 0, 1));

@@ -4,7 +4,7 @@ import type { BudgetReport } from '../../../api/types';
 
 function row(overrides: Partial<BudgetReport['rows'][number]>): BudgetReport['rows'][number] {
   return {
-    categoryId: 0, name: '', color: null, accountId: null, period: 'monthly',
+    id: 0, categoryId: 0, name: '', color: null, parentId: null, accountId: null, period: 'monthly',
     limit: '0.00', currency: 'EUR', spent: '0.00', remaining: '0.00', pct: 0, over: false,
     projected: null, history: null, anomaly: false, suggestedLimit: null,
     ...overrides,

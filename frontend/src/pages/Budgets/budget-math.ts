@@ -20,6 +20,13 @@ export function summarizePace(totals: BudgetReport['totals']): 'over' | 'onTrack
 // double-counting when both a parent (e.g. "Alimentation") and its child
 // (e.g. "Restaurants") carry independent budgets — the parent's rolled-up
 // spend already includes the child's spend, so summing both is wrong.
+//
+// The backend (`/api/reports/budget`'s totals) now applies the equivalent
+// filter server-side, so `report.data.totals` itself is already correct.
+// This client-side filter is kept as defense-in-depth (and because the
+// SummaryCard's mini-chart re-derives its bars from `rows`, not `totals`) —
+// if a future backend change ever regresses the server-side filter, the UI
+// still won't double-count.
 export function topLevelRows(
   rows: BudgetReport['rows'],
   categories: Category[],

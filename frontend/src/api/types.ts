@@ -170,9 +170,11 @@ export type Budget = {
 };
 
 export type BudgetReportRow = {
+  id: number;
   categoryId: number;
   name: string;
   color: string | null;
+  parentId: number | null;
   accountId: number | null;
   period: BudgetPeriod;
   limit: string;

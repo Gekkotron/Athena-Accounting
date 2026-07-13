@@ -37,12 +37,12 @@ vi.mock('../../../api/client', () => ({
         elapsedDays: 15,
         rows: [
           {
-            categoryId: 1, name: 'Courses', color: null, accountId: null, period: 'monthly',
+            id: 101, categoryId: 1, name: 'Courses', color: null, parentId: null, accountId: null, period: 'monthly',
             limit: '100.00', currency: 'EUR', spent: '80.00', remaining: '20.00', pct: 80, over: false,
             projected: null, history: null, anomaly: false, suggestedLimit: null,
           },
           {
-            categoryId: 2, name: 'Alimentation', color: null, accountId: null, period: 'monthly',
+            id: 102, categoryId: 2, name: 'Alimentation', color: null, parentId: 1, accountId: null, period: 'monthly',
             limit: '0.00', currency: 'EUR', spent: '30.00', remaining: '-30.00', pct: 0, over: false,
             projected: null, history: null, anomaly: false, suggestedLimit: null,
           },
@@ -99,12 +99,12 @@ describe('Budgets page — totals correction (no double-count)', () => {
           elapsedDays: 15,
           rows: [
             {
-              categoryId: 1, name: 'Courses', color: null, accountId: null, period: 'monthly',
+              id: 10, categoryId: 1, name: 'Courses', color: null, parentId: null, accountId: null, period: 'monthly',
               limit: '100.00', currency: 'EUR', spent: '80.00', remaining: '20.00', pct: 80, over: false,
               projected: null, history: null, anomaly: false, suggestedLimit: null,
             },
             {
-              categoryId: 2, name: 'Alimentation', color: null, accountId: null, period: 'monthly',
+              id: 20, categoryId: 2, name: 'Alimentation', color: null, parentId: 1, accountId: null, period: 'monthly',
               limit: '30.00', currency: 'EUR', spent: '30.00', remaining: '0.00', pct: 100, over: false,
               projected: null, history: null, anomaly: false, suggestedLimit: null,
             },
@@ -167,7 +167,7 @@ describe('Budgets page — end-to-end URL + summary', () => {
           windowDays: 365,
           elapsedDays: 200,
           rows: [{
-            id: 1, categoryId: 1, name: 'Loisirs', color: null, accountId: null,
+            id: 1, categoryId: 1, name: 'Loisirs', color: null, parentId: null, accountId: null,
             period: 'yearly', limit: '600.00', currency: 'EUR',
             spent: '420.00', remaining: '180.00', pct: 70, over: false,
             projected: '766.50',

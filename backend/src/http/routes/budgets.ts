@@ -137,6 +137,20 @@ export async function budgetsRoutes(app: FastifyInstance): Promise<void> {
     if (parsed.data.accountId != null && !(await accountOwned(uid, parsed.data.accountId))) {
       return reply.code(400).send({ error: 'account_not_owned' });
     }
+    // Read the pre-update row so a 23505 catch below can echo the
+    // {categoryId, period, accountId} tuple, matching POST's 409 contract.
+    // categoryId never changes via PUT; period/accountId fall back to the
+    // existing row's value when the patch didn't touch them.
+    const [existing] = await db
+      .select({
+        categoryId: categoryBudgets.categoryId,
+        period: categoryBudgets.period,
+        accountId: categoryBudgets.accountId,
+      })
+      .from(categoryBudgets)
+      .where(and(eq(categoryBudgets.id, id), eq(categoryBudgets.userId, uid)));
+    if (!existing) return reply.code(404).send({ error: 'not found' });
+
     const patch: Partial<typeof categoryBudgets.$inferInsert> = { updatedAt: new Date() };
     if (parsed.data.monthlyLimit !== undefined) patch.monthlyLimit = parsed.data.monthlyLimit;
     if (parsed.data.currency !== undefined) patch.currency = parsed.data.currency;
@@ -155,7 +169,12 @@ export async function budgetsRoutes(app: FastifyInstance): Promise<void> {
       return { budget: serialize(updated) };
     } catch (err) {
       if (isPgError(err) && err.code === '23505') {
-        return reply.code(409).send({ error: 'budget_exists' });
+        return reply.code(409).send({
+          error: 'budget_exists',
+          categoryId: existing.categoryId,
+          period: parsed.data.period ?? existing.period,
+          accountId: parsed.data.accountId !== undefined ? parsed.data.accountId : existing.accountId,
+        });
       }
       throw err;
     }

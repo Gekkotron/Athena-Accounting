@@ -15,7 +15,7 @@ vi.mock('../../api/client', () => ({
     if (path === '/api/budgets') return Promise.resolve({ budgets: [{ id: 1, categoryId: 10, monthlyLimit: '300.00', currency: 'EUR' }] });
     if (path === '/api/reports/budget') return Promise.resolve({
       month: '2025-03',
-      rows: [{ categoryId: 10, name: 'Restaurants', color: null, limit: '300.00', currency: 'EUR', spent: '240.00', remaining: '60.00', pct: 80, over: false }],
+      rows: [{ id: 1, categoryId: 10, name: 'Restaurants', color: null, parentId: null, limit: '300.00', currency: 'EUR', spent: '240.00', remaining: '60.00', pct: 80, over: false }],
       totals: { limit: '300.00', spent: '240.00' },
       unbudgetedCandidates: [],
     });
@@ -67,7 +67,7 @@ describe('Budgets page', () => {
       if (path === '/api/budgets') return Promise.resolve({ budgets: [{ id: 1, categoryId: 10, monthlyLimit: '300.00', currency: 'EUR' }] });
       if (path === '/api/reports/budget') return Promise.resolve({
         month: '2025-03',
-        rows: [{ categoryId: 10, name: 'Restaurants', color: null, limit: '300.00', currency: 'EUR', spent: '240.00', remaining: '60.00', pct: 80, over: false }],
+        rows: [{ id: 1, categoryId: 10, name: 'Restaurants', color: null, parentId: null, limit: '300.00', currency: 'EUR', spent: '240.00', remaining: '60.00', pct: 80, over: false }],
         totals: { limit: '300.00', spent: '240.00' },
         unbudgetedCandidates: [],
       });
@@ -88,7 +88,7 @@ describe('Budgets page', () => {
       if (path === '/api/reports/budget') return Promise.resolve({
         month: '2025-03',
         // 1004/1000 → pct rounds to 100, but over is true.
-        rows: [{ categoryId: 10, name: 'Courses', color: null, limit: '1000.00', currency: 'EUR', spent: '1004.00', remaining: '-4.00', pct: 100, over: true }],
+        rows: [{ id: 1, categoryId: 10, name: 'Courses', color: null, parentId: null, limit: '1000.00', currency: 'EUR', spent: '1004.00', remaining: '-4.00', pct: 100, over: true }],
         totals: { limit: '1000.00', spent: '1004.00' },
         unbudgetedCandidates: [],
       });

@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { SuggestionCard } from '../SuggestionCard';
 
 const rowOver = {
-  id: 5, categoryId: 42, name: 'Restaurants', color: null, accountId: null,
+  id: 5, categoryId: 42, name: 'Restaurants', color: null, parentId: null, accountId: null,
   period: 'monthly' as const, limit: '50.00', currency: 'EUR',
   spent: '75.00', remaining: '-25.00', pct: 150, over: true,
   projected: '75.00',

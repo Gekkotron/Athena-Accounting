@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { BudgetRow } from '../BudgetRow';
 
 const row = {
-  id: 1, categoryId: 42, name: 'Restaurants', color: null, accountId: null,
+  id: 1, categoryId: 42, name: 'Restaurants', color: null, parentId: null, accountId: null,
   period: 'monthly' as const, limit: '50.00', currency: 'EUR',
   spent: '38.20', remaining: '11.80', pct: 76, over: false,
   projected: '91.10',

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { SummaryCard } from '../SummaryCard';
 
 const baseRow = {
-  id: 1, categoryId: 1, name: 'X', color: null, accountId: null,
+  id: 1, categoryId: 1, name: 'X', color: null, parentId: null, accountId: null,
   period: 'monthly' as const, limit: '50.00', currency: 'EUR',
   spent: '20.00', remaining: '30.00', pct: 40, over: false,
   projected: '40.00',

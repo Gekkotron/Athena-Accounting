@@ -209,6 +209,18 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         const catId = resolveCategoryRef(b.category, b.categoryParent, categoryIdByPath, categoryIdsByName);
         if (catId === null) continue;
         const budgetAccountId = resolveNameToId(b.account ?? null, accountIdByName);
+        if (b.account != null && budgetAccountId == null) {
+          // The dump's account name didn't resolve (e.g. renamed/removed
+          // account). Skip rather than silently downgrading to a global
+          // budget: if a global variant for the same (category, period)
+          // already exists in the dump, that silent downgrade would hit the
+          // unique index and abort the whole restore transaction.
+          req.log.warn(
+            { category: b.category, account: b.account },
+            'restore: budget account name did not resolve; skipping scoped budget',
+          );
+          continue;
+        }
         await tx.insert(categoryBudgets).values({
           userId: uid,
           categoryId: catId,

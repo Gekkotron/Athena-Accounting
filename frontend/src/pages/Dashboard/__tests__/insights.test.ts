@@ -194,9 +194,11 @@ describe('buildInsights — category movers', () => {
 
 function budgetRow(p: Partial<BudgetReportRow>): BudgetReportRow {
   return {
+    id: 1,
     categoryId: 1,
     name: 'Cat',
     color: null,
+    parentId: null,
     accountId: null,
     period: 'monthly',
     limit: '100.00',
