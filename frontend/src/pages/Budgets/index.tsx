@@ -9,6 +9,7 @@ import { formatCategoryPath, groupCategories } from '../../lib/categories';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
+import { topLevelRows } from './budget-math';
 
 function currentMonth(): string {
   const d = new Date();
@@ -106,19 +107,18 @@ export function Budgets(): JSX.Element {
   // The server totals a naive sum across every budgeted row (see
   // reports.ts) — when a parent AND its child both carry a budget, the
   // child's spend is already rolled into the parent's own `spent` value,
-  // so summing both rows double-counts it. Recompute a rollup-aware total
-  // here for the SummaryCard by dropping any row whose direct parent is
-  // itself budgeted (its spend already lives inside the parent's row).
+  // so summing both rows double-counts it. Filter to rollup-aware rows
+  // once here, then derive both the summary totals AND the SummaryCard's
+  // chart data from the same filtered set — otherwise the chart re-sums
+  // the raw rows and reintroduces the double-count the totals fix removed.
+  const filteredRows = useMemo(() => topLevelRows(rows, allCategories), [rows, allCategories]);
+
   const summaryTotals = useMemo(() => {
-    const topLevel = rows.filter((r) => {
-      const parentId = byId.get(r.categoryId)?.parentId ?? null;
-      return !(parentId != null && rowsByCategory.has(parentId));
-    });
-    const limit = topLevel.reduce((a, r) => a + Number(r.limit), 0);
-    const spent = topLevel.reduce((a, r) => a + Number(r.spent), 0);
-    const allProjected = topLevel.length > 0 && topLevel.every((r) => r.projected != null);
+    const limit = filteredRows.reduce((a, r) => a + Number(r.limit), 0);
+    const spent = filteredRows.reduce((a, r) => a + Number(r.spent), 0);
+    const allProjected = filteredRows.length > 0 && filteredRows.every((r) => r.projected != null);
     const projected = allProjected
-      ? topLevel.reduce((a, r) => a + Number(r.projected), 0).toFixed(2)
+      ? filteredRows.reduce((a, r) => a + Number(r.projected), 0).toFixed(2)
       : null;
     return {
       limit: limit.toFixed(2),
@@ -126,7 +126,7 @@ export function Budgets(): JSX.Element {
       remaining: (limit - spent).toFixed(2),
       projected,
     };
-  }, [rows, byId, rowsByCategory]);
+  }, [filteredRows]);
 
   const [newCatId, setNewCatId] = useState('');
   const [newLimit, setNewLimit] = useState('');
@@ -172,7 +172,7 @@ export function Budgets(): JSX.Element {
       {report.data && report.data.rows.length > 0 && (
         <SummaryCard
           totals={summaryTotals}
-          rows={report.data.rows}
+          rows={filteredRows}
           period={report.data.period}
           monthOrYear={monthOrYear}
         />
