@@ -51,7 +51,7 @@ vi.mock('../../../api/client', () => ({
         unbudgetedCandidates: [],
       };
     }
-    if (url === '/api/budgets') return { budgets: [{ id: 10, categoryId: 1, monthlyLimit: '100.00', currency: 'EUR' }] };
+    if (url === '/api/budgets') return { budgets: [{ id: 10, categoryId: 1, monthlyLimit: '100.00', currency: 'EUR', period: 'monthly', accountId: null }] };
     throw new Error(`unexpected url ${url}`);
   }),
   ApiError: class ApiError extends Error {},
@@ -118,8 +118,8 @@ describe('Budgets page — totals correction (no double-count)', () => {
       if (url === '/api/budgets') {
         return {
           budgets: [
-            { id: 10, categoryId: 1, monthlyLimit: '100.00', currency: 'EUR' },
-            { id: 20, categoryId: 2, monthlyLimit: '30.00', currency: 'EUR' },
+            { id: 10, categoryId: 1, monthlyLimit: '100.00', currency: 'EUR', period: 'monthly', accountId: null },
+            { id: 20, categoryId: 2, monthlyLimit: '30.00', currency: 'EUR', period: 'monthly', accountId: null },
           ],
         };
       }

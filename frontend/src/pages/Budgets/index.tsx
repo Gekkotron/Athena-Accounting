@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, BudgetPeriod, Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
-import { formatCategoryPath, groupCategories } from '../../lib/categories';
+import { groupCategories } from '../../lib/categories';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
 import { BudgetRow } from './BudgetRow';
 import { SuggestionCard } from './SuggestionCard';
 import { UnbudgetedSection } from './UnbudgetedSection';
+import { AddBudgetForm } from './AddBudgetForm';
 import { topLevelRows } from './budget-math';
 
 function currentMonth(): string {
@@ -20,10 +21,6 @@ function currentMonth(): string {
 
 function currentYear(): string {
   return String(new Date().getFullYear());
-}
-
-function isValidLimit(v: string): boolean {
-  return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
 }
 
 const MUTATION_ERROR_FALLBACK = "Impossible d'enregistrer le budget.";
@@ -87,15 +84,7 @@ export function Budgets(): JSX.Element {
     }),
     [roots, childrenByParent, rowsByCategory],
   );
-  const budgetedIds = useMemo(() => new Set(budgets.map((b) => b.categoryId)), [budgets]);
   const allCategories = cats;
-  const byId = useMemo(
-    () => new Map(allCategories.map((c) => [c.id, c] as const)),
-    [allCategories],
-  );
-  const addable = allCategories.filter(
-    (c) => c.kind === 'expense' && !budgetedIds.has(c.id),
-  );
 
   // The server totals a naive sum across every budgeted row (see
   // reports.ts) — when a parent AND its child both carry a budget, the
@@ -121,27 +110,8 @@ export function Budgets(): JSX.Element {
     };
   }, [filteredRows]);
 
-  const [newCatId, setNewCatId] = useState('');
-  const [newLimit, setNewLimit] = useState('');
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<{ categoryId: number; suggested: string } | null>(null);
-
-  useEffect(() => {
-    if (prefill) {
-      setNewCatId(String(prefill.categoryId));
-      setNewLimit(prefill.suggested);
-    }
-  }, [prefill]);
-
-  const submitNew = () => {
-    const categoryId = Number(newCatId);
-    if (!categoryId || !isValidLimit(newLimit)) return;
-    setMutationError(null);
-    create.mutate({ categoryId, monthlyLimit: newLimit }, {
-      onSuccess: () => { setNewCatId(''); setNewLimit(''); setMutationError(null); },
-      onError: (err) => setMutationError(mutationErrorMessage(err)),
-    });
-  };
 
   const handleSave = (id: number, limit: string) => update.mutate({ id, monthlyLimit: limit }, {
     onSuccess: () => setMutationError(null),
@@ -299,31 +269,18 @@ export function Budgets(): JSX.Element {
         />
       )}
 
-      <div id="budgets-add-form" className="surface p-4 flex flex-col gap-3">
-        <div className="label">Ajouter un budget</div>
-        {addable.length === 0 ? (
-          <p className="text-sm text-ink-500">Toutes vos catégories de dépense ont déjà un plafond.</p>
-        ) : (
-          <div className="flex items-end gap-2 flex-wrap">
-            <select className="input" aria-label="Catégorie" value={newCatId} onChange={(e) => setNewCatId(e.target.value)}>
-              <option value="">Choisir une catégorie…</option>
-              {[...addable]
-                .sort((a, b) => {
-                  const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
-                  const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
-                  return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-                })
-                .map((c) => <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>)}
-            </select>
-            <input
-              className="input w-28" type="number" min="0" step="0.01"
-              aria-label="Plafond mensuel" placeholder="Plafond €"
-              value={newLimit} onChange={(e) => setNewLimit(e.target.value)}
-            />
-            <button className="btn-primary" onClick={submitNew} disabled={create.isPending}>Ajouter</button>
-          </div>
-        )}
-      </div>
+      <AddBudgetForm
+        categories={cats}
+        accounts={accounts}
+        budgets={budgets}
+        candidates={report.data?.unbudgetedCandidates ?? []}
+        prefill={prefill}
+        onSubmit={(body) => create.mutate(body, {
+          onSuccess: () => { setPrefill(null); setMutationError(null); },
+          onError: (err) => setMutationError(mutationErrorMessage(err)),
+        })}
+        isPending={create.isPending}
+      />
     </div>
   );
 }
