@@ -159,26 +159,20 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
     if (q.maxAmount) where.push(lte(transactions.amount, q.maxAmount));
     if (q.amount) {
       // Sign-agnostic match — both the credit and the debit — which is what
-      // the user usually means by "find 338€". A bare integer ("19") widens
-      // to the whole euro: 19.00–19.99, so it also finds 19.72. Typing the
-      // cents explicitly ("19.72", "722.90") keeps an exact match, which is
-      // what reconciliation against a known écart needs.
-      const n = Math.abs(Number(q.amount));
-      if (q.amount.includes('.')) {
-        const abs = n.toFixed(2);
-        const neg = (-n).toFixed(2);
-        const cond = or(eq(transactions.amount, abs), eq(transactions.amount, neg));
-        if (cond) where.push(cond);
-      } else {
-        // n is an integer here (regex forbids a fractional part without a dot).
-        const lo = `${n}.00`;
-        const hi = `${n}.99`;
-        const cond = or(
-          and(gte(transactions.amount, lo), lte(transactions.amount, hi)),
-          and(gte(transactions.amount, `-${n}.99`), lte(transactions.amount, `-${n}.00`)),
-        );
-        if (cond) where.push(cond);
-      }
+      // the user usually means by "find 338€". Missing decimals widen: "19"
+      // → 19.00–19.99 (finds 19.72), "55.5" → 55.50–55.59 (finds 55.57), so
+      // the results keep updating while the user is still typing. Typing the
+      // full cents ("19.72") collapses to an exact match, which is what
+      // reconciliation against a known écart needs.
+      const [intPart, fracPart = ''] = q.amount.replace(/^-/, '').split('.');
+      const missing = 2 - fracPart.length;
+      const lo = `${intPart}.${fracPart}${'0'.repeat(missing)}`;
+      const hi = `${intPart}.${fracPart}${'9'.repeat(missing)}`;
+      const cond = or(
+        and(gte(transactions.amount, lo), lte(transactions.amount, hi)),
+        and(gte(transactions.amount, `-${hi}`), lte(transactions.amount, `-${lo}`)),
+      );
+      if (cond) where.push(cond);
     }
     if (!q.includeTransfers) where.push(isNull(transactions.transferGroupId));
 

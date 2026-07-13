@@ -211,6 +211,20 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       expect(labels).toEqual(['lo', 'mid', 'neg']);
     });
 
+    it('treats a 1-decimal amount as a range (55.5 -> 55.50..55.59, sign-agnostic)', async () => {
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '55.50', rawLabel: 'lo' });
+      await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '55.57', rawLabel: 'mid' });
+      await makeTx({ accountId: accountAId, date: '2026-06-17', amount: '-55.59', rawLabel: 'neg' });
+      await makeTx({ accountId: accountAId, date: '2026-06-18', amount: '55.60', rawLabel: 'above' });
+      await makeTx({ accountId: accountAId, date: '2026-06-19', amount: '55.49', rawLabel: 'below' });
+      const res = await app.inject({
+        method: 'GET', url: '/api/transactions?amount=55.5',
+        headers: { cookie },
+      });
+      const labels = res.json().transactions.map((t: { rawLabel: string }) => t.rawLabel).sort();
+      expect(labels).toEqual(['lo', 'mid', 'neg']);
+    });
+
     it('keeps an explicit-decimal amount an exact match (19.72 stays exact)', async () => {
       await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '19.72', rawLabel: 'exact' });
       await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '19.00', rawLabel: 'noise' });
