@@ -260,7 +260,7 @@ export function Budgets(): JSX.Element {
 
       {report.data && (
         <UnbudgetedSection
-          candidates={report.data.unbudgetedCandidates}
+          candidates={report.data.unbudgetedCandidates ?? []}
           period={period}
           onDefineBudget={(categoryId, suggested) => {
             setPrefill({ categoryId, suggested });

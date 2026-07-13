@@ -17,6 +17,7 @@ vi.mock('../../api/client', () => ({
       month: '2025-03',
       rows: [{ categoryId: 10, name: 'Restaurants', color: null, limit: '300.00', currency: 'EUR', spent: '240.00', remaining: '60.00', pct: 80, over: false }],
       totals: { limit: '300.00', spent: '240.00' },
+      unbudgetedCandidates: [],
     });
     if (path === '/api/categories') return Promise.resolve({ categories: [{ id: 10, name: 'Restaurants', kind: 'expense' }] });
     return Promise.resolve({});
@@ -36,7 +37,10 @@ function renderPage() {
 describe('Budgets page', () => {
   it('renders a budgeted category row with spent / limit', async () => {
     renderPage();
-    expect(await screen.findByText('Restaurants')).toBeInTheDocument();
+    // "Restaurants" now also appears as an <option> in AddBudgetForm's
+    // category select (Task 11) — assert at least one occurrence rather
+    // than a single unique match.
+    expect((await screen.findAllByText('Restaurants')).length).toBeGreaterThan(0);
     // formatAmount renders "240,00 €" (with a non-breaking space) and the
     // amount appears twice (the totals bar + the row) — match on the
     // leading digits and assert at least one occurrence rather than one.
@@ -48,7 +52,7 @@ describe('Budgets page', () => {
   it('shows the empty state when there are no budgets', async () => {
     const { api } = await import('../../api/client');
     (api as unknown as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
-      if (path === '/api/reports/budget') return Promise.resolve({ month: '2025-03', rows: [], totals: { limit: '0.00', spent: '0.00' } });
+      if (path === '/api/reports/budget') return Promise.resolve({ month: '2025-03', rows: [], totals: { limit: '0.00', spent: '0.00' }, unbudgetedCandidates: [] });
       if (path === '/api/budgets') return Promise.resolve({ budgets: [] });
       if (path === '/api/categories') return Promise.resolve({ categories: [] });
       return Promise.resolve({});
@@ -65,6 +69,7 @@ describe('Budgets page', () => {
         month: '2025-03',
         rows: [{ categoryId: 10, name: 'Restaurants', color: null, limit: '300.00', currency: 'EUR', spent: '240.00', remaining: '60.00', pct: 80, over: false }],
         totals: { limit: '300.00', spent: '240.00' },
+        unbudgetedCandidates: [],
       });
       if (path === '/api/categories') return Promise.resolve({ categories: [{ id: 10, name: 'Restaurants', kind: 'expense' }] });
       if (path === '/api/budgets/1' && init?.method === 'DELETE') return Promise.reject(new MockApiError('Suppression impossible.'));
@@ -85,6 +90,7 @@ describe('Budgets page', () => {
         // 1004/1000 → pct rounds to 100, but over is true.
         rows: [{ categoryId: 10, name: 'Courses', color: null, limit: '1000.00', currency: 'EUR', spent: '1004.00', remaining: '-4.00', pct: 100, over: true }],
         totals: { limit: '1000.00', spent: '1004.00' },
+        unbudgetedCandidates: [],
       });
       if (path === '/api/categories') return Promise.resolve({ categories: [{ id: 10, name: 'Courses', kind: 'expense' }] });
       return Promise.resolve({});

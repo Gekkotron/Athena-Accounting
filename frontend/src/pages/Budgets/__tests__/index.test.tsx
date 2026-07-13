@@ -5,11 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Budgets } from '../index';
 import { api } from '../../../api/client';
 
-function withProviders(children: React.ReactNode): JSX.Element {
+function withProviders(children: React.ReactNode, opts?: { initialEntries?: string[] }): JSX.Element {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={opts?.initialEntries ?? ['/']}>{children}</MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -146,5 +146,68 @@ describe('Budgets page — totals correction (no double-count)', () => {
     const summaryCard = totalLabel.closest('.surface') as HTMLElement;
     expect(within(summaryCard).getByText(/80,00.*100,00/)).toBeInTheDocument();
     expect(screen.queryByText(/130,00/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Budgets page — end-to-end URL + summary', () => {
+  it('reads period from URL and renders SummaryCard + UnbudgetedSection + AddBudgetForm', async () => {
+    vi.mocked(api).mockImplementation(async (url: string) => {
+      if (url === '/api/categories') {
+        return { categories: [
+          { id: 1, name: 'Loisirs', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+        ] };
+      }
+      if (url === '/api/accounts') {
+        return { accounts: [{ id: 10, name: 'Compte A', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2026-01-01' }] };
+      }
+      if (url.startsWith('/api/reports/budget')) {
+        return {
+          period: 'yearly',
+          year: '2026',
+          windowDays: 365,
+          elapsedDays: 200,
+          rows: [{
+            id: 1, categoryId: 1, name: 'Loisirs', color: null, accountId: null,
+            period: 'yearly', limit: '600.00', currency: 'EUR',
+            spent: '420.00', remaining: '180.00', pct: 70, over: false,
+            projected: '766.50',
+            history: { values: ['500.00', '450.00', '480.00', '510.00', '520.00', '490.00'], average: '491.67', median: '495.00' },
+            anomaly: false,
+            suggestedLimit: null,
+          }],
+          totals: { limit: '600.00', spent: '420.00', remaining: '180.00', projected: '766.50' },
+          unbudgetedCandidates: [
+            { categoryId: 99, name: 'Vacances', color: null, parentId: null, average: '800.00' },
+          ],
+        };
+      }
+      if (url === '/api/budgets') {
+        return { budgets: [{ id: 1, categoryId: 1, monthlyLimit: '600.00', currency: 'EUR', period: 'yearly', accountId: null }] };
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    render(withProviders(<Budgets />, { initialEntries: ['/?period=yearly&year=2026'] }));
+
+    // Header period label + summary.
+    expect(await screen.findByText('2026')).toBeInTheDocument();
+    expect(await screen.findByText(/Cette année/i)).toBeInTheDocument();
+    // "420,00" and "766,50" each render twice (SummaryCard totals/projection
+    // AND the single BudgetRow, since there's only one budgeted category) —
+    // assert presence rather than uniqueness.
+    expect((await screen.findAllByText(/420,00/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/766,50/)).length).toBeGreaterThan(0);
+
+    // Row (also appears as an <option> in AddBudgetForm's category select
+    // once it's no longer the only unbudgeted-for-this-context category —
+    // here it's fully budgeted so the row is the sole source, but stay
+    // consistent with the AllBy pattern used elsewhere in this file).
+    expect((await screen.findAllByText('Loisirs')).length).toBeGreaterThan(0);
+
+    // Unbudgeted (yearly view, 1 candidate → header shows count 1).
+    expect(await screen.findByText(/Catégories sans budget \(1\)/)).toBeInTheDocument();
+
+    // Add form present.
+    expect(screen.getByText(/Ajouter un budget/)).toBeInTheDocument();
   });
 });

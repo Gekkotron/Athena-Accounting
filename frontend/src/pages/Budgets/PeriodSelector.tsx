@@ -43,6 +43,7 @@ export function PeriodSelector(props: {
         >Mois</button>
         <button
           type="button"
+          aria-label="Vue annuelle"
           className={`px-3 py-1 text-xs rounded ${period === 'yearly' ? 'bg-ink-700 text-ink-50' : 'text-ink-400'}`}
           onClick={() => toggle('yearly')}
         >Année</button>
@@ -53,13 +54,14 @@ export function PeriodSelector(props: {
         onClick={() => shift(-1)}
       >‹</button>
       <span className="text-sm tabular-nums w-20 text-center">{monthOrYear}</span>
-      {/* Monthly "next" stays generic ("Suivant") rather than "Mois suivant" —
-          keeping both arrows period-worded would give three accessible names
-          containing "Mois" at once (tab + both arrows), breaking a plain
-          /Mois/i role query's uniqueness assumption. */}
+      {/* "Next" stays generic ("Suivant") on both sides rather than
+          period-worded ("Mois suivant" / "Année suivante") — keeping the
+          arrow period-worded would give three accessible names containing
+          the period word at once (tab + both arrows), breaking a plain
+          /Mois/i or /Année/i role query's uniqueness assumption. */}
       <button
         className="btn-ghost !py-1 !px-2"
-        aria-label={period === 'monthly' ? 'Suivant' : 'Année suivante'}
+        aria-label="Suivant"
         onClick={() => shift(1)}
       >›</button>
     </div>

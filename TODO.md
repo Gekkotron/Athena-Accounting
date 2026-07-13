@@ -131,6 +131,8 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   Plus ambitieux que la simple limite mensuelle, et un vrai changement de posture
   (Athena aujourd'hui = suivi rétrospectif des relevés, l'enveloppe = prospectif).
   À trancher : est-ce cohérent avec un outil nourri après coup par les banques ?
+  Promu en suivi concret (voir "Envelopes" sous 📌 Pour plus tard) une fois
+  Budgets v2 (limites mensuelles/annuelles) livré.
 - Tirelires / objectifs d'épargne (piggy banks, Firefly III) : cible d'épargne
   rattachée à un compte, avec barre de progression et échéance optionnelle.
   Autonome, s'aligne bien avec la contrainte no-cloud. Effort moyen.
@@ -164,6 +166,12 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 - Édition d'un template sans re-upload — plus grand, mais résout une vraie
   friction (chaque changement d'ancre = delete + re-import aujourd'hui).
 - Prévisualisation d'une règle (transactions passées qu'elle aurait matché).
+
+### Envelopes (Actual Budget-style, separate menu entry)
+
+New page + schema, deferred from Budgets v2. Zero-based / "assign every euro"
+mental model with rollover and move-money-between-envelopes actions. Spec
+required before implementation. Estimated large.
 
 ## 🚧 En cours
 
@@ -277,6 +285,20 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   CRUD endpoints with 409/400 rules, `/api/reports/budget` for
   planned-vs-actual, and a dedicated Budgets page with month picker,
   per-category bars, and red overflow indicator.
+- **Budgets v2** : plafonds mensuels **ou annuels** (`period` sur
+  `category_budgets`), scope optionnel par compte. `/api/reports/budget`
+  expose désormais `windowDays`/`elapsedDays`, une projection de fin de
+  période, un historique 6-périodes par catégorie, une détection
+  d'anomalie, une suggestion de plafond (moyenne historique quand le
+  dépassement est chronique) et les `unbudgetedCandidates` (catégories
+  sans plafond parmi les plus dépensières). Page Budgets refaite :
+  sélecteur Mois/Année avec état dans l'URL, filtre de compte,
+  SummaryCard (totaux + mini-graphe 6 périodes, rollup-aware pour éviter
+  le double-compte parent/enfant), lignes avec sparkline + pastille
+  anomalie, carte de suggestion (Ignorer / Ajuster à X€, dismissal
+  scopé par période via localStorage), section "Catégories sans budget"
+  avec pré-remplissage du formulaire d'ajout, et formulaire d'ajout avec
+  choix période + compte.
 - **OCR pour les PDF scannés + photos de relevés papier** : nouveau
   module `imports/ocr` basé sur `tesseract.js` côté serveur (fra+eng,
   `OCR_LANG_PATH` env var pour déploiement LAN-only). Job async lancé
