@@ -16,7 +16,10 @@ const RangeQuery = z.object({
 });
 
 const BudgetQuery = z.object({
+  period: z.enum(['monthly', 'yearly']).default('monthly'),
   month: z.string().regex(/^\d{4}-\d{2}$/, 'must be YYYY-MM').optional(),
+  year: z.string().regex(/^\d{4}$/, 'must be YYYY').optional(),
+  accountId: z.coerce.number().int().positive().optional(),
 });
 
 // Shared "effective transactions" CTE body: a transaction with no splits
@@ -38,6 +41,39 @@ const TX_EFFECTIVE_CTE = sql`
           FROM transactions t
           JOIN transaction_splits s ON s.transaction_id = t.id
       )`;
+
+// Days elapsed inside [start, endExclusive), clamped to the window. Uses UTC
+// midnight of `today` so the boundary is consistent with the SQL date filter.
+// - Strictly past periods (today's midnight >= endExclusive) clamp to the
+//   whole window (elapsedDays === windowDays).
+// - Strictly future periods (today's midnight < start) are 0.
+// - Otherwise (today falls inside [start, endExclusive)) day 1 of the period
+//   counts as elapsedDays = 1, day 2 as 2, etc. (inclusive of today).
+function elapsedIn(start: Date, endExclusive: Date, now: Date): number {
+  const todayUtcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (todayUtcMidnight >= endExclusive) {
+    return Math.round((endExclusive.getTime() - start.getTime()) / 86_400_000);
+  }
+  if (todayUtcMidnight < start) return 0;
+  return Math.round((todayUtcMidnight.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
+// projected = null when it's too early in the current period to extrapolate
+// (elapsedDays < 3); locked to `spent` for strictly past periods; otherwise a
+// linear extrapolation of spend across the whole window.
+function computeProjected(
+  spent: number,
+  elapsedDays: number,
+  windowDays: number,
+  endExclusive: Date,
+  now: Date,
+): string | null {
+  // Past period → projected == spent (locked).
+  if (now >= endExclusive) return spent.toFixed(2);
+  // Too early to project.
+  if (elapsedDays < 3) return null;
+  return (spent / elapsedDays * windowDays).toFixed(2);
+}
 
 export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -228,24 +264,60 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
     }
-    const month = parsed.data.month ?? new Date().toISOString().slice(0, 7);
+    const { period, accountId } = parsed.data;
 
+    // Resolve the period bounds and windowDays/elapsedDays.
+    const now = new Date();
+    const [periodStart, periodEndExclusive, windowDays, elapsedDays, monthOut, yearOut] =
+      (() => {
+        if (period === 'monthly') {
+          const m = parsed.data.month
+            ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const [y, mm] = m.split('-').map(Number);
+          const start = new Date(Date.UTC(y!, mm! - 1, 1));
+          const end = new Date(Date.UTC(y!, mm!, 1));
+          const wDays = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+          const eDays = elapsedIn(start, end, now);
+          return [start, end, wDays, eDays, m, undefined] as const;
+        } else {
+          const y = parsed.data.year ?? String(now.getFullYear());
+          const yn = Number(y);
+          const start = new Date(Date.UTC(yn, 0, 1));
+          const end = new Date(Date.UTC(yn + 1, 0, 1));
+          const wDays = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+          const eDays = elapsedIn(start, end, now);
+          return [start, end, wDays, eDays, undefined, y] as const;
+        }
+      })();
+
+    const startIso = periodStart.toISOString().slice(0, 10); // YYYY-MM-DD
+    const endIso = periodEndExclusive.toISOString().slice(0, 10);
+
+    // Rows: for each budget matching the period + account scope, its rolled-up
+    // spend inside the period. Global budgets (account_id IS NULL) always count;
+    // scoped budgets require accountId param equality (or no filter).
     const result = await db.execute<{
+      id: number;
       category_id: number;
       name: string;
       color: string | null;
       limit: string;
       currency: string;
+      period: string;
+      account_id: number | null;
       spent: string;
     }>(sql`
       WITH ${TX_EFFECTIVE_CTE}
       SELECT
-        b.category_id                              AS category_id,
-        c.name                                     AS name,
-        c.color                                    AS color,
-        b.monthly_limit::text                      AS limit,
-        b.currency                                 AS currency,
-        COALESCE(-SUM(e.amount), 0)::text          AS spent
+        b.id                                        AS id,
+        b.category_id                               AS category_id,
+        c.name                                      AS name,
+        c.color                                     AS color,
+        b.monthly_limit::text                       AS limit,
+        b.currency                                  AS currency,
+        b.period                                    AS period,
+        b.account_id                                AS account_id,
+        COALESCE(-SUM(e.amount), 0)::text           AS spent
       FROM category_budgets b
       JOIN categories c ON c.id = b.category_id AND c.user_id = ${uid}
       LEFT JOIN tx_effective e
@@ -258,36 +330,75 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         )
        AND e.user_id = ${uid}
        AND e.transfer_group_id IS NULL
-       AND to_char(date_trunc('month', e.date::timestamp), 'YYYY-MM') = ${month}
+       AND e.date >= ${startIso}::date
+       AND e.date <  ${endIso}::date
+       AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
       WHERE b.user_id = ${uid}
-      GROUP BY b.category_id, c.name, c.color, b.monthly_limit, b.currency
+        AND b.period = ${period}
+        AND (
+          b.account_id IS NULL
+          OR (${accountId ?? null}::int IS NULL AND b.account_id IS NOT NULL)
+          OR b.account_id = ${accountId ?? null}::int
+        )
+      GROUP BY b.id, b.category_id, c.name, c.color, b.monthly_limit, b.currency, b.period, b.account_id
       ORDER BY c.name ASC
     `);
 
+    // When accountId IS provided, hide budgets scoped to OTHER accounts (SQL
+    // above lets global rows and rows scoped to this account through; this
+    // pass makes that intent explicit and defensive).
+    const rowsFiltered = result.rows.filter((r) =>
+      accountId == null ? true : r.account_id == null || r.account_id === accountId
+    );
+
     let totalLimit = 0;
     let totalSpent = 0;
-    const rows = result.rows.map((r) => {
+    let totalProjected: number | null = 0;
+    const rows = rowsFiltered.map((r) => {
       const limit = Number(r.limit);
       const spent = Number(r.spent);
       totalLimit += limit;
       totalSpent += spent;
+      const projected = computeProjected(spent, elapsedDays, windowDays, periodEndExclusive, now);
+      if (totalProjected !== null) {
+        if (projected == null) totalProjected = null;
+        else totalProjected += Number(projected);
+      }
       return {
         categoryId: r.category_id,
         name: r.name,
         color: r.color,
+        accountId: r.account_id,
+        period: r.period as 'monthly' | 'yearly',
         limit: r.limit,
         currency: r.currency,
         spent: spent.toFixed(2),
         remaining: (limit - spent).toFixed(2),
         pct: limit > 0 ? Math.round((spent / limit) * 100) : 0,
         over: spent > limit,
+        projected,
       };
     });
 
-    return {
-      month,
+    const response: {
+      period: 'monthly' | 'yearly';
+      month?: string; year?: string;
+      windowDays: number; elapsedDays: number;
+      rows: typeof rows;
+      totals: { limit: string; spent: string; remaining: string; projected: string | null };
+    } = {
+      period,
+      windowDays, elapsedDays,
       rows,
-      totals: { limit: totalLimit.toFixed(2), spent: totalSpent.toFixed(2) },
+      totals: {
+        limit: totalLimit.toFixed(2),
+        spent: totalSpent.toFixed(2),
+        remaining: (totalLimit - totalSpent).toFixed(2),
+        projected: totalProjected == null ? null : totalProjected.toFixed(2),
+      },
     };
+    if (monthOut) response.month = monthOut;
+    if (yearOut) response.year = yearOut;
+    return response;
   });
 }
