@@ -9,6 +9,7 @@ import {
 } from '../../domain/imports/import-service.js';
 import { importPdf, applyTemplateAndImport, previewTemplate } from '../../domain/imports/pdf/index.js';
 import type { TemplateZones } from '../../domain/imports/pdf/zones.js';
+import { importPhoto, PhotoTooLargeError, PhotoUnsupportedMimeError } from '../../domain/imports/photo/index.js';
 import { userId } from '../plugins/auth.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
@@ -99,6 +100,30 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     } catch (err) {
       app.log.error({ err, filename }, 'import failed');
       return reply.code(400).send({ error: 'import failed', message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.post('/api/imports/photo', async (req, reply) => {
+    if (!req.isMultipart()) return reply.code(400).send({ error: 'no file uploaded' });
+    const data = await req.file({ limits: { fileSize: 25 * 1024 * 1024 } });
+    if (!data) return reply.code(400).send({ error: 'no file uploaded' });
+    const filename = data.filename;
+    const buffer = await data.toBuffer();
+    const q = req.query as { accountId?: string };
+    const accountId = q.accountId ? Number(q.accountId) : null;
+    if (!accountId || !Number.isInteger(accountId) || accountId <= 0) {
+      return reply.code(400).send({ error: 'invalid accountId' });
+    }
+    try {
+      const result = await importPhoto({
+        filename, accountId, userId: userId(req), buffer,
+      });
+      return reply.code(200).send(result);
+    } catch (err) {
+      if (err instanceof PhotoTooLargeError) return reply.code(400).send({ error: 'photo too large (max 25 MB)' });
+      if (err instanceof PhotoUnsupportedMimeError) return reply.code(400).send({ error: 'unsupported image format' });
+      app.log.error({ err, filename }, 'photo import failed');
+      throw err;
     }
   });
 

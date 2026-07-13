@@ -246,6 +246,35 @@ describe.skipIf(!RUN)('/api/imports', () => {
     expect(res.json().fileImport.statedBalanceDate).toBeNull();
   });
 
+  it('POST /api/imports/photo accepts a JPEG and creates a photo draft', async () => {
+    const sharp = (await import('sharp')).default;
+    const jpeg = await sharp({ create: { width: 20, height: 20, channels: 3, background: '#fff' } })
+      .jpeg().toBuffer();
+    const { headers, payload } = await buildForm('statement.jpg', jpeg, 'image/jpeg');
+    const res = await app.inject({
+      method: 'POST', url: `/api/imports/photo?accountId=${accountId}`,
+      headers: { cookie, ...headers },
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.kind).toBe('needs_template');
+    expect(body.sourceKind).toBe('photo');
+    expect(body.ocrStatus).toBe('pending');
+    expect(body.ocrTotal).toBe(1);
+  });
+
+  it('POST /api/imports/photo rejects a PDF payload with 400', async () => {
+    const pdf = Buffer.from('%PDF-1.4\n', 'utf8');
+    const { headers, payload } = await buildForm('statement.pdf', pdf, 'application/pdf');
+    const res = await app.inject({
+      method: 'POST', url: `/api/imports/photo?accountId=${accountId}`,
+      headers: { cookie, ...headers },
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('GET /api/imports/pdf/drafts/:id/ocr-status returns 404 for unknown draft', async () => {
     const res = await app.inject({
       method: 'GET', url: '/api/imports/pdf/drafts/999999/ocr-status', headers: { cookie },
