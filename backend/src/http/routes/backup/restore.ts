@@ -208,7 +208,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       for (const b of dump.budgets ?? []) {
         const catId = resolveCategoryRef(b.category, b.categoryParent, categoryIdByPath, categoryIdsByName);
         if (catId === null) continue;
-        const budgetAccountId = b.account ? (accountIdByName.get(b.account) ?? null) : null;
+        const budgetAccountId = resolveNameToId(b.account ?? null, accountIdByName);
         await tx.insert(categoryBudgets).values({
           userId: uid,
           categoryId: catId,

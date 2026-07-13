@@ -150,7 +150,7 @@ export const BackupBody = z.object({
       categoryParent: z.string().nullable().optional(),
       monthlyLimit: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((s) => Number(s) > 0, 'must be greater than 0'),
       currency: z.string(),
-      period: z.enum(['monthly', 'yearly']).default('monthly').optional(),
+      period: z.enum(['monthly', 'yearly']).optional().default('monthly'),
       account: z.string().nullable().optional(), // account name; null = global
     }),
   ).optional(),

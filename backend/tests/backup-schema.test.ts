@@ -197,7 +197,7 @@ describe('backup/schema.ts', () => {
   });
 
   it('defaults period to "monthly" when a pre-v2 budget entry omits it', () => {
-    // Zod's `.default(…).optional()` populates period when absent.
+    // Zod's `.optional().default(…)` populates period when absent.
     const parsed = BackupBody.parse({
       ...minimalDump,
       budgets: [{
@@ -205,7 +205,7 @@ describe('backup/schema.ts', () => {
         monthlyLimit: '100.00', currency: 'EUR',
       }],
     });
-    expect(parsed.budgets![0]!.period ?? 'monthly').toBe('monthly');
+    expect(parsed.budgets![0]!.period).toBe('monthly');
     expect(parsed.budgets![0]!.account ?? null).toBe(null);
   });
 });
