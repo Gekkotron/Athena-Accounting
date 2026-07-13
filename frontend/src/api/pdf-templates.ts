@@ -59,6 +59,9 @@ export interface PdfImportNeedsTemplate {
   reason: 'no_text_layer' | 'low_confidence' | 'template_stale';
   // Human-readable explanation set only when reason === 'template_stale'.
   staleDiagnostic?: string;
+  sourceKind: 'pdf' | 'photo';
+  ocrStatus: 'not_needed' | 'pending';
+  ocrTotal: number;
 }
 
 export type PdfImportResponse = PdfImportImported | PdfImportNeedsTemplate;
@@ -75,18 +78,51 @@ export async function submitPdf(file: File, accountId: number): Promise<PdfImpor
   return await r.json();
 }
 
-export async function submitZones(draftId: number, label: string, zones: TemplateZones): Promise<PdfImportImported> {
+export async function submitZones(
+  draftId: number,
+  label: string,
+  zones: TemplateZones,
+  overrideRows?: Array<{ date: string; label: string; amount: string }>,
+): Promise<PdfImportImported> {
   const r = await fetch('/api/imports/pdf/templates', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ draftId, label, zones }),
+    body: JSON.stringify({ draftId, label, zones,
+      ...(overrideRows ? { override_rows: overrideRows } : {}),
+    }),
   });
   if (!r.ok) {
     return failure(r, 'apply failed');
   }
   const { result, skippedRows } = await r.json();
   return { kind: 'imported', result, skippedRows };
+}
+
+export async function submitPhoto(file: File, accountId: number): Promise<PdfImportResponse> {
+  const form = new FormData();
+  form.append('file', file);
+  const r = await fetch(`/api/imports/photo?accountId=${accountId}`, {
+    method: 'POST', body: form, credentials: 'include',
+  });
+  if (!r.ok) {
+    return failure(r, 'upload failed');
+  }
+  return await r.json();
+}
+
+export type OcrStatusResponse = {
+  status: 'not_needed' | 'pending' | 'ready' | 'error';
+  progress: number;
+  total: number;
+  meanConfidence?: number;
+  error?: string;
+};
+
+export async function getOcrStatus(draftId: number): Promise<OcrStatusResponse> {
+  const r = await fetch(`/api/imports/pdf/drafts/${draftId}/ocr-status`, { credentials: 'include' });
+  if (!r.ok) throw new Error(`ocr-status ${r.status}`);
+  return await r.json();
 }
 
 export async function previewZones(draftId: number, zones: TemplateZones): Promise<PreviewResult> {

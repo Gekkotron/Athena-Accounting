@@ -20,6 +20,9 @@ function makeNeeds(items: PdfTextItem[]): PdfImportNeedsTemplate {
     textItems: items,
     suggestedZones: null,
     reason: 'low_confidence',
+    sourceKind: 'pdf',
+    ocrStatus: 'not_needed',
+    ocrTotal: 0,
   };
 }
 

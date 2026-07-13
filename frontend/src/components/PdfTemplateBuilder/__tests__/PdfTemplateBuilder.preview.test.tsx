@@ -48,6 +48,9 @@ const needsTemplate: PdfImportNeedsTemplate = {
   textItems: [],
   suggestedZones: null,
   reason: 'low_confidence',
+  sourceKind: 'pdf',
+  ocrStatus: 'not_needed',
+  ocrTotal: 0,
 };
 
 // Walks the wizard from the initial "header" step to "amount" with every

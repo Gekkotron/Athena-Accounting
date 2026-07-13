@@ -97,6 +97,9 @@ describe('UploadForm', () => {
       textItems: [],
       suggestedZones: null,
       reason: 'low_confidence' as const,
+      sourceKind: 'pdf' as const,
+      ocrStatus: 'not_needed' as const,
+      ocrTotal: 0,
     };
     submitPdfMock.mockResolvedValue(response);
     const user = userEvent.setup();
