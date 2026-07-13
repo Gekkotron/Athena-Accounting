@@ -14,10 +14,11 @@ const uploadMock = vi.mocked(apiUpload);
 
 vi.mock('../../../api/pdf-templates', async () => {
   const actual = await vi.importActual<typeof import('../../../api/pdf-templates')>('../../../api/pdf-templates');
-  return { ...actual, submitPdf: vi.fn() };
+  return { ...actual, submitPdf: vi.fn(), submitPhoto: vi.fn() };
 });
-import { submitPdf } from '../../../api/pdf-templates';
+import { submitPdf, submitPhoto } from '../../../api/pdf-templates';
 const submitPdfMock = vi.mocked(submitPdf);
+const submitPhotoMock = vi.mocked(submitPhoto);
 
 const accs: Account[] = [
   { id: 1, name: 'Compte', type: 'checking', currency: 'EUR',
@@ -57,6 +58,7 @@ function fieldFor(labelText: string | RegExp): HTMLElement {
 beforeEach(() => {
   uploadMock.mockReset();
   submitPdfMock.mockReset();
+  submitPhotoMock.mockReset();
 });
 
 describe('UploadForm', () => {
@@ -207,5 +209,36 @@ describe('UploadForm', () => {
     await user.upload(fileInput, [junk, good]);
     // Only 1 file survives → single-file mode → submit label stays "Importer".
     expect(screen.getByRole('button', { name: 'Importer' })).toBeInTheDocument();
+  });
+
+  it('routes a JPEG upload to /api/imports/photo', async () => {
+    const response = {
+      kind: 'needs_template' as const,
+      draftId: 5,
+      fingerprint: '',
+      pages: [],
+      textItems: [],
+      suggestedZones: null,
+      reason: 'no_text_layer' as const,
+      sourceKind: 'photo' as const,
+      ocrStatus: 'pending' as const,
+      ocrTotal: 1,
+    };
+    submitPhotoMock.mockResolvedValue(response);
+    const user = userEvent.setup();
+    const { props } = renderForm();
+
+    const jpeg = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], 'st.jpg', { type: 'image/jpeg' });
+    const photoInput = screen.getByLabelText(/photo/i) as HTMLInputElement;
+    await user.upload(photoInput, jpeg);
+    const accountSelect = screen.getByLabelText(/compte cible/i);
+    await user.selectOptions(accountSelect, '1');
+    await user.click(screen.getByRole('button', { name: /importer/i }));
+
+    await waitFor(() => expect(submitPhotoMock).toHaveBeenCalledWith(jpeg, 1));
+    expect(props.onPdfNeedsTemplate).toHaveBeenCalledWith(response);
+    // apiUpload / submitPdf must not fire on the photo path.
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(submitPdfMock).not.toHaveBeenCalled();
   });
 });

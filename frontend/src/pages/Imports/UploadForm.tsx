@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiUpload, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
-import { submitPdf, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
+import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
 
 export function UploadForm({
   accounts,
@@ -20,8 +20,10 @@ export function UploadForm({
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<File[]>([]);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [accountId, setAccountId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [batch, setBatch] = useState<
@@ -54,6 +56,33 @@ export function UploadForm({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Photo path takes priority over the file batch when both inputs carry a
+    // value — the two are independent inputs, but a single submit can only
+    // drive one request.
+    if (photo) {
+      if (accountId === '') {
+        setError('Veuillez sélectionner un compte pour importer une photo.');
+        return;
+      }
+      setError(null);
+      setBatch(null);
+      try {
+        const r = await submitPhoto(photo, accountId as number);
+        if (r.kind === 'imported') {
+          invalidateAll();
+          onPdfImported(r);
+        } else {
+          onPdfNeedsTemplate(r);
+        }
+        setPhoto(null);
+        if (photoRef.current) photoRef.current.value = '';
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erreur lors de l\'import de la photo.');
+      }
+      return;
+    }
+
     if (files.length === 0) return;
 
     const hasAnyPdf = files.some((f) => f.name.toLowerCase().endsWith('.pdf'));
@@ -212,6 +241,7 @@ export function UploadForm({
             <label className="label">Compte</label>
             <select
               className="input"
+              aria-label="Compte cible"
               value={accountId}
               onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
               disabled={pending}
@@ -223,13 +253,26 @@ export function UploadForm({
             </select>
           </div>
 
-          <button className="btn-primary" disabled={files.length === 0 || pending}>
+          <button className="btn-primary" disabled={(files.length === 0 && !photo) || pending}>
             {pending
               ? 'Import…'
               : files.length > 1
               ? `Importer ${files.length} fichiers`
               : 'Importer'}
           </button>
+        </div>
+
+        <div className="flex flex-col gap-1.5 mt-4 pt-4 border-t border-ink-800/60">
+          <label htmlFor="photo-input" className="label">Photo (JPEG, PNG, HEIC)</label>
+          <input
+            id="photo-input"
+            ref={photoRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+            disabled={pending}
+            className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
+          />
         </div>
       </form>
 
