@@ -3,15 +3,19 @@ import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
 import {
   submitZones,
   previewZones,
+  getDraft,
   type PdfImportNeedsTemplate,
   type PdfImportImported,
   type TemplateZones,
   type PreviewResult,
+  type PdfTextItem,
 } from '../../api/pdf-templates.js';
 import { InfoTip } from './InfoTip';
 import { StepIndicator } from './StepIndicator';
 import { TableStep } from './TableStep';
 import { AmountStep } from './AmountStep';
+import { OcrProgress } from './OcrProgress';
+import { PreviewTable, type PreviewRow } from './PreviewTable';
 import {
   PAINT_COLOR,
   STEP_ORDER,
@@ -75,6 +79,43 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   const [previewSkipped, setPreviewSkipped] = useState<PreviewResult['skippedRows']>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  // OCR path: this draft came from a scanned/photo statement, so its
+  // text_items are populated asynchronously by a background job. Until that
+  // job flips the draft to 'ready', we show a polling progress screen
+  // instead of the zone-painting steps.
+  const isOcrSource =
+    needsTemplate.ocrStatus === 'pending' || needsTemplate.reason === 'no_text_layer';
+  const [ocrReady, setOcrReady] = useState(needsTemplate.ocrStatus !== 'pending');
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  // Populated by a one-shot refetch of the draft once OCR finishes — the
+  // initial needsTemplate.textItems is empty for an OCR source (nothing had
+  // been recognized yet at upload time).
+  const [freshTextItems, setFreshTextItems] = useState<PdfTextItem[] | null>(null);
+  const effectiveNeedsTemplate: PdfImportNeedsTemplate = freshTextItems
+    ? { ...needsTemplate, textItems: freshTextItems }
+    : needsTemplate;
+
+  async function handleOcrReady() {
+    setOcrReady(true);
+    try {
+      const draft = await getDraft(needsTemplate.draftId);
+      setFreshTextItems(draft.textItems);
+    } catch {
+      // Non-fatal: the anchor-picker/extracted-text panels just show
+      // whatever text_items were available at upload time (likely empty).
+    }
+  }
+
+  // Rows the user hand-fixes in the editable preview table, on the OCR
+  // path only. Reset whenever a fresh preview is fetched (or cleared).
+  const [editableRows, setEditableRows] = useState<PreviewRow[]>([]);
+  useEffect(() => {
+    if (!isOcrSource) return;
+    setEditableRows(
+      previewRows ? previewRows.map((r) => ({ date: r.date, label: r.rawLabel, amount: r.amount })) : [],
+    );
+  }, [previewRows, isOcrSource]);
   // Guards against a stale in-flight preview response landing after the
   // zones have changed (and thus the reset effect below already ran).
   // Every call to handlePreview claims a new id; any setState it performs
@@ -184,19 +225,26 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
     }
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(overrideRows?: Array<{ date: string; label: string; amount: string }>) {
     const zones = buildZones();
     if (!zones || !label.trim()) return;
     setSubmitting(true);
     setErr(null);
     try {
-      const result = await submitZones(needsTemplate.draftId, label.trim(), zones);
+      const result = await submitZones(needsTemplate.draftId, label.trim(), zones, overrideRows);
       onImported(result);
     } catch (e: any) {
       setErr(e?.message ?? 'submit failed');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Import trigger for the OCR path's editable PreviewTable: sends the
+  // user's hand-fixed rows verbatim instead of letting the backend
+  // re-parse the zones (see override_rows on POST /api/imports/pdf/templates).
+  function handleOcrImport() {
+    return handleSubmit(editableRows.map((r) => ({ date: r.date, label: r.label, amount: r.amount })));
   }
 
   // Reference rectangles drawn (dashed) under the user's paint, so they can
@@ -235,14 +283,23 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           >✕</button>
         </div>
 
+        {isOcrSource && !ocrReady ? (
+          <>
+            <OcrProgress
+              draftId={needsTemplate.draftId}
+              onReady={handleOcrReady}
+              onError={setOcrError}
+            />
+            {ocrError && (
+              <p className="text-center text-xs text-ink-500 -mt-6">
+                Fermez cette fenêtre et réessayez avec un fichier plus net ou mieux cadré.
+              </p>
+            )}
+          </>
+        ) : (
+        <>
         <StepIndicator currentStep={step} />
 
-        {needsTemplate.reason === 'no_text_layer' && (
-          <div className="bg-clay-900/30 border border-clay-800/60 text-clay-200 p-3 rounded-lg mb-4 text-sm">
-            Ce PDF semble être une image scannée. La sélection de zones fonctionne, mais l'extraction
-            de lignes sera vide — l'OCR n'est pas encore disponible.
-          </div>
-        )}
         {needsTemplate.reason === 'template_stale' && (
           <div className="bg-clay-900/30 border border-clay-800/60 text-clay-200 p-3 rounded-lg mb-4 text-sm">
             <div className="font-medium mb-1">Le template précédent ne correspond plus à ce PDF</div>
@@ -280,7 +337,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'table' && (
           <TableStep
-            needsTemplate={needsTemplate}
+            needsTemplate={effectiveNeedsTemplate}
             totalSteps={totalSteps}
             tableRect={tableRect}
             onTableChange={setTableRect}
@@ -341,7 +398,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {step === 'amount' && (
           <AmountStep
-            needsTemplate={needsTemplate}
+            needsTemplate={effectiveNeedsTemplate}
             totalSteps={totalSteps}
             amountMode={amountMode}
             onAmountModeChange={setAmountMode}
@@ -393,7 +450,19 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
                 Aucune ligne extraite. Vérifiez que les colonnes couvrent bien le tableau.
               </div>
             )}
-            {previewRows && previewRows.length > 0 && (
+            {previewRows && previewRows.length > 0 && isOcrSource && (
+              <PreviewTable
+                rows={editableRows}
+                editable
+                onChange={(i, patch) =>
+                  setEditableRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+                }
+                onDelete={(i) => setEditableRows((rows) => rows.filter((_, idx) => idx !== i))}
+                onImport={handleOcrImport}
+                importing={submitting}
+              />
+            )}
+            {previewRows && previewRows.length > 0 && !isOcrSource && (
               <div className="max-h-72 overflow-y-auto pr-1">
                 <table className="w-full text-xs">
                   <thead className="text-left text-ink-500">
@@ -449,14 +518,16 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
                 (step === 'description' && !descCol)
               }
             >Suivant →</button>
-          ) : (
+          ) : !isOcrSource ? (
             <button
               className="px-4 py-2 rounded-lg bg-sage-300 text-ink-950 font-medium hover:bg-sage-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={!canSubmit || submitting}
             >{submitting ? 'Import…' : 'Importer'}</button>
-          )}
+          ) : null}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

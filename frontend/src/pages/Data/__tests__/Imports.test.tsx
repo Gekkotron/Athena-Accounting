@@ -123,6 +123,9 @@ describe('Imports page (characterization)', () => {
         textItems: [],
         suggestedZones: null,
         reason: 'low_confidence',
+        sourceKind: 'pdf',
+        ocrStatus: 'not_needed',
+        ocrTotal: 0,
       }),
     });
     vi.stubGlobal('fetch', fetchMock);

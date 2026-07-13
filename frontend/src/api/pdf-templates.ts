@@ -125,6 +125,17 @@ export async function getOcrStatus(draftId: number): Promise<OcrStatusResponse> 
   return await r.json();
 }
 
+export interface DraftResponse {
+  textItems: PdfTextItem[];
+  ocrStatus: OcrStatusResponse['status'];
+}
+
+export async function getDraft(draftId: number): Promise<DraftResponse> {
+  const r = await fetch(`/api/imports/pdf/drafts/${draftId}`, { credentials: 'include' });
+  if (!r.ok) throw new Error(`draft ${r.status}`);
+  return await r.json();
+}
+
 export async function previewZones(draftId: number, zones: TemplateZones): Promise<PreviewResult> {
   const r = await fetch('/api/imports/pdf/templates/preview', {
     method: 'POST',

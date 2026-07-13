@@ -210,6 +210,20 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     return { fileImport: await enrichImport(row) };
   });
 
+  app.get('/api/imports/pdf/drafts/:id', async (req, reply) => {
+    const uid = userId(req);
+    const id = Number((req.params as { id?: string }).id);
+    if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
+    const [row] = await db.select({
+      id: pdfImportDrafts.id,
+      userId: pdfImportDrafts.userId,
+      textItems: pdfImportDrafts.textItems,
+      ocrStatus: pdfImportDrafts.ocrStatus,
+    }).from(pdfImportDrafts).where(eq(pdfImportDrafts.id, id));
+    if (!row || row.userId !== uid) return reply.code(404).send({ error: 'not found' });
+    return { textItems: row.textItems, ocrStatus: row.ocrStatus };
+  });
+
   app.get('/api/imports/pdf/drafts/:id/ocr-status', async (req, reply) => {
     const uid = userId(req);
     const id = Number((req.params as { id?: string }).id);
