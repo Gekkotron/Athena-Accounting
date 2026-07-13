@@ -252,12 +252,17 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
     return { rows: rows.rows };
   });
 
-  // Planned-vs-actual per budgeted expense category for one calendar month.
-  // Reuses the tx_effective CTE from /api/reports/categories so splits count
-  // per split-category and internal transfers are excluded. Only categories
-  // that have a budget row appear. spent = -SUM(amount) (expenses are stored
-  // negative); a budgeted category with no spend that month returns "0.00".
-  // Parent budgets roll up own + direct children (depth cap = 2).
+  // Planned-vs-actual per budgeted expense category for one period (a
+  // calendar month or a calendar year, per `period`), optionally scoped to
+  // one account. Reuses the tx_effective CTE from /api/reports/categories so
+  // splits count per split-category and internal transfers are excluded.
+  // Only categories that have a budget row (matching `period` + account
+  // scope) appear. spent = -SUM(amount) (expenses are stored negative); a
+  // budgeted category with no spend that period returns "0.00". Parent
+  // budgets roll up own + direct children (depth cap = 2). `projected`
+  // extrapolates spend across the whole window once >= 3 days have elapsed,
+  // is locked to `spent` for periods already in the past, and is `null`
+  // otherwise (too early in the current period to extrapolate).
   app.get('/api/reports/budget', async (req, reply) => {
     const uid = userId(req);
     const parsed = BudgetQuery.safeParse(req.query);
