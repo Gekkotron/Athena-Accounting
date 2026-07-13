@@ -6,11 +6,11 @@ import { fingerprintHeader } from './fingerprint.js';
 import { runHeuristic } from './heuristic.js';
 import { applyTemplate } from './template-apply.js';
 import { deriveAccountAnchor, deriveOtherAccountAnchors, pageContainsAnchor } from './page-anchor.js';
-import { renderPagesToPng, type RenderedPage } from './render.js';
+import { renderPagesToPng, RENDER_SCALE, type RenderedPage } from './render.js';
 import { validateZones, type TemplateZones } from './zones.js';
 import { runImport, type ImportResult } from '../import-service.js';
 import { parseStatementRows } from './parse-rows.js';
-import { ocrPngPages } from '../ocr/index.js';
+import { ocrPngPages, readPngDims } from '../ocr/index.js';
 
 const HEURISTIC_AUTO_THRESHOLD = 0.9;
 const HEURISTIC_SUGGEST_THRESHOLD = 0.5;
@@ -152,8 +152,10 @@ async function parkDraft(
   if (willOcr && draft) {
     // Kick off the background OCR job. queueMicrotask lets the HTTP response
     // return immediately; the job continues after the response is sent.
+    // Scanned PDFs render at RENDER_SCALE (150 DPI) but the zone canvas
+    // operates in PDF points — divide OCR word coords back to points.
     queueMicrotask(() => {
-      void runOcrJob(draft.id, rendered.map((p) => p.pngBase64));
+      void runOcrJob(draft.id, rendered.map((p) => p.pngBase64), RENDER_SCALE);
     });
   }
   return {
@@ -174,7 +176,19 @@ async function parkDraft(
 // Runs OCR on a draft's rendered pages, streaming progress into the draft
 // row. Any thrown error transitions the draft to ocr_status = 'error' with
 // a human-readable message; downstream polling picks that up.
-export async function runOcrJob(draftId: number, pngBase64Pages: string[]): Promise<void> {
+//
+// `coordScale` divides the pixel-space (xLeft/yTop/width/height) coordinates
+// Tesseract emits so stored text_items land in the same coordinate system as
+// the wizard's zone canvas. Callers:
+//   - scanned PDFs (parkDraft) pass RENDER_SCALE (=150/72) — canvas widthPt
+//     is in PDF points but the PNGs OCR sees are at 150 DPI.
+//   - photos (importPhoto) pass 1 — the canvas widthPt is already the pixel
+//     width sharp reported, so pixels-in matches pixels-out.
+export async function runOcrJob(
+  draftId: number,
+  pngBase64Pages: string[],
+  coordScale = 1,
+): Promise<void> {
   try {
     const pages = await ocrPngPages(pngBase64Pages, {
       onPageDone: async (i) => {
@@ -192,7 +206,14 @@ export async function runOcrJob(draftId: number, pngBase64Pages: string[]): Prom
       },
     });
     // Merge OCR words into text_items so parseStatementRows works unchanged.
-    const items = pages.flatMap((p) => p.words);
+    // Rescale coords into the zone canvas's coordinate system.
+    const items = pages.flatMap((p) => p.words.map((w) => ({
+      ...w,
+      xLeft: w.xLeft / coordScale,
+      yTop: w.yTop / coordScale,
+      width: w.width / coordScale,
+      height: w.height / coordScale,
+    })));
     await db.update(pdfImportDrafts)
       .set({
         textItems: items,
@@ -206,6 +227,47 @@ export async function runOcrJob(draftId: number, pngBase64Pages: string[]): Prom
       .set({ ocrStatus: 'error', ocrError: message })
       .where(eq(pdfImportDrafts.id, draftId));
   }
+}
+
+// Rebuild PdfPageText[] from a draft row. Photos and OCR-processed PDFs
+// use the stored text_items (written at OCR completion) rather than
+// re-running pdfjs on the raw bytes — pdfjs would either refuse a PNG
+// ("Invalid PDF structure") or return empty items on a text-less PDF.
+async function hydrateDraftPages(draft: {
+  pdfBytes: string;
+  textItems: unknown;
+  sourceKind: string;
+  ocrStatus: string;
+}): Promise<PdfPageText[]> {
+  const b64 = draft.pdfBytes;
+  const buf = Buffer.from(b64, 'base64');
+  const stored = (draft.textItems ?? []) as PdfTextItem[];
+  const itemsByPage = new Map<number, PdfTextItem[]>();
+  for (const it of stored) {
+    const arr = itemsByPage.get(it.pageIndex) ?? [];
+    arr.push(it);
+    itemsByPage.set(it.pageIndex, arr);
+  }
+  if (draft.sourceKind === 'photo') {
+    const { widthPx, heightPx } = readPngDims(buf);
+    return [{
+      pageIndex: 0,
+      widthPt: widthPx,
+      heightPt: heightPx,
+      items: itemsByPage.get(0) ?? [],
+    }];
+  }
+  // PDF path — extractText yields the correct page dims. Its own items
+  // are empty on a text-less PDF, so if OCR ran we override them with
+  // the stored (already rescaled to points) text_items.
+  const extracted = await extractText(buf);
+  if (draft.ocrStatus === 'ready') {
+    return extracted.map((p) => ({
+      ...p,
+      items: itemsByPage.get(p.pageIndex) ?? [],
+    }));
+  }
+  return extracted;
 }
 
 // Explain in one short French sentence WHY the saved template produced 0
@@ -285,15 +347,24 @@ export async function applyTemplateAndImport(opts: {
   const stored = draft.pdfBytes as unknown;
   const b64 = typeof stored === 'string' ? stored : (stored as Buffer).toString('utf8');
   const buf = Buffer.from(b64, 'base64');
-  if (buf.length < 4 || buf.subarray(0, 4).toString('latin1') !== '%PDF') {
-    const head = buf.subarray(0, 8).toString('hex');
-    const err = new Error(
-      `stored draft is not a valid PDF (got first bytes ${head}); ` +
-      `re-upload the file or check migration 0004_pdf_bytes_to_text has been applied`,
-    );
-    throw err;
+  // The %PDF magic-byte guard is meaningful only when we're about to run
+  // pdfjs on the buffer — skip it for photo drafts (PNG bytes are legit).
+  if (draft.sourceKind !== 'photo') {
+    if (buf.length < 4 || buf.subarray(0, 4).toString('latin1') !== '%PDF') {
+      const head = buf.subarray(0, 8).toString('hex');
+      const err = new Error(
+        `stored draft is not a valid PDF (got first bytes ${head}); ` +
+        `re-upload the file or check migration 0004_pdf_bytes_to_text has been applied`,
+      );
+      throw err;
+    }
   }
-  const pages = await extractText(buf);
+  const pages = await hydrateDraftPages({
+    pdfBytes: b64,
+    textItems: draft.textItems,
+    sourceKind: draft.sourceKind,
+    ocrStatus: draft.ocrStatus,
+  });
 
   // Stamp a content-based anchor onto the template so subsequent statements
   // with a different page count still pick the right pages. Falls back to
@@ -385,8 +456,12 @@ export async function previewTemplate(opts: {
   }
   const stored = draft.pdfBytes as unknown;
   const b64 = typeof stored === 'string' ? stored : (stored as Buffer).toString('utf8');
-  const buf = Buffer.from(b64, 'base64');
-  const pages = await extractText(buf);
+  const pages = await hydrateDraftPages({
+    pdfBytes: b64,
+    textItems: draft.textItems,
+    sourceKind: draft.sourceKind,
+    ocrStatus: draft.ocrStatus,
+  });
   const { rows, skippedRows } = applyTemplate(pages, opts.zones);
   return { rows, skippedRows };
 }

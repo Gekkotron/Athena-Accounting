@@ -10,7 +10,7 @@ export interface OcrPage {
   words: OcrWord[]; meanConfidence: number;
 }
 
-function readPngDims(buf: Buffer): { widthPx: number; heightPx: number } {
+export function readPngDims(buf: Buffer): { widthPx: number; heightPx: number } {
   // PNG signature check
   if (buf.length < 24 || buf.readUInt32BE(0) !== 0x89504e47 || buf.readUInt32BE(4) !== 0x0d0a1a0a) {
     throw new Error('OCR input is not a PNG');

@@ -15,7 +15,8 @@ export interface RenderedPage {
 }
 
 const TARGET_DPI = 150;
-const SCALE = TARGET_DPI / 72;       // PDF user space is 72dpi
+export const RENDER_SCALE = TARGET_DPI / 72;       // PDF user space is 72dpi
+const SCALE = RENDER_SCALE;
 
 let pdfjsModule: typeof import('pdfjs-dist/legacy/build/pdf.mjs') | null = null;
 async function loadPdfjs() {

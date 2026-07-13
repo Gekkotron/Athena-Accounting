@@ -74,7 +74,9 @@ export async function importPhoto(opts: {
   if (!draft) throw new Error('draft insert failed');
 
   queueMicrotask(() => {
-    void runOcrJob(draft.id, [pngBase64]);
+    // Photos: the wizard canvas widthPt is the pixel width sharp reported,
+    // so OCR word coords (also pixels) already match — no rescale.
+    void runOcrJob(draft.id, [pngBase64], 1);
   });
 
   return {
