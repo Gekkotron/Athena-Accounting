@@ -150,8 +150,11 @@ export const categories = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// category_budgets  —  one recurring monthly spending limit per expense
-// category (migration 0015). UNIQUE(user_id, category_id).
+// category_budgets  —  one recurring spending limit per expense category
+// (migration 0015). Two partial unique indexes (migration 0021) enforce
+// uniqueness on (user_id, category_id, period) for global budgets
+// (account_id IS NULL) and (user_id, category_id, period, account_id) for
+// per-account budgets.
 // ---------------------------------------------------------------------------
 
 export const categoryBudgets = pgTable(
@@ -166,11 +169,23 @@ export const categoryBudgets = pgTable(
       .references(() => categories.id, { onDelete: 'cascade' }),
     monthlyLimit: numeric('monthly_limit', { precision: 14, scale: 2 }).notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
+    // v2 additions (migration 0021):
+    //  - `period` widens `monthlyLimit` from "monthly cap" to "period target".
+    //    The DB column name and JSON key stay `monthly_limit` / `monthlyLimit`
+    //    for backup/restore compatibility.
+    //  - `accountId` NULL = global (all accounts); non-NULL = scoped.
+    period: text('period').notNull().default('monthly'),
+    accountId: integer('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    uqUserCategory: uniqueIndex('category_budgets_user_category_idx').on(t.userId, t.categoryId),
+    uqGlobal: uniqueIndex('category_budgets_global_uniq')
+      .on(t.userId, t.categoryId, t.period)
+      .where(sql`account_id IS NULL`),
+    uqScoped: uniqueIndex('category_budgets_scoped_uniq')
+      .on(t.userId, t.categoryId, t.period, t.accountId)
+      .where(sql`account_id IS NOT NULL`),
   }),
 );
 

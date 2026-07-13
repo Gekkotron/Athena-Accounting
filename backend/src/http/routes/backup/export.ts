@@ -156,6 +156,8 @@ export function registerExportRoute(app: FastifyInstance): void {
         categoryParent: categoryParentName(b.categoryId),
         monthlyLimit: b.monthlyLimit,
         currency: b.currency,
+        period: b.period,
+        account: b.accountId != null ? (accountById.get(b.accountId)?.name ?? null) : null,
       })),
     };
 

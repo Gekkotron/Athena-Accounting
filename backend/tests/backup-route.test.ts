@@ -237,6 +237,62 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(budgets[0].monthlyLimit).toBe('150.00');
     });
 
+    it('exports and restores budgets with period + accountId (v2)', async () => {
+      // Set up: an expense category + an account to scope the yearly budget to.
+      const cat = await app.inject({
+        method: 'POST', url: '/api/categories',
+        headers: { cookie }, payload: { name: 'Sport', kind: 'expense' },
+      });
+      const expenseCatId = cat.json().category.id;
+
+      const acc = await app.inject({
+        method: 'POST', url: '/api/accounts',
+        headers: { cookie },
+        payload: {
+          name: 'Test Account', type: 'checking', currency: 'EUR',
+          openingBalance: '0', openingDate: '2026-01-01',
+        },
+      });
+      const scopedAccountId = acc.json().account.id;
+
+      // Create the two budgets via API so we exercise the whole path: a
+      // global monthly budget + a yearly account-scoped budget.
+      await app.inject({
+        method: 'POST', url: '/api/budgets',
+        headers: { cookie }, payload: {
+          categoryId: expenseCatId, monthlyLimit: '50.00',
+          period: 'monthly', accountId: null,
+        },
+      });
+      await app.inject({
+        method: 'POST', url: '/api/budgets',
+        headers: { cookie }, payload: {
+          categoryId: expenseCatId, monthlyLimit: '600.00',
+          period: 'yearly', accountId: scopedAccountId,
+        },
+      });
+
+      // Export.
+      const exp = await app.inject({ method: 'GET', url: '/api/backup/export', headers: { cookie } });
+      expect(exp.statusCode).toBe(200);
+      const dump = exp.json();
+      expect(dump.budgets).toHaveLength(2);
+      const yearly = dump.budgets.find((b: { period: string }) => b.period === 'yearly');
+      expect(yearly.account).toBe('Test Account'); // account name matches
+      expect(yearly.monthlyLimit).toBe('600.00');
+
+      // Re-import (restore.ts wipes the caller's data as part of the transaction).
+      const imp = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: dump,
+      });
+      expect(imp.statusCode).toBe(200);
+      const after = await app.inject({ method: 'GET', url: '/api/budgets', headers: { cookie } });
+      const restored = after.json().budgets;
+      expect(restored).toHaveLength(2);
+      expect(restored.some((b: { period: string; accountId: number | null }) =>
+        b.period === 'yearly' && b.accountId != null)).toBe(true);
+    });
+
     it('round-trips a dump with same-name children under two different parents', async () => {
       // First: export the current empty user's dump so we have a valid v3+
       // envelope to base the test payload on.

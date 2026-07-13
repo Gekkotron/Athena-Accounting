@@ -179,6 +179,35 @@ describe('backup/schema.ts', () => {
     });
     expect(parsed.success).toBe(true);
   });
+
+  it('accepts a budget entry with period and account (v2)', () => {
+    const parsed = BackupBody.parse({
+      ...minimalDump,
+      budgets: [{
+        category: 'Restaurants',
+        categoryParent: null,
+        monthlyLimit: '50.00',
+        currency: 'EUR',
+        period: 'yearly',
+        account: 'Boursorama',
+      }],
+    });
+    expect(parsed.budgets![0]!.period).toBe('yearly');
+    expect(parsed.budgets![0]!.account).toBe('Boursorama');
+  });
+
+  it('defaults period to "monthly" when a pre-v2 budget entry omits it', () => {
+    // Zod's `.default(…).optional()` populates period when absent.
+    const parsed = BackupBody.parse({
+      ...minimalDump,
+      budgets: [{
+        category: 'Courses', categoryParent: null,
+        monthlyLimit: '100.00', currency: 'EUR',
+      }],
+    });
+    expect(parsed.budgets![0]!.period ?? 'monthly').toBe('monthly');
+    expect(parsed.budgets![0]!.account ?? null).toBe(null);
+  });
 });
 
 describe('fileImportKey', () => {

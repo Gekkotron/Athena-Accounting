@@ -208,11 +208,14 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       for (const b of dump.budgets ?? []) {
         const catId = resolveCategoryRef(b.category, b.categoryParent, categoryIdByPath, categoryIdsByName);
         if (catId === null) continue;
+        const budgetAccountId = b.account ? (accountIdByName.get(b.account) ?? null) : null;
         await tx.insert(categoryBudgets).values({
           userId: uid,
           categoryId: catId,
           monthlyLimit: b.monthlyLimit,
           currency: b.currency,
+          period: b.period ?? 'monthly',
+          accountId: budgetAccountId,
         });
         budgetsInserted++;
       }
