@@ -343,6 +343,11 @@ export const pdfImportDrafts = pgTable(
     pdfBytes: text('pdf_bytes').notNull(),
     textItems: jsonb('text_items').notNull(),
     fingerprint: text('fingerprint').notNull(),
+    sourceKind: text('source_kind').notNull().default('pdf'),
+    ocrStatus: text('ocr_status').notNull().default('not_needed'),
+    ocrProgress: integer('ocr_progress').notNull().default(0),
+    ocrTotal: integer('ocr_total').notNull().default(0),
+    ocrError: text('ocr_error'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true })
       .notNull()
