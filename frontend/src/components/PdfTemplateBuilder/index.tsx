@@ -102,8 +102,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       const draft = await getDraft(needsTemplate.draftId);
       setFreshTextItems(draft.textItems);
     } catch {
-      // Non-fatal: the anchor-picker/extracted-text panels just show
-      // whatever text_items were available at upload time (likely empty).
+      setOcrError('Impossible de charger le texte reconnu — réessayez.');
     }
   }
 
