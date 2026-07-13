@@ -20,10 +20,16 @@ export function SuggestionCard(props: {
   onApply: (id: number, newLimit: string) => void;
 }): JSX.Element | null {
   const { row, budgetId, periodKey, onApply } = props;
-  const [dismissedNow, setDismissedNow] = useState(false);
+  // Tracks only "I was just dismissed, for this exact period + category" —
+  // not a plain boolean — because the mount site in index.tsx keeps this
+  // component's key stable (`suggest-${categoryId}`) across period
+  // navigation. A plain boolean would leak a July dismissal into August
+  // since React reuses the same instance instead of remounting it.
+  const [justDismissed, setJustDismissed] = useState<{ periodKey: string; categoryId: number } | null>(null);
 
   if (row.suggestedLimit == null) return null;
   const dismissedList = loadDismissed(periodKey);
+  const dismissedNow = justDismissed?.periodKey === periodKey && justDismissed?.categoryId === row.categoryId;
   if (dismissedNow || dismissedList.includes(row.categoryId)) return null;
 
   const chronicUnder = Number(row.suggestedLimit) < Number(row.limit);
@@ -32,7 +38,7 @@ export function SuggestionCard(props: {
     : `${row.name} dépasse depuis 3 mois. Passer à ${formatAmount(row.suggestedLimit, row.currency)} ?`;
 
   const dismiss = () => {
-    setDismissedNow(true);
+    setJustDismissed({ periodKey, categoryId: row.categoryId });
     saveDismissed(periodKey, [...dismissedList, row.categoryId]);
   };
 

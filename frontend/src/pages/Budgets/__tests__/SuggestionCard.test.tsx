@@ -58,4 +58,18 @@ describe('SuggestionCard', () => {
     render(<SuggestionCard row={rowOver} budgetId={5} periodKey="2026-08" onApply={() => {}} />);
     expect(screen.getByRole('button', { name: /Ajuster à/ })).toBeInTheDocument();
   });
+
+  it('reappears after an in-place period switch on the same mounted instance (no remount)', () => {
+    // index.tsx keeps this component's key stable across period navigation
+    // (it does not include periodKey), so React reuses the same instance
+    // instead of remounting when the user flips from July to August.
+    const { rerender } = render(
+      <SuggestionCard row={rowOver} budgetId={5} periodKey="2026-07" onApply={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Ignorer/ }));
+    expect(screen.queryByRole('button', { name: /Ajuster à/ })).not.toBeInTheDocument();
+
+    rerender(<SuggestionCard row={rowOver} budgetId={5} periodKey="2026-08" onApply={() => {}} />);
+    expect(screen.getByRole('button', { name: /Ajuster à/ })).toBeInTheDocument();
+  });
 });
