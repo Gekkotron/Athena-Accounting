@@ -74,11 +74,7 @@ describe('Budgets page — grouped rendering', () => {
 });
 
 describe('Budgets page — totals correction (no double-count)', () => {
-  // TODO(Task 7): this used to assert the "Total ce mois-ci" summary block
-  // showed the corrected (non-double-counted) total. Task 6 removes that
-  // one-line block from the shell — Task 7's SummaryCard reintroduces the
-  // corrected total display and should restore an equivalent assertion here.
-  it('renders a budgeted parent and child without double-counting anywhere else on the page (total block pending Task 7)', async () => {
+  it('renders the SummaryCard with the corrected (non-double-counted) total', async () => {
     // Parent (Courses) is budgeted at 100€ with 80€ rolled-up spent (which
     // includes the child's 30€). The child (Alimentation) is ALSO budgeted,
     // at 30€, fully spent. A naive sum of row.spent (80 + 30 = 110) would
@@ -141,5 +137,14 @@ describe('Budgets page — totals correction (no double-count)', () => {
     expect(within(parentRow).getByText(/80,00.*100,00/)).toBeInTheDocument();
     expect(within(childRow).getByText(/30,00.*30,00/)).toBeInTheDocument();
     expect(screen.queryByText(/110,00/)).not.toBeInTheDocument();
+
+    // SummaryCard shows the rollup-aware total: the child's budgeted row is
+    // dropped from the sum because its spend already lives inside the
+    // parent's rolled-up 80,00 — so the card reads 80,00 / 100,00, not the
+    // server's naive per-row sum (110,00 / 130,00).
+    const totalLabel = await screen.findByText('Ce mois-ci');
+    const summaryCard = totalLabel.closest('.surface') as HTMLElement;
+    expect(within(summaryCard).getByText(/80,00.*100,00/)).toBeInTheDocument();
+    expect(screen.queryByText(/130,00/)).not.toBeInTheDocument();
   });
 });

@@ -41,7 +41,8 @@ describe('Budgets page', () => {
     // amount appears twice (the totals bar + the row) — match on the
     // leading digits and assert at least one occurrence rather than one.
     expect((await screen.findAllByText(/240/)).length).toBeGreaterThan(0);
-    expect(screen.getByText(/reste/i)).toBeInTheDocument();
+    // "Reste" now appears both on the row and in the SummaryCard.
+    expect((await screen.findAllByText(/reste/i)).length).toBeGreaterThan(0);
   });
 
   it('shows the empty state when there are no budgets', async () => {

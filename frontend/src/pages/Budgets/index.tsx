@@ -8,6 +8,7 @@ import { formatAmount } from '../../lib/format';
 import { formatCategoryPath, groupCategories } from '../../lib/categories';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
+import { SummaryCard } from './SummaryCard';
 
 function currentMonth(): string {
   const d = new Date();
@@ -30,12 +31,6 @@ function barColor(pct: number, over: boolean): string {
 function isValidLimit(v: string): boolean {
   return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
 }
-
-// NOTE: the client-side "double-counted parent+child spend" correction that
-// used to live here (`correctedSpentTotal`) drove the removed one-line total
-// block. It has no caller left in this shell — Task 7's SummaryCard reimplements
-// the corrected total (likely via budget-math.ts) alongside the richer summary
-// UI, so it isn't ported forward as dead code.
 
 const MUTATION_ERROR_FALLBACK = "Impossible d'enregistrer le budget.";
 
@@ -108,6 +103,31 @@ export function Budgets(): JSX.Element {
     (c) => c.kind === 'expense' && !budgetedIds.has(c.id),
   );
 
+  // The server totals a naive sum across every budgeted row (see
+  // reports.ts) — when a parent AND its child both carry a budget, the
+  // child's spend is already rolled into the parent's own `spent` value,
+  // so summing both rows double-counts it. Recompute a rollup-aware total
+  // here for the SummaryCard by dropping any row whose direct parent is
+  // itself budgeted (its spend already lives inside the parent's row).
+  const summaryTotals = useMemo(() => {
+    const topLevel = rows.filter((r) => {
+      const parentId = byId.get(r.categoryId)?.parentId ?? null;
+      return !(parentId != null && rowsByCategory.has(parentId));
+    });
+    const limit = topLevel.reduce((a, r) => a + Number(r.limit), 0);
+    const spent = topLevel.reduce((a, r) => a + Number(r.spent), 0);
+    const allProjected = topLevel.length > 0 && topLevel.every((r) => r.projected != null);
+    const projected = allProjected
+      ? topLevel.reduce((a, r) => a + Number(r.projected), 0).toFixed(2)
+      : null;
+    return {
+      limit: limit.toFixed(2),
+      spent: spent.toFixed(2),
+      remaining: (limit - spent).toFixed(2),
+      projected,
+    };
+  }, [rows, byId, rowsByCategory]);
+
   const [newCatId, setNewCatId] = useState('');
   const [newLimit, setNewLimit] = useState('');
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -149,14 +169,23 @@ export function Budgets(): JSX.Element {
         </div>
       )}
 
+      {report.data && report.data.rows.length > 0 && (
+        <SummaryCard
+          totals={summaryTotals}
+          rows={report.data.rows}
+          period={report.data.period}
+          monthOrYear={monthOrYear}
+        />
+      )}
+
       {accounts.length > 1 && (
         <AccountFilter accountId={accountId} accounts={accounts} onChange={setAccountFilter} />
       )}
 
-      {/* Summary card + Row list + Suggestions + Unbudgeted + Add form
-          — placeholders for Tasks 7–11. For this task, keep the existing
-          per-row rendering, sourced from the new `report.data.rows` shape
-          (a strict superset of the old one).                             */}
+      {/* Row list + Suggestions + Unbudgeted + Add form — placeholders for
+          Tasks 8–11. For this task, keep the existing per-row rendering,
+          sourced from the new `report.data.rows` shape (a strict superset
+          of the old one).                                                */}
 
       {rows.length === 0 ? (
         <div className="surface p-8 text-center text-ink-400">
