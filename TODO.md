@@ -12,9 +12,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
 - Traduire l'app (fr, en) avec detection de la langue du navigateur.
 - check if nuextract will be useful https://about.nuextract.ai (self-hosted).
 - Update readme with new features + screenshots.
-- OCR pour les PDF scannés (Tesseract-node ou tesseract.js côté serveur) — le
-  wizard PDF détecte déjà `no_text_layer` mais renvoie une template vide.
-  Servirait pour les vieux relevés archivés.
 - Renommer un template PDF depuis le panneau (le backend accepte déjà `PUT
   /api/pdf-templates/:id { label }`, il manque juste un champ inline).
 - Édition d'un template sans re-uploader le PDF (aperçu des dernières zones
@@ -280,6 +277,24 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   CRUD endpoints with 409/400 rules, `/api/reports/budget` for
   planned-vs-actual, and a dedicated Budgets page with month picker,
   per-category bars, and red overflow indicator.
+- **OCR pour les PDF scannés + photos de relevés papier** : nouveau
+  module `imports/ocr` basé sur `tesseract.js` côté serveur (fra+eng,
+  `OCR_LANG_PATH` env var pour déploiement LAN-only). Job async lancé
+  via `queueMicrotask` sur upload d'un PDF sans couche texte —
+  transitions `not_needed` / `pending` / `ready` / `error` exposées via
+  `GET /api/imports/pdf/drafts/:id/ocr-status` (polling depuis un
+  nouveau step `<OcrProgress>` dans le wizard). Nouveau chemin photo :
+  `POST /api/imports/photo` accepte JPEG/PNG/WebP/HEIC (25 Mo max,
+  transcodage HEIC via `sharp`, MIME sniffé par magic-bytes), même
+  wizard, même flux OCR. `PreviewTable` composant partagé
+  `editable=true|false` : les lignes OCR sont éditables avant import
+  avec pastilles de confiance (vert ≥ 85%, orange 65-84%, rouge <65%)
+  et bouton × pour supprimer une ligne parasite ; l'import final poste
+  `override_rows` qui bypasse `parseStatementRows`. Migration 0020
+  ajoute `source_kind`, `ocr_status`, `ocr_progress`, `ocr_total`,
+  `ocr_error` sur `pdf_import_drafts`. Ownership check ajouté sur
+  `applyTemplateAndImport` (parité avec `previewTemplate`) — `override_rows`
+  rendait le trou pré-existant exploitable en cross-user.
 - **Sous-catégories (hiérarchie 2 niveaux)** : `parent_id` désormais
   exploité de bout en bout. Migration 0019 (index unique
   `(user_id, COALESCE(parent_id, 0), name)`), invariants serveur (cap
