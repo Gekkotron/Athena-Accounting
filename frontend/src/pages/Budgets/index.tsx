@@ -9,6 +9,7 @@ import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
 import { BudgetRow } from './BudgetRow';
+import { SuggestionCard } from './SuggestionCard';
 import { topLevelRows } from './budget-math';
 
 function currentMonth(): string {
@@ -189,16 +190,28 @@ export function Budgets(): JSX.Element {
             const rootRow = rowsByCategory.get(r.id);
             const nodes: JSX.Element[] = [];
             if (rootRow) {
+              const budgetId = budgets.find((b) => b.categoryId === r.id)?.id;
               nodes.push(
                 <BudgetRow
                   key={`root-${r.id}`}
                   row={rootRow}
                   depth={0}
-                  budgetId={budgets.find((b) => b.categoryId === r.id)?.id}
+                  budgetId={budgetId}
                   onSave={handleSave}
                   onDelete={handleDelete}
                 />,
               );
+              if (rootRow.suggestedLimit != null && budgetId !== undefined) {
+                nodes.push(
+                  <SuggestionCard
+                    key={`suggest-${r.id}`}
+                    row={rootRow}
+                    budgetId={budgetId}
+                    periodKey={monthOrYear}
+                    onApply={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
+                  />,
+                );
+              }
             } else {
               // Parent has no budget of its own but has budgeted children — slim header.
               nodes.push(
@@ -210,32 +223,59 @@ export function Budgets(): JSX.Element {
             for (const c of childrenByParent.get(r.id) ?? []) {
               const row = rowsByCategory.get(c.id);
               if (!row) continue;
+              const budgetId = budgets.find((b) => b.categoryId === c.id)?.id;
               nodes.push(
                 <BudgetRow
                   key={`child-${c.id}`}
                   row={row}
                   depth={1}
-                  budgetId={budgets.find((b) => b.categoryId === c.id)?.id}
+                  budgetId={budgetId}
                   onSave={handleSave}
                   onDelete={handleDelete}
                 />,
               );
+              if (row.suggestedLimit != null && budgetId !== undefined) {
+                nodes.push(
+                  <SuggestionCard
+                    key={`suggest-${c.id}`}
+                    row={row}
+                    budgetId={budgetId}
+                    periodKey={monthOrYear}
+                    onApply={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
+                  />,
+                );
+              }
             }
             return nodes;
           })}
           {/* Also render any budgeted category whose parent isn't visible (orphaned leaf edge case). */}
           {rows
             .filter((r) => !visibleRoots.some((vr) => vr.id === r.categoryId || (childrenByParent.get(vr.id) ?? []).some((c) => c.id === r.categoryId)))
-            .map((r) => (
-              <BudgetRow
-                key={`orphan-${r.categoryId}`}
-                row={r}
-                depth={0}
-                budgetId={budgets.find((b) => b.categoryId === r.categoryId)?.id}
-                onSave={handleSave}
-                onDelete={handleDelete}
-              />
-            ))}
+            .flatMap((r) => {
+              const budgetId = budgets.find((b) => b.categoryId === r.categoryId)?.id;
+              const nodes = [
+                <BudgetRow
+                  key={`orphan-${r.categoryId}`}
+                  row={r}
+                  depth={0}
+                  budgetId={budgetId}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                />,
+              ];
+              if (r.suggestedLimit != null && budgetId !== undefined) {
+                nodes.push(
+                  <SuggestionCard
+                    key={`suggest-orphan-${r.categoryId}`}
+                    row={r}
+                    budgetId={budgetId}
+                    periodKey={monthOrYear}
+                    onApply={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
+                  />,
+                );
+              }
+              return nodes;
+            })}
         </ul>
       )}
 
