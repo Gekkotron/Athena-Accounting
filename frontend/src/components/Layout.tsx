@@ -76,17 +76,19 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
       : 'text-ink-400 hover:text-ink-100 hover:bg-ink-900/70'
   }`;
 
-function useDuplicatesBadgeCount(): number {
+function useNavBadgeCounts(): Record<string, number> {
   // Shares the queryKey with DuplicatesPanel so the two views stay in sync
   // and the badge updates as soon as the user resolves a group.
-  const q = useQuery({
+  const duplicates = useQuery({
     queryKey: ['transaction-duplicates'],
     queryFn: () =>
       api<{ groups: unknown[] }>('/api/transactions/duplicates'),
     refetchOnWindowFocus: true,
     staleTime: 30_000,
   });
-  return q.data?.groups?.length ?? 0;
+  return {
+    '/donnees/doublons': duplicates.data?.groups?.length ?? 0,
+  };
 }
 
 function NavTree({
@@ -97,7 +99,7 @@ function NavTree({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
-  const duplicatesCount = useDuplicatesBadgeCount();
+  const badges = useNavBadgeCounts();
   return (
     <div className="flex flex-col gap-5">
       {sections.map((section) => (
@@ -111,6 +113,9 @@ function NavTree({
                 isHub &&
                 (location.pathname === item.to ||
                   location.pathname.startsWith(item.to + '/'));
+              const rootBadge = isHub
+                ? item.children!.reduce((sum, c) => sum + (badges[c.to] ?? 0), 0)
+                : (badges[item.to] ?? 0);
               return (
                 <div key={item.to}>
                   <NavLink
@@ -123,16 +128,22 @@ function NavTree({
                       <>
                         <Icon className={isActive || isActiveHub ? 'text-sage-300' : 'text-ink-500'} />
                         <span>{item.label}</span>
+                        {rootBadge > 0 && (
+                          <span
+                            aria-label={`${rootBadge} en attente`}
+                            className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-clay-500/25 text-clay-200 text-[10px] font-mono leading-none"
+                          >
+                            {rootBadge}
+                          </span>
+                        )}
                       </>
                     )}
                   </NavLink>
                   {isHub && isActiveHub && (
                     <div className="ml-8 mt-1 flex flex-col gap-0.5">
                       {item.children!.map((child) => {
-                        const badge =
-                          child.to === '/donnees/doublons' && duplicatesCount > 0
-                            ? duplicatesCount
-                            : null;
+                        const childBadge = badges[child.to] ?? 0;
+                        const badge = childBadge > 0 ? childBadge : null;
                         return (
                           <NavLink
                             key={child.to}
@@ -150,7 +161,7 @@ function NavTree({
                             <span>{child.label}</span>
                             {badge !== null && (
                               <span
-                                aria-label={`${badge} doublon${badge > 1 ? 's' : ''} à vérifier`}
+                                aria-label={`${badge} en attente`}
                                 className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-clay-500/25 text-clay-200 text-[10px] font-mono leading-none"
                               >
                                 {badge}
