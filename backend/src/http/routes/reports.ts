@@ -401,12 +401,14 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       : new Date(Date.UTC(periodStart.getUTCFullYear() - 6, 0, 1));
 
     const historyRes = await db.execute<{
+      budget_id: number;
       category_id: number;
       period_key: string;      // 'YYYY-MM' or 'YYYY'
       spent: string;
     }>(sql`
       WITH ${TX_EFFECTIVE_CTE}
       SELECT
+        b.id                                          AS budget_id,
         b.category_id,
         ${period === 'monthly'
           ? sql`to_char(e.date, 'YYYY-MM')`
@@ -429,14 +431,17 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
        AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
       WHERE b.user_id = ${uid}
         AND b.period = ${period}
-      GROUP BY b.category_id, period_key
+      GROUP BY b.id, b.category_id, period_key
     `);
 
-    // Group history rows by categoryId then by period_key.
-    const historyByCategory = new Map<number, Map<string, string>>();
+    // Group history rows by budget-row id (not category_id) then by period_key.
+    // A category can have both a GLOBAL and an ACCOUNT-SCOPED budget (Task 2),
+    // so keying by category_id here would double-count: the outer /result
+    // query already groups by b.id per row, so history must match that grain.
+    const historyByBudget = new Map<number, Map<string, string>>();
     for (const r of historyRes.rows) {
-      let inner = historyByCategory.get(r.category_id);
-      if (!inner) { inner = new Map(); historyByCategory.set(r.category_id, inner); }
+      let inner = historyByBudget.get(r.budget_id);
+      if (!inner) { inner = new Map(); historyByBudget.set(r.budget_id, inner); }
       inner.set(r.period_key, r.spent);
     }
 
@@ -455,7 +460,7 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const priorKeys = priorPeriodKeys(period, periodStart);
-      const catHist = historyByCategory.get(r.category_id) ?? new Map<string, string>();
+      const catHist = historyByBudget.get(r.id) ?? new Map<string, string>();
       const historyValuesNum = priorKeys.map((k) => Number(catHist.get(k) ?? '0'));
       const nonZeroCount = historyValuesNum.filter((v) => v > 0).length;
 
@@ -467,8 +472,14 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
           }
         : null;
 
+      // Gate on nonZeroCount (not historyValuesNum.length, which is always 6
+      // due to zero-padding to a fixed 6-period window): stdev computed
+      // against a mostly-zero-padded array is not a meaningful anomaly
+      // signal, so we require >=3 real (non-zero) completed periods before
+      // flagging. nonZeroCount >= 3 implies >= 2, so `history !== null` is
+      // already satisfied; kept for readability.
       const anomaly = history !== null
-        && historyValuesNum.length >= 3
+        && nonZeroCount >= 3
         && Math.abs(spent - mean(historyValuesNum)) > stdev(historyValuesNum);
 
       const overCount = historyValuesNum.filter((v) => v > limit).length;
