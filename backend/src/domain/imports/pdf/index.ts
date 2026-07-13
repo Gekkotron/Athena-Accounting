@@ -238,6 +238,7 @@ export async function applyTemplateAndImport(opts: {
   draftId: number;
   label: string;
   zones: TemplateZones;
+  overrideRows?: Array<{ date: string; label: string; amount: string }>;
 }): Promise<ApplyTemplateImportedResult> {
   validateZones(opts.zones);
   const [draft] = await db.select().from(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));
@@ -252,6 +253,30 @@ export async function applyTemplateAndImport(opts: {
     (err as any).code = 'draft_expired';
     throw err;
   }
+
+  // The user hand-fixed OCR misreads in the preview panel — skip zone
+  // parsing entirely and hand the reviewed rows straight to runImport.
+  // The template row from the earlier zone-painting step is left as-is;
+  // this call only imports transactions, it doesn't retrain the template.
+  if (opts.overrideRows && opts.overrideRows.length > 0) {
+    const prepared = opts.overrideRows.map((r) => ({
+      date: r.date,
+      amount: r.amount.replace(',', '.'),
+      rawLabel: r.label,
+      memo: null,
+      fitid: null,
+    }));
+    const result = await runImport({
+      filename: opts.label,
+      accountId: draft.accountId,
+      userId: draft.userId!,
+      format: 'pdf',
+      prepared,
+    });
+    await db.delete(pdfImportDrafts).where(eq(pdfImportDrafts.id, opts.draftId));
+    return { result, skippedRows: [] };
+  }
+
   // The column SHOULD be TEXT holding a base64 string (migration 0004 aligns
   // the runtime shape with the schema). Defensive Buffer handling stays as a
   // safety net so a regression surfaces with a clear message rather than a

@@ -277,6 +277,46 @@ describe.skipIf(!RUN)('/api/imports', () => {
     return r?.n ?? 0;
   }
 
+  describe('POST /api/imports/pdf/templates (override_rows)', () => {
+    const validZones = {
+      headerZone: { page: 0, x: 0, y: 0, w: 1, h: 1 },
+      tableZone: { page: 0, x: 0, y: 0, w: 1, h: 1 },
+      tableRepeatsPerPage: false,
+      rowsStartY: 0,
+      columns: [
+        { xStart: 0, xEnd: 1, role: 'date' },
+        { xStart: 1, xEnd: 2, role: 'description' },
+        { xStart: 2, xEnd: 3, role: 'amountSigned' },
+      ],
+    };
+
+    it('with override_rows bypasses zone parsing', async () => {
+      const uid = await getUid();
+      const { db } = await import('../src/db/client.js');
+      const { pdfImportDrafts } = await import('../src/db/schema.js');
+      const [draft] = await db.insert(pdfImportDrafts).values({
+        userId: uid, accountId, pdfBytes: '', textItems: [], fingerprint: 'override-test',
+        sourceKind: 'pdf', ocrStatus: 'ready', ocrTotal: 1, ocrProgress: 1,
+      }).returning();
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/imports/pdf/templates',
+        headers: { cookie, 'content-type': 'application/json' },
+        payload: JSON.stringify({
+          draftId: draft!.id,
+          label: 'override-import',
+          zones: validZones,
+          override_rows: [
+            { date: '2026-06-14', label: 'CARREFOUR', amount: '-34.20' },
+            { date: '2026-06-15', label: 'SNCF', amount: '-87,00' },
+          ],
+        }),
+      });
+      expect(res.statusCode).toBe(201);
+      expect(res.json().result.insertedCount).toBe(2);
+    });
+  });
+
   describe('POST /api/imports/pdf/templates/preview', () => {
     async function insertDraft(zones: unknown = null, opts: { expired?: boolean; foreignUser?: boolean } = {}): Promise<number> {
       const PDFDocument = (await import('pdfkit')).default;

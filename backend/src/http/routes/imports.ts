@@ -103,12 +103,38 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/api/imports/pdf/templates', async (req, reply) => {
-    const body = req.body as { draftId?: number; label?: string; zones?: TemplateZones };
+    const body = req.body as {
+      draftId?: number;
+      label?: string;
+      zones?: TemplateZones;
+      override_rows?: Array<{ date?: string; label?: string; amount?: string }>;
+    };
     if (!body?.draftId || !body.label || !body.zones) {
       return reply.code(400).send({ error: 'draftId, label, and zones are required' });
     }
+    let overrideRows: Array<{ date: string; label: string; amount: string }> | undefined;
+    if (body.override_rows !== undefined) {
+      if (!Array.isArray(body.override_rows)) {
+        return reply.code(400).send({ error: 'override_rows must be an array' });
+      }
+      for (const r of body.override_rows) {
+        if (
+          typeof r?.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.date) ||
+          typeof r?.label !== 'string' || r.label.length < 1 || r.label.length > 200 ||
+          typeof r?.amount !== 'string' || !/^-?\d+([.,]\d{1,2})?$/.test(r.amount)
+        ) {
+          return reply.code(400).send({ error: 'invalid override_rows entry (expected date YYYY-MM-DD, label, decimal amount)' });
+        }
+      }
+      overrideRows = body.override_rows as Array<{ date: string; label: string; amount: string }>;
+    }
     try {
-      const r = await applyTemplateAndImport({ draftId: body.draftId, label: body.label, zones: body.zones });
+      const r = await applyTemplateAndImport({
+        draftId: body.draftId,
+        label: body.label,
+        zones: body.zones,
+        overrideRows,
+      });
       return reply.code(201).send(r);
     } catch (err: any) {
       if (err?.code === 'draft_expired') return reply.code(410).send({ code: 'draft_expired', error: 'draft expired or not found' });
