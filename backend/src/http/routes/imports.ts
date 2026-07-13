@@ -105,7 +105,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/api/imports/photo', async (req, reply) => {
     if (!req.isMultipart()) return reply.code(400).send({ error: 'no file uploaded' });
-    const data = await req.file({ limits: { fileSize: 25 * 1024 * 1024 } });
+    const data = await req.file({ limits: { fileSize: 26 * 1024 * 1024 } });
     if (!data) return reply.code(400).send({ error: 'no file uploaded' });
     const filename = data.filename;
     const buffer = await data.toBuffer();

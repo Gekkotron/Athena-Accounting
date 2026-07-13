@@ -275,6 +275,18 @@ describe.skipIf(!RUN)('/api/imports', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('POST /api/imports/photo rejects a >25MB payload with 400 and domain error', async () => {
+    const oversized = Buffer.alloc(25.5 * 1024 * 1024, 0xff);
+    const { headers, payload } = await buildForm('oversized.jpg', oversized, 'image/jpeg');
+    const res = await app.inject({
+      method: 'POST', url: `/api/imports/photo?accountId=${accountId}`,
+      headers: { cookie, ...headers },
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/photo too large/i);
+  });
+
   it('GET /api/imports/pdf/drafts/:id/ocr-status returns 404 for unknown draft', async () => {
     const res = await app.inject({
       method: 'GET', url: '/api/imports/pdf/drafts/999999/ocr-status', headers: { cookie },
