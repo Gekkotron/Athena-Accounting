@@ -75,6 +75,42 @@ function computeProjected(
   return (spent / elapsedDays * windowDays).toFixed(2);
 }
 
+// Six most recent *completed* periods before `currentStart`, oldest first.
+// Monthly: 'YYYY-MM' keys for the 6 calendar months before currentStart.
+// Yearly: 'YYYY' keys for the 6 calendar years before currentStart's year.
+function priorPeriodKeys(period: 'monthly' | 'yearly', currentStart: Date): string[] {
+  const keys: string[] = [];
+  if (period === 'monthly') {
+    for (let i = 6; i >= 1; i--) {
+      const d = new Date(Date.UTC(currentStart.getUTCFullYear(), currentStart.getUTCMonth() - i, 1));
+      keys.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    }
+  } else {
+    for (let i = 6; i >= 1; i--) {
+      keys.push(String(currentStart.getUTCFullYear() - i));
+    }
+  }
+  return keys;
+}
+
+function mean(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0) / (values.length || 1);
+}
+
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
+}
+
+function stdev(values: number[]): number {
+  if (values.length < 2) return 0;
+  const m = mean(values);
+  const v = values.reduce((sum, x) => sum + (x - m) ** 2, 0) / values.length;
+  return Math.sqrt(v);
+}
+
 export async function reportsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
@@ -356,6 +392,54 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       accountId == null ? true : r.account_id == null || r.account_id === accountId
     );
 
+    // Fetch 6 completed periods of history in one query, grouped by budget row.
+    // For monthly: 6 calendar months before periodStart. For yearly: 6 calendar
+    // years before periodStart. Missing (userId, categoryId, periodKey) tuples
+    // stay zero.
+    const historyStart = period === 'monthly'
+      ? new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() - 6, 1))
+      : new Date(Date.UTC(periodStart.getUTCFullYear() - 6, 0, 1));
+
+    const historyRes = await db.execute<{
+      category_id: number;
+      period_key: string;      // 'YYYY-MM' or 'YYYY'
+      spent: string;
+    }>(sql`
+      WITH ${TX_EFFECTIVE_CTE}
+      SELECT
+        b.category_id,
+        ${period === 'monthly'
+          ? sql`to_char(e.date, 'YYYY-MM')`
+          : sql`to_char(e.date, 'YYYY')`
+        } AS period_key,
+        COALESCE(-SUM(e.amount), 0)::text AS spent
+      FROM category_budgets b
+      JOIN tx_effective e
+        ON (
+          e.category_id = b.category_id
+          OR e.category_id IN (
+            SELECT cc.id FROM categories cc
+            WHERE cc.parent_id = b.category_id AND cc.user_id = ${uid}
+          )
+        )
+       AND e.user_id = ${uid}
+       AND e.transfer_group_id IS NULL
+       AND e.date >= ${historyStart.toISOString().slice(0, 10)}::date
+       AND e.date <  ${startIso}::date
+       AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
+      WHERE b.user_id = ${uid}
+        AND b.period = ${period}
+      GROUP BY b.category_id, period_key
+    `);
+
+    // Group history rows by categoryId then by period_key.
+    const historyByCategory = new Map<number, Map<string, string>>();
+    for (const r of historyRes.rows) {
+      let inner = historyByCategory.get(r.category_id);
+      if (!inner) { inner = new Map(); historyByCategory.set(r.category_id, inner); }
+      inner.set(r.period_key, r.spent);
+    }
+
     let totalLimit = 0;
     let totalSpent = 0;
     let totalProjected: number | null = 0;
@@ -369,6 +453,32 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         if (projected == null) totalProjected = null;
         else totalProjected += Number(projected);
       }
+
+      const priorKeys = priorPeriodKeys(period, periodStart);
+      const catHist = historyByCategory.get(r.category_id) ?? new Map<string, string>();
+      const historyValuesNum = priorKeys.map((k) => Number(catHist.get(k) ?? '0'));
+      const nonZeroCount = historyValuesNum.filter((v) => v > 0).length;
+
+      const history = nonZeroCount >= 2
+        ? {
+            values: historyValuesNum.map((v) => v.toFixed(2)),
+            average: mean(historyValuesNum).toFixed(2),
+            median: median(historyValuesNum).toFixed(2),
+          }
+        : null;
+
+      const anomaly = history !== null
+        && historyValuesNum.length >= 3
+        && Math.abs(spent - mean(historyValuesNum)) > stdev(historyValuesNum);
+
+      const overCount = historyValuesNum.filter((v) => v > limit).length;
+      const underHalfCount = limit > 0
+        ? historyValuesNum.filter((v) => v < limit * 0.5).length
+        : 0;
+      const suggestedLimit = (overCount >= 3 || underHalfCount >= 3)
+        ? median(historyValuesNum).toFixed(2)
+        : null;
+
       return {
         categoryId: r.category_id,
         name: r.name,
@@ -382,6 +492,9 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         pct: limit > 0 ? Math.round((spent / limit) * 100) : 0,
         over: spent > limit,
         projected,
+        history,
+        anomaly,
+        suggestedLimit,
       };
     });
 
@@ -391,6 +504,13 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       windowDays: number; elapsedDays: number;
       rows: typeof rows;
       totals: { limit: string; spent: string; remaining: string; projected: string | null };
+      unbudgetedCandidates: Array<{
+        categoryId: number;
+        name: string;
+        color: string | null;
+        parentId: number | null;
+        average: string;
+      }>;
     } = {
       period,
       windowDays, elapsedDays,
@@ -401,9 +521,66 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
         remaining: (totalLimit - totalSpent).toFixed(2),
         projected: totalProjected == null ? null : totalProjected.toFixed(2),
       },
+      unbudgetedCandidates: [],
     };
     if (monthOut) response.month = monthOut;
     if (yearOut) response.year = yearOut;
+
+    // Unbudgeted candidates: expense categories with no active budget in the
+    // current period AND positive average spend over the last 3 completed
+    // periods (same period-type as the request).
+    const budgetedCategoryIds = new Set(rowsFiltered.map((r) => r.category_id));
+    const candidateHistoryStart = period === 'monthly'
+      ? new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() - 3, 1))
+      : new Date(Date.UTC(periodStart.getUTCFullYear() - 3, 0, 1));
+
+    const candidateRes = await db.execute<{
+      category_id: number;
+      name: string;
+      color: string | null;
+      parent_id: number | null;
+      average: string;
+    }>(sql`
+      WITH ${TX_EFFECTIVE_CTE},
+      spend AS (
+        SELECT
+          e.category_id,
+          ${period === 'monthly' ? sql`to_char(e.date, 'YYYY-MM')` : sql`to_char(e.date, 'YYYY')`} AS period_key,
+          COALESCE(-SUM(e.amount), 0)::numeric AS spent
+        FROM tx_effective e
+        WHERE e.user_id = ${uid}
+          AND e.transfer_group_id IS NULL
+          AND e.date >= ${candidateHistoryStart.toISOString().slice(0, 10)}::date
+          AND e.date <  ${startIso}::date
+          AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
+        GROUP BY e.category_id, period_key
+      )
+      SELECT
+        c.id                                       AS category_id,
+        c.name                                     AS name,
+        c.color                                    AS color,
+        c.parent_id                                AS parent_id,
+        ROUND(AVG(s.spent)::numeric, 2)::text       AS average
+      FROM categories c
+      LEFT JOIN spend s ON s.category_id = c.id
+      WHERE c.user_id = ${uid}
+        AND c.kind = 'expense'
+      GROUP BY c.id, c.name, c.color, c.parent_id
+      HAVING COALESCE(AVG(s.spent), 0) > 0
+      ORDER BY AVG(s.spent) DESC
+      LIMIT 20
+    `);
+
+    response.unbudgetedCandidates = candidateRes.rows
+      .filter((c) => !budgetedCategoryIds.has(c.category_id))
+      .map((c) => ({
+        categoryId: c.category_id,
+        name: c.name,
+        color: c.color,
+        parentId: c.parent_id,
+        average: c.average,
+      }));
+
     return response;
   });
 }

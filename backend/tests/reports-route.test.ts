@@ -342,4 +342,62 @@ describe.skipIf(!RUN)('/api/reports', () => {
     'past yearly period equally treats projected as spent: ' +
     'year = current year - 1; windowDays is 365 or 366; projected === spent',
   );
+
+  // --- Task 4: history + anomaly + suggestedLimit + unbudgetedCandidates ---
+  // Stubbed as it.todo(...) for the same reason as the Task 3 block above:
+  // these fixtures are "today"-relative (6 completed calendar months/years
+  // before the current period) and the brief left them as prose sketches
+  // rather than exact assertions. DB tests are also unreachable in this
+  // environment (RUN_DB_TESTS requires a live Postgres) — see task-4-report.md.
+
+  it.todo(
+    'populates history.values / average / median for a budget with 6+ months of data: ' +
+    'seed 6 prior calendar months of transactions in the target category (varying amounts), ' +
+    'create a monthly budget, GET /api/reports/budget?period=monthly&month=<current>, assert ' +
+    'row.history.values.length === 6 (oldest first), and average/median match hand-computed values',
+  );
+
+  it.todo(
+    'returns history=null when fewer than 2 non-zero completed periods exist: ' +
+    'category + budget exist but only the current month has data — no prior-period spend, ' +
+    'assert row.history === null',
+  );
+
+  it.todo(
+    'flags anomaly when spent deviates > 1 stdev from the 6-period mean: ' +
+    'seed 6 months around a ~50€ baseline (small variance) then insert 200€ in the current ' +
+    'month; assert row.anomaly === true',
+  );
+
+  it.todo(
+    'does not flag anomaly with fewer than 3 completed periods of history: ' +
+    'seed only 2 prior months of data (history.values still length 6 but nonZeroCount === 2, ' +
+    'so history is non-null) — with only 2 non-zero prior periods, assert row.anomaly === false',
+  );
+
+  it.todo(
+    'suggests a new limit when chronically overspent: ' +
+    'seed 6 months of 80€ against a 50€ limit, assert row.suggestedLimit === "80.00" ' +
+    '(the 6-period median)',
+  );
+
+  it.todo(
+    'suggests a new (lower) limit when chronically under-spent: ' +
+    'seed 6 months of 10€ against a 100€ limit (< 50% of limit each month), assert ' +
+    'row.suggestedLimit is around the 6-period median ("10.00")',
+  );
+
+  it.todo(
+    'does not suggest when spending is close to the limit: ' +
+    'seed 6 months of 48-52€ against a 50€ limit — no chronic-over, no chronic-under, assert ' +
+    'row.suggestedLimit === null',
+  );
+
+  it.todo(
+    'lists unbudgetedCandidates from top-spending unbudgeted expense categories: ' +
+    'two expense categories with spend in the last 3 periods — one has a budget (excluded), ' +
+    'the other does not (included); for a yearly request, a category with only a MONTHLY ' +
+    'budget (not a matching YEARLY one) should still be listed as a candidate; assert the ' +
+    'result is sorted by average descending and capped at 20',
+  );
 });
