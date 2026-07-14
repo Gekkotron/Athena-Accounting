@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -345,10 +345,13 @@ function CategoryTableRow(props: {
     disabled: depth === 1,
   });
 
-  const setRowRef = (node: HTMLTableRowElement | null) => {
-    draggable.setNodeRef(node);
-    droppable.setNodeRef(node);
-  };
+  const setRowRef = useCallback(
+    (node: HTMLTableRowElement | null) => {
+      draggable.setNodeRef(node);
+      droppable.setNodeRef(node);
+    },
+    [draggable.setNodeRef, droppable.setNodeRef],
+  );
 
   const isValidDropTarget = depth === 0 && droppable.isOver && draggable.isDragging === false;
 

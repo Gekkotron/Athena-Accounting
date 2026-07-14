@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Categories } from '../Categories';
@@ -11,6 +11,22 @@ vi.mock('../../../api/client', async () => {
 });
 import { api } from '../../../api/client';
 const apiMock = vi.mocked(api);
+
+// jsdom can't drive real pointer drags, so we mock DndContext to capture its
+// onDragStart/onDragEnd props and invoke them directly to simulate a drag.
+let capturedOnDragStart: ((e: any) => void) | null = null;
+let capturedOnDragEnd: ((e: any) => void) | null = null;
+vi.mock('@dnd-kit/core', async () => {
+  const actual = await vi.importActual<typeof import('@dnd-kit/core')>('@dnd-kit/core');
+  return {
+    ...actual,
+    DndContext: (props: any) => {
+      capturedOnDragStart = props.onDragStart;
+      capturedOnDragEnd = props.onDragEnd;
+      return <actual.DndContext {...props} />;
+    },
+  };
+});
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -50,7 +66,11 @@ async function findCategoryNameInput(name: string): Promise<HTMLElement> {
   return input;
 }
 
-beforeEach(() => { apiMock.mockReset(); });
+beforeEach(() => {
+  apiMock.mockReset();
+  capturedOnDragStart = null;
+  capturedOnDragEnd = null;
+});
 
 describe('Categories page', () => {
   it('renders the category list with kind badges', async () => {
@@ -256,9 +276,7 @@ describe('Categories page', () => {
   it('inserts a spacer row after each root+children group', async () => {
     mockNestedCategories();
     render(<Categories />, { wrapper: withProviders });
-    const parent = await findCategoryNameInput('Courses');
     const childInput = await findCategoryNameInput('Alimentation');
-    const parentRow = parent.closest('tr')!;
     const childRow = childInput.closest('tr')!;
     // parent → child → spacer (data-spacer="true", aria-hidden)
     const spacer = childRow.nextElementSibling as HTMLElement | null;
@@ -266,7 +284,45 @@ describe('Categories page', () => {
     expect(spacer!.tagName).toBe('TR');
     expect(spacer!.getAttribute('data-spacer')).toBe('true');
     expect(spacer!.getAttribute('aria-hidden')).toBe('true');
-    // Same for a root without children:
-    void parentRow; // silence unused-var if lint complains
+  });
+
+  it('drop of a childless root onto another root fires PUT with the new parentId', async () => {
+    const puts: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/categories' && !init) {
+        return {
+          categories: [
+            cat(1, 'A', 'expense'),
+            cat(2, 'B', 'expense'),
+          ],
+        };
+      }
+      if (path === '/api/reports/categories') return { rows: [] };
+      if (path === '/api/categories/1' && init?.method === 'PUT') {
+        puts.push(init.json);
+        return { category: {} };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('A');
+    // Simulate dropping A onto B via the captured onDragEnd.
+    expect(capturedOnDragEnd).not.toBeNull();
+    capturedOnDragEnd!({ active: { id: 1 }, over: { id: 2 } });
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(puts[0]).toEqual({ parentId: 2 });
+  });
+
+  it('renders the promote-to-root band only while a drag is active', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Courses');
+    // Idle: band absent
+    expect(screen.queryByRole('region', { name: /promouvoir en racine/i })).not.toBeInTheDocument();
+    // Simulate drag start
+    expect(capturedOnDragStart).not.toBeNull();
+    act(() => capturedOnDragStart!({ active: { id: 21 } }));
+    // Band present
+    expect(await screen.findByRole('region', { name: /promouvoir en racine/i })).toBeInTheDocument();
   });
 });
