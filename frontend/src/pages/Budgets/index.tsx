@@ -124,14 +124,21 @@ export function Budgets(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="grid grid-cols-3 items-center gap-3">
+        <div className="justify-self-start">
           <h1 className="display text-2xl text-ink-50">Budgets</h1>
           <p className="text-sm text-ink-400 mt-1">
             Plafond par catégorie de dépense.
           </p>
         </div>
-        <PeriodSelector period={period} monthOrYear={monthOrYear} onChange={setPeriodState} />
+        <div className="justify-self-center">
+          <PeriodSelector period={period} monthOrYear={monthOrYear} onChange={setPeriodState} />
+        </div>
+        <div className="justify-self-end">
+          {accounts.length > 1 && (
+            <AccountFilter accountId={accountId} accounts={accounts} onChange={setAccountFilter} />
+          )}
+        </div>
       </div>
 
       {mutationError && (
@@ -147,10 +154,6 @@ export function Budgets(): JSX.Element {
           period={report.data.period}
           monthOrYear={monthOrYear}
         />
-      )}
-
-      {accounts.length > 1 && (
-        <AccountFilter accountId={accountId} accounts={accounts} onChange={setAccountFilter} />
       )}
 
       {/* Row list + Suggestions + Unbudgeted + Add form — placeholders for
