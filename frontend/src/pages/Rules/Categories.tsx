@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -21,11 +21,6 @@ import { KIND_LABEL, kindBadgeClass, groupCategories } from '../../lib/categorie
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { resolveDrop } from './dragNest';
-
-// A horizontal drag by more than this many pixels to the LEFT, when the row
-// isn't dropped on a target, promotes a child back to root. Chosen to feel
-// intentional — small jitter shouldn't trigger it.
-const PROMOTE_LEFT_DRAG_PX = -60;
 
 export function Categories() {
   const qc = useQueryClient();
@@ -94,6 +89,7 @@ export function Categories() {
   );
 
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
 
   const onDragStart = (e: DragStartEvent) => {
     if (typeof e.active.id === 'number') setActiveDragId(e.active.id);
@@ -101,18 +97,25 @@ export function Categories() {
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveDragId(null);
-    const { active, over, delta } = e;
+    const { active, over, delta, activatorEvent } = e;
     if (typeof active.id !== 'number') return;
 
     const activeCat = cats.find((c) => c.id === active.id);
 
-    // Promote (checked first): a big LEFT drag on a child un-nests it,
-    // regardless of what closestCenter picked as `over`. Without this
-    // priority, `over` is almost never null (some root row is always the
-    // closest droppable) and the promote gesture never fires.
-    if (activeCat && activeCat.parentId != null && delta.x < PROMOTE_LEFT_DRAG_PX) {
-      updateCategory.mutate({ id: activeCat.id, patch: { parentId: null } });
-      return;
+    // Promote (checked first): if the pointer ended up LEFT of the table's
+    // left edge, un-nest the child. Runs before the drop-target branch
+    // because closestCenter almost always picks some root row as `over` —
+    // guarding on `!over` would make this branch unreachable.
+    if (activeCat && activeCat.parentId != null && activatorEvent) {
+      const evt = activatorEvent as { clientX?: number };
+      const tableRect = tableRef.current?.getBoundingClientRect();
+      if (typeof evt.clientX === 'number' && tableRect) {
+        const endPointerX = evt.clientX + delta.x;
+        if (endPointerX < tableRect.left) {
+          updateCategory.mutate({ id: activeCat.id, patch: { parentId: null } });
+          return;
+        }
+      }
     }
 
     // Nest / re-parent: dropped onto a root row.
@@ -235,7 +238,7 @@ export function Categories() {
       >
         <div className="surface overflow-hidden">
           <div className="table-scroll">
-            <table className="w-full text-sm">
+            <table ref={tableRef} className="w-full text-sm">
               <thead className="text-left">
                 <tr className="border-b border-ink-800/70">
                   <th className="px-2 py-3 w-8" aria-hidden />

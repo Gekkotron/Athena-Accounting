@@ -310,7 +310,11 @@ describe('Categories page', () => {
     expect(puts[0]).toEqual({ parentId: 2 });
   });
 
-  it('promotes a child back to root when dragged far enough to the LEFT', async () => {
+  // jsdom returns { left: 0, top: 0, ... } from getBoundingClientRect, so the
+  // table's left edge is treated as x=0. A pointer whose final clientX (start
+  // + delta.x) is < 0 counts as "outside the table" for the promote check.
+
+  it('promotes a child back to root when the pointer ends up LEFT of the table', async () => {
     const puts: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/categories' && !init) return { categories: nestedCats() };
@@ -324,20 +328,22 @@ describe('Categories page', () => {
     render(<Categories />, { wrapper: withProviders });
     await findCategoryNameInput('Alimentation');
     expect(capturedOnDragEnd).not.toBeNull();
-    // Child (id 21) dragged left by 100px. Note `over` is intentionally
-    // NON-null (id 20 = the parent Courses) — with closestCenter collision,
-    // some root row is almost always the closest droppable, so the promote
-    // branch must win over the drop-target branch when the left-drag is big.
+    // Started at clientX 100, dragged left by 200 → end pointer at -100.
+    // Table left = 0 in jsdom → -100 < 0 → promote.
+    // `over` is intentionally non-null (id 20) — with closestCenter, some
+    // root is almost always the closest droppable, so the promote branch
+    // must beat the drop-target branch when the pointer left the table.
     capturedOnDragEnd!({
       active: { id: 21 },
       over: { id: 20 },
-      delta: { x: -100, y: 0 },
+      delta: { x: -200, y: 0 },
+      activatorEvent: { clientX: 100 },
     });
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0]).toEqual({ parentId: null });
   });
 
-  it('does NOT promote when the left drag is below the threshold', async () => {
+  it('does NOT promote when the pointer stays inside the table', async () => {
     const puts: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/categories' && !init) return { categories: nestedCats() };
@@ -351,14 +357,19 @@ describe('Categories page', () => {
     render(<Categories />, { wrapper: withProviders });
     await findCategoryNameInput('Alimentation');
     expect(capturedOnDragEnd).not.toBeNull();
-    // Only 20px left — jitter, not intent. No mutation should fire.
-    capturedOnDragEnd!({ active: { id: 21 }, over: null, delta: { x: -20, y: 0 } });
-    // Give react-query a tick to potentially fire; then assert nothing happened.
+    // Start clientX 100, delta -20 → end at 80, still inside the table.
+    // `over` is null so nesting doesn't fire either → total no-op.
+    capturedOnDragEnd!({
+      active: { id: 21 },
+      over: null,
+      delta: { x: -20, y: 0 },
+      activatorEvent: { clientX: 100 },
+    });
     await new Promise((r) => setTimeout(r, 20));
     expect(puts).toHaveLength(0);
   });
 
-  it('does NOT promote a root that is left-dragged (it has no parent)', async () => {
+  it('does NOT promote a root that is left-dragged outside (it has no parent)', async () => {
     const puts: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/categories' && !init) return { categories: nestedCats() };
@@ -372,7 +383,12 @@ describe('Categories page', () => {
     render(<Categories />, { wrapper: withProviders });
     await findCategoryNameInput('Courses');
     expect(capturedOnDragEnd).not.toBeNull();
-    capturedOnDragEnd!({ active: { id: 20 }, over: null, delta: { x: -200, y: 0 } });
+    capturedOnDragEnd!({
+      active: { id: 20 },
+      over: null,
+      delta: { x: -300, y: 0 },
+      activatorEvent: { clientX: 100 },
+    });
     await new Promise((r) => setTimeout(r, 20));
     expect(puts).toHaveLength(0);
   });
