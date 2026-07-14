@@ -50,7 +50,7 @@ export function SuggestionCard(props: {
         <button
           type="button"
           className="btn-primary !py-1 !px-3 text-xs"
-          onClick={() => onApply(budgetId, row.suggestedLimit!)}
+          onClick={() => { onApply(budgetId, row.suggestedLimit!); dismiss(); }}
         >Ajuster à {formatAmount(row.suggestedLimit, row.currency)}</button>
       </span>
     </li>

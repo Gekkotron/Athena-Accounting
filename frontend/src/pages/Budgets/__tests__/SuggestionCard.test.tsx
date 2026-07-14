@@ -33,6 +33,18 @@ describe('SuggestionCard', () => {
     expect(onApply).toHaveBeenCalledWith(5, '62.00');
   });
 
+  it('dismisses the card after Ajuster is clicked and persists that dismissal', () => {
+    const { container, rerender } = render(
+      <SuggestionCard row={rowOver} budgetId={5} periodKey="2026-07" onApply={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Ajuster à/ }));
+    expect(container.textContent).toBe('');
+    rerender(<SuggestionCard row={rowOver} budgetId={5} periodKey="2026-07" onApply={() => {}} />);
+    expect(container.textContent).toBe('');
+    const dismissed = JSON.parse(localStorage.getItem('budget-suggestions-dismissed-2026-07') ?? '[]');
+    expect(dismissed).toContain(42);
+  });
+
   it('hides the card after Ignorer and persists that dismissal in localStorage', () => {
     const { rerender, container } = render(
       <SuggestionCard row={rowOver} budgetId={5} periodKey="2026-07" onApply={() => {}} />,

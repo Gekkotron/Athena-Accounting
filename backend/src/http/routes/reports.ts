@@ -508,11 +508,14 @@ export async function reportsRoutes(app: FastifyInstance): Promise<void> {
       // render an "Ajuster à 0,00 €" button that the PUT positiveDecimal
       // guard rejects with a 400. Also clamp to > 0 defensively in case the
       // median itself rounds to zero even with qualifying history.
+      // Round to nearest whole unit then add a 10% margin (also rounded)
+      // so suggestions land on tidy round amounts (e.g. 49.68 → 50 → 55).
       const medianValue = median(historyValuesNum);
+      const proposedValue = Math.round(Math.round(medianValue) * 1.1);
       const suggestedLimit = history !== null
-        && medianValue > 0
+        && proposedValue > 0
         && (overCount >= 3 || underHalfCount >= 3)
-        ? medianValue.toFixed(2)
+        ? proposedValue.toFixed(2)
         : null;
 
       return {
