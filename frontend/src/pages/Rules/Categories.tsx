@@ -346,6 +346,7 @@ function CategoryTableRow(props: {
   });
 
   const setRowRef = (node: HTMLTableRowElement | null) => {
+    draggable.setNodeRef(node);
     droppable.setNodeRef(node);
   };
 
