@@ -153,7 +153,6 @@ export function Categories() {
               <tr className="border-b border-ink-800/70">
                 <th className="px-4 py-3 label font-normal">Nom</th>
                 <th className="px-4 py-3 label font-normal">Type</th>
-                <th className="px-4 py-3 label font-normal hidden lg:table-cell">Parent</th>
                 <th
                   className="px-4 py-3 label font-normal hidden md:table-cell text-center"
                   title="Exclut la catégorie des moyennes mensuelles (dépenses/revenus). Utile pour marquer un mouvement interne — épargne, transfert entre comptes — sans passer par la détection automatique."
@@ -176,7 +175,6 @@ export function Categories() {
                     total={rolledUpTotal(r)}
                     hasChildren={children.length > 0}
                     parent={null}
-                    roots={roots}
                     childrenByParent={childrenByParent}
                     updateCategory={updateCategory}
                     onDelete={() => { setDeleteError(null); setConfirmDelete(r); }}
@@ -189,7 +187,6 @@ export function Categories() {
                       total={ownTotalsByCat.get(ch.id) ?? 0}
                       hasChildren={false}
                       parent={r}
-                      roots={roots}
                       childrenByParent={childrenByParent}
                       updateCategory={updateCategory}
                       onDelete={() => { setDeleteError(null); setConfirmDelete(ch); }}
@@ -243,23 +240,14 @@ function CategoryTableRow(props: {
   total: number;
   hasChildren: boolean;
   parent: Category | null;
-  roots: Category[];
   childrenByParent: Map<number, Category[]>;
   updateCategory: UpdateMutation;
   onDelete: () => void;
 }): JSX.Element {
-  const { c, depth, total, hasChildren, parent, roots, childrenByParent, updateCategory, onDelete } = props;
-
-  const parentOptions = roots.filter(
-    (r) => r.id !== c.id && (childrenByParent.get(r.id)?.length ?? 0) === 0,
-  );
-  // Ensure the current parent is always visible in the dropdown (it might have gained other children since).
-  if (parent && !parentOptions.some((r) => r.id === parent.id)) {
-    parentOptions.push(parent);
-  }
+  // `hasChildren` stays in the prop type for Task 3 (drag-handle disabling); unused here.
+  const { c, depth, total, parent, childrenByParent, updateCategory, onDelete } = props;
 
   const kindDisabled = depth === 1;
-  const parentDisabled = depth === 0 && hasChildren;
 
   return (
     <tr
@@ -329,28 +317,6 @@ function CategoryTableRow(props: {
             <option value="neutral">Neutre</option>
           </select>
         </div>
-      </td>
-      <td className="px-4 py-2.5 hidden lg:table-cell">
-        <select
-          className="input-sm"
-          value={c.parentId ?? ''}
-          disabled={parentDisabled}
-          aria-label="Parent"
-          title={
-            parentDisabled
-              ? 'Cette catégorie a des sous-catégories — les 2 niveaux sont la limite.'
-              : undefined
-          }
-          onChange={(e) => {
-            const next = e.target.value ? Number(e.target.value) : null;
-            updateCategory.mutate({ id: c.id, patch: { parentId: next } });
-          }}
-        >
-          <option value="">—</option>
-          {parentOptions.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
       </td>
       <td className="px-4 py-2.5 hidden md:table-cell text-center">
         <input

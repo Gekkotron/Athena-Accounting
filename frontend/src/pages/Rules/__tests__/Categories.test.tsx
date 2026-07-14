@@ -192,13 +192,14 @@ describe('Categories page', () => {
     expect(kindSelect).toHaveAttribute('title', expect.stringContaining('hérité'));
   });
 
-  it('disables the parent selector on a category that already has children', async () => {
+  it('does not render a Parent column in the table header', async () => {
     mockNestedCategories();
     render(<Categories />, { wrapper: withProviders });
-    const parent = await findCategoryNameInput('Courses');
-    const parentRow = parent.closest('tr')!;
-    const parentSelect = within(parentRow).getByRole('combobox', { name: /parent/i });
-    expect(parentSelect).toBeDisabled();
+    await findCategoryNameInput('Courses');
+    // The "Parent" <th> was the only cell with the exact text "Parent"; other
+    // occurrences ("Parent (optionnel)") were in the create form label, which
+    // Task 1 deleted.
+    expect(screen.queryByRole('columnheader', { name: /^parent$/i })).not.toBeInTheDocument();
   });
 
   it('does not render a Parent field in the create form', async () => {
