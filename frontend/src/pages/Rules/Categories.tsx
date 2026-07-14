@@ -104,19 +104,23 @@ export function Categories() {
     const { active, over, delta } = e;
     if (typeof active.id !== 'number') return;
 
+    const activeCat = cats.find((c) => c.id === active.id);
+
+    // Promote (checked first): a big LEFT drag on a child un-nests it,
+    // regardless of what closestCenter picked as `over`. Without this
+    // priority, `over` is almost never null (some root row is always the
+    // closest droppable) and the promote gesture never fires.
+    if (activeCat && activeCat.parentId != null && delta.x < PROMOTE_LEFT_DRAG_PX) {
+      updateCategory.mutate({ id: activeCat.id, patch: { parentId: null } });
+      return;
+    }
+
     // Nest / re-parent: dropped onto a root row.
     if (over && typeof over.id === 'number') {
       const resolved = resolveDrop(active.id, over.id, cats);
       if (resolved) {
         updateCategory.mutate({ id: resolved.id, patch: { parentId: resolved.parentId } });
       }
-      return;
-    }
-
-    // Promote: no drop target, but the child was dragged far enough LEFT.
-    const activeCat = cats.find((c) => c.id === active.id);
-    if (activeCat && activeCat.parentId != null && delta.x < PROMOTE_LEFT_DRAG_PX) {
-      updateCategory.mutate({ id: activeCat.id, patch: { parentId: null } });
     }
   };
 

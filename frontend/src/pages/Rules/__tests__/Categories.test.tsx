@@ -310,7 +310,7 @@ describe('Categories page', () => {
     expect(puts[0]).toEqual({ parentId: 2 });
   });
 
-  it('promotes a child back to root when dragged far enough to the LEFT with no drop target', async () => {
+  it('promotes a child back to root when dragged far enough to the LEFT', async () => {
     const puts: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/categories' && !init) return { categories: nestedCats() };
@@ -324,8 +324,15 @@ describe('Categories page', () => {
     render(<Categories />, { wrapper: withProviders });
     await findCategoryNameInput('Alimentation');
     expect(capturedOnDragEnd).not.toBeNull();
-    // Child (id 21) dragged left by 100px, dropped over nothing → promote.
-    capturedOnDragEnd!({ active: { id: 21 }, over: null, delta: { x: -100, y: 0 } });
+    // Child (id 21) dragged left by 100px. Note `over` is intentionally
+    // NON-null (id 20 = the parent Courses) — with closestCenter collision,
+    // some root row is almost always the closest droppable, so the promote
+    // branch must win over the drop-target branch when the left-drag is big.
+    capturedOnDragEnd!({
+      active: { id: 21 },
+      over: { id: 20 },
+      delta: { x: -100, y: 0 },
+    });
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0]).toEqual({ parentId: null });
   });
