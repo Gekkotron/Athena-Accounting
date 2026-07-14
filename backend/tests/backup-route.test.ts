@@ -93,7 +93,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(res.headers['content-disposition']).toContain('attachment');
       expect(res.headers['content-disposition']).toContain('athena-backup-');
       const dump = res.json();
-      expect(dump.version).toBe(2);
+      expect(dump.version).toBe(4);
       expect(dump.instance).toBe('athena-accounting');
       expect(dump.counts.accounts).toBeGreaterThanOrEqual(1);
       expect(dump.counts.categories).toBeGreaterThanOrEqual(1);
@@ -158,7 +158,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       const res = await app.inject({
         method: 'POST', url: '/api/backup/import',
         headers: { cookie },
-        payload: { version: 3, accounts: [], categories: [], accountFilenamePatterns: [], rules: [], transferRules: [], transactions: [] },
+        payload: { version: 999, accounts: [], categories: [], accountFilenamePatterns: [], rules: [], transferRules: [], transactions: [] },
       });
       expect(res.statusCode).toBe(400);
       expect(res.json().error).toMatch(/backup format/i);
@@ -429,7 +429,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
         method: 'GET', url: '/api/backup/export', headers: { cookie },
       });
       const dump = exported.json();
-      expect(dump.version).toBe(2);
+      expect(dump.version).toBe(4);
       const dumpedTx = (dump.transactions as Array<{ rawLabel: string; splits?: unknown[] }>)
         .find((t) => t.rawLabel === 'Amazon FR')!;
       expect(dumpedTx.splits).toHaveLength(2);
