@@ -37,6 +37,32 @@ describe('buildSankeyModel', () => {
     expect(m.expenseNodes[2]).toMatchObject({ label: 'Autres', amount: 50 });
   });
 
+  it('exposes the bundled tail on the Autres node as a sorted breakdown, and never on top-N nodes', () => {
+    const cats = [1, 2, 3, 4].map((i) => cat(i, `C${i}`, 'expense', { color: `#${i}${i}${i}` }));
+    const rows = [
+      row(1, 'expense', '-500'),
+      row(2, 'expense', '-300'),
+      row(3, 'expense', '-120'),
+      row(4, 'expense', '-80'),
+    ];
+    const m = buildSankeyModel(rows, cats, 'EUR', { topNExpense: 2 });
+    const autres = m.expenseNodes.find((n) => n.label === 'Autres')!;
+    expect(autres.breakdown).toEqual([
+      { label: 'C3', amount: 120, color: '#333' },
+      { label: 'C4', amount: 80, color: '#444' },
+    ]);
+    // Top-N nodes must not carry a breakdown — only the aggregate does.
+    expect(m.expenseNodes.filter((n) => n.label !== 'Autres').every((n) => n.breakdown === undefined)).toBe(true);
+  });
+
+  it('does not attach a breakdown when nothing spills into the tail', () => {
+    const cats = [1, 2].map((i) => cat(i, `C${i}`, 'expense'));
+    const rows = [row(1, 'expense', '-300'), row(2, 'expense', '-200')];
+    const m = buildSankeyModel(rows, cats, 'EUR', { topNExpense: 5 });
+    expect(m.expenseNodes.find((n) => n.label === 'Autres')).toBeUndefined();
+    expect(m.expenseNodes.every((n) => n.breakdown === undefined)).toBe(true);
+  });
+
   it('computes a positive savings node and zero deficit on surplus', () => {
     const cats = [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')];
     const m = buildSankeyModel([row(1, 'income', '3000'), row(2, 'expense', '-800')], cats, 'EUR');

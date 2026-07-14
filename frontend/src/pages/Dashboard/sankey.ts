@@ -1,11 +1,20 @@
 import type { Category, CategoryReportRow } from '../../api/types';
 
+export interface BreakdownItem {
+  label: string;
+  amount: number;
+  color: string | null;
+}
 export interface SankeyNode {
   key: string;
   label: string;
   amount: number;
   color: string | null;
   tone: 'category' | 'sage' | 'clay' | 'neutral';
+  // Only set on the aggregated "Autres" tail node — lists the individual
+  // category groups it bundles, sorted by descending amount. Consumers
+  // (e.g. hover tooltip) can reveal the detail without recomputing.
+  breakdown?: BreakdownItem[];
 }
 export interface SankeyModel {
   incomeNodes: SankeyNode[];
@@ -52,6 +61,7 @@ function bucketToNodes(
     nodes.push({
       key: `${keyPrefix}:autres`, label: 'Autres',
       amount: tail.reduce((s, g) => s + g.amount, 0), color: null, tone: 'neutral',
+      breakdown: tail.map((g) => ({ label: g.label, amount: g.amount, color: g.color })),
     });
   }
   return nodes;
@@ -101,9 +111,7 @@ export function buildSankeyModel(
   };
 }
 
-export interface LaidOutNode {
-  key: string; label: string; amount: number; color: string | null;
-  tone: SankeyNode['tone'];
+export interface LaidOutNode extends SankeyNode {
   column: 'left' | 'center' | 'right';
   x: number; y: number; w: number; h: number;
 }

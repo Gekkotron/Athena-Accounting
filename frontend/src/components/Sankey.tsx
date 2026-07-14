@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { layoutSankey, type SankeyModel, type LaidOutNode } from '../pages/Dashboard/sankey';
 import { formatAmount } from '../lib/format';
 
@@ -75,6 +75,18 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const hoveredNode = hoveredKey ? layout.nodes.find((n) => n.key === hoveredKey) : null;
 
+  // Floating tooltip for the aggregated "Autres" node — reveals the detail
+  // of what got bundled into the tail. Pointer coords are tracked relative
+  // to the wrapper so the tooltip lands next to the cursor regardless of
+  // where the SVG sits on the page.
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
   const ariaLabel =
     `Flux : ${formatAmount(model.totalIncome, model.currency)} de revenus, ` +
     `${formatAmount(model.totalExpense, model.currency)} de dépenses`;
@@ -91,7 +103,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
   const centerColor = hoveredNode ? (colorByKey.get(hoveredNode.key) ?? '#e6e8ed') : '#e6e8ed';
 
   return (
-    <div className="overflow-x-auto">
+    <div ref={wrapperRef} className="overflow-x-auto relative">
       <div className="grid grid-cols-3 items-end gap-2 mb-4 px-1">
         <div className="label">Sources</div>
         <div className="text-center min-h-[44px]">
@@ -170,7 +182,8 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
               <g
                 key={n.key}
                 onMouseEnter={() => setHoveredKey(n.key)}
-                onMouseLeave={() => setHoveredKey(null)}
+                onMouseLeave={() => { setHoveredKey(null); setPointer(null); }}
+                onMouseMove={n.breakdown ? handleMouseMove : undefined}
                 style={{ transition: 'opacity 180ms ease-out', cursor: 'default' }}
                 opacity={isDim ? 0.45 : 1}
               >
@@ -219,6 +232,60 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
           })}
         </g>
       </svg>
+
+      {hoveredNode?.breakdown && pointer && (
+        <BreakdownTooltip
+          node={hoveredNode}
+          pointer={pointer}
+          wrapperWidth={wrapperRef.current?.clientWidth ?? 0}
+          currency={model.currency}
+        />
+      )}
+    </div>
+  );
+}
+
+function BreakdownTooltip({
+  node, pointer, wrapperWidth, currency,
+}: {
+  node: LaidOutNode;
+  pointer: { x: number; y: number };
+  wrapperWidth: number;
+  currency: string;
+}): JSX.Element {
+  const items = node.breakdown ?? [];
+  // Flip to the left of the cursor when close to the right edge so the
+  // panel never overflows the wrapper. 220 px is the tooltip's target width.
+  const flipLeft = pointer.x + 220 + 16 > wrapperWidth;
+  const style: React.CSSProperties = {
+    position: 'absolute',
+    top: pointer.y + 12,
+    ...(flipLeft ? { right: Math.max(0, wrapperWidth - pointer.x + 12) } : { left: pointer.x + 12 }),
+    pointerEvents: 'none',
+    width: 220,
+  };
+  return (
+    <div
+      role="tooltip"
+      style={style}
+      className="z-10 rounded-md border border-ink-700 bg-ink-900/95 px-3 py-2 shadow-lg backdrop-blur-sm"
+    >
+      <div className="label mb-1.5 flex items-baseline justify-between gap-2">
+        <span>{node.label}</span>
+        <span className="text-[10px] text-ink-400">{items.length} postes</span>
+      </div>
+      <ul className="space-y-1">
+        {items.map((it, i) => (
+          <li key={`${it.label}-${i}`} className="flex items-center gap-2 text-[11px]">
+            <span
+              className="inline-block h-2 w-2 shrink-0 rounded-sm"
+              style={{ background: it.color ?? '#5b6478' }}
+            />
+            <span className="flex-1 truncate text-ink-200">{it.label}</span>
+            <span className="tabular-nums text-ink-100">{formatAmount(it.amount, currency)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
