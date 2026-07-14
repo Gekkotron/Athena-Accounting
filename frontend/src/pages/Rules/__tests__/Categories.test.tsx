@@ -369,6 +369,20 @@ describe('Categories page', () => {
     expect(puts).toHaveLength(0);
   });
 
+  it('renders the color swatch with a fallback background even when c.color is null', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/categories') return { categories: [cat(1, 'Loisirs')] };
+      if (path === '/api/reports/categories') return { rows: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Loisirs');
+    const swatch = screen.getByRole('button', { name: /choisir une couleur pour « loisirs »/i });
+    // Inline style resolves the deterministic fallback via c.id % palette.length
+    // — c(1) → index 1 → '#dc7861' (clay).
+    expect(swatch.getAttribute('style')).toMatch(/background-color:\s*rgb\(220,\s*120,\s*97\)/);
+  });
+
   it('opens the color picker dialog when the color swatch is clicked, and PUTs on preset selection', async () => {
     const puts: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {

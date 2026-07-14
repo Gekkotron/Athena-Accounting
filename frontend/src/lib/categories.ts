@@ -1,5 +1,30 @@
 import type { Category, CategoryKind } from '../api/types';
 
+// Curated 10-color palette shared with Sankey, CategoryDonut, and the
+// CategoryColorPicker so a category's color stays visually consistent
+// across every view.
+export const CATEGORY_FALLBACK_PALETTE = [
+  '#7dd3c0', // sage
+  '#dc7861', // clay
+  '#d4a05a', // gold
+  '#7aa8d4', // sky
+  '#b08fd4', // lavender
+  '#97b87f', // moss
+  '#d48ba8', // dusty rose
+  '#6cc1bb', // teal
+  '#caa97a', // sand
+  '#9cb6d4', // steel blue
+];
+
+// Resolve a stable display color for a category: uses `c.color` when set,
+// otherwise a deterministic palette entry indexed by `c.id`. Stable across
+// views because it doesn't depend on sort order — a category that has no
+// explicit color will always render the same fallback.
+export function resolveCategoryColor(c: Category): string {
+  if (c.color) return c.color;
+  return CATEGORY_FALLBACK_PALETTE[c.id % CATEGORY_FALLBACK_PALETTE.length]!;
+}
+
 export const KIND_LABEL: Record<CategoryKind, string> = {
   expense: 'Dépense',
   income: 'Revenu',

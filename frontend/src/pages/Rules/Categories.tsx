@@ -17,7 +17,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
-import { KIND_LABEL, kindBadgeClass, groupCategories } from '../../lib/categories';
+import { KIND_LABEL, kindBadgeClass, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { resolveDrop } from './dragNest';
@@ -426,12 +426,11 @@ function CategoryTableRow(props: {
       </td>
       <td className={`px-4 py-2.5 ${depth === 1 ? 'pl-10' : ''}`}>
         <div className="flex items-center gap-2">
-          {c.color && (
-            <span
-              className="h-2 w-2 rounded-full border border-ink-700 shrink-0"
-              style={{ backgroundColor: c.color }}
-            />
-          )}
+          <span
+            className="h-2 w-2 rounded-full border border-ink-700 shrink-0"
+            style={{ backgroundColor: resolveCategoryColor(c) }}
+          />
+
           <input
             defaultValue={c.name}
             key={`name-${c.id}-${c.name}`}
@@ -509,13 +508,18 @@ function CategoryTableRow(props: {
               ? `Modifier la couleur de « ${c.name} » (${c.color})`
               : `Choisir une couleur pour « ${c.name} »`
           }
+          title={
+            c.color
+              ? undefined
+              : 'Couleur automatique — cliquer pour choisir'
+          }
           className={
             `h-6 w-6 rounded-full border transition ` +
             (c.color
               ? 'border-ink-700 hover:border-ink-400'
-              : 'border-dashed border-ink-600 hover:border-ink-400 bg-ink-900/40')
+              : 'border-dashed border-ink-600 hover:border-ink-400')
           }
-          style={c.color ? { backgroundColor: c.color } : undefined}
+          style={{ backgroundColor: resolveCategoryColor(c) }}
         />
       </td>
       <td
