@@ -104,11 +104,11 @@ export function Dashboard(): JSX.Element {
         </section>
       )}
 
-      {/* Dashboard filters — account scope drives the balance chart; range
-          drives the balance chart, the donut and the Sankey. Local changes
-          stay in this session only; the persistent defaults live in Réglages. */}
+      {/* Page-wide account scope — drives the balance chart, the donut and
+          the Sankey. Local changes stay in this session; persistent defaults
+          live in Réglages. */}
       {currencies.length > 0 && (
-        <section className="surface p-4 md:p-5 flex flex-col gap-3">
+        <section className="surface p-4 md:p-5">
           <select
             className="input-sm w-full"
             value={chartScope === 'all' ? 'all' : String(chartScope)}
@@ -124,19 +124,21 @@ export function Dashboard(): JSX.Element {
               </option>
             ))}
           </select>
-          <div className="flex">
-            <RangePicker value={range} onChange={setRange} />
-          </div>
         </section>
       )}
 
       {primary && <MoyennesMensuellesSection currency={primary.currency} />}
       {primary && <InsightsSection currency={primary.currency} />}
 
-      {/* Time series */}
+      {/* Time series — the period picker lives here (above the graph) rather
+          than in a top-of-page filter box; it still drives the donut and the
+          Sankey below via the shared `range` state. */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
-          <div className="section-rule mb-4">Évolution · {chartCurrency}</div>
+          <div className="section-rule mb-4 flex items-center justify-between gap-3 flex-wrap">
+            <span>Évolution · {chartCurrency}</span>
+            <RangePicker value={range} onChange={setRange} />
+          </div>
           {seriesQ.data && primary ? (
             <BalanceChart
               points={chartPoints}
