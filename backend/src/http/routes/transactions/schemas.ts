@@ -40,6 +40,15 @@ export const PatchBody = z.object({
   lockYears: z.number().int().min(0).max(99).nullable().optional(),
 });
 
+// Body for the bulk-recategorize endpoint. Same 500-id cap as delete-bulk so
+// server-side memory and lock windows stay bounded. categoryId is nullable
+// (null clears the category) but the field is required — an omitted field
+// would be ambiguous.
+export const CategorizeBulkBody = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(500),
+  categoryId: z.number().int().positive().nullable(),
+});
+
 // Body for manual creation. raw_label is required; the server derives the
 // normalized_label + dedup_key. categoryId is optional — when omitted the rule
 // engine fires the same way it does at import time.

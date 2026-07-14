@@ -614,6 +614,133 @@ describe.skipIf(!RUN)('/api/transactions', () => {
     });
   });
 
+  describe('POST /api/transactions/categorize-bulk', () => {
+    it('updates categoryId + categorySource=manual for every eligible id', async () => {
+      const ids = [
+        await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'a' }),
+        await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-2.00', rawLabel: 'b' }),
+      ];
+      const res = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie }, payload: { ids, categoryId },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ updated: 2, skipped: 0 });
+
+      const list = await app.inject({
+        method: 'GET', url: '/api/transactions',
+        headers: { cookie },
+      });
+      for (const tx of list.json().transactions) {
+        expect(tx.categoryId).toBe(categoryId);
+        expect(tx.categorySource).toBe('manual');
+      }
+    });
+
+    it('categoryId=null clears the category and still flips categorySource to manual', async () => {
+      const id = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'a' });
+      // First give it a category so the clear is observable.
+      await app.inject({
+        method: 'PATCH', url: `/api/transactions/${id}`,
+        headers: { cookie }, payload: { categoryId },
+      });
+      const res = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie }, payload: { ids: [id], categoryId: null },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ updated: 1, skipped: 0 });
+
+      const get = await app.inject({
+        method: 'GET', url: `/api/transactions/${id}`,
+        headers: { cookie },
+      });
+      expect(get.json().transaction.categoryId).toBeNull();
+      expect(get.json().transaction.categorySource).toBe('manual');
+    });
+
+    it('skips transfer legs and split parents; only eligible rows are updated', async () => {
+      // Direct DB seed for the transfer leg — the app has no "link two rows
+      // as a transfer" HTTP endpoint (transfer_group_id is set at import
+      // time by the auto-detector or restore path). This mirrors the existing
+      // hidden-transfer test at line 358+ of this file.
+      const { db } = await import('../src/db/client.js');
+      const { transactions } = await import('../src/db/schema.js');
+      const { randomUUID } = await import('node:crypto');
+      const { eq } = await import('drizzle-orm');
+
+      const plain = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'plain' });
+      const legA = await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-100.00', rawLabel: 'legA' });
+      await db.update(transactions).set({ transferGroupId: randomUUID() }).where(eq(transactions.id, legA));
+
+      // Split parent: two splits summing to the parent's amount.
+      const parent = await makeTx({ accountId: accountAId, date: '2026-06-17', amount: '-30.00', rawLabel: 'split-parent' });
+      const splitRes = await app.inject({
+        method: 'PUT', url: `/api/transactions/${parent}/splits`,
+        headers: { cookie },
+        payload: { splits: [
+          { categoryId, amount: '-20.00', memo: null },
+          { categoryId, amount: '-10.00', memo: null },
+        ] },
+      });
+      expect(splitRes.statusCode).toBe(200);
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie },
+        payload: { ids: [plain, legA, parent], categoryId },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ updated: 1, skipped: 2 });
+
+      const plainRow = await app.inject({
+        method: 'GET', url: `/api/transactions/${plain}`,
+        headers: { cookie },
+      });
+      expect(plainRow.json().transaction.categoryId).toBe(categoryId);
+      const legARow = await app.inject({
+        method: 'GET', url: `/api/transactions/${legA}`,
+        headers: { cookie },
+      });
+      expect(legARow.json().transaction.categoryId).toBeNull();
+    });
+
+    it('counts unknown ids and cross-user ids as skipped', async () => {
+      const own = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'own' });
+      const res = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie },
+        payload: { ids: [own, 999_999_999], categoryId },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ updated: 1, skipped: 1 });
+    });
+
+    it('returns 400 catégorie inconnue on an FK violation', async () => {
+      const id = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'x' });
+      const res = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie },
+        payload: { ids: [id], categoryId: 999_999_999 },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toMatch(/catégorie inconnue/i);
+    });
+
+    it('rejects an empty or malformed body with 400', async () => {
+      const empty = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie }, payload: { ids: [], categoryId: null },
+      });
+      expect(empty.statusCode).toBe(400);
+      const bad = await app.inject({
+        method: 'POST', url: '/api/transactions/categorize-bulk',
+        headers: { cookie }, payload: { ids: 'nope', categoryId: null },
+      });
+      expect(bad.statusCode).toBe(400);
+    });
+  });
+
   describe('POST /api/transactions/mark-not-duplicate', () => {
     it('flips notDuplicate=true for the given ids', async () => {
       const id = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'x' });
