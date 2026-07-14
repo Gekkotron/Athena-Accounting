@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
+import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { TransactionsTable } from './TransactionsTable';
 import { FiltersBar } from './FiltersBar';
@@ -56,6 +57,9 @@ export function Transactions() {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+  const [bulkSelectValue, setBulkSelectValue] = useState('');
+  const [bulkCategorizeNotice, setBulkCategorizeNotice] = useState<{ skipped: number } | null>(null);
+  const [bulkCategorizeError, setBulkCategorizeError] = useState<string | null>(null);
   const [pendingCheckpointDate, setPendingCheckpointDate] = useState<string | null>(null);
   const [checkpointError, setCheckpointError] = useState<string | null>(null);
 
@@ -65,6 +69,8 @@ export function Transactions() {
   useEffect(() => {
     setSelectedIds(new Set());
     setExpandedIds(new Set());
+    setBulkCategorizeNotice(null);
+    setBulkCategorizeError(null);
   }, [filters, offset]);
 
   // Whenever the search input changes, route it to either `amount` or
@@ -155,6 +161,27 @@ export function Transactions() {
     onError: (err: ApiError) => setBulkDeleteError(err.message),
   });
 
+  const bulkCategorize = useMutation({
+    mutationFn: (vars: { ids: number[]; categoryId: number | null }) =>
+      api<{ updated: number; skipped: number }>('/api/transactions/categorize-bulk', {
+        method: 'POST',
+        json: vars,
+      }),
+    onSuccess: ({ skipped }) => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
+      setSelectedIds(new Set());
+      setBulkSelectValue('');
+      setBulkCategorizeError(null);
+      setBulkCategorizeNotice(skipped > 0 ? { skipped } : null);
+    },
+    onError: (err: ApiError) => {
+      setBulkSelectValue('');
+      setBulkCategorizeError(err.message);
+    },
+  });
+
   const createCheckpointM = useMutation({
     mutationFn: (vars: { accountId: number; date: string; amount: string }) =>
       createCheckpoint(vars.accountId, {
@@ -183,6 +210,16 @@ export function Transactions() {
 
   const accounts = accountsQ.data?.accounts ?? [];
   const categories = categoriesQ.data?.categories ?? [];
+  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c] as const)), [categories]);
+  const sortedCategories = useMemo(
+    () =>
+      [...categories].sort((a, b) => {
+        const pa = a.parentId != null ? catById.get(a.parentId)?.name ?? '' : a.name;
+        const pb = b.parentId != null ? catById.get(b.parentId)?.name ?? '' : b.name;
+        return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+      }),
+    [categories, catById],
+  );
   const txs = txQ.data?.transactions ?? [];
   const total = txQ.data?.pagination.total ?? 0;
 
@@ -272,6 +309,29 @@ export function Transactions() {
             >
               Effacer la sélection
             </button>
+            <select
+              className="input-sm"
+              value={bulkSelectValue}
+              disabled={bulkCategorize.isPending}
+              aria-label="Changer la catégorie des transactions sélectionnées"
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) return;
+                setBulkSelectValue('');
+                bulkCategorize.mutate({
+                  ids: Array.from(selectedIds),
+                  categoryId: v === 'none' ? null : Number(v),
+                });
+              }}
+            >
+              <option value="" disabled>Catégorie…</option>
+              <option value="none">— Aucune</option>
+              {sortedCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatCategoryPath(c, catById)}
+                </option>
+              ))}
+            </select>
             <button
               className="btn-secondary !py-1.5 !px-3 text-clay-300 hover:text-clay-200 border-clay-800/60 hover:border-clay-700"
               onClick={() => { setBulkDeleteError(null); setConfirmBulkDelete(true); }}
@@ -279,6 +339,32 @@ export function Transactions() {
               Supprimer
             </button>
           </div>
+        </div>
+      )}
+
+      {bulkCategorizeNotice && (
+        <div className="rounded-lg border border-sage-800/40 bg-sage-900/10 px-4 py-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-ink-200">
+            {bulkCategorizeNotice.skipped} ligne{bulkCategorizeNotice.skipped > 1 ? 's' : ''} ignorée{bulkCategorizeNotice.skipped > 1 ? 's' : ''} (virements internes ou ventilations)
+          </span>
+          <button
+            className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+            onClick={() => setBulkCategorizeNotice(null)}
+          >
+            Fermer
+          </button>
+        </div>
+      )}
+
+      {bulkCategorizeError && (
+        <div className="rounded-lg border border-clay-800/60 bg-clay-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-clay-200">Changement de catégorie : {bulkCategorizeError}</span>
+          <button
+            className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+            onClick={() => setBulkCategorizeError(null)}
+          >
+            Fermer
+          </button>
         </div>
       )}
 
