@@ -369,6 +369,83 @@ describe('Categories page', () => {
     expect(puts).toHaveLength(0);
   });
 
+  it('opens the color picker dialog when the color swatch is clicked, and PUTs on preset selection', async () => {
+    const puts: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/categories' && !init) {
+        return { categories: [cat(1, 'Loisirs', 'expense')] };
+      }
+      if (path === '/api/reports/categories') return { rows: [] };
+      if (path === '/api/categories/1' && init?.method === 'PUT') {
+        puts.push(init.json);
+        return { category: {} };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Loisirs');
+
+    // Dialog is closed initially.
+    expect(screen.queryByRole('dialog', { name: /choisir une couleur/i })).not.toBeInTheDocument();
+
+    // Click the swatch button (no color yet → matches the "choisir une couleur" aria-label).
+    await user.click(
+      screen.getByRole('button', { name: /choisir une couleur pour « loisirs »/i }),
+    );
+
+    // Dialog is open with the palette rendered.
+    const dialog = await screen.findByRole('dialog', { name: /choisir une couleur/i });
+    // Pick the first preset color.
+    const firstPreset = within(dialog).getByRole('button', { name: /couleur #7dd3c0/i });
+    await user.click(firstPreset);
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(puts[0]).toEqual({ color: '#7dd3c0' });
+  });
+
+  it('clears the color when "Aucune couleur" is clicked in the picker', async () => {
+    const puts: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/categories' && !init) {
+        return { categories: [cat(1, 'Loisirs', 'expense', { color: '#7dd3c0' })] };
+      }
+      if (path === '/api/reports/categories') return { rows: [] };
+      if (path === '/api/categories/1' && init?.method === 'PUT') {
+        puts.push(init.json);
+        return { category: {} };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Loisirs');
+    // Swatch aria-label reflects the current color when set.
+    await user.click(
+      screen.getByRole('button', { name: /modifier la couleur de « loisirs »/i }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: /choisir une couleur/i });
+    await user.click(within(dialog).getByRole('button', { name: /^aucune couleur$/i }));
+
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(puts[0]).toEqual({ color: null });
+  });
+
+  it('does NOT render an inline hex text-input inside a category row', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/categories') return { categories: [cat(1, 'Loisirs')] };
+      if (path === '/api/reports/categories') return { rows: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    render(<Categories />, { wrapper: withProviders });
+    const nameInput = await findCategoryNameInput('Loisirs');
+    const row = nameInput.closest('tr')!;
+    // The old inline hex input used placeholder "#7dd3c0" and lived in the
+    // row's Couleur cell — asserting nothing with that placeholder remains
+    // inside THIS row (the create form's identical placeholder is not in a tr).
+    expect(within(row).queryByPlaceholderText('#7dd3c0')).not.toBeInTheDocument();
+  });
+
   it('does NOT promote a root that is left-dragged outside (it has no parent)', async () => {
     const puts: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {

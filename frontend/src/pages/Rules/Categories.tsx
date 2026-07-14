@@ -21,6 +21,7 @@ import { KIND_LABEL, kindBadgeClass, groupCategories } from '../../lib/categorie
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { resolveDrop } from './dragNest';
+import { CategoryColorPicker } from './CategoryColorPicker';
 
 export function Categories() {
   const qc = useQueryClient();
@@ -90,6 +91,7 @@ export function Categories() {
 
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
+  const [colorPickerFor, setColorPickerFor] = useState<Category | null>(null);
 
   const onDragStart = (e: DragStartEvent) => {
     if (typeof e.active.id === 'number') setActiveDragId(e.active.id);
@@ -269,6 +271,7 @@ export function Categories() {
                       childrenByParent={childrenByParent}
                       updateCategory={updateCategory}
                       onDelete={() => { setDeleteError(null); setConfirmDelete(r); }}
+                      onOpenColorPicker={() => setColorPickerFor(r)}
                     />,
                     ...children.map((ch) => (
                       <CategoryTableRow
@@ -281,6 +284,7 @@ export function Categories() {
                         childrenByParent={childrenByParent}
                         updateCategory={updateCategory}
                         onDelete={() => { setDeleteError(null); setConfirmDelete(ch); }}
+                        onOpenColorPicker={() => setColorPickerFor(ch)}
                       />
                     )),
                     <tr
@@ -301,6 +305,19 @@ export function Categories() {
           {activeDragId != null ? <DragGhost id={activeDragId} byId={byId} /> : null}
         </DragOverlay>
       </DndContext>
+
+      <CategoryColorPicker
+        open={colorPickerFor !== null}
+        categoryName={colorPickerFor?.name ?? ''}
+        current={colorPickerFor?.color ?? null}
+        onApply={(color) => {
+          if (colorPickerFor) {
+            updateCategory.mutate({ id: colorPickerFor.id, patch: { color } });
+          }
+          setColorPickerFor(null);
+        }}
+        onCancel={() => setColorPickerFor(null)}
+      />
 
       <ConfirmDialog
         open={!!confirmDelete}
@@ -346,8 +363,9 @@ function CategoryTableRow(props: {
   childrenByParent: Map<number, Category[]>;
   updateCategory: UpdateMutation;
   onDelete: () => void;
+  onOpenColorPicker: () => void;
 }): JSX.Element {
-  const { c, depth, total, hasChildren, parent, childrenByParent, updateCategory, onDelete } = props;
+  const { c, depth, total, hasChildren, parent, childrenByParent, updateCategory, onDelete, onOpenColorPicker } = props;
 
   const kindDisabled = depth === 1;
 
@@ -483,30 +501,21 @@ function CategoryTableRow(props: {
         />
       </td>
       <td className="px-4 py-2.5 hidden sm:table-cell">
-        <input
-          type="text"
-          defaultValue={c.color ?? ''}
-          key={`color-${c.id}-${c.color ?? ''}`}
-          placeholder="#7dd3c0"
-          className="input-sm font-mono w-28"
-          onBlur={(e) => {
-            const raw = e.target.value.trim();
-            if (raw === '') {
-              if (c.color !== null) {
-                updateCategory.mutate({ id: c.id, patch: { color: null } });
-              }
-            } else if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) {
-              if (raw !== c.color) {
-                updateCategory.mutate({ id: c.id, patch: { color: raw } });
-              }
-            } else {
-              e.target.value = c.color ?? '';
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-            if (e.key === 'Escape') (e.target as HTMLInputElement).value = c.color ?? '';
-          }}
+        <button
+          type="button"
+          onClick={onOpenColorPicker}
+          aria-label={
+            c.color
+              ? `Modifier la couleur de « ${c.name} » (${c.color})`
+              : `Choisir une couleur pour « ${c.name} »`
+          }
+          className={
+            `h-6 w-6 rounded-full border transition ` +
+            (c.color
+              ? 'border-ink-700 hover:border-ink-400'
+              : 'border-dashed border-ink-600 hover:border-ink-400 bg-ink-900/40')
+          }
+          style={c.color ? { backgroundColor: c.color } : undefined}
         />
       </td>
       <td
