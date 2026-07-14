@@ -12,6 +12,7 @@ import { DashboardHero } from './DashboardHero';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
 import { InsightsSection } from './InsightsSection';
 import { SankeySection } from './SankeySection';
+import { AccountSelect } from './AccountSelect';
 
 export function Dashboard(): JSX.Element {
   const accountsQ = useQuery({
@@ -104,40 +105,27 @@ export function Dashboard(): JSX.Element {
         </section>
       )}
 
-      {/* Page-wide account scope — drives the balance chart, the donut and
-          the Sankey. Local changes stay in this session; persistent defaults
-          live in Réglages. */}
-      {currencies.length > 0 && (
-        <section className="surface p-4 md:p-5">
-          <select
-            className="input-sm w-full"
-            value={chartScope === 'all' ? 'all' : String(chartScope)}
-            onChange={(e) =>
-              setChartScope(e.target.value === 'all' ? 'all' : Number(e.target.value))
-            }
-            aria-label="Compte affiché"
-          >
-            <option value="all">Tous les comptes ({primary?.currency})</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.currency})
-              </option>
-            ))}
-          </select>
-        </section>
-      )}
-
       {primary && <MoyennesMensuellesSection currency={primary.currency} />}
       {primary && <InsightsSection currency={primary.currency} />}
 
-      {/* Time series — the period picker lives here (above the graph) rather
-          than in a top-of-page filter box; it still drives the donut and the
-          Sankey below via the shared `range` state. */}
+      {/* Time series — the account scope and period picker sit in the card
+          header (right-aligned). Both drive the donut and the Sankey below
+          via the shared `range` / `chartScope` state, and each chart card
+          mirrors the same control cluster for visibility. Persistent
+          defaults live in Réglages; in-session changes are ephemeral. */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
           <div className="section-rule mb-4 flex items-center justify-between gap-3 flex-wrap">
             <span>Évolution · {chartCurrency}</span>
-            <RangePicker value={range} onChange={setRange} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <AccountSelect
+                value={chartScope}
+                onChange={setChartScope}
+                accounts={accounts}
+                primaryCurrency={primary?.currency}
+              />
+              <RangePicker value={range} onChange={setRange} />
+            </div>
           </div>
           {seriesQ.data && primary ? (
             <BalanceChart
@@ -155,7 +143,18 @@ export function Dashboard(): JSX.Element {
       {/* Category breakdown — donut */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
-          <div className="section-rule mb-4">Répartition par catégorie</div>
+          <div className="section-rule mb-4 flex items-center justify-between gap-3 flex-wrap">
+            <span>Répartition par catégorie</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <AccountSelect
+                value={chartScope}
+                onChange={setChartScope}
+                accounts={accounts}
+                primaryCurrency={primary?.currency}
+              />
+              <RangePicker value={range} onChange={setRange} />
+            </div>
+          </div>
           <CategoryBreakdown
             range={range}
             onRangeChange={setRange}
@@ -172,6 +171,9 @@ export function Dashboard(): JSX.Element {
           onRangeChange={setRange}
           currency={chartCurrency}
           accountId={chartScope}
+          accounts={accounts}
+          onAccountChange={setChartScope}
+          primaryCurrency={primary?.currency}
         />
       )}
     </div>

@@ -16,9 +16,11 @@ function renderSection(opts: {
   range?: RangeKey;
   onRangeChange?: (r: RangeKey) => void;
   accountId?: number | 'all';
+  onAccountChange?: (v: 'all' | number) => void;
 } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onRangeChange = opts.onRangeChange ?? vi.fn();
+  const onAccountChange = opts.onAccountChange ?? vi.fn();
   const utils = render(
     <QueryClientProvider client={client}>
       <SankeySection
@@ -26,10 +28,13 @@ function renderSection(opts: {
         onRangeChange={onRangeChange}
         currency="EUR"
         accountId={opts.accountId}
+        accounts={[]}
+        onAccountChange={onAccountChange}
+        primaryCurrency="EUR"
       />
     </QueryClientProvider>,
   );
-  return { ...utils, onRangeChange };
+  return { ...utils, onRangeChange, onAccountChange };
 }
 
 beforeEach(() => apiMock.mockReset());
@@ -70,25 +75,27 @@ it('renders the header suffix based on the range prop', async () => {
   expect(await screen.findByText(/sur 30 jours/i)).toBeInTheDocument();
 });
 
-it('clicking the "longer range" chevron calls onRangeChange with the next-longer range', async () => {
+it('clicking a range button in the header picker calls onRangeChange with that range', async () => {
   apiMock.mockImplementation(async (path: string) => {
     if (path === '/api/categories') return { categories: [] } as any;
     return { rows: [] } as any;
   });
   const { onRangeChange } = renderSection({ range: '6m' });
   const u = userEvent.setup();
-  await u.click(await screen.findByRole('button', { name: /période plus longue/i }));
+  // The RangePicker is a role="group" of buttons labelled with the range
+  // label ("30 j", "3 m", …). Click "12 m" to move to a longer range.
+  await u.click(await screen.findByRole('button', { name: /^12 m$/ }));
   expect(onRangeChange).toHaveBeenCalledWith('12m');
 });
 
-it('disables the "longer" chevron on `all`', async () => {
+it('marks the active range button with aria-pressed', async () => {
   apiMock.mockImplementation(async (path: string) => {
     if (path === '/api/categories') return { categories: [] } as any;
     return { rows: [] } as any;
   });
   renderSection({ range: 'all' });
-  const longer = await screen.findByRole('button', { name: /période plus longue/i });
-  expect(longer).toBeDisabled();
+  const active = await screen.findByRole('button', { name: /^Tout$/ });
+  expect(active).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('forwards accountId to /api/reports/categories when a specific account is scoped', async () => {
@@ -117,12 +124,11 @@ it('omits accountId when scope is "all"', async () => {
   });
 });
 
-it('disables the "shorter" chevron on `30d`', async () => {
+it('exposes the account selector in the header', async () => {
   apiMock.mockImplementation(async (path: string) => {
     if (path === '/api/categories') return { categories: [] } as any;
     return { rows: [] } as any;
   });
-  renderSection({ range: '30d' });
-  const shorter = await screen.findByRole('button', { name: /période plus courte/i });
-  expect(shorter).toBeDisabled();
+  renderSection();
+  expect(await screen.findByLabelText(/compte affiché/i)).toBeInTheDocument();
 });

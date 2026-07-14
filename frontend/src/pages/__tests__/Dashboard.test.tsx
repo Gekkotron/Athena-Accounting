@@ -130,9 +130,11 @@ describe('Dashboard', () => {
       throw new Error(`unexpected: ${path}`);
     });
     renderDashboard();
-    const select = await screen.findByLabelText(/compte affiché/i);
-    // Wait for settings to hydrate.
-    await waitFor(() => expect((select as HTMLSelectElement).value).toBe('2'));
+    // The account selector is mirrored in every chart-card header (graph,
+    // donut, Sankey). All three share `chartScope`, so any one of them
+    // reflects the hydrated value — assert on the first.
+    const selects = await screen.findAllByLabelText(/compte affiché/i);
+    await waitFor(() => expect((selects[0] as HTMLSelectElement).value).toBe('2'));
   });
 
   it('local changes to the chart selector do NOT PATCH /api/settings', async () => {
@@ -154,8 +156,10 @@ describe('Dashboard', () => {
     });
     const u = userEvent.setup();
     renderDashboard();
-    const select = await screen.findByLabelText(/compte affiché/i);
-    await u.selectOptions(select, '2');
+    // Change the scope via the graph card's selector (index 0). All three
+    // header selects share the same page-wide state.
+    const selects = await screen.findAllByLabelText(/compte affiché/i);
+    await u.selectOptions(selects[0]!, '2');
     // Give any accidental PATCH time to fire.
     await new Promise((r) => setTimeout(r, 50));
     expect(patchCalls).toHaveLength(0);
