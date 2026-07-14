@@ -221,4 +221,52 @@ describe('Categories page', () => {
       await screen.findByText(/sous-catégories deviendront des catégories racine/i),
     ).toBeInTheDocument();
   });
+
+  it('renders a drag handle button on every row', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Courses');
+    // One handle per row (2 rows in the nested fixture).
+    const handles = screen.getAllByRole('button', { name: /déplacer la catégorie/i });
+    expect(handles).toHaveLength(2);
+  });
+
+  it('disables the drag handle on a root that already has children', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const parent = await findCategoryNameInput('Courses');
+    const parentRow = parent.closest('tr')!;
+    const handle = within(parentRow).getByRole('button', { name: /déplacer la catégorie/i });
+    expect(handle).toBeDisabled();
+    expect(handle).toHaveAttribute(
+      'title',
+      expect.stringContaining('sous-catégories'),
+    );
+  });
+
+  it('leaves the drag handle enabled on a child row', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const child = await findCategoryNameInput('Alimentation');
+    const childRow = child.closest('tr')!;
+    const handle = within(childRow).getByRole('button', { name: /déplacer la catégorie/i });
+    expect(handle).not.toBeDisabled();
+  });
+
+  it('inserts a spacer row after each root+children group', async () => {
+    mockNestedCategories();
+    render(<Categories />, { wrapper: withProviders });
+    const parent = await findCategoryNameInput('Courses');
+    const childInput = await findCategoryNameInput('Alimentation');
+    const parentRow = parent.closest('tr')!;
+    const childRow = childInput.closest('tr')!;
+    // parent → child → spacer (data-spacer="true", aria-hidden)
+    const spacer = childRow.nextElementSibling as HTMLElement | null;
+    expect(spacer).not.toBeNull();
+    expect(spacer!.tagName).toBe('TR');
+    expect(spacer!.getAttribute('data-spacer')).toBe('true');
+    expect(spacer!.getAttribute('aria-hidden')).toBe('true');
+    // Same for a root without children:
+    void parentRow; // silence unused-var if lint complains
+  });
 });

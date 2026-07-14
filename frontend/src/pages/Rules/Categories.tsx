@@ -1,11 +1,26 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
 import { KIND_LABEL, kindBadgeClass, groupCategories } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { resolveDrop, PROMOTE_DROP_ID, type DragTarget } from './dragNest';
 
 export function Categories() {
   const qc = useQueryClient();
@@ -40,13 +55,62 @@ export function Categories() {
   const updateCategory = useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: Partial<Category> }) =>
       api(`/api/categories/${id}`, { method: 'PUT', json: patch }),
+    onMutate: async ({ id, patch }) => {
+      // Only take a snapshot when the mutation touches parentId — that's the
+      // path drag-and-drop uses; other patches are covered by the standard
+      // invalidate-on-success and don't need optimistic rewriting.
+      if (!Object.prototype.hasOwnProperty.call(patch, 'parentId')) return;
+      await qc.cancelQueries({ queryKey: ['categories'] });
+      const previous = qc.getQueryData<{ categories: Category[] }>(['categories']);
+      if (previous) {
+        const next = {
+          categories: previous.categories.map((c) =>
+            c.id === id ? { ...c, parentId: patch.parentId ?? null } : c,
+          ),
+        };
+        qc.setQueryData(['categories'], next);
+      }
+      return { previous } as const;
+    },
+    onError: (err: ApiError, _vars, context) => {
+      if (context?.previous) qc.setQueryData(['categories'], context.previous);
+      setError(err.message);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categories'] });
       qc.invalidateQueries({ queryKey: ['transactions'] });
       qc.invalidateQueries({ queryKey: ['reports'] });
     },
-    onError: (err: ApiError) => setError(err.message),
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const [activeDragId, setActiveDragId] = useState<number | null>(null);
+
+  const onDragStart = (e: DragStartEvent) => {
+    if (typeof e.active.id === 'number') setActiveDragId(e.active.id);
+  };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = e;
+    if (!over || typeof active.id !== 'number') return;
+    const target: DragTarget | null =
+      over.id === PROMOTE_DROP_ID
+        ? { kind: 'promote' }
+        : typeof over.id === 'number'
+          ? { kind: 'root', targetId: over.id }
+          : null;
+    const resolved = resolveDrop(active.id, target, cats);
+    if (!resolved) return;
+    updateCategory.mutate({ id: resolved.id, patch: { parentId: resolved.parentId } });
+  };
+
+  const onDragCancel = () => setActiveDragId(null);
+
   const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -77,6 +141,7 @@ export function Categories() {
   const cats = catQ.data?.categories ?? [];
   const report = reportQ.data?.rows ?? [];
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
+  const byId = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
 
   const ownTotalsByCat = new Map<number, number>();
   for (const r of report) {
@@ -146,58 +211,79 @@ export function Categories() {
         {error && <div className="text-sm text-clay-300 w-full">{error}</div>}
       </form>
 
-      <div className="surface overflow-hidden">
-        <div className="table-scroll">
-          <table className="w-full text-sm">
-            <thead className="text-left">
-              <tr className="border-b border-ink-800/70">
-                <th className="px-4 py-3 label font-normal">Nom</th>
-                <th className="px-4 py-3 label font-normal">Type</th>
-                <th
-                  className="px-4 py-3 label font-normal hidden md:table-cell text-center"
-                  title="Exclut la catégorie des moyennes mensuelles (dépenses/revenus). Utile pour marquer un mouvement interne — épargne, transfert entre comptes — sans passer par la détection automatique."
-                >
-                  Interne
-                </th>
-                <th className="px-4 py-3 label font-normal hidden sm:table-cell">Couleur</th>
-                <th className="px-4 py-3 label font-normal text-right">Total (période chargée)</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {roots.flatMap((r) => {
-                const children = childrenByParent.get(r.id) ?? [];
-                return [
-                  <CategoryTableRow
-                    key={`root-${r.id}`}
-                    c={r}
-                    depth={0}
-                    total={rolledUpTotal(r)}
-                    hasChildren={children.length > 0}
-                    parent={null}
-                    childrenByParent={childrenByParent}
-                    updateCategory={updateCategory}
-                    onDelete={() => { setDeleteError(null); setConfirmDelete(r); }}
-                  />,
-                  ...children.map((ch) => (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
+      >
+        {activeDragId != null && <PromoteToRootBand />}
+        <div className="surface overflow-hidden">
+          <div className="table-scroll">
+            <table className="w-full text-sm">
+              <thead className="text-left">
+                <tr className="border-b border-ink-800/70">
+                  <th className="px-2 py-3 w-8" aria-hidden />
+                  <th className="px-4 py-3 label font-normal">Nom</th>
+                  <th className="px-4 py-3 label font-normal">Type</th>
+                  <th
+                    className="px-4 py-3 label font-normal hidden md:table-cell text-center"
+                    title="Exclut la catégorie des moyennes mensuelles (dépenses/revenus). Utile pour marquer un mouvement interne — épargne, transfert entre comptes — sans passer par la détection automatique."
+                  >
+                    Interne
+                  </th>
+                  <th className="px-4 py-3 label font-normal hidden sm:table-cell">Couleur</th>
+                  <th className="px-4 py-3 label font-normal text-right">Total (période chargée)</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {roots.flatMap((r) => {
+                  const children = childrenByParent.get(r.id) ?? [];
+                  const rows: JSX.Element[] = [
                     <CategoryTableRow
-                      key={`child-${ch.id}`}
-                      c={ch}
-                      depth={1}
-                      total={ownTotalsByCat.get(ch.id) ?? 0}
-                      hasChildren={false}
-                      parent={r}
+                      key={`root-${r.id}`}
+                      c={r}
+                      depth={0}
+                      total={rolledUpTotal(r)}
+                      hasChildren={children.length > 0}
+                      parent={null}
                       childrenByParent={childrenByParent}
                       updateCategory={updateCategory}
-                      onDelete={() => { setDeleteError(null); setConfirmDelete(ch); }}
-                    />
-                  )),
-                ];
-              })}
-            </tbody>
-          </table>
+                      onDelete={() => { setDeleteError(null); setConfirmDelete(r); }}
+                    />,
+                    ...children.map((ch) => (
+                      <CategoryTableRow
+                        key={`child-${ch.id}`}
+                        c={ch}
+                        depth={1}
+                        total={ownTotalsByCat.get(ch.id) ?? 0}
+                        hasChildren={false}
+                        parent={r}
+                        childrenByParent={childrenByParent}
+                        updateCategory={updateCategory}
+                        onDelete={() => { setDeleteError(null); setConfirmDelete(ch); }}
+                      />
+                    )),
+                    <tr
+                      key={`spacer-${r.id}`}
+                      data-spacer="true"
+                      aria-hidden="true"
+                    >
+                      <td colSpan={7} className="h-3" />
+                    </tr>,
+                  ];
+                  return rows;
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+        <DragOverlay dropAnimation={null}>
+          {activeDragId != null ? <DragGhost id={activeDragId} byId={byId} /> : null}
+        </DragOverlay>
+      </DndContext>
 
       <ConfirmDialog
         open={!!confirmDelete}
@@ -244,18 +330,61 @@ function CategoryTableRow(props: {
   updateCategory: UpdateMutation;
   onDelete: () => void;
 }): JSX.Element {
-  // `hasChildren` stays in the prop type for Task 3 (drag-handle disabling); unused here.
-  const { c, depth, total, parent, childrenByParent, updateCategory, onDelete } = props;
+  const { c, depth, total, hasChildren, parent, childrenByParent, updateCategory, onDelete } = props;
 
   const kindDisabled = depth === 1;
 
+  const dragDisabled = depth === 0 && hasChildren;
+  const draggable = useDraggable({
+    id: c.id,
+    disabled: dragDisabled,
+  });
+  // Only root rows are drop targets for nesting.
+  const droppable = useDroppable({
+    id: c.id,
+    disabled: depth === 1,
+  });
+
+  const setRowRef = (node: HTMLTableRowElement | null) => {
+    droppable.setNodeRef(node);
+  };
+
+  const isValidDropTarget = depth === 0 && droppable.isOver && draggable.isDragging === false;
+
   return (
     <tr
+      ref={setRowRef}
       data-depth={depth}
       className={
-        `border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${depth === 1 ? 'bg-ink-900/20' : ''}`
+        `border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ` +
+        (depth === 1 ? 'bg-ink-900/20 ' : '') +
+        (isValidDropTarget ? 'ring-2 ring-sage-300/60 ' : '') +
+        (draggable.isDragging ? 'opacity-40' : '')
       }
     >
+      <td className="pl-2 pr-1 py-2.5 w-8">
+        <button
+          ref={draggable.setActivatorNodeRef}
+          type="button"
+          disabled={dragDisabled}
+          aria-label={`Déplacer la catégorie « ${c.name} »`}
+          title={
+            dragDisabled
+              ? 'Cette catégorie a des sous-catégories — elle ne peut pas être imbriquée.'
+              : undefined
+          }
+          className={
+            `select-none text-ink-500 leading-none px-1 ` +
+            (dragDisabled
+              ? 'cursor-not-allowed opacity-30'
+              : 'cursor-grab active:cursor-grabbing hover:text-ink-300')
+          }
+          {...draggable.attributes}
+          {...draggable.listeners}
+        >
+          ⋮⋮
+        </button>
+      </td>
       <td className={`px-4 py-2.5 ${depth === 1 ? 'pl-10' : ''}`}>
         <div className="flex items-center gap-2">
           {c.color && (
@@ -377,5 +506,47 @@ function CategoryTableRow(props: {
         )}
       </td>
     </tr>
+  );
+}
+
+function PromoteToRootBand(): JSX.Element {
+  const { isOver, setNodeRef } = useDroppable({ id: PROMOTE_DROP_ID });
+  return (
+    <div
+      ref={setNodeRef}
+      role="region"
+      aria-label="Déposez ici pour promouvoir en racine"
+      className={
+        `mb-3 rounded-md border border-dashed px-4 py-2.5 text-sm text-ink-400 text-center transition ` +
+        (isOver
+          ? 'border-sage-300 bg-sage-300/10 text-sage-200'
+          : 'border-ink-700')
+      }
+    >
+      Déposez ici pour promouvoir en catégorie racine
+    </div>
+  );
+}
+
+function DragGhost({
+  id,
+  byId,
+}: {
+  id: number;
+  byId: Map<number, Category>;
+}): JSX.Element | null {
+  const c = byId.get(id);
+  if (!c) return null;
+  return (
+    <div className="surface px-3 py-2 text-sm flex items-center gap-2 shadow-lg">
+      {c.color && (
+        <span
+          className="h-2 w-2 rounded-full border border-ink-700 shrink-0"
+          style={{ backgroundColor: c.color }}
+        />
+      )}
+      <span>{c.name}</span>
+      <span className={kindBadgeClass(c.kind)}>{KIND_LABEL[c.kind]}</span>
+    </div>
   );
 }
