@@ -8,22 +8,30 @@ const PALETTE = [
   '#97b87f', '#d48ba8', '#6cc1bb', '#caa97a', '#9cb6d4',
 ];
 
-const HEX_RE = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
-
 interface Props {
   open: boolean;
   categoryName: string;
   current: string | null;
+  // Falls back to this when the row has no explicit color, so the native
+  // picker opens on the same color the user sees on the row swatch.
+  defaultColor: string;
   onApply: (color: string | null) => void;
   onCancel: () => void;
 }
 
-export function CategoryColorPicker({ open, categoryName, current, onApply, onCancel }: Props) {
-  const [customHex, setCustomHex] = useState(current ?? '');
+export function CategoryColorPicker({
+  open,
+  categoryName,
+  current,
+  defaultColor,
+  onApply,
+  onCancel,
+}: Props) {
+  const [customColor, setCustomColor] = useState(current ?? defaultColor);
 
   useEffect(() => {
-    if (open) setCustomHex(current ?? '');
-  }, [open, current]);
+    if (open) setCustomColor(current ?? defaultColor);
+  }, [open, current, defaultColor]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,9 +47,7 @@ export function CategoryColorPicker({ open, categoryName, current, onApply, onCa
 
   if (!open) return null;
 
-  const trimmed = customHex.trim();
-  const hexValid = HEX_RE.test(trimmed);
-  const hexChanged = trimmed !== (current ?? '');
+  const customChanged = customColor.toLowerCase() !== (current ?? '').toLowerCase();
 
   return (
     <div
@@ -75,22 +81,24 @@ export function CategoryColorPicker({ open, categoryName, current, onApply, onCa
           ))}
         </div>
 
-        <label className="label mb-1.5 block" htmlFor="color-custom-hex">
+        <label className="label mb-1.5 block" htmlFor="color-custom-picker">
           Couleur personnalisée
         </label>
-        <div className="flex gap-2 mb-5">
+        <div className="flex items-center gap-3 mb-5">
           <input
-            id="color-custom-hex"
-            className="input font-mono flex-1"
-            value={customHex}
-            placeholder="#7dd3c0"
-            onChange={(e) => setCustomHex(e.target.value)}
+            id="color-custom-picker"
+            type="color"
+            className="h-10 w-14 rounded-md border border-ink-700 bg-transparent cursor-pointer p-0"
+            value={customColor}
+            aria-label="Sélecteur de couleur personnalisée"
+            onChange={(e) => setCustomColor(e.target.value)}
           />
+          <code className="font-mono text-sm text-ink-300">{customColor.toLowerCase()}</code>
           <button
             type="button"
-            className="btn-primary"
-            disabled={!hexValid || !hexChanged}
-            onClick={() => onApply(trimmed)}
+            className="btn-primary ml-auto"
+            disabled={!customChanged}
+            onClick={() => onApply(customColor.toLowerCase())}
           >
             Appliquer
           </button>

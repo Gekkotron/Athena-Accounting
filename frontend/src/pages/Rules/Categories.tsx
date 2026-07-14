@@ -310,6 +310,7 @@ export function Categories() {
         open={colorPickerFor !== null}
         categoryName={colorPickerFor?.name ?? ''}
         current={colorPickerFor?.color ?? null}
+        defaultColor={colorPickerFor ? resolveCategoryColor(colorPickerFor) : '#7dd3c0'}
         onApply={(color) => {
           if (colorPickerFor) {
             updateCategory.mutate({ id: colorPickerFor.id, patch: { color } });
