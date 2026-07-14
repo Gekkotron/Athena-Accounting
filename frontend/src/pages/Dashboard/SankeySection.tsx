@@ -67,13 +67,14 @@ export function SankeySection({
 
   return (
     <section className="surface p-5 md:p-6">
-      <div className="section-rule mb-4 flex items-center justify-between gap-3 flex-wrap">
-        <span>
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
           Flux · {currency}{' '}
           <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
             — {rangeSuffixLabel(range)}
           </span>
         </span>
+        <div className="flex-1 h-px bg-ink-800" />
         <div className="flex items-center gap-2 flex-wrap">
           <AccountSelect
             value={accountId ?? 'all'}

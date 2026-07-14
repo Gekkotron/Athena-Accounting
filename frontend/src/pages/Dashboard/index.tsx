@@ -115,8 +115,9 @@ export function Dashboard(): JSX.Element {
           defaults live in Réglages; in-session changes are ephemeral. */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
-          <div className="section-rule mb-4 flex items-center justify-between gap-3 flex-wrap">
-            <span>Évolution · {chartCurrency}</span>
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Évolution · {chartCurrency}</span>
+            <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <AccountSelect
                 value={chartScope}
@@ -143,8 +144,9 @@ export function Dashboard(): JSX.Element {
       {/* Category breakdown — donut */}
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
-          <div className="section-rule mb-4 flex items-center justify-between gap-3 flex-wrap">
-            <span>Répartition par catégorie</span>
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Répartition par catégorie</span>
+            <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <AccountSelect
                 value={chartScope}
