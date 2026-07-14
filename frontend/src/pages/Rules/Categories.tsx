@@ -21,7 +21,6 @@ export function Categories() {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<CategoryKind>('expense');
   const [color, setColor] = useState('');
-  const [parentIdInCreate, setParentIdInCreate] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
@@ -35,7 +34,6 @@ export function Categories() {
       qc.invalidateQueries({ queryKey: ['categories'] });
       setName('');
       setColor('');
-      setParentIdInCreate(null);
     },
     onError: (err: ApiError) => setError(err.message),
   });
@@ -72,14 +70,13 @@ export function Categories() {
       name: name.trim(),
       kind,
       color: color || null,
-      parentId: parentIdInCreate,
+      parentId: null,
     });
   };
 
   const cats = catQ.data?.categories ?? [];
   const report = reportQ.data?.rows ?? [];
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
-  const byId = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
 
   const ownTotalsByCat = new Map<number, number>();
   for (const r of report) {
@@ -94,9 +91,6 @@ export function Categories() {
     }
     return sum;
   };
-
-  const parentInCreate = parentIdInCreate != null ? byId.get(parentIdInCreate) : null;
-  const effectiveCreateKind = parentInCreate ? parentInCreate.kind : kind;
 
   return (
     <div className="flex flex-col gap-8">
@@ -125,34 +119,12 @@ export function Categories() {
             required
           />
         </div>
-        <div className="w-full sm:w-56">
-          <label className="label mb-1.5 block" htmlFor="cat-create-parent">
-            Parent (optionnel)
-          </label>
-          <select
-            id="cat-create-parent"
-            className="input"
-            value={parentIdInCreate ?? ''}
-            onChange={(e) => setParentIdInCreate(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">—</option>
-            {roots.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </div>
         <div className="w-full sm:w-40">
           <label className="label mb-1.5 block" htmlFor="cat-create-kind">Type</label>
           <select
             id="cat-create-kind"
             className="input"
-            value={effectiveCreateKind}
-            disabled={parentInCreate != null}
-            title={
-              parentInCreate
-                ? `Type hérité de « ${parentInCreate.name} »`
-                : undefined
-            }
+            value={kind}
             onChange={(e) => setKind(e.target.value as CategoryKind)}
           >
             <option value="expense">Dépense</option>

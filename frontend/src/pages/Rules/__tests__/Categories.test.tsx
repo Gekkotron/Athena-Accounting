@@ -201,19 +201,13 @@ describe('Categories page', () => {
     expect(parentSelect).toBeDisabled();
   });
 
-  it('locks kind in the create form when a parent is selected', async () => {
+  it('does not render a Parent field in the create form', async () => {
     mockNestedCategories();
     render(<Categories />, { wrapper: withProviders });
-    // Wait for categories to load so the Parent select actually has a
-    // "Courses" option before we try to select it.
     await findCategoryNameInput('Courses');
-    const parentInCreate = screen.getByRole('combobox', { name: /parent \(optionnel\)/i });
-    // The create form's own Kind select — scoped by id since row selects
-    // also carry an accessible name of "Type" once categories render.
-    const kindInCreate = document.getElementById('cat-create-kind') as HTMLSelectElement;
-    fireEvent.change(parentInCreate, { target: { value: '20' } }); // Courses id
-    expect(kindInCreate).toBeDisabled();
-    expect(kindInCreate).toHaveValue('expense');
+    expect(
+      screen.queryByRole('combobox', { name: /parent \(optionnel\)/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('appends the "sous-catégories deviendront racines" line to the delete confirm for a parent', async () => {
