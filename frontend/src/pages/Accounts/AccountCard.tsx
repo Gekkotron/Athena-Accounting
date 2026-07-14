@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Link } from 'react-router-dom';
 import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
@@ -85,7 +86,7 @@ export function AccountCard({
           modifier
         </button>
       </div>
-      <div className="mt-3 pt-3 border-t border-ink-800/60">
+      <div className="mt-3 pt-3 border-t border-ink-800/60 flex items-center justify-between gap-3">
         <button
           type="button"
           className="flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
@@ -95,8 +96,18 @@ export function AccountCard({
           <span className={`inline-block transition-transform ${expanded ? 'rotate-90' : ''}`}>▸</span>
           Points de contrôle
         </button>
-        {expanded && <BalanceCheckpointsDrawer accountId={a.id} currency={a.currency} />}
+        <Link
+          to={`/transactions?accountId=${a.id}`}
+          className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+        >
+          Transactions →
+        </Link>
       </div>
+      {expanded && (
+        <div className="mt-3">
+          <BalanceCheckpointsDrawer accountId={a.id} currency={a.currency} />
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
+import { MemoryRouter } from 'react-router-dom';
 import { AccountCard } from '../AccountCard';
 import type { Account } from '../../../api/types';
 
@@ -21,11 +22,13 @@ const defaultProps = {
 
 function renderCard(props: Partial<typeof defaultProps> = {}) {
   return render(
-    <DndContext>
-      <SortableContext items={[acc.id]} strategy={rectSortingStrategy}>
-        <AccountCard {...defaultProps} {...props} />
-      </SortableContext>
-    </DndContext>,
+    <MemoryRouter>
+      <DndContext>
+        <SortableContext items={[acc.id]} strategy={rectSortingStrategy}>
+          <AccountCard {...defaultProps} {...props} />
+        </SortableContext>
+      </DndContext>
+    </MemoryRouter>,
   );
 }
 
@@ -82,5 +85,11 @@ describe('AccountCard', () => {
   it('does not render the drawer when expanded is false', () => {
     renderCard();
     expect(screen.queryByText(/aucun point de contrôle/i)).not.toBeInTheDocument();
+  });
+
+  it('links to /transactions?accountId=<id>', () => {
+    renderCard();
+    const link = screen.getByRole('link', { name: /transactions/i });
+    expect(link).toHaveAttribute('href', '/transactions?accountId=1');
   });
 });
