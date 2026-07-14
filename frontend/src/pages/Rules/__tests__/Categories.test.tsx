@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Categories } from '../Categories';
@@ -13,15 +13,13 @@ import { api } from '../../../api/client';
 const apiMock = vi.mocked(api);
 
 // jsdom can't drive real pointer drags, so we mock DndContext to capture its
-// onDragStart/onDragEnd props and invoke them directly to simulate a drag.
-let capturedOnDragStart: ((e: any) => void) | null = null;
+// onDragEnd prop and invoke it directly to simulate a drag.
 let capturedOnDragEnd: ((e: any) => void) | null = null;
 vi.mock('@dnd-kit/core', async () => {
   const actual = await vi.importActual<typeof import('@dnd-kit/core')>('@dnd-kit/core');
   return {
     ...actual,
     DndContext: (props: any) => {
-      capturedOnDragStart = props.onDragStart;
       capturedOnDragEnd = props.onDragEnd;
       return <actual.DndContext {...props} />;
     },
@@ -68,7 +66,6 @@ async function findCategoryNameInput(name: string): Promise<HTMLElement> {
 
 beforeEach(() => {
   apiMock.mockReset();
-  capturedOnDragStart = null;
   capturedOnDragEnd = null;
 });
 
@@ -308,21 +305,68 @@ describe('Categories page', () => {
     await findCategoryNameInput('A');
     // Simulate dropping A onto B via the captured onDragEnd.
     expect(capturedOnDragEnd).not.toBeNull();
-    capturedOnDragEnd!({ active: { id: 1 }, over: { id: 2 } });
+    capturedOnDragEnd!({ active: { id: 1 }, over: { id: 2 }, delta: { x: 0, y: 0 } });
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0]).toEqual({ parentId: 2 });
   });
 
-  it('renders the promote-to-root band only while a drag is active', async () => {
-    mockNestedCategories();
+  it('promotes a child back to root when dragged far enough to the LEFT with no drop target', async () => {
+    const puts: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/categories' && !init) return { categories: nestedCats() };
+      if (path === '/api/reports/categories') return { rows: [] };
+      if (path === '/api/categories/21' && init?.method === 'PUT') {
+        puts.push(init.json);
+        return { category: {} };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Alimentation');
+    expect(capturedOnDragEnd).not.toBeNull();
+    // Child (id 21) dragged left by 100px, dropped over nothing → promote.
+    capturedOnDragEnd!({ active: { id: 21 }, over: null, delta: { x: -100, y: 0 } });
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(puts[0]).toEqual({ parentId: null });
+  });
+
+  it('does NOT promote when the left drag is below the threshold', async () => {
+    const puts: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/categories' && !init) return { categories: nestedCats() };
+      if (path === '/api/reports/categories') return { rows: [] };
+      if (path === '/api/categories/21' && init?.method === 'PUT') {
+        puts.push(init.json);
+        return { category: {} };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
+    render(<Categories />, { wrapper: withProviders });
+    await findCategoryNameInput('Alimentation');
+    expect(capturedOnDragEnd).not.toBeNull();
+    // Only 20px left — jitter, not intent. No mutation should fire.
+    capturedOnDragEnd!({ active: { id: 21 }, over: null, delta: { x: -20, y: 0 } });
+    // Give react-query a tick to potentially fire; then assert nothing happened.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(puts).toHaveLength(0);
+  });
+
+  it('does NOT promote a root that is left-dragged (it has no parent)', async () => {
+    const puts: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/categories' && !init) return { categories: nestedCats() };
+      if (path === '/api/reports/categories') return { rows: [] };
+      if (path === '/api/categories/20' && init?.method === 'PUT') {
+        puts.push(init.json);
+        return { category: {} };
+      }
+      throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
+    });
     render(<Categories />, { wrapper: withProviders });
     await findCategoryNameInput('Courses');
-    // Idle: band absent
-    expect(screen.queryByRole('region', { name: /promouvoir en racine/i })).not.toBeInTheDocument();
-    // Simulate drag start
-    expect(capturedOnDragStart).not.toBeNull();
-    act(() => capturedOnDragStart!({ active: { id: 21 } }));
-    // Band present
-    expect(await screen.findByRole('region', { name: /promouvoir en racine/i })).toBeInTheDocument();
+    expect(capturedOnDragEnd).not.toBeNull();
+    capturedOnDragEnd!({ active: { id: 20 }, over: null, delta: { x: -200, y: 0 } });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(puts).toHaveLength(0);
   });
 });

@@ -20,7 +20,12 @@ import { formatAmount } from '../../lib/format';
 import { KIND_LABEL, kindBadgeClass, groupCategories } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { resolveDrop, PROMOTE_DROP_ID, type DragTarget } from './dragNest';
+import { resolveDrop } from './dragNest';
+
+// A horizontal drag by more than this many pixels to the LEFT, when the row
+// isn't dropped on a target, promotes a child back to root. Chosen to feel
+// intentional — small jitter shouldn't trigger it.
+const PROMOTE_LEFT_DRAG_PX = -60;
 
 export function Categories() {
   const qc = useQueryClient();
@@ -96,17 +101,23 @@ export function Categories() {
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveDragId(null);
-    const { active, over } = e;
-    if (!over || typeof active.id !== 'number') return;
-    const target: DragTarget | null =
-      over.id === PROMOTE_DROP_ID
-        ? { kind: 'promote' }
-        : typeof over.id === 'number'
-          ? { kind: 'root', targetId: over.id }
-          : null;
-    const resolved = resolveDrop(active.id, target, cats);
-    if (!resolved) return;
-    updateCategory.mutate({ id: resolved.id, patch: { parentId: resolved.parentId } });
+    const { active, over, delta } = e;
+    if (typeof active.id !== 'number') return;
+
+    // Nest / re-parent: dropped onto a root row.
+    if (over && typeof over.id === 'number') {
+      const resolved = resolveDrop(active.id, over.id, cats);
+      if (resolved) {
+        updateCategory.mutate({ id: resolved.id, patch: { parentId: resolved.parentId } });
+      }
+      return;
+    }
+
+    // Promote: no drop target, but the child was dragged far enough LEFT.
+    const activeCat = cats.find((c) => c.id === active.id);
+    if (activeCat && activeCat.parentId != null && delta.x < PROMOTE_LEFT_DRAG_PX) {
+      updateCategory.mutate({ id: activeCat.id, patch: { parentId: null } });
+    }
   };
 
   const onDragCancel = () => setActiveDragId(null);
@@ -218,7 +229,6 @@ export function Categories() {
         onDragEnd={onDragEnd}
         onDragCancel={onDragCancel}
       >
-        {activeDragId != null && <PromoteToRootBand />}
         <div className="surface overflow-hidden">
           <div className="table-scroll">
             <table className="w-full text-sm">
@@ -510,25 +520,6 @@ function CategoryTableRow(props: {
         )}
       </td>
     </tr>
-  );
-}
-
-function PromoteToRootBand(): JSX.Element {
-  const { isOver, setNodeRef } = useDroppable({ id: PROMOTE_DROP_ID });
-  return (
-    <div
-      ref={setNodeRef}
-      role="region"
-      aria-label="Déposez ici pour promouvoir en racine"
-      className={
-        `mb-3 rounded-md border border-dashed px-4 py-2.5 text-sm text-ink-400 text-center transition ` +
-        (isOver
-          ? 'border-sage-300 bg-sage-300/10 text-sage-200'
-          : 'border-ink-700')
-      }
-    >
-      Déposez ici pour promouvoir en catégorie racine
-    </div>
   );
 }
 
