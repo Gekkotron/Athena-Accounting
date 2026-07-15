@@ -140,11 +140,12 @@ describe('Budgets page — totals correction (no double-count)', () => {
 
     // SummaryCard shows the rollup-aware total: the child's budgeted row is
     // dropped from the sum because its spend already lives inside the
-    // parent's rolled-up 80,00 — so the card reads 80,00 / 100,00, not the
+    // parent's rolled-up 80,00 — so the card reads 80,00 sur 100,00, not the
     // server's naive per-row sum (110,00 / 130,00).
-    const totalLabel = await screen.findByText('Ce mois-ci');
-    const summaryCard = totalLabel.closest('.surface') as HTMLElement;
-    expect(within(summaryCard).getByText(/80,00.*100,00/)).toBeInTheDocument();
+    const heroSentence = await screen.findByText(/Vous avez dépensé/);
+    const summaryCard = heroSentence.closest('.surface') as HTMLElement;
+    expect(within(summaryCard).getByText(/80,00/)).toBeInTheDocument();
+    expect(within(summaryCard).getByText(/100,00/)).toBeInTheDocument();
     expect(screen.queryByText(/130,00/)).not.toBeInTheDocument();
   });
 });

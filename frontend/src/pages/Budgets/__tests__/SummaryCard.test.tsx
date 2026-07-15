@@ -2,58 +2,83 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SummaryCard } from '../SummaryCard';
 
-const baseRow = {
-  id: 1, categoryId: 1, name: 'X', color: null, parentId: null, accountId: null,
-  period: 'monthly' as const, limit: '50.00', currency: 'EUR',
-  spent: '20.00', remaining: '30.00', pct: 40, over: false,
-  projected: '40.00',
-  history: { values: ['10.00', '12.00', '14.00', '16.00', '18.00', '20.00'], average: '15.00', median: '15.00' },
-  anomaly: false,
-  suggestedLimit: null,
-};
-
 describe('SummaryCard', () => {
-  it('renders totals and projection', () => {
+  it('renders the hero sentence with spent and limit for monthly period', () => {
     render(<SummaryCard
-      totals={{ limit: '450.00', spent: '312.40', remaining: '137.60', projected: '685.20' }}
-      rows={[baseRow]}
+      totals={{ limit: '3000.00', spent: '2340.00', remaining: '660.00', projected: '3180.00' }}
+      rows={[]}
       period="monthly"
       monthOrYear="2026-07"
     />);
-    expect(screen.getByText(/312,40/)).toBeInTheDocument();
-    expect(screen.getByText(/450,00/)).toBeInTheDocument();
-    expect(screen.getByText(/685,20/)).toBeInTheDocument();
+    expect(screen.getByText(/Vous avez dépensé/)).toBeInTheDocument();
+    expect(screen.getByText(/2\s?340,00/)).toBeInTheDocument();
+    expect(screen.getByText(/3\s?000,00/)).toBeInTheDocument();
+    expect(screen.getByText(/ce mois-ci/)).toBeInTheDocument();
   });
 
-  it('shows a warning label when projected > limit', () => {
+  it('renders the hero sentence with "cette année" for yearly period', () => {
+    render(<SummaryCard
+      totals={{ limit: '30000.00', spent: '12000.00', remaining: '18000.00', projected: null }}
+      rows={[]}
+      period="yearly"
+      monthOrYear="2026"
+    />);
+    expect(screen.getByText(/cette année/)).toBeInTheDocument();
+  });
+
+  it('shows the on-track status line when projected is null and remaining is positive', () => {
+    render(<SummaryCard
+      totals={{ limit: '3000.00', spent: '2340.00', remaining: '660.00', projected: null }}
+      rows={[]}
+      period="monthly"
+      monthOrYear="2026-07"
+    />);
+    expect(screen.getByText(/Il reste/)).toBeInTheDocument();
+    expect(screen.getByText(/d'ici la fin du mois/)).toBeInTheDocument();
+    expect(screen.getByText(/660,00/)).toBeInTheDocument();
+  });
+
+  it('shows the slipping status line when projected exceeds limit but not yet over', () => {
+    render(<SummaryCard
+      totals={{ limit: '3000.00', spent: '2340.00', remaining: '660.00', projected: '3180.00' }}
+      rows={[]}
+      period="monthly"
+      monthOrYear="2026-07"
+    />);
+    expect(screen.getByText(/À ce rythme, vous dépasserez de/)).toBeInTheDocument();
+    expect(screen.getByText(/180,00/)).toBeInTheDocument();
+  });
+
+  it('shows the over status line when remaining is negative', () => {
+    render(<SummaryCard
+      totals={{ limit: '3000.00', spent: '3200.00', remaining: '-200.00', projected: '3500.00' }}
+      rows={[]}
+      period="monthly"
+      monthOrYear="2026-07"
+    />);
+    expect(screen.getByText(/Vous avez dépassé de/)).toBeInTheDocument();
+    // "200,00" also appears in the hero's "3 200,00" — assert it appears at least once.
+    expect(screen.getAllByText(/200,00/).length).toBeGreaterThan(0);
+  });
+
+  it('does not render the old "Dépassement projeté" pill nor a mini bar chart', () => {
     render(<SummaryCard
       totals={{ limit: '100.00', spent: '80.00', remaining: '20.00', projected: '150.00' }}
       rows={[]}
       period="monthly"
       monthOrYear="2026-07"
     />);
-    expect(screen.getByText(/Dépassement projeté/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Dépassement projeté/i)).toBeNull();
+    expect(document.querySelectorAll('[data-testid="summary-mini-bar"]').length).toBe(0);
   });
 
-  it('hides projection when totals.projected is null', () => {
+  it('uses the yearly on-track copy for yearly period', () => {
     render(<SummaryCard
-      totals={{ limit: '100.00', spent: '80.00', remaining: '20.00', projected: null }}
+      totals={{ limit: '30000.00', spent: '12000.00', remaining: '18000.00', projected: null }}
       rows={[]}
-      period="monthly"
-      monthOrYear="2026-07"
+      period="yearly"
+      monthOrYear="2026"
     />);
-    expect(screen.queryByText(/Projection/i)).toBeNull();
-  });
-
-  it('renders a 6-bar mini chart when rows have history', () => {
-    render(<SummaryCard
-      totals={{ limit: '50.00', spent: '20.00', remaining: '30.00', projected: '40.00' }}
-      rows={[baseRow]}
-      period="monthly"
-      monthOrYear="2026-07"
-    />);
-    // Six SVG bars + 1 current-period bar. The current bar has a distinct class.
-    const bars = document.querySelectorAll('[data-testid="summary-mini-bar"]');
-    expect(bars.length).toBeGreaterThanOrEqual(6);
+    expect(screen.getByText(/d'ici la fin de l'année/)).toBeInTheDocument();
   });
 });
