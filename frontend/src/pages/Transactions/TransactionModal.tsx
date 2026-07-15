@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
-import { formatDate, parseUserDate } from '../../lib/format';
+import { formatDate, parseDecimal, parseUserDate } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 import { SplitEditor, type DraftSplit, parseMagnitudeCents, fromInitial } from './SplitEditor';
 
@@ -96,8 +96,8 @@ export function TransactionModal({
     qc.invalidateQueries({ queryKey: ['tri-groups'] });
   };
 
-  const cleanedAmountForSplit = amount.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
-  const parentCents = /^-?\d+(\.\d{1,2})?$/.test(cleanedAmountForSplit)
+  const cleanedAmountForSplit = parseDecimal(amount);
+  const parentCents = cleanedAmountForSplit !== null
     ? Math.round(Number(cleanedAmountForSplit) * 100)
     : 0;
   const parentAmountMagnitude = Math.abs(parentCents) / 100;
@@ -208,8 +208,8 @@ export function TransactionModal({
       setError('Date invalide. Format attendu : JJ/MM/AAAA (ex. 14/07/2025).');
       return;
     }
-    const cleanedAmount = amount.replace(/€/g, '').replace(/\s+/g, '').replace(',', '.').trim();
-    if (!/^-?\d+(\.\d{1,2})?$/.test(cleanedAmount)) {
+    const cleanedAmount = parseDecimal(amount);
+    if (cleanedAmount === null) {
       setError('Montant invalide. Format attendu : 338.50, -25,30, 1234, …');
       return;
     }
@@ -410,9 +410,7 @@ export function TransactionModal({
               Blocage individuel (ans) <span className="text-ink-500 font-normal">— optionnel</span>
             </label>
             <input
-              type="number"
-              min={0}
-              max={99}
+              inputMode="numeric"
               className="input font-mono"
               value={lockYearsInput}
               onChange={(e) => setLockYearsInput(e.target.value)}

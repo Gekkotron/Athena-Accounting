@@ -250,10 +250,8 @@ function NumberField(props: {
       </label>
       <div className="flex items-center gap-2">
         <input
-          type="number"
+          inputMode="numeric"
           className="input w-28"
-          min={min}
-          max={max}
           value={local}
           onChange={(e) => setLocal(e.target.value)}
           onBlur={commit}

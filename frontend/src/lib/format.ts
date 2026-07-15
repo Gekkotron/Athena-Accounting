@@ -1,3 +1,18 @@
+// Interpret a user-typed money value. Accepts French decimal comma, English
+// decimal period, integers, interior whitespace, and a trailing €. Returns
+// the canonical "X" / "X.Y" / "X.YY" form, or null when the input can't be
+// parsed. Backing store for every form field where the user types an amount.
+export function parseDecimal(raw: string): string | null {
+  const cleaned = raw
+    .replace(/€/g, '')
+    .replace(/\s+/g, '')
+    .replace(',', '.')
+    .trim();
+  if (!cleaned) return null;
+  if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  return cleaned;
+}
+
 export function formatAmount(value: string | number, currency = 'EUR'): string {
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return String(value);

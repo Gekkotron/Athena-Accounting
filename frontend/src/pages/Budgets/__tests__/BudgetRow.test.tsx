@@ -56,4 +56,14 @@ describe('BudgetRow', () => {
     fireEvent.click(screen.getByRole('button', { name: /^OK$/i }));
     expect(onSave).toHaveBeenCalledWith(10, '75.00');
   });
+
+  it('accepts the French decimal comma when editing and saves it canonicalized', () => {
+    const onSave = vi.fn();
+    render(<BudgetRow row={row} depth={0} budgetId={10} onSave={onSave} onDelete={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /Modifier/i }));
+    const input = screen.getByLabelText(/Modifier le plafond/i) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '75,25' } });
+    fireEvent.click(screen.getByRole('button', { name: /^OK$/i }));
+    expect(onSave).toHaveBeenCalledWith(10, '75.25');
+  });
 });

@@ -113,7 +113,7 @@ export function FlatTable({
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <input
-                      type="number"
+                      inputMode="numeric"
                       defaultValue={r.priority}
                       key={`pri-${r.id}-${r.priority}`}
                       className="input-sm font-mono text-right w-16 ml-auto"

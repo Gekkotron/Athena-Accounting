@@ -3,10 +3,14 @@ import type {
   Account, Budget, BudgetPeriod, BudgetReport, Category,
 } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
-import { formatAmount } from '../../lib/format';
+import { formatAmount, parseDecimal } from '../../lib/format';
 
-function isValidLimit(v: string): boolean {
-  return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
+// Returns the canonical "X" / "X.YY" form when v parses as a strictly positive
+// amount (comma OR period accepted), else null.
+function normalizeLimit(v: string): string | null {
+  const cleaned = parseDecimal(v);
+  if (cleaned === null) return null;
+  return Number(cleaned) > 0 ? cleaned : null;
 }
 
 export function AddBudgetForm(props: {
@@ -58,10 +62,11 @@ export function AddBudgetForm(props: {
 
   const submit = () => {
     const categoryId = Number(catId);
-    if (!categoryId || !isValidLimit(limit)) return;
+    const monthlyLimit = normalizeLimit(limit);
+    if (!categoryId || monthlyLimit === null) return;
     onSubmit({
       categoryId,
-      monthlyLimit: limit,
+      monthlyLimit,
       period,
       accountId: accountId ? Number(accountId) : null,
     });
@@ -133,7 +138,7 @@ export function AddBudgetForm(props: {
 
             <input
               className="input w-32"
-              type="number" min="0" step="0.01"
+              inputMode="decimal"
               aria-label={period === 'monthly' ? 'Plafond mensuel' : 'Plafond annuel'}
               placeholder={placeholder}
               value={limit}

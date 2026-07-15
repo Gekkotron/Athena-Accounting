@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BudgetReportRow } from '../../api/types';
-import { formatAmount } from '../../lib/format';
+import { formatAmount, parseDecimal } from '../../lib/format';
 import { Sparkline } from './Sparkline';
 
 function barColor(pct: number, over: boolean): string {
@@ -9,8 +9,10 @@ function barColor(pct: number, over: boolean): string {
   return 'bg-sage-500';
 }
 
-function isValidLimit(v: string): boolean {
-  return /^\d+(\.\d{1,2})?$/.test(v) && Number(v) > 0;
+function normalizeLimit(v: string): string | null {
+  const cleaned = parseDecimal(v);
+  if (cleaned === null) return null;
+  return Number(cleaned) > 0 ? cleaned : null;
 }
 
 function paceState(row: BudgetReportRow): 'over' | 'onTrack' | 'unknown' {
@@ -85,7 +87,8 @@ export function BudgetRow(props: {
         {budgetId !== undefined && (editing ? (
           <span className="flex items-center gap-1">
             <input
-              className="input w-24 !py-1" type="number" min="0" step="0.01"
+              className="input w-24 !py-1"
+              inputMode="decimal"
               aria-label="Modifier le plafond"
               value={value}
               onChange={(e) => setValue(e.target.value)}
@@ -98,7 +101,8 @@ export function BudgetRow(props: {
             <button
               className="btn-ghost !py-1 !px-2 text-xs"
               onClick={() => {
-                if (isValidLimit(value)) { onSave(budgetId, value); setEditing(false); }
+                const cleaned = normalizeLimit(value);
+                if (cleaned !== null) { onSave(budgetId, cleaned); setEditing(false); }
               }}
             >OK</button>
             <button

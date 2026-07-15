@@ -120,7 +120,7 @@ export function AdvancedEditor({
           <div>
             <label className="label mb-1.5 block">Priorité</label>
             <input
-              type="number"
+              inputMode="numeric"
               className="input font-mono"
               value={priority}
               onChange={(e) => setPriority(Number(e.target.value))}

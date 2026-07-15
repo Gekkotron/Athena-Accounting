@@ -76,6 +76,20 @@ describe('AddBudgetForm', () => {
     });
   });
 
+  it('accepts the French decimal comma in the limit field and submits it canonicalized', () => {
+    const onSubmit = vi.fn();
+    render(<AddBudgetForm
+      categories={cats} accounts={accounts} budgets={[]} candidates={[]}
+      prefill={null} onSubmit={onSubmit} isPending={false}
+    />);
+    fireEvent.change(screen.getByLabelText(/Catégorie/), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/Plafond/i), { target: { value: '50,50' } });
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter/ }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ monthlyLimit: '50.50' }),
+    );
+  });
+
   it('hides already-budgeted categories from the dropdown', () => {
     render(<AddBudgetForm
       categories={cats} accounts={accounts}

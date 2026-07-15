@@ -95,9 +95,7 @@ function FormFields({
           Blocage (ans)
         </label>
         <input
-          type="number"
-          min={0}
-          max={99}
+          inputMode="numeric"
           className="input font-mono"
           value={lockYearsInput}
           placeholder="—"
