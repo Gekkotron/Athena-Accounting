@@ -8,11 +8,13 @@ import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
 export function AccountCard({
   account: a,
   onEdit,
+  onMerge,
   onExpand,
   expanded,
 }: {
   account: Account;
   onEdit: (account: Account) => void;
+  onMerge?: (account: Account) => void;
   onExpand: (id: number) => void;
   expanded: boolean;
 }) {
@@ -85,6 +87,34 @@ export function AccountCard({
           </svg>
           modifier
         </button>
+        {onMerge && (
+          <details className="relative ml-1">
+            <summary
+              className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition cursor-pointer list-none"
+              title="Actions"
+              aria-label={`Actions pour ${a.name}`}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+                <circle cx="6" cy="2" r="1" />
+                <circle cx="6" cy="6" r="1" />
+                <circle cx="6" cy="10" r="1" />
+              </svg>
+            </summary>
+            <div className="absolute right-0 mt-1 min-w-[10rem] surface p-1 z-10">
+              <button
+                type="button"
+                className="block w-full text-left px-2 py-1 text-sm text-ink-200 hover:bg-ink-900 rounded"
+                onClick={(e) => {
+                  e.preventDefault();
+                  (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute('open');
+                  onMerge(a);
+                }}
+              >
+                Fusionner avec…
+              </button>
+            </div>
+          </details>
+        )}
       </div>
       <div className="mt-3 pt-3 border-t border-ink-800/60 flex items-center justify-between gap-3">
         <button

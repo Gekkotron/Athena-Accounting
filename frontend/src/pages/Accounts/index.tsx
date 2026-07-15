@@ -20,6 +20,8 @@ import type { Account } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
+import { MergeModal } from './MergeModal';
+import type { MergeResult } from '../../api/accounts';
 
 export function Accounts() {
   const qc = useQueryClient();
@@ -103,6 +105,7 @@ export function Accounts() {
 
   const [confirmDelete, setConfirmDelete] = useState<Account | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [mergeSource, setMergeSource] = useState<Account | null>(null);
 
   const del = useMutation({
     mutationFn: (id: number) => api(`/api/accounts/${id}`, { method: 'DELETE' }),
@@ -239,6 +242,7 @@ export function Accounts() {
                       key={a.id}
                       account={a}
                       onEdit={(acc) => startEdit(acc)}
+                      onMerge={setMergeSource}
                       onExpand={(id) => toggleCheckpoints(id)}
                       expanded={checkpointsOpen.has(a.id)}
                     />
@@ -272,6 +276,26 @@ export function Accounts() {
           setDeleteError(null);
         }}
       />
+
+      {mergeSource && (
+        <MergeModal
+          open
+          source={mergeSource}
+          candidates={accountsQ.data?.accounts ?? []}
+          onCancel={() => setMergeSource(null)}
+          onDone={(result: MergeResult) => {
+            setMergeSource(null);
+            void qc.invalidateQueries({ queryKey: ['accounts'] });
+            void qc.invalidateQueries({ queryKey: ['reports'] });
+            void qc.invalidateQueries({ queryKey: ['transactions'] });
+            console.info(
+              `Fusion réussie : ${result.transactionsMoved} transactions déplacées, ` +
+              `${result.dedupCollisionsDropped} doublons ignorés, ` +
+              `solde d'ouverture ajouté ${result.openingBalanceAdded}.`,
+            );
+          }}
+        />
+      )}
     </div>
   );
 }
