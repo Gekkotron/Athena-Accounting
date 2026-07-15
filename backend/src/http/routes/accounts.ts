@@ -300,9 +300,48 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    // Pipeline lands in Task 2. For now, validate-only.
-    app.log.info({ sourceId, targetId, uid }, 'account merge (validation-only)');
-    return { ok: true, merged: null };
+    const merged = await db.transaction(async (tx) => {
+      // Step A — promote source's account-level lock_years to per-row for
+      // transactions where the per-row value is null. Preserves lock intent
+      // across the move.
+      if (source.lockYears != null) {
+        await tx.execute(sql`
+          UPDATE transactions
+             SET lock_years = ${source.lockYears}
+           WHERE account_id = ${sourceId}
+             AND lock_years IS NULL
+        `);
+      }
+
+      // Step B — delete source transactions that collide by dedup_key with
+      // an existing target transaction. Target's copy wins.
+      const dedupDropped = await tx.execute<{ id: number }>(sql`
+        DELETE FROM transactions
+         WHERE account_id = ${sourceId}
+           AND dedup_key IN (
+             SELECT dedup_key FROM transactions WHERE account_id = ${targetId}
+           )
+        RETURNING id
+      `);
+      const dedupCollisionsDropped = dedupDropped.rows.length;
+
+      // Step C — move every remaining source transaction onto target.
+      const moved = await tx.execute<{ id: number }>(sql`
+        UPDATE transactions
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const transactionsMoved = moved.rows.length;
+
+      return { transactionsMoved, dedupCollisionsDropped };
+    });
+
+    app.log.info(
+      { sourceId, targetId, uid, counts: merged },
+      'account merge (steps A-C)',
+    );
+    return { ok: true, merged };
   });
 }
 
