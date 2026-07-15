@@ -13,41 +13,76 @@ const row = {
 };
 
 describe('BudgetRow', () => {
-  it('renders name, spent/limit, and progress bar', () => {
-    render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
+  it('renders the category name and the primary status "Reste X sur Y" when on track', () => {
+    render(<BudgetRow
+      row={{ ...row, projected: '45.00', anomaly: false }}
+      depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}}
+    />);
     expect(screen.getByText('Restaurants')).toBeInTheDocument();
-    expect(screen.getByText(/38,20/)).toBeInTheDocument();
+    expect(screen.getByText(/Reste/)).toBeInTheDocument();
+    expect(screen.getByText(/11,80/)).toBeInTheDocument();
     expect(screen.getByText(/50,00/)).toBeInTheDocument();
   });
 
-  it('shows the anomaly chip when row.anomaly is true', () => {
+  it('renders the amber "à surveiller" status when projected exceeds limit but not yet over', () => {
     render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
-    expect(screen.getByText(/anomalie/i)).toBeInTheDocument();
+    expect(screen.getByText(/à surveiller/)).toBeInTheDocument();
+    expect(screen.getByText(/11,80/)).toBeInTheDocument();
   });
 
-  it('shows projected value and history avg when both are present', () => {
-    render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
-    expect(screen.getByText(/91,10/)).toBeInTheDocument();
-    expect(screen.getByText(/49,92/)).toBeInTheDocument();
-  });
-
-  it('renders "—" instead of a projected value when projected is null', () => {
-    render(<BudgetRow
-      row={{ ...row, projected: null }}
-      depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}}
-    />);
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
-
-  it('shows "Dépassé de X€" text when over is true', () => {
+  it('renders "Dépassé de X" when the row is over', () => {
     render(<BudgetRow
       row={{ ...row, spent: '75.00', limit: '50.00', remaining: '-25.00', over: true, pct: 150 }}
       depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}}
     />);
     expect(screen.getByText(/Dépassé de/)).toBeInTheDocument();
+    expect(screen.getByText(/25,00/)).toBeInTheDocument();
   });
 
-  it('enters edit mode and saves on OK', () => {
+  it('renders the muted trend clause with both "À ce rythme" and "Habituellement"', () => {
+    render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText(/À ce rythme/)).toBeInTheDocument();
+    expect(screen.getByText(/91,10/)).toBeInTheDocument();
+    expect(screen.getByText(/Habituellement/)).toBeInTheDocument();
+    expect(screen.getByText(/49,92/)).toBeInTheDocument();
+  });
+
+  it('renders the trend clause with only "Habituellement" when projected is null', () => {
+    render(<BudgetRow
+      row={{ ...row, projected: null }}
+      depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}}
+    />);
+    expect(screen.queryByText(/À ce rythme/)).toBeNull();
+    expect(screen.getByText(/Habituellement/)).toBeInTheDocument();
+  });
+
+  it('hides the trend clause entirely when neither projected nor history is present', () => {
+    render(<BudgetRow
+      row={{ ...row, projected: null, history: null, anomaly: false }}
+      depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}}
+    />);
+    expect(screen.queryByText(/À ce rythme/)).toBeNull();
+    expect(screen.queryByText(/Habituellement/)).toBeNull();
+    expect(screen.queryByText(/inhabituel/)).toBeNull();
+  });
+
+  it('appends " · inhabituel" inline in the trend clause when row.anomaly is true', () => {
+    render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText(/inhabituel/)).toBeInTheDocument();
+  });
+
+  it('does not render the old anomaly pill glyph nor the % overlay', () => {
+    render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
+    expect(screen.queryByText(/anomalie/i)).toBeNull();
+    expect(screen.queryByText('76%')).toBeNull();
+  });
+
+  it('does not render a per-row sparkline SVG anymore', () => {
+    const { container } = render(<BudgetRow row={row} depth={0} budgetId={10} onSave={() => {}} onDelete={() => {}} />);
+    expect(container.querySelectorAll('svg').length).toBe(0);
+  });
+
+  it('enters edit mode and saves on OK (unchanged behavior)', () => {
     const onSave = vi.fn();
     render(<BudgetRow row={row} depth={0} budgetId={10} onSave={onSave} onDelete={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /Modifier/i }));
@@ -57,7 +92,7 @@ describe('BudgetRow', () => {
     expect(onSave).toHaveBeenCalledWith(10, '75.00');
   });
 
-  it('accepts the French decimal comma when editing and saves it canonicalized', () => {
+  it('accepts the French decimal comma and saves it canonicalized (unchanged behavior)', () => {
     const onSave = vi.fn();
     render(<BudgetRow row={row} depth={0} budgetId={10} onSave={onSave} onDelete={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /Modifier/i }));

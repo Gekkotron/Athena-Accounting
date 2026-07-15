@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { BudgetReportRow } from '../../api/types';
 import { formatAmount, parseDecimal } from '../../lib/format';
-import { Sparkline } from './Sparkline';
 
 function barColor(pct: number, over: boolean): string {
   if (over) return 'bg-clay-500';
@@ -20,6 +19,73 @@ function paceState(row: BudgetReportRow): 'over' | 'onTrack' | 'unknown' {
   return Number(row.projected) > Number(row.limit) ? 'over' : 'onTrack';
 }
 
+type PrimaryStatus = { text: JSX.Element; className: string };
+
+function primaryStatus(r: BudgetReportRow): PrimaryStatus {
+  if (Number(r.limit) === 0) {
+    return {
+      text: <><span className="private tabular-nums">{formatAmount(r.spent, r.currency)}</span> dépensés</>,
+      className: 'text-ink-300',
+    };
+  }
+  if (r.over) {
+    const overBy = formatAmount((-Number(r.remaining)).toFixed(2), r.currency);
+    return {
+      text: <>Dépassé de <span className="private tabular-nums">{overBy}</span></>,
+      className: 'text-clay-300',
+    };
+  }
+  if (paceState(r) === 'over') {
+    return {
+      text: <>
+        <span className="private tabular-nums">{formatAmount(r.remaining, r.currency)}</span>
+        {' '}restants · à surveiller
+      </>,
+      className: 'text-amber-300',
+    };
+  }
+  return {
+    text: <>
+      Reste{' '}
+      <span className="private tabular-nums">{formatAmount(r.remaining, r.currency)}</span>
+      {' '}sur{' '}
+      <span className="private tabular-nums">{formatAmount(r.limit, r.currency)}</span>
+    </>,
+    className: 'text-sage-300',
+  };
+}
+
+function trendClause(r: BudgetReportRow): JSX.Element | null {
+  const hasProjected = r.projected != null;
+  const hasAverage = r.history != null;
+  if (!hasProjected && !hasAverage && !r.anomaly) return null;
+  const parts: JSX.Element[] = [];
+  if (hasProjected) {
+    parts.push(
+      <span key="pace">
+        À ce rythme{' '}
+        <span className="private tabular-nums">{formatAmount(r.projected!, r.currency)}</span>
+      </span>,
+    );
+  }
+  if (hasAverage) {
+    parts.push(
+      <span key="avg">
+        Habituellement{' '}
+        <span className="private tabular-nums">{formatAmount(r.history!.average, r.currency)}</span>
+      </span>,
+    );
+  }
+  if (r.anomaly) parts.push(<span key="anom">inhabituel</span>);
+  return (
+    <span>
+      {parts.map((p, i) => (
+        <span key={i}>{i > 0 ? ' · ' : ''}{p}</span>
+      ))}
+    </span>
+  );
+}
+
 export function BudgetRow(props: {
   row: BudgetReportRow;
   depth: 0 | 1;
@@ -31,9 +97,8 @@ export function BudgetRow(props: {
   const pct = Math.min(Math.max(r.pct, 0), 100);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(r.limit);
-  const state = paceState(r);
-  const historyValues = r.history?.values ?? [];
-  const sparkValues = [...historyValues, r.spent];  // append current bar
+  const status = primaryStatus(r);
+  const trend = trendClause(r);
 
   return (
     <li
@@ -42,48 +107,22 @@ export function BudgetRow(props: {
       className={`surface p-4 ${depth === 1 ? 'ml-8 bg-ink-900/20' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{r.name}</span>
-          {r.anomaly && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink-800 text-ink-300 border border-ink-700">
-              ● anomalie
-            </span>
-          )}
-        </div>
-        <span className="text-sm tabular-nums private">
-          {formatAmount(r.spent, r.currency)} / {Number(r.limit) > 0 ? formatAmount(r.limit, r.currency) : '—'}
-        </span>
+        <span className="font-medium">{r.name}</span>
+        <span className={`text-sm ${status.className}`}>{status.text}</span>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-ink-400 mb-2">
-        <Sparkline values={sparkValues} state={state} />
-        <span className="tabular-nums">
-          {r.projected != null ? `~${formatAmount(r.projected, r.currency)}` : '—'}
-          {r.history && (
-            <span className="ml-2 text-ink-500">
-              · avg {formatAmount(r.history.average, r.currency)}
-            </span>
-          )}
-        </span>
-      </div>
-
-      <div className="h-2.5 rounded-full bg-ink-800 overflow-hidden relative">
+      <div
+        className="h-2 rounded-full bg-ink-800 overflow-hidden"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div className={`h-full ${barColor(r.pct, r.over)}`} style={{ width: `${pct}%` }} />
-        <span
-          className="absolute inset-0 flex items-center justify-end pr-1 text-[10px] tabular-nums text-ink-100"
-          aria-hidden="true"
-        >{r.pct}%</span>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <span className={`text-xs ${r.over ? 'text-clay-300' : 'text-ink-400'}`}>
-          {r.over ? 'Dépassé de ' : 'Reste '}
-          <span className="private">
-            {r.over
-              ? formatAmount((-Number(r.remaining)).toFixed(2), r.currency)
-              : formatAmount(r.remaining, r.currency)}
-          </span>
-        </span>
+      <div className="flex items-center justify-between mt-2 text-xs text-ink-500">
+        <span>{trend ?? ' '}</span>
         {budgetId !== undefined && (editing ? (
           <span className="flex items-center gap-1">
             <input
