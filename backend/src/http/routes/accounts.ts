@@ -43,6 +43,10 @@ const UpdateBody = z
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 
+const MergeBody = z.object({
+  targetId: z.number().int().positive(),
+});
+
 function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
   const r = IdParam.safeParse(req.params);
   if (!r.success) {
@@ -257,6 +261,48 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       }
       throw err;
     }
+  });
+
+  app.post('/api/accounts/:sourceId/merge', async (req, reply) => {
+    const uid = userId(req);
+
+    const sourceParse = z.object({ sourceId: z.coerce.number().int().positive() })
+      .safeParse(req.params);
+    if (!sourceParse.success) {
+      return reply.code(400).send({ error: 'invalid source id' });
+    }
+    const sourceId = sourceParse.data.sourceId;
+
+    const bodyParse = MergeBody.safeParse(req.body);
+    if (!bodyParse.success) {
+      return reply.code(400).send({ error: 'invalid input', issues: bodyParse.error.issues });
+    }
+    const targetId = bodyParse.data.targetId;
+
+    if (sourceId === targetId) {
+      return reply.code(400).send({ error: 'source and target must differ' });
+    }
+
+    const rows = await db
+      .select()
+      .from(accounts)
+      .where(and(inArray(accounts.id, [sourceId, targetId]), eq(accounts.userId, uid)));
+    const source = rows.find((r) => r.id === sourceId);
+    const target = rows.find((r) => r.id === targetId);
+    if (!source) return reply.code(404).send({ error: 'source not found' });
+    if (!target) return reply.code(404).send({ error: 'target not found' });
+
+    if (source.currency !== target.currency) {
+      return reply.code(400).send({
+        error: 'currency mismatch',
+        sourceCurrency: source.currency,
+        targetCurrency: target.currency,
+      });
+    }
+
+    // Pipeline lands in Task 2. For now, validate-only.
+    app.log.info({ sourceId, targetId, uid }, 'account merge (validation-only)');
+    return { ok: true, merged: null };
   });
 }
 
