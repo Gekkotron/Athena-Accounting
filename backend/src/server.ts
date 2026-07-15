@@ -25,6 +25,7 @@ import { settingsRoutes } from './http/routes/settings.js';
 import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
 import { reconcileRoutes } from './http/routes/reconcile.js';
+import { metricsPlugin } from './http/plugins/metrics.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
   const logger = opts?.logger === false
@@ -46,6 +47,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
     max: 300,
     timeWindow: '1 minute',
   });
+  await app.register(metricsPlugin);
   await app.register(authPlugin);
 
   // Public routes (no auth required to discover / complete onboarding, or log in).
