@@ -29,9 +29,6 @@ les éléments entre les sections au fur et à mesure que vous décidez quoi fai
   positifs.
 - Réordonner les règles par drag-and-drop (comme les comptes) — la priorité
   est déjà stockée, il manque juste l'UI @dnd-kit.
-- Vue "Comparatif mensuel" : ce mois-ci vs le mois dernier par catégorie,
-  avec delta et sparkline. Bâti sur `/api/reports/categories` qui expose
-  déjà les mois.
 - Undo (fenêtre ~5s) après une suppression de transaction ou d'import. Toast
   en bas de l'écran avec bouton "Annuler".
 - Raccourcis clavier sur la page Transactions : `j`/`k` naviguer, `e`
