@@ -98,8 +98,10 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     });
     const accountId = acc.json().account.id;
 
-    // Minimal Athena-flavored CSV: date;label;amount (semicolon-separated).
-    const csvBody = 'date;label;amount\n2026-06-01;coffee;-3.50\n';
+    // French-bank-flavored CSV per backend/src/domain/imports/csv-parser.ts:
+    // ';' separator, headers 'date' + 'libelle' + 'montant', JJ/MM/AAAA
+    // date, ',' decimal.
+    const csvBody = 'date;libelle;montant\n01/06/2026;coffee;-3,50\n';
     const boundary = '----MetricsBoundary';
     const multipart =
       `--${boundary}\r\n` +
@@ -130,23 +132,44 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
   });
 
   it('sweeper increments athena_imports_total{kind="pdf",outcome="aborted"}', async () => {
+    // Self-contained: create a dedicated user + account for this test so
+    // we don't race with other test files that call `db.delete(users)`
+    // (e.g. tests/mcp/store.test.ts) in their beforeAll.
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'sweeper-user', password: 'sweeper-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'sweeper-user', password: 'sweeper-1234' },
+    });
+    const cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
+    const acc = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: {
+        name: 'SweeperAcc', type: 'checking', currency: 'EUR',
+        openingBalance: '0', openingDate: '2025-01-01',
+      },
+    });
+    const accountId: number = acc.json().account.id;
+
     const { sweepExpiredDrafts } = await import(
       '../src/domain/imports/pdf/draft-sweeper.js'
     );
     const { db } = await import('../src/db/client.js');
-    const { pdfImportDrafts, accounts, users } = await import('../src/db/schema.js');
+    const { pdfImportDrafts, accounts } = await import('../src/db/schema.js');
     const { eq } = await import('drizzle-orm');
 
-    // Grab any user + account (metrics test above created them).
-    const [u] = await db.select().from(users);
-    const [a] = await db.select().from(accounts).where(eq(accounts.userId, u.id));
+    const [a] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+    expect(a).toBeDefined();
 
     // Insert an already-expired draft so the sweeper deletes it. Column
     // shape matches backend/src/db/schema.ts:pdfImportDrafts — pdfBytes is
     // TEXT (not bytea), fingerprint is NOT NULL, no filename column.
     await db.insert(pdfImportDrafts).values({
-      userId: u.id,
-      accountId: a.id,
+      userId: a!.userId!,
+      accountId: a!.id,
       pdfBytes: '%PDF-1.4',
       textItems: [],
       fingerprint: 'sweeper-test-fp',
