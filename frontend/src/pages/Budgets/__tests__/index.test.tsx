@@ -68,8 +68,9 @@ describe('Budgets page — grouped rendering', () => {
     const childRow = child.closest('[data-role="budget-row"]') as HTMLElement;
     expect(parentRow.nextElementSibling).toBe(childRow);
     expect(childRow.getAttribute('data-depth')).toBe('1');
-    // Parent shows the rollup 80 / 100.
-    expect(within(parentRow).getByText(/80.*100/)).toBeInTheDocument();
+    // Parent shows the rollup: remaining 20 sur 100 (amounts live in separate spans).
+    expect(within(parentRow).getByText(/20,00/)).toBeInTheDocument();
+    expect(within(parentRow).getByText(/100,00/)).toBeInTheDocument();
   });
 });
 
@@ -131,11 +132,17 @@ describe('Budgets page — totals correction (no double-count)', () => {
     const child = await screen.findByText('Alimentation');
     const parentRow = parent.closest('[data-role="budget-row"]') as HTMLElement;
     const childRow = child.closest('[data-role="budget-row"]') as HTMLElement;
-    // Parent row still shows its own rolled-up 80,00 / 100,00, unaffected by
-    // the child's separately-budgeted 30,00 — no naive-sum artifact (110,00)
-    // leaks into either row.
-    expect(within(parentRow).getByText(/80,00.*100,00/)).toBeInTheDocument();
-    expect(within(childRow).getByText(/30,00.*30,00/)).toBeInTheDocument();
+    // Parent row still shows its own rolled-up remaining 20,00 sur 100,00,
+    // unaffected by the child's separately-budgeted 30,00 — no naive-sum
+    // artifact (110,00) leaks into either row. Amounts live in separate spans
+    // so we assert each individually rather than in a single regex.
+    expect(within(parentRow).getByText(/20,00/)).toBeInTheDocument();
+    expect(within(parentRow).getByText(/100,00/)).toBeInTheDocument();
+    // Child is exactly at its limit (spent 30 of 30, remaining 0) — the row
+    // shows "Reste 0,00 sur 30,00". Anchor on "^0,00" so the remaining span
+    // ("0,00 €") is matched but the limit span ("30,00 €") is not.
+    expect(within(childRow).getAllByText(/30,00/).length).toBeGreaterThan(0);
+    expect(within(childRow).getByText(/^0,00/)).toBeInTheDocument();
     expect(screen.queryByText(/110,00/)).not.toBeInTheDocument();
 
     // SummaryCard shows the rollup-aware total: the child's budgeted row is

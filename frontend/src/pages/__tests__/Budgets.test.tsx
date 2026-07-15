@@ -96,7 +96,9 @@ describe('Budgets page', () => {
       return Promise.resolve({});
     });
     const { container } = renderPage();
-    expect(await screen.findByText(/dépassé/i)).toBeInTheDocument();
+    // "dépassé" now appears both in the SummaryCard ("Vous avez dépassé de …")
+    // and in the row's status ("Dépassé de …"), so assert at least one match.
+    expect((await screen.findAllByText(/dépassé/i)).length).toBeGreaterThan(0);
     expect(container.querySelector('.bg-clay-500')).not.toBeNull();
     expect(container.querySelector('.bg-amber-500')).toBeNull();
   });
