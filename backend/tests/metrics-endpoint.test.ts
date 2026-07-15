@@ -75,4 +75,57 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     expect(res.body).toMatch(/# TYPE athena_accounts_total gauge/);
     expect(res.body).toMatch(/athena_accounts_total \d+/);
   });
+
+  it('increments athena_imports_total{kind="csv",outcome="success"} on CSV import', async () => {
+    // Set up user + account + upload a minimal CSV.
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'metrics-user', password: 'metrics-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'metrics-user', password: 'metrics-1234' },
+    });
+    const cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
+
+    const acc = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: {
+        name: 'MetricsAcc', type: 'checking', currency: 'EUR',
+        openingBalance: '0', openingDate: '2025-01-01',
+      },
+    });
+    const accountId = acc.json().account.id;
+
+    // Minimal Athena-flavored CSV: date;label;amount (semicolon-separated).
+    const csvBody = 'date;label;amount\n2026-06-01;coffee;-3.50\n';
+    const boundary = '----MetricsBoundary';
+    const multipart =
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="tx.csv"\r\n` +
+      `Content-Type: text/csv\r\n\r\n` +
+      `${csvBody}\r\n` +
+      `--${boundary}--\r\n`;
+
+    const before = await app.inject({ method: 'GET', url: '/metrics' });
+    const beforeMatch = before.body.match(
+      /athena_imports_total\{kind="csv",outcome="success"\} (\d+)/,
+    );
+    const beforeCount = beforeMatch ? Number(beforeMatch[1]) : 0;
+
+    const importRes = await app.inject({
+      method: 'POST', url: `/api/imports?accountId=${accountId}`,
+      headers: { cookie, 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: multipart,
+    });
+    expect(importRes.statusCode).toBe(201);
+
+    const after = await app.inject({ method: 'GET', url: '/metrics' });
+    const afterMatch = after.body.match(
+      /athena_imports_total\{kind="csv",outcome="success"\} (\d+)/,
+    );
+    expect(afterMatch).not.toBeNull();
+    expect(Number(afterMatch![1])).toBe(beforeCount + 1);
+  });
 });

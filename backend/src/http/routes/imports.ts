@@ -82,9 +82,13 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       }
       try {
         const r = await importPdf({ filename, accountId, userId: uid, buffer });
-        if (r.kind === 'imported') return reply.code(201).send(r);
+        if (r.kind === 'imported') {
+          app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' });
+          return reply.code(201).send(r);
+        }
         return reply.code(200).send(r);
       } catch (err: any) {
+        app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'error' });
         if (err?.code === 'pdf_encrypted') return reply.code(400).send({ code: 'pdf_encrypted', error: 'PDF is password-protected' });
         if (err?.code === 'template_yielded_no_rows') {
           return reply.code(422).send({ code: 'template_yielded_no_rows', error: 'saved template did not match this PDF; retrain via /api/pdf-templates' });
@@ -96,8 +100,10 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
 
     try {
       const result = await runImport({ filename, accountId, userId: uid, format, buffer });
+      app.metrics.importsTotal.inc({ kind: format, outcome: 'success' });
       return reply.code(201).send(result);
     } catch (err) {
+      app.metrics.importsTotal.inc({ kind: format, outcome: 'error' });
       app.log.error({ err, filename }, 'import failed');
       return reply.code(400).send({ error: 'import failed', message: err instanceof Error ? err.message : String(err) });
     }
@@ -118,8 +124,10 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       const result = await importPhoto({
         filename, accountId, userId: userId(req), buffer,
       });
+      app.metrics.importsTotal.inc({ kind: 'photo', outcome: 'success' });
       return reply.code(200).send(result);
     } catch (err) {
+      app.metrics.importsTotal.inc({ kind: 'photo', outcome: 'error' });
       if (err instanceof PhotoTooLargeError) return reply.code(400).send({ error: 'photo too large (max 25 MB)' });
       if (err instanceof PhotoUnsupportedMimeError) return reply.code(400).send({ error: err.message });
       app.log.error({ err, filename }, 'photo import failed');
@@ -161,8 +169,10 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
         overrideRows,
         userId: userId(req),
       });
+      app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' });
       return reply.code(201).send(r);
     } catch (err: any) {
+      app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'error' });
       if (err?.code === 'draft_expired') return reply.code(410).send({ code: 'draft_expired', error: 'draft expired or not found' });
       if (err?.code === 'template_yielded_no_rows') return reply.code(422).send({ code: 'template_yielded_no_rows', error: 'zones produced 0 rows' });
       app.log.error({ err }, 'apply template failed');

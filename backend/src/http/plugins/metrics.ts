@@ -15,6 +15,7 @@ export interface MetricsBag {
   dbSizeBytes: Gauge<string>;
   transactionsTotal: Gauge<string>;
   accountsTotal: Gauge<string>;
+  importsTotal: Counter<'kind' | 'outcome'>;
 }
 
 declare module 'fastify' {
@@ -98,12 +99,20 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     },
   });
 
+  const importsTotal = new Counter({
+    name: 'athena_imports_total',
+    help: 'Count of import attempts, labeled by kind (ofx|qfx|csv|pdf|photo) and outcome (success|error|aborted).',
+    labelNames: ['kind', 'outcome'] as const,
+    registers: [registry],
+  });
+
   app.decorate('metrics', {
     httpRequestsTotal,
     httpRequestDurationSeconds,
     dbSizeBytes,
     transactionsTotal,
     accountsTotal,
+    importsTotal,
   } as MetricsBag);
 
   app.addHook('onResponse', async (req, reply) => {
