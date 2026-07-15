@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FiltersBar } from '../FiltersBar';
 import type { Account, Category } from '../../../api/types';
-import type { Filters } from '../index';
+import type { Filters } from '../filters';
 
 const accs: Account[] = [
   { id: 1, name: 'A', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },

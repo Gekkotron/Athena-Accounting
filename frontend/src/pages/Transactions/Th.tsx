@@ -1,4 +1,4 @@
-import type { Filters } from './index';
+import type { Filters } from './filters';
 
 export function Th({
   children,

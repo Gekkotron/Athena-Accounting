@@ -11,17 +11,8 @@ import { TransactionModal } from './TransactionModal';
 import { parseAmountQuery } from './parseAmountQuery';
 import { listCheckpoints, createCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 
-export interface Filters {
-  accountId?: number;
-  categoryId?: number;
-  sourceFileId?: number;
-  fromDate?: string;
-  toDate?: string;
-  search?: string;
-  amount?: string;
-  sort: 'date' | 'amount' | 'label';
-  order: 'asc' | 'desc';
-}
+export type { Filters } from './filters';
+import type { Filters } from './filters';
 
 const PAGE = 50;
 

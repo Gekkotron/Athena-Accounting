@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
-import type { Filters } from './index';
+import type { Filters } from './filters';
 import { Th } from './Th';
 import { TransactionRow } from './TransactionRow';
 import { endOfDayRowIds } from './endOfDay';

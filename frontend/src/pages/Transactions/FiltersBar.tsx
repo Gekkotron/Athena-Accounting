@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Account, Category } from '../../api/types';
-import type { Filters } from './index';
+import type { Filters } from './filters';
 import { parseAmountQuery } from './parseAmountQuery';
 import { formatCategoryPath } from '../../lib/categories';
 

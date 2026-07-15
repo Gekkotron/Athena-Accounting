@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TransactionsTable } from '../TransactionsTable';
 import type { Transaction, Category, Account } from '../../../api/types';
-import type { Filters } from '../index';
+import type { Filters } from '../filters';
 
 const acc: Account = {
   id: 1,
