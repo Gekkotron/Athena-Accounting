@@ -128,4 +128,54 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     expect(afterMatch).not.toBeNull();
     expect(Number(afterMatch![1])).toBe(beforeCount + 1);
   });
+
+  it('sweeper increments athena_imports_total{kind="pdf",outcome="aborted"}', async () => {
+    const { sweepExpiredDrafts } = await import(
+      '../src/domain/imports/pdf/draft-sweeper.js'
+    );
+    const { db } = await import('../src/db/client.js');
+    const { pdfImportDrafts, accounts, users } = await import('../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    // Grab any user + account (metrics test above created them).
+    const [u] = await db.select().from(users);
+    const [a] = await db.select().from(accounts).where(eq(accounts.userId, u.id));
+
+    // Insert an already-expired draft so the sweeper deletes it. Column
+    // shape matches backend/src/db/schema.ts:pdfImportDrafts — pdfBytes is
+    // TEXT (not bytea), fingerprint is NOT NULL, no filename column.
+    await db.insert(pdfImportDrafts).values({
+      userId: u.id,
+      accountId: a.id,
+      pdfBytes: '%PDF-1.4',
+      textItems: [],
+      fingerprint: 'sweeper-test-fp',
+      ocrStatus: 'not_needed',
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+
+    const before = await app.inject({ method: 'GET', url: '/metrics' });
+    const beforeMatch = before.body.match(
+      /athena_imports_total\{kind="pdf",outcome="aborted"\} (\d+)/,
+    );
+    const beforeCount = beforeMatch ? Number(beforeMatch[1]) : 0;
+
+    let observed = -1;
+    const deleted = await sweepExpiredDrafts((n) => { observed = n; });
+    expect(deleted).toBeGreaterThanOrEqual(1);
+    expect(observed).toBe(deleted);
+
+    // Simulate the wiring that startDraftSweeper does at runtime.
+    (app as any).metrics.importsTotal.inc(
+      { kind: 'pdf', outcome: 'aborted' },
+      deleted,
+    );
+
+    const after = await app.inject({ method: 'GET', url: '/metrics' });
+    const afterMatch = after.body.match(
+      /athena_imports_total\{kind="pdf",outcome="aborted"\} (\d+)/,
+    );
+    expect(afterMatch).not.toBeNull();
+    expect(Number(afterMatch![1])).toBe(beforeCount + deleted);
+  });
 });
