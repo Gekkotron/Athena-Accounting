@@ -211,3 +211,139 @@ describe.skipIf(!RUN)('POST /api/accounts/:sourceId/merge — transactions pipel
     expect(tx?.lockYears).toBe(5);
   });
 });
+
+describe.skipIf(!RUN)('POST /api/accounts/:sourceId/merge — side tables + finalize', () => {
+  let cookie: string;
+
+  beforeAll(async () => {
+    const { buildApp } = await import('./helpers/build-app.js');
+    app = await buildApp();
+    cookie = await setupUser('merge-side-user', 'merge-side-1234');
+  });
+
+  afterAll(async () => { await app.close(); });
+
+  async function postTx(
+    accountId: number, date: string, amount: string,
+    rawLabel: string, extra: Record<string, unknown> = {},
+  ): Promise<number> {
+    const res = await app.inject({
+      method: 'POST', url: '/api/transactions',
+      headers: { cookie },
+      payload: { accountId, date, amount, rawLabel, ...extra },
+    });
+    if (res.statusCode !== 201) {
+      throw new Error(`create tx failed ${res.statusCode}: ${res.body}`);
+    }
+    return res.json().transaction.id;
+  }
+
+  it('collapses transfer groups whose legs are now all on target', async () => {
+    const { db } = await import('../src/db/client.js');
+    const { transactions } = await import('../src/db/schema.js');
+    const { eq, inArray } = await import('drizzle-orm');
+
+    const src = await createAccount(cookie, 'XferSrc', 'EUR');
+    const tgt = await createAccount(cookie, 'XferTgt', 'EUR');
+    const legA = await postTx(src, '2026-06-01', '-100.00', 'xferA');
+    const legB = await postTx(tgt, '2026-06-01', '100.00', 'xferB');
+    const groupId = '11111111-1111-1111-1111-111111111111';
+    await db.update(transactions)
+      .set({ transferGroupId: groupId })
+      .where(inArray(transactions.id, [legA, legB]));
+
+    const res = await app.inject({
+      method: 'POST', url: `/api/accounts/${src}/merge`,
+      headers: { cookie }, payload: { targetId: tgt },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().merged.transferGroupsCollapsed).toBe(1);
+
+    const rows = await db.select().from(transactions).where(eq(transactions.accountId, tgt));
+    expect(rows.every((r) => r.transferGroupId === null)).toBe(true);
+  });
+
+  it('repoints filename patterns, checkpoints, budgets, imports, templates', async () => {
+    const { db } = await import('../src/db/client.js');
+    const {
+      accountFilenamePatterns, balanceCheckpoints, categoryBudgets, categories,
+      fileImports, pdfStatementTemplates,
+    } = await import('../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    const src = await createAccount(cookie, 'SideSrc', 'EUR');
+    const tgt = await createAccount(cookie, 'SideTgt', 'EUR');
+
+    const { users } = await import('../src/db/schema.js');
+    const [u] = await db.select().from(users).where(eq(users.username, 'merge-side-user'));
+    const uid = u!.id;
+
+    await db.insert(accountFilenamePatterns).values({
+      userId: uid, pattern: 'side-*.ofx', accountId: src, priority: 0,
+    });
+    await db.insert(balanceCheckpoints).values({
+      userId: uid, accountId: src, checkpointDate: '2026-04-01', expectedAmount: '10.00',
+    });
+    const [cat] = await db.insert(categories).values({
+      userId: uid, name: 'SideBudgetCat', kind: 'expense',
+    }).returning();
+    await db.insert(categoryBudgets).values({
+      userId: uid, categoryId: cat.id, monthlyLimit: '100.00',
+      currency: 'EUR', period: 'monthly', accountId: src,
+    });
+    await db.insert(fileImports).values({
+      userId: uid, filename: 'side.ofx', accountId: src, format: 'ofx',
+      totalLines: 0, insertedCount: 0, dedupSkipped: 0,
+    });
+    await db.insert(pdfStatementTemplates).values({
+      userId: uid, accountId: src, fingerprint: 'side-fp', label: 'side',
+      zones: {}, source: 'user',
+    });
+
+    const res = await app.inject({
+      method: 'POST', url: `/api/accounts/${src}/merge`,
+      headers: { cookie }, payload: { targetId: tgt },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().merged.patternsMoved).toBe(1);
+    expect(res.json().merged.checkpointsMoved).toBe(1);
+    expect(res.json().merged.budgetsMoved).toBe(1);
+    expect(res.json().merged.importsMoved).toBe(1);
+    expect(res.json().merged.templatesMoved).toBe(1);
+
+    const pats = await db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.accountId, tgt));
+    expect(pats.length).toBe(1);
+    const cps = await db.select().from(balanceCheckpoints).where(eq(balanceCheckpoints.accountId, tgt));
+    expect(cps.length).toBe(1);
+    const buds = await db.select().from(categoryBudgets).where(eq(categoryBudgets.accountId, tgt));
+    expect(buds.length).toBe(1);
+    const imps = await db.select().from(fileImports).where(eq(fileImports.accountId, tgt));
+    expect(imps.length).toBe(1);
+    const tpls = await db.select().from(pdfStatementTemplates).where(eq(pdfStatementTemplates.accountId, tgt));
+    expect(tpls.length).toBe(1);
+  });
+
+  it('sums opening_balance onto target and deletes the source', async () => {
+    const src = await createAccount(cookie, 'OpBalSrc', 'EUR', '100.00');
+    const tgt = await createAccount(cookie, 'OpBalTgt', 'EUR', '50.00');
+
+    const res = await app.inject({
+      method: 'POST', url: `/api/accounts/${src}/merge`,
+      headers: { cookie }, payload: { targetId: tgt },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().merged.openingBalanceAdded).toBe('100.00');
+
+    const tgtRes = await app.inject({
+      method: 'GET', url: `/api/accounts/${tgt}`,
+      headers: { cookie },
+    });
+    expect(tgtRes.json().account.openingBalance).toBe('150.00');
+
+    const srcRes = await app.inject({
+      method: 'GET', url: `/api/accounts/${src}`,
+      headers: { cookie },
+    });
+    expect(srcRes.statusCode).toBe(404);
+  });
+});

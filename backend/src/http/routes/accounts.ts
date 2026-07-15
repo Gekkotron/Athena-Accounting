@@ -334,12 +334,132 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       `);
       const transactionsMoved = moved.rows.length;
 
-      return { transactionsMoved, dedupCollisionsDropped };
+      // Step D — collapse transfer groups now entirely on target.
+      const doomed = await tx.execute<{ transfer_group_id: string }>(sql`
+        SELECT transfer_group_id
+          FROM transactions
+         WHERE transfer_group_id IS NOT NULL
+         GROUP BY transfer_group_id
+        HAVING COUNT(*) FILTER (WHERE account_id <> ${targetId}) = 0
+           AND COUNT(*) > 0
+      `);
+      const doomedIds = doomed.rows.map((r) => r.transfer_group_id);
+      if (doomedIds.length > 0) {
+        await tx.execute(sql`
+          UPDATE transactions
+             SET transfer_group_id = NULL
+           WHERE transfer_group_id = ANY(${doomedIds}::uuid[])
+        `);
+      }
+      const transferGroupsCollapsed = doomedIds.length;
+
+      // Step E — repoint side tables (delete colliders first, then UPDATE).
+
+      // account_filename_patterns — no unique on account_id alone.
+      const patternsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE account_filename_patterns
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const patternsMoved = patternsRes.rows.length;
+
+      // balance_checkpoints — unique (account_id, checkpoint_date).
+      await tx.execute(sql`
+        DELETE FROM balance_checkpoints
+         WHERE account_id = ${sourceId}
+           AND checkpoint_date IN (
+             SELECT checkpoint_date FROM balance_checkpoints WHERE account_id = ${targetId}
+           )
+      `);
+      const checkpointsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE balance_checkpoints
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const checkpointsMoved = checkpointsRes.rows.length;
+
+      // category_budgets — scoped uniq on (user_id, category_id, period, account_id).
+      await tx.execute(sql`
+        DELETE FROM category_budgets
+         WHERE account_id = ${sourceId}
+           AND (user_id, category_id, period) IN (
+             SELECT user_id, category_id, period
+               FROM category_budgets
+              WHERE account_id = ${targetId}
+           )
+      `);
+      const budgetsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE category_budgets
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const budgetsMoved = budgetsRes.rows.length;
+
+      // file_imports — no unique on account_id alone.
+      const importsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE file_imports
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const importsMoved = importsRes.rows.length;
+
+      // pdf_statement_templates — unique (fingerprint, account_id).
+      await tx.execute(sql`
+        DELETE FROM pdf_statement_templates
+         WHERE account_id = ${sourceId}
+           AND fingerprint IN (
+             SELECT fingerprint FROM pdf_statement_templates WHERE account_id = ${targetId}
+           )
+      `);
+      const templatesRes = await tx.execute<{ id: number }>(sql`
+        UPDATE pdf_statement_templates
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const templatesMoved = templatesRes.rows.length;
+
+      // pdf_import_drafts — transient; sweeper purges within 24h anyway.
+      const draftsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE pdf_import_drafts
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const draftsMoved = draftsRes.rows.length;
+
+      // Step F — bump target's opening_balance by source's.
+      const openingBalanceAdded = source.openingBalance;
+      await tx.execute(sql`
+        UPDATE accounts
+           SET opening_balance = opening_balance + ${openingBalanceAdded}::numeric
+         WHERE id = ${targetId}
+      `);
+
+      // Step G — delete the source account.
+      await tx.execute(sql`DELETE FROM accounts WHERE id = ${sourceId}`);
+
+      return {
+        transactionsMoved,
+        dedupCollisionsDropped,
+        transferGroupsCollapsed,
+        patternsMoved,
+        checkpointsMoved,
+        budgetsMoved,
+        importsMoved,
+        templatesMoved,
+        draftsMoved,
+        openingBalanceAdded,
+      };
     });
 
     app.log.info(
       { sourceId, targetId, uid, counts: merged },
-      'account merge (steps A-C)',
+      'account merge complete',
     );
     return { ok: true, merged };
   });
