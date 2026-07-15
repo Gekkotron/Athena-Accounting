@@ -28,4 +28,32 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
   it('exposes app.metrics decoration', () => {
     expect((app as any).metrics).toBeDefined();
   });
+
+  it('counts HTTP requests to business routes with route template + status_class', async () => {
+    // /api/onboarding/status is a public GET always available.
+    await app.inject({ method: 'GET', url: '/api/onboarding/status' });
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.body).toMatch(
+      /athena_http_requests_total\{method="GET",route="\/api\/onboarding\/status",status_class="2xx"\} \d+/,
+    );
+    expect(res.body).toMatch(
+      /athena_http_request_duration_seconds_count\{method="GET",route="\/api\/onboarding\/status",status_class="2xx"\} \d+/,
+    );
+  });
+
+  it('excludes /metrics and /health from the HTTP hook', async () => {
+    await app.inject({ method: 'GET', url: '/health' });
+    await app.inject({ method: 'GET', url: '/metrics' });
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.body).not.toMatch(/route="\/health"/);
+    expect(res.body).not.toMatch(/route="\/metrics"/);
+  });
+
+  it('labels unmatched routes as route="unmatched"', async () => {
+    await app.inject({ method: 'GET', url: '/api/definitely-does-not-exist' });
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.body).toMatch(
+      /athena_http_requests_total\{method="GET",route="unmatched",status_class="4xx"\} \d+/,
+    );
+  });
 });
