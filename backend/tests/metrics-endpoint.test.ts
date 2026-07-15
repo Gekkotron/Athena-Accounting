@@ -56,4 +56,23 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
       /athena_http_requests_total\{method="GET",route="unmatched",status_class="4xx"\} \d+/,
     );
   });
+
+  it('exposes athena_db_size_bytes with a positive value', async () => {
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    const m = res.body.match(/athena_db_size_bytes (\d+)/);
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBeGreaterThan(0);
+  });
+
+  it('exposes athena_transactions_total as a numeric gauge', async () => {
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.body).toMatch(/# TYPE athena_transactions_total gauge/);
+    expect(res.body).toMatch(/athena_transactions_total \d+/);
+  });
+
+  it('exposes athena_accounts_total as a numeric gauge', async () => {
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.body).toMatch(/# TYPE athena_accounts_total gauge/);
+    expect(res.body).toMatch(/athena_accounts_total \d+/);
+  });
 });

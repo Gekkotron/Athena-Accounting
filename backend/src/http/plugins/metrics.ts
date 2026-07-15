@@ -3,13 +3,18 @@ import fp from 'fastify-plugin';
 import {
   Registry,
   Counter,
+  Gauge,
   Histogram,
   collectDefaultMetrics,
 } from 'prom-client';
+import { pool } from '../../db/client.js';
 
 export interface MetricsBag {
   httpRequestsTotal: Counter<'method' | 'route' | 'status_class'>;
   httpRequestDurationSeconds: Histogram<'method' | 'route' | 'status_class'>;
+  dbSizeBytes: Gauge<string>;
+  transactionsTotal: Gauge<string>;
+  accountsTotal: Gauge<string>;
 }
 
 declare module 'fastify' {
@@ -45,9 +50,60 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     registers: [registry],
   });
 
+  const dbSizeBytes = new Gauge({
+    name: 'athena_db_size_bytes',
+    help: 'Size in bytes of the current Postgres database (pg_database_size).',
+    registers: [registry],
+    async collect() {
+      try {
+        const { rows } = await pool.query(
+          "SELECT pg_database_size(current_database())::bigint AS s",
+        );
+        this.set(Number(rows[0].s));
+      } catch (err) {
+        app.log.warn({ err }, 'athena_db_size_bytes collect failed');
+      }
+    },
+  });
+
+  const transactionsTotal = new Gauge({
+    name: 'athena_transactions_total',
+    help: 'Total number of transactions across all users.',
+    registers: [registry],
+    async collect() {
+      try {
+        const { rows } = await pool.query(
+          'SELECT COUNT(*)::bigint AS n FROM transactions',
+        );
+        this.set(Number(rows[0].n));
+      } catch (err) {
+        app.log.warn({ err }, 'athena_transactions_total collect failed');
+      }
+    },
+  });
+
+  const accountsTotal = new Gauge({
+    name: 'athena_accounts_total',
+    help: 'Total number of accounts across all users.',
+    registers: [registry],
+    async collect() {
+      try {
+        const { rows } = await pool.query(
+          'SELECT COUNT(*)::bigint AS n FROM accounts',
+        );
+        this.set(Number(rows[0].n));
+      } catch (err) {
+        app.log.warn({ err }, 'athena_accounts_total collect failed');
+      }
+    },
+  });
+
   app.decorate('metrics', {
     httpRequestsTotal,
     httpRequestDurationSeconds,
+    dbSizeBytes,
+    transactionsTotal,
+    accountsTotal,
   } as MetricsBag);
 
   app.addHook('onResponse', async (req, reply) => {
