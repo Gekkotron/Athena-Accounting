@@ -260,6 +260,44 @@ re-run. You can also use `drizzle-kit` (`cd backend && npm run db:generate`)
 to emit the next migration from `schema.ts`; the runner ignores the
 journal file Drizzle creates alongside.
 
+## Metrics (Prometheus)
+
+The backend exposes Prometheus metrics at `GET /metrics` on the same
+port as the API. There is no authentication — the endpoint is designed
+for a LAN-only deployment. Rate-limited to 20 requests per minute per
+client IP; a normal Prometheus scrape is 2–4 requests per minute.
+
+Example scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: athena
+    metrics_path: /metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['<homelab-host>:<port>']
+```
+
+Metrics of interest:
+
+- `athena_http_requests_total{method,route,status_class}` — request
+  counts.
+- `athena_http_request_duration_seconds` — latency histogram.
+- `athena_imports_total{kind,outcome}` — imports counted by format
+  (`csv`/`ofx`/`qfx`/`pdf`/`photo`) and result
+  (`success`/`error`/`aborted`).
+- `athena_db_size_bytes` — Postgres database size.
+- `athena_transactions_total`, `athena_accounts_total` — row counts.
+- `athena_backup_last_success_timestamp_seconds` — Unix timestamp of
+  the last successful `GET /api/backup/export`. Alert on
+  `time() - <this> > <N days>`.
+- `process_*`, `nodejs_*` — Node.js runtime metrics (from `prom-client`
+  defaults): CPU, memory, event-loop lag, GC.
+
+Labels are curated to stay public-safe: no user IDs, account IDs,
+transaction IDs, hostnames, emails, or IPs ever appear in metric
+labels.
+
 ## Security notes
 
 - Both services bind to `127.0.0.1` only — there's no public listener.

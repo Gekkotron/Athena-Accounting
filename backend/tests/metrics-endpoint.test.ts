@@ -209,4 +209,40 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     expect(Number(m![1])).toBeGreaterThanOrEqual(nowBefore);
     expect(Number(m![1])).toBeLessThanOrEqual(nowBefore + 30);
   });
+
+  it('public-safe: response body contains no PII-like tokens', async () => {
+    // Exercise several routes first so the response body isn't near-empty.
+    await app.inject({ method: 'GET', url: '/health' });
+    await app.inject({ method: 'GET', url: '/api/onboarding/status' });
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+
+    // No user IDs, account IDs, transaction IDs, emails, or HH:MM:SS wall
+    // clock leaks (Fastify default log fields never end up in metric labels).
+    const suspiciousPatterns: RegExp[] = [
+      /user_id="/,
+      /account_id="/,
+      /transaction_id="/,
+      /@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
+      /\b\d{2}:\d{2}:\d{2}\b/,
+    ];
+    for (const pat of suspiciousPatterns) {
+      expect(res.body).not.toMatch(pat);
+    }
+  });
+
+  it('rate-limits /metrics past 20 req/min', async () => {
+    // Fire 25 requests quickly with a stable synthetic IP; at least one
+    // response should be 429 once the 20/min bucket empties.
+    const responses = [];
+    for (let i = 0; i < 25; i++) {
+      responses.push(
+        await app.inject({
+          method: 'GET', url: '/metrics',
+          headers: { 'x-forwarded-for': '203.0.113.99' },
+        }),
+      );
+    }
+    const anyLimited = responses.some((r) => r.statusCode === 429);
+    expect(anyLimited).toBe(true);
+  });
 });
