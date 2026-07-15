@@ -16,6 +16,7 @@ export interface MetricsBag {
   transactionsTotal: Gauge<string>;
   accountsTotal: Gauge<string>;
   importsTotal: Counter<'kind' | 'outcome'>;
+  backupLastSuccessTimestampSeconds: Gauge<string>;
 }
 
 declare module 'fastify' {
@@ -106,6 +107,12 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     registers: [registry],
   });
 
+  const backupLastSuccessTimestampSeconds = new Gauge({
+    name: 'athena_backup_last_success_timestamp_seconds',
+    help: 'Unix timestamp of the last successful GET /api/backup/export response.',
+    registers: [registry],
+  });
+
   app.decorate('metrics', {
     httpRequestsTotal,
     httpRequestDurationSeconds,
@@ -113,6 +120,7 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     transactionsTotal,
     accountsTotal,
     importsTotal,
+    backupLastSuccessTimestampSeconds,
   } as MetricsBag);
 
   app.addHook('onResponse', async (req, reply) => {
@@ -125,6 +133,9 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
       { method, route: url, status_class: klass },
       reply.elapsedTime / 1000,
     );
+    if (url === '/api/backup/export' && reply.statusCode < 400) {
+      backupLastSuccessTimestampSeconds.setToCurrentTime();
+    }
   });
 
   app.get('/metrics', {

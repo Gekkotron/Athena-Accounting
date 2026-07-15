@@ -178,4 +178,35 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     expect(afterMatch).not.toBeNull();
     expect(Number(afterMatch![1])).toBe(beforeCount + deleted);
   });
+
+  it('records athena_backup_last_success_timestamp_seconds after GET /api/backup/export', async () => {
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'backup-user', password: 'backup-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'backup-user', password: 'backup-1234' },
+    });
+    const cookie = login.cookies[0]
+      ? login.cookies[0].name + '=' + login.cookies[0].value
+      : '';
+    expect(cookie).not.toBe('');
+
+    const nowBefore = Math.floor(Date.now() / 1000);
+
+    const dump = await app.inject({
+      method: 'GET', url: '/api/backup/export',
+      headers: { cookie },
+    });
+    expect(dump.statusCode).toBe(200);
+
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    const m = res.body.match(
+      /athena_backup_last_success_timestamp_seconds (\d+(?:\.\d+)?)/,
+    );
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBeGreaterThanOrEqual(nowBefore);
+    expect(Number(m![1])).toBeLessThanOrEqual(nowBefore + 30);
+  });
 });
