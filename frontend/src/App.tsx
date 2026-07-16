@@ -13,6 +13,7 @@ import { Transactions } from './pages/Transactions';
 import { Tri } from './pages/Rules/Tri';
 import { Categories } from './pages/Rules/Categories';
 import { Plafonds } from './pages/Budgets/Plafonds';
+import { Enveloppes } from './pages/Budgets/Enveloppes/Enveloppes';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
 import { Patterns } from './pages/Accounts/Patterns';
@@ -40,10 +41,6 @@ const DONNEES_TABS: HubTab[] = [
   { to: '/donnees/modeles', label: 'Modèles PDF' },
   { to: '/donnees/sauvegarde', label: 'Sauvegarde' },
 ];
-
-function EnveloppesPlaceholder() {
-  return <div className="surface p-6 text-ink-300">Enveloppes — bientôt.</div>;
-}
 
 export default function App() {
   const location = useLocation();
@@ -104,7 +101,7 @@ export default function App() {
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/budgets" element={<Navigate to="/budgets/plafonds" replace />} />
           <Route path="/budgets/plafonds" element={<Plafonds />} />
-          <Route path="/budgets/enveloppes" element={<EnveloppesPlaceholder />} />
+          <Route path="/budgets/enveloppes" element={<Enveloppes />} />
 
           {/* Règles hub */}
           <Route path="/regles" element={<HubLayout title="Règles" tabs={RULES_TABS} />}>
