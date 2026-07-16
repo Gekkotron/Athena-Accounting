@@ -22,14 +22,14 @@ if (!root) throw new Error('#root not found');
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <Suspense fallback={<div />}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <PrivacyProvider>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <PrivacyProvider>
+          <Suspense fallback={<div />}>
             <App />
-          </PrivacyProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </Suspense>
+          </Suspense>
+        </PrivacyProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   </React.StrictMode>,
 );
