@@ -14,6 +14,7 @@ import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangeP
 import { DashboardHero } from './DashboardHero';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
 import { InsightsSection } from './InsightsSection';
+import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { AccountSelect } from './AccountSelect';
 
@@ -120,6 +121,7 @@ export function Dashboard(): JSX.Element {
 
       {primary && <MoyennesMensuellesSection currency={primary.currency} />}
       {primary && <InsightsSection currency={primary.currency} />}
+      <BudgetEnvelopeSection />
 
       {/* Time series — the account scope and period picker sit in the card
           header (right-aligned). Both drive the donut and the Sankey below
