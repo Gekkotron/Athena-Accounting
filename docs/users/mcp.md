@@ -56,7 +56,7 @@ Claude Desktop and several other MCP clients):
       "command": "node",
       "args": ["/absolute/path/to/Athena-Accounting/mcp/dist/index.js"],
       "env": {
-        "ATHENA_API_URL": "http://<mini-pc-host>:3000",
+        "ATHENA_API_URL": "http://<mini-pc-host>:8001",
         "ATHENA_MCP_USER": "<your-athena-username>",
         "ATHENA_MCP_TOKEN": "<paste-token-here>",
         "ATHENA_STATEMENTS_DIR": "/Users/you/AthenaStatements"

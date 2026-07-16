@@ -17,30 +17,30 @@ runs a Model Context Protocol server for local LLM access.
                                      │  HTTP
                                      ▼
                     ┌─────────────────────────────────────┐
-                    │  Frontend container                  │
-                    │  nginx serving built Vite assets     │
-                    │  (proxies /api → backend:3000)       │
+                    │  Frontend container                 │
+                    │  nginx serving built Vite assets    │
+                    │  (proxies /api → backend:3000)      │
                     └────────────────┬────────────────────┘
                                      │  HTTP
                                      ▼
                     ┌─────────────────────────────────────┐
-                    │  Backend container                   │
-                    │  Node 20 + Fastify 5 + TypeScript    │
-                    │  Drizzle ORM · argon2id · pg driver  │
-                    │  Host port 8001 → container 3000     │
+                    │  Backend container                  │
+                    │  Node 20 + Fastify 5 + TypeScript   │
+                    │  Drizzle ORM · argon2id · pg driver │
+                    │  Host port 8001 → container 3000    │
                     └────────────────┬────────────────────┘
                                      │  SQL
                                      ▼
                     ┌─────────────────────────────────────┐
-                    │  PostgreSQL 16 container             │
-                    │  pg_trgm · unaccent · pgcrypto       │
-                    │  Host port 5432 bound to 127.0.0.1   │
+                    │  PostgreSQL 16 container            │
+                    │  pg_trgm · unaccent · pgcrypto      │
+                    │  Host port 5432 bound to 127.0.0.1  │
                     └─────────────────────────────────────┘
 
                     ┌─────────────────────────────────────┐
-                    │  (Optional) MCP container            │
-                    │  End-to-end encrypted with a         │
-                    │  per-user token; talks to backend.   │
+                    │  (Optional) MCP container           │
+                    │  End-to-end encrypted with a        │
+                    │  per-user token; talks to backend.  │
                     └─────────────────────────────────────┘
 ```
 
