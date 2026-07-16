@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold } from '../../../lib/useEnvelopes';
+import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold, useUpsertSettings, useDeleteSettings } from '../../../lib/useEnvelopes';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { PoolCard } from './PoolCard';
 import { EnvelopeRow } from './EnvelopeRow';
 import { AssignmentInput } from './AssignmentInput';
 import { ReallocateModal } from './ReallocateModal';
 import { HoldModal } from './HoldModal';
+import { SettingsModal } from './SettingsModal';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -32,8 +33,11 @@ export function Enveloppes(): JSX.Element {
   const upsertAsg = useUpsertAssignment();
   const reallocate = useReallocate();
   const upsertHold = useUpsertHold();
+  const upsertSettings = useUpsertSettings();
+  const deleteSettings = useDeleteSettings();
   const [reallocSource, setReallocSource] = useState<EnvelopeReportRow | null>(null);
   const [holdOpen, setHoldOpen] = useState(false);
+  const [settingsRow, setSettingsRow] = useState<EnvelopeReportRow | null>(null);
 
   const rows = reportQ.data?.rows ?? [];
   const pool = reportQ.data?.pool;
@@ -76,7 +80,7 @@ export function Enveloppes(): JSX.Element {
               />
             }
             onReallocateClick={(row) => setReallocSource(row)}
-            onSettingsClick={() => { /* wired in Task 14 */ }}
+            onSettingsClick={(row) => setSettingsRow(row)}
           />
         ))}
       </section>
@@ -96,6 +100,14 @@ export function Enveloppes(): JSX.Element {
         poolAvailable={pool?.available ?? '0.00'}
         onClose={() => setHoldOpen(false)}
         onConfirm={(payload) => { upsertHold.mutate(payload); setHoldOpen(false); }}
+      />
+
+      <SettingsModal
+        open={!!settingsRow}
+        row={settingsRow}
+        onClose={() => setSettingsRow(null)}
+        onSave={(args) => { upsertSettings.mutate(args); setSettingsRow(null); }}
+        onDeleteTarget={(categoryId) => { deleteSettings.mutate(categoryId); setSettingsRow(null); }}
       />
     </div>
   );
