@@ -20,6 +20,10 @@ import { submitPdf, submitPhoto } from '../../../api/pdf-templates';
 const submitPdfMock = vi.mocked(submitPdf);
 const submitPhotoMock = vi.mocked(submitPhoto);
 
+vi.mock('../../../api/imports', () => ({ previewImport: vi.fn() }));
+import { previewImport } from '../../../api/imports';
+const previewMock = vi.mocked(previewImport);
+
 const accs: Account[] = [
   { id: 1, name: 'Compte', type: 'checking', currency: 'EUR',
     openingBalance: '0', openingDate: '2025-01-01' },
@@ -59,6 +63,7 @@ beforeEach(() => {
   uploadMock.mockReset();
   submitPdfMock.mockReset();
   submitPhotoMock.mockReset();
+  previewMock.mockReset();
 });
 
 describe('UploadForm', () => {
@@ -69,7 +74,12 @@ describe('UploadForm', () => {
     expect(screen.getByRole('button', { name: 'Importer' })).toBeInTheDocument();
   });
 
-  it('CSV submit fires apiUpload and onOfxCsvSuccess with the transformed shape', async () => {
+  it('CSV single-file submit opens the preview modal, then Importer inside the modal fires apiUpload', async () => {
+    previewMock.mockResolvedValue({
+      filename: 'new.csv', format: 'csv', accountId: 1, totalRows: 1,
+      newRows: [{ date: '2026-06-15', amount: '-10.00', rawLabel: 'A', memo: null }],
+      duplicateRows: [],
+    });
     uploadMock.mockResolvedValue({ filename: 'new.csv', insertedCount: 5, dedupSkipped: 1, totalLines: 6 });
     const user = userEvent.setup();
     const { props } = renderForm();
@@ -80,14 +90,73 @@ describe('UploadForm', () => {
     await user.selectOptions(fieldFor(/^Compte$/), '1');
     await user.click(screen.getByRole('button', { name: 'Importer' }));
 
-    await waitFor(() => expect(uploadMock).toHaveBeenCalled());
-    expect(uploadMock).toHaveBeenCalledWith('/api/imports', file, { query: { accountId: 1 } });
+    // Preview endpoint fires first; real upload has NOT happened yet.
+    await waitFor(() => expect(previewMock).toHaveBeenCalledTimes(1));
+    expect(uploadMock).not.toHaveBeenCalled();
+
+    // Click the modal's Importer (second one on screen).
+    const modalImporter = screen.getAllByRole('button', { name: /^(Importer|Import…)$/ })
+      .find((b) => b.closest('[role="dialog"]'));
+    await user.click(modalImporter!);
+
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledWith('/api/imports', file, { query: { accountId: 1 } }));
     expect(props.onOfxCsvSuccess).toHaveBeenCalledWith({
       filename: 'new.csv',
       inserted: 5,
       skipped: 1,
       total: 6,
     });
+  });
+
+  it('clicking Annuler in the preview modal closes it and does not call apiUpload', async () => {
+    previewMock.mockResolvedValue({
+      filename: 'p.csv', format: 'csv', accountId: 1, totalRows: 1,
+      newRows: [{ date: '2026-06-15', amount: '-1.00', rawLabel: 'X', memo: null }],
+      duplicateRows: [],
+    });
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, new File(['x'], 'p.csv', { type: 'text/csv' }));
+    await user.selectOptions(fieldFor(/^Compte$/), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+    await screen.findByRole('dialog', { name: /Prévisualiser/ });
+    const modalCancel = screen.getAllByRole('button', { name: 'Annuler' })
+      .find((b) => b.closest('[role="dialog"]'));
+    await user.click(modalCancel!);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Prévisualiser/ })).not.toBeInTheDocument());
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it('PDF single-file submit skips the preview modal (goes straight to submitPdf)', async () => {
+    submitPdfMock.mockResolvedValue({
+      kind: 'imported',
+      result: { fileImportId: 1, insertedCount: 1, dedupSkipped: 0, totalLines: 1 },
+      skippedRows: [],
+    } as any);
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, new File(['%PDF'], 'x.pdf', { type: 'application/pdf' }));
+    await user.selectOptions(fieldFor(/^Compte$/), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+    await waitFor(() => expect(submitPdfMock).toHaveBeenCalledTimes(1));
+    expect(previewMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: /Prévisualiser/ })).not.toBeInTheDocument();
+  });
+
+  it('multi-file batch skips the preview modal (imports directly)', async () => {
+    uploadMock.mockResolvedValue({ filename: 'a.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 });
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, [
+      new File(['x'], 'a.csv', { type: 'text/csv' }),
+      new File(['x'], 'b.csv', { type: 'text/csv' }),
+    ]);
+    await user.click(screen.getByRole('button', { name: /Importer 2 fichiers/ }));
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledTimes(2));
+    expect(previewMock).not.toHaveBeenCalled();
   });
 
   it('PDF needs_template response fires onPdfNeedsTemplate', async () => {
@@ -159,9 +228,9 @@ describe('UploadForm', () => {
     await waitFor(() => expect(props.onPdfImported).toHaveBeenCalledWith(response));
   });
 
-  it('OFX/CSV error surfaces the ApiError message in the banner', async () => {
+  it('OFX/CSV error from preview surfaces the ApiError message in the banner', async () => {
     const { ApiError } = await import('../../../api/client');
-    uploadMock.mockRejectedValue(new ApiError('doublon détecté', 409, null));
+    previewMock.mockRejectedValue(new ApiError('doublon détecté', 409, null));
     const user = userEvent.setup();
     const { props } = renderForm();
     const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
@@ -172,6 +241,7 @@ describe('UploadForm', () => {
 
     expect(await screen.findByText(/doublon détecté/i)).toBeInTheDocument();
     expect(props.onOfxCsvSuccess).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
   });
 
   it('picking a file calls onFileSelected so the parent can clear stale banners', async () => {

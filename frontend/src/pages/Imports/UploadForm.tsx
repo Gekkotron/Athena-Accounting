@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { apiUpload, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
+import { useImportPreview } from './useImportPreview';
+import { ImportPreviewModal } from './ImportPreviewModal';
+import { runOne } from './run-import';
 
 export function UploadForm({
   accounts,
@@ -46,13 +48,20 @@ export function UploadForm({
   };
 
   const invalidateAll = () => {
-    qc.invalidateQueries({ queryKey: ['imports'] });
-    qc.invalidateQueries({ queryKey: ['transactions'] });
-    qc.invalidateQueries({ queryKey: ['accounts'] });
-    qc.invalidateQueries({ queryKey: ['reports'] });
-    qc.invalidateQueries({ queryKey: ['tri-groups'] });
-    qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+    for (const key of ['imports', 'transactions', 'accounts', 'reports', 'tri-groups', 'transaction-duplicates']) {
+      qc.invalidateQueries({ queryKey: [key] });
+    }
   };
+
+  const previewCtl = useImportPreview({
+    onImported: (r) => onOfxCsvSuccess(r),
+    onError: (msg) => setError(msg),
+    onSuccess: () => {
+      setFiles([]);
+      if (fileRef.current) fileRef.current.value = '';
+    },
+    invalidate: invalidateAll,
+  });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,9 +100,6 @@ export function UploadForm({
       return;
     }
 
-    // Single-file path: preserve the original behavior exactly — PDF
-    // needs_template routes to the wizard, OFX/CSV fires the banner. No batch
-    // summary UI, no aggregation.
     if (files.length === 1) {
       const f = files[0]!;
       setError(null);
@@ -101,8 +107,6 @@ export function UploadForm({
       if (f.name.toLowerCase().endsWith('.pdf')) {
         setBatch({ phase: 'running', current: 1, total: 1, currentName: f.name });
         try {
-          // accountId is guaranteed non-'' here — the top-of-submit guard
-          // rejects any PDF-containing selection when accountId is empty.
           const r = await submitPdf(f, accountId as number);
           if (r.kind === 'imported') {
             invalidateAll();
@@ -119,32 +123,12 @@ export function UploadForm({
         }
         return;
       }
-      // OFX / CSV
-      try {
-        const data = await apiUpload<{
-          filename: string;
-          insertedCount: number;
-          dedupSkipped: number;
-          totalLines: number;
-        }>('/api/imports', f, { query: accountId ? { accountId } : undefined });
-        onOfxCsvSuccess({
-          filename: f.name,
-          inserted: data.insertedCount,
-          skipped: data.dedupSkipped,
-          total: data.totalLines,
-        });
-        invalidateAll();
-        setFiles([]);
-        if (fileRef.current) fileRef.current.value = '';
-      } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Erreur lors de l\'import.');
-      }
+      await previewCtl.start(f, accountId ? (accountId as number) : undefined);
       return;
     }
 
-    // Batch path: process files sequentially. PDFs that need a template are
-    // deferred (surfaced in the summary) rather than opening the wizard mid-
-    // batch — that would strand the remaining files.
+    // Batch: PDFs that need a template are deferred to the summary rather than
+    // opening the wizard mid-loop (that would strand the remaining files).
     setError(null);
     const total = files.length;
     let inserted = 0;
@@ -156,34 +140,15 @@ export function UploadForm({
     for (let i = 0; i < files.length; i++) {
       const f = files[i]!;
       setBatch({ phase: 'running', current: i + 1, total, currentName: f.name });
-      try {
-        if (f.name.toLowerCase().endsWith('.pdf')) {
-          // accountId is guaranteed non-'' here — the top-of-submit guard
-          // rejects any PDF-containing selection when accountId is empty.
-          const r = await submitPdf(f, accountId as number);
-          if (r.kind === 'imported') {
-            imported++;
-            inserted += r.result.insertedCount;
-            skipped += r.result.dedupSkipped;
-          } else {
-            needsTemplate.push(f.name);
-          }
-        } else {
-          const data = await apiUpload<{
-            filename: string;
-            insertedCount: number;
-            dedupSkipped: number;
-            totalLines: number;
-          }>('/api/imports', f, { query: accountId ? { accountId } : undefined });
-          imported++;
-          inserted += data.insertedCount;
-          skipped += data.dedupSkipped;
-        }
-      } catch (err) {
-        errors.push({
-          file: f.name,
-          message: err instanceof Error ? err.message : String(err),
-        });
+      const r = await runOne(f, accountId);
+      if (r.ok) {
+        imported++;
+        inserted += r.inserted;
+        skipped += r.skipped;
+      } else if ('needsTemplate' in r) {
+        needsTemplate.push(f.name);
+      } else {
+        errors.push({ file: f.name, message: r.message });
       }
     }
 
@@ -254,11 +219,7 @@ export function UploadForm({
           </div>
 
           <button className="btn-primary" disabled={(files.length === 0 && !photo) || pending}>
-            {pending
-              ? 'Import…'
-              : files.length > 1
-              ? `Importer ${files.length} fichiers`
-              : 'Importer'}
+            {pending ? 'Import…' : files.length > 1 ? `Importer ${files.length} fichiers` : 'Importer'}
           </button>
         </div>
 
@@ -317,6 +278,15 @@ export function UploadForm({
             Fermer
           </button>
         </div>
+      )}
+
+      {previewCtl.preview && (
+        <ImportPreviewModal
+          preview={previewCtl.preview}
+          onConfirm={previewCtl.confirm}
+          onCancel={previewCtl.cancel}
+          pending={previewCtl.pending}
+        />
       )}
 
       {error && (
