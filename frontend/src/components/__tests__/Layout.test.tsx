@@ -59,6 +59,13 @@ describe('Layout', () => {
     }
   });
 
+  it('renders Budgets hub with Plafonds + Enveloppes children when on /budgets/*', async () => {
+    renderLayout(['/budgets/plafonds']);
+    expect(await screen.findByText('Budgets')).toBeInTheDocument();
+    expect(await screen.findByText('Plafonds')).toBeInTheDocument();
+    expect(await screen.findByText('Enveloppes')).toBeInTheDocument();
+  });
+
   it('exposes the sub-items under Règles as links with the /regles/… href', () => {
     // The Règles hub expands its sub-nav only while the current route is
     // inside it — render on a /regles/* route to exercise that.

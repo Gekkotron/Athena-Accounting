@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Budgets } from '../index';
+import { Plafonds } from '../Plafonds';
 import { api } from '../../../api/client';
 import { withTips } from '../../../test/renderWithProviders';
 
@@ -64,7 +64,7 @@ describe('Budgets page — grouped rendering', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders a child budget row indented under its parent budget row', async () => {
-    render(withProviders(<Budgets />));
+    render(withProviders(<Plafonds />));
     const parent = await screen.findByText('Courses');
     const child = await screen.findByText('Alimentation');
     const parentRow = parent.closest('[data-role="budget-row"]') as HTMLElement;
@@ -130,7 +130,7 @@ describe('Budgets page — totals correction (no double-count)', () => {
       throw new Error(`unexpected url ${url}`);
     });
 
-    render(withProviders(<Budgets />));
+    render(withProviders(<Plafonds />));
     const parent = await screen.findByText('Courses');
     const child = await screen.findByText('Alimentation');
     const parentRow = parent.closest('[data-role="budget-row"]') as HTMLElement;
@@ -198,7 +198,7 @@ describe('Budgets page — end-to-end URL + summary', () => {
       throw new Error(`unexpected url ${url}`);
     });
 
-    render(withProviders(<Budgets />, { initialEntries: ['/?period=yearly&year=2026'] }));
+    render(withProviders(<Plafonds />, { initialEntries: ['/?period=yearly&year=2026'] }));
 
     // Header period label + summary.
     expect(await screen.findByText('2026')).toBeInTheDocument();

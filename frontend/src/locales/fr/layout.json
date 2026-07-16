@@ -28,6 +28,10 @@
         "duplicates": "Doublons",
         "pdfTemplates": "Modèles PDF",
         "backup": "Sauvegarde"
+      },
+      "budgets": {
+        "plafonds": "Plafonds",
+        "enveloppes": "Enveloppes"
       }
     },
     "badge_one": "{{count}} en attente",

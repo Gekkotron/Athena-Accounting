@@ -14,7 +14,7 @@ vi.mock('../../pages/Dashboard', () => ({ Dashboard: () => <div>dashboard-page</
 vi.mock('../../pages/Transactions', () => ({ Transactions: () => <div>transactions-page</div> }));
 vi.mock('../../pages/Rules/Tri', () => ({ Tri: () => <div>tri-page</div> }));
 vi.mock('../../pages/Rules/Categories', () => ({ Categories: () => <div>categories-page</div> }));
-vi.mock('../../pages/Budgets', () => ({ Budgets: () => <div>budgets-page</div> }));
+vi.mock('../../pages/Budgets/Plafonds', () => ({ Plafonds: () => <div>plafonds-page</div> }));
 vi.mock('../../pages/Rules', () => ({ Rules: () => <div>rules-page</div> }));
 vi.mock('../../pages/Accounts', () => ({ Accounts: () => <div>accounts-page</div> }));
 vi.mock('../../pages/Data/Imports', () => ({ Imports: () => <div>imports-page</div> }));
@@ -59,6 +59,7 @@ const cases: Array<[string, string, string]> = [
   ['/regles', '/regles/tri', 'tri-page'],
   ['/comptes/', '/comptes', 'accounts-page'],
   ['/donnees', '/donnees/imports', 'imports-page'],
+  ['/budgets', '/budgets/plafonds', 'plafonds-page'],
 ];
 
 describe.each(cases)('redirect %s → %s', (from, to, marker) => {

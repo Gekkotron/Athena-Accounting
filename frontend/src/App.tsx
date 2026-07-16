@@ -12,7 +12,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Tri } from './pages/Rules/Tri';
 import { Categories } from './pages/Rules/Categories';
-import { Budgets } from './pages/Budgets';
+import { Plafonds } from './pages/Budgets/Plafonds';
 import { Rules } from './pages/Rules';
 import { Accounts } from './pages/Accounts';
 import { Patterns } from './pages/Accounts/Patterns';
@@ -40,6 +40,10 @@ const DONNEES_TABS: HubTab[] = [
   { to: '/donnees/modeles', label: 'Modèles PDF' },
   { to: '/donnees/sauvegarde', label: 'Sauvegarde' },
 ];
+
+function EnveloppesPlaceholder() {
+  return <div className="surface p-6 text-ink-300">Enveloppes — bientôt.</div>;
+}
 
 export default function App() {
   const location = useLocation();
@@ -98,7 +102,9 @@ export default function App() {
         <Route element={<Layout user={user} />}>
           <Route index element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
-          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/budgets" element={<Navigate to="/budgets/plafonds" replace />} />
+          <Route path="/budgets/plafonds" element={<Plafonds />} />
+          <Route path="/budgets/enveloppes" element={<EnveloppesPlaceholder />} />
 
           {/* Règles hub */}
           <Route path="/regles" element={<HubLayout title="Règles" tabs={RULES_TABS} />}>

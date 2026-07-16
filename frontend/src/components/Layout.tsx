@@ -25,7 +25,15 @@ const nav: NavSection[] = [
     items: [
       { to: '/', labelKey: 'nav.items.dashboard', end: true, icon: 'dashboard' },
       { to: '/transactions', labelKey: 'nav.items.transactions', icon: 'transactions' },
-      { to: '/budgets', labelKey: 'nav.items.budgets', icon: 'budgets' },
+      {
+        to: '/budgets',
+        labelKey: 'nav.items.budgets',
+        icon: 'budgets',
+        children: [
+          { to: '/budgets/plafonds', labelKey: 'nav.children.budgets.plafonds' },
+          { to: '/budgets/enveloppes', labelKey: 'nav.children.budgets.enveloppes' },
+        ],
+      },
     ],
   },
   {

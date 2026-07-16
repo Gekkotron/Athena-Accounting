@@ -31,7 +31,7 @@ function mutationErrorMessage(err: unknown): string {
   return err instanceof ApiError ? err.message : MUTATION_ERROR_FALLBACK;
 }
 
-export function Budgets(): JSX.Element {
+export function Plafonds(): JSX.Element {
   const [params, setParams] = useSearchParams();
   const period = (params.get('period') ?? 'monthly') as BudgetPeriod;
   const monthOrYear = params.get(period === 'monthly' ? 'month' : 'year')

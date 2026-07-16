@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Budgets } from '../Budgets';
+import { Plafonds } from '../Budgets/Plafonds';
 import { withTips } from '../../test/renderWithProviders';
 
 const { MockApiError } = vi.hoisted(() => ({
@@ -30,7 +30,7 @@ function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{withTips(<Budgets />)}</MemoryRouter>
+      <MemoryRouter>{withTips(<Plafonds />)}</MemoryRouter>
     </QueryClientProvider>,
   );
 }

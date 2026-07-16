@@ -28,6 +28,10 @@
         "duplicates": "Duplicates",
         "pdfTemplates": "PDF templates",
         "backup": "Backup"
+      },
+      "budgets": {
+        "plafonds": "Caps",
+        "enveloppes": "Envelopes"
       }
     },
     "badge_one": "{{count}} pending",
