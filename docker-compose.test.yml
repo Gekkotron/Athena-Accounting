@@ -14,7 +14,7 @@
 #   docker compose -f docker-compose.test.yml run --rm --build backend-test
 #   docker compose -f docker-compose.test.yml down -v
 # Or the one-command wrapper (auto-teardown): bash backend/scripts/test-db.sh
-# See docs/running-db-tests.md.
+# See docs/contributors/development.md.
 services:
   test-db:
     image: postgres:16-alpine
