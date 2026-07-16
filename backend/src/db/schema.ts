@@ -150,8 +150,8 @@ export const categories = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// category_budgets  —  one recurring spending limit per expense category
-// (migration 0015). Two partial unique indexes (migration 0021) enforce
+// category_budgets  —  Spending-cap mode ("Plafonds"). Envelope-mode data lives in envelope_* tables.
+// One recurring spending limit per expense category (migration 0015). Two partial unique indexes (migration 0021) enforce
 // uniqueness on (user_id, category_id, period) for global budgets
 // (account_id IS NULL) and (user_id, category_id, period, account_id) for
 // per-account budgets.
@@ -187,6 +187,66 @@ export const categoryBudgets = pgTable(
       .on(t.userId, t.categoryId, t.period, t.accountId)
       .where(sql`account_id IS NOT NULL`),
   }),
+);
+
+// ---------------------------------------------------------------------------
+// envelope_assignments  —  per-month allocation per category. Under the
+// envelope model, income is allocated forward one month at a time.
+// ---------------------------------------------------------------------------
+
+export const envelopeAssignments = pgTable(
+  'envelope_assignments',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+    month: date('month').notNull(),
+    amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('envelope_assignments_user_cat_month_uq')
+      .on(t.userId, t.categoryId, t.month),
+    byUserMonth: index('envelope_assignments_user_month_idx')
+      .on(t.userId, t.month),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// envelope_category_settings  —  per-envelope configuration: optional target
+// and overspend policy. Row exists only when user configures something.
+// ---------------------------------------------------------------------------
+
+export const envelopeCategorySettings = pgTable(
+  'envelope_category_settings',
+  {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+    targetAmount: numeric('target_amount', { precision: 14, scale: 2 }),
+    targetDate: date('target_date'),
+    targetKind: text('target_kind'),
+    overspendPolicy: text('overspend_policy').notNull().default('rollover_negative'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.categoryId] }) }),
+);
+
+// ---------------------------------------------------------------------------
+// envelope_month_holds  —  "hold for next month" buffer. A hold on month M
+// deducts from month M's pool and releases into month M+1's pool.
+// ---------------------------------------------------------------------------
+
+export const envelopeMonthHolds = pgTable(
+  'envelope_month_holds',
+  {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    month: date('month').notNull(),
+    amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.month] }) }),
 );
 
 // ---------------------------------------------------------------------------
