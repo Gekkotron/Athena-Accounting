@@ -223,6 +223,14 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
     targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
     targetKind: z.enum(['save_by_date', 'monthly_recurring', 'save_up_to']).nullable().optional(),
     overspendPolicy: z.enum(['rollover_negative', 'reallocate_manual']).optional(),
+  }).superRefine((data, ctx) => {
+    if (data.targetAmount != null && data.targetKind == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'target_kind_required_with_target_amount',
+        path: ['targetKind'],
+      });
+    }
   });
   const SettingsCatIdParam = z.object({ categoryId: z.coerce.number().int().positive() });
 
@@ -360,6 +368,7 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
       .where(and(
         eq(categories.userId, uid),
         eq(categories.kind, 'expense'),
+        eq(transactions.userId, uid),
         lte(transactions.date, sql`(${monthDate}::date + interval '1 month - 1 day')`),
       ))
       .groupBy(transactions.categoryId, sql`date_trunc('month', ${transactions.date})`);
@@ -374,6 +383,7 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
       .where(and(
         eq(categories.userId, uid),
         eq(categories.kind, 'income'),
+        eq(transactions.userId, uid),
         lte(transactions.date, sql`(${monthDate}::date + interval '1 month - 1 day')`),
       ));
 
@@ -439,9 +449,10 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
       .toFixed(2);
 
     const assignedCumul = asgnRows.reduce((sum, a) => sum + Number(a.amount), 0).toFixed(2);
+    const incomeCumulative = Number(incomeAgg?.total ?? 0).toFixed(2);
     const pool = computePool({
       upToMonth: monthDate,
-      incomeCumulative: incomeAgg?.total ?? '0.00',
+      incomeCumulative,
       assignmentCumulative: assignedCumul,
       holdThisMonth: holdThis,
       holdPriorMonth: holdPrev,
@@ -480,7 +491,7 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
     return {
       month: monthYm,
       pool: {
-        incomeCumulative: incomeAgg?.total ?? '0.00',
+        incomeCumulative,
         assignedCumulative: assignedCumul,
         heldFromPriorMonths: pool.heldFromPriorMonths,
         heldForNextMonth: pool.heldForNextMonth,

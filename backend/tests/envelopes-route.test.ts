@@ -210,6 +210,14 @@ describe.skipIf(!RUN)('/api/envelopes/categories', () => {
     expect(r.statusCode).toBe(400);
   });
 
+  it('rejects targetAmount without targetKind', async () => {
+    const r = await app.inject({
+      method: 'PUT', url: `/api/envelopes/categories/${cat}`, headers: { cookie },
+      payload: { targetAmount: '500.00' },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
   it('lists settings for user', async () => {
     const r = await app.inject({
       method: 'GET', url: '/api/envelopes/categories', headers: { cookie },
