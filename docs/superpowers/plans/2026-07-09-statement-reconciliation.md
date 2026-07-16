@@ -763,13 +763,13 @@ git commit -m "feat(mcp): reconcile_statement tool + search_transactions summary
 ### Task 5: Documentation
 
 **Files:**
-- Modify: `docs/mcp.md`
+- Modify: `docs/users/mcp.md`
 
 **Interfaces:** none (docs only).
 
 - [ ] **Step 1: Add a "Reconcile a statement" section**
 
-Append a section to `docs/mcp.md` covering (placeholders only — no real hosts/tokens):
+Append a section to `docs/users/mcp.md` covering (placeholders only — no real hosts/tokens):
 1. **What it does** — read-only; parses a statement PDF via the account's saved Athena import template and reports matched/missing/mismatched/extra; the LLM only relays the backend `summaryText`. It never writes.
 2. **Prerequisite** — the account must already have a working PDF import template (import the statement once in Athena first). If not, the tool returns `needs_template`.
 3. **Usage in LM Studio** — load a tools-capable model; in chat: *"Use reconcile_statement with path /Users/you/statements/april.pdf and accountId 66."* The model calls the tool; you read the summary.
@@ -778,13 +778,13 @@ Append a section to `docs/mcp.md` covering (placeholders only — no real hosts/
 
 - [ ] **Step 2: Verify**
 
-Run: `grep -n "reconcile_statement" docs/mcp.md`
+Run: `grep -n "reconcile_statement" docs/users/mcp.md`
 Expected: the new section references the tool.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/mcp.md
+git add docs/users/mcp.md
 git commit -m "docs(reconcile): document the reconcile_statement tool"
 ```
 

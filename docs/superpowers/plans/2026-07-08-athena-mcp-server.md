@@ -1657,14 +1657,14 @@ git commit -m "feat(mcp): Réglages card to enable MCP and mint/revoke the token
 ### Task 11: Documentation
 
 **Files:**
-- Create: `docs/mcp.md`
+- Create: `docs/users/mcp.md`
 - Modify: `README.md` (add a short "MCP access" subsection under Features)
 
 **Interfaces:** none (docs only).
 
-- [ ] **Step 1: Write `docs/mcp.md`**
+- [ ] **Step 1: Write `docs/users/mcp.md`**
 
-Create `docs/mcp.md` covering, in order (use placeholders only — no real hosts/tokens):
+Create `docs/users/mcp.md` covering, in order (use placeholders only — no real hosts/tokens):
 
 1. **What it is** — a local, stdio MCP server exposing 6 transaction tools; content encrypted end-to-end with the token (AES-256-GCM); no plaintext on the LAN, TLS optional. Ollama is the model backend inside an MCP client, not an MCP client itself.
 2. **Enable it** — Réglages → Accès MCP → toggle on → "Générer un jeton" → copy the token now (shown once).
@@ -1701,18 +1701,18 @@ Under the Features list in `README.md`, add:
 - Optional local Model Context Protocol server: let a local LLM (e.g. Ollama
   via an MCP client) create, update, delete, and search transactions. Content
   is encrypted end-to-end with a per-user token — nothing travels the LAN in
-  plaintext. See [docs/mcp.md](docs/mcp.md).
+  plaintext. See [docs/users/mcp.md](docs/users/mcp.md).
 ```
 
 - [ ] **Step 3: Verify links and build the docs mentally**
 
-Run: `ls docs/mcp.md && grep -n "docs/mcp.md" README.md`
+Run: `ls docs/users/mcp.md && grep -n "docs/users/mcp.md" README.md`
 Expected: file exists; README references it.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/mcp.md README.md
+git add docs/users/mcp.md README.md
 git commit -m "docs(mcp): usage guide and README subsection"
 ```
 
@@ -1725,4 +1725,4 @@ git commit -m "docs(mcp): usage guide and README subsection"
 - [ ] Backend full suite (regression): `cd backend && RUN_DB_TESTS=1 npx vitest run`
 - [ ] MCP package: `cd mcp && npx vitest run && npm run build`
 - [ ] Frontend: `cd frontend && npx vitest run src/pages/__tests__/Settings.mcp.test.tsx src/pages/__tests__/Settings.test.tsx`
-- [ ] Manual smoke test (documented in `docs/mcp.md`): with the backend running, enable MCP + generate a token, set the three env vars, run `node mcp/dist/index.js` under an MCP client, and confirm `list_accounts` and a `create_transaction` succeed end-to-end.
+- [ ] Manual smoke test (documented in `docs/users/mcp.md`): with the backend running, enable MCP + generate a token, set the three env vars, run `node mcp/dist/index.js` under an MCP client, and confirm `list_accounts` and a `create_transaction` succeed end-to-end.

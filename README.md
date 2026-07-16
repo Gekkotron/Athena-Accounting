@@ -74,7 +74,7 @@ bank data never leaves your network.
 - Optional local Model Context Protocol server: let a local LLM (e.g. Ollama
   via an MCP client) create, update, delete, and search transactions. Content
   is encrypted end-to-end with a per-user token — nothing travels the LAN in
-  plaintext. See [docs/mcp.md](docs/mcp.md).
+  plaintext. See [docs/users/mcp.md](docs/users/mcp.md).
 
 ## Stack
 

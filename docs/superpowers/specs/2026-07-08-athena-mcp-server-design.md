@@ -281,11 +281,11 @@ A card on the settings page:
 
 ## Documentation
 
-- `docs/mcp.md`: enable MCP in Réglages, generate a token, set `ATHENA_API_URL`
+- `docs/users/mcp.md`: enable MCP in Réglages, generate a token, set `ATHENA_API_URL`
   + `ATHENA_MCP_USER` + `ATHENA_MCP_TOKEN`, an example MCP-client config
   (mcphost / Claude Desktop JSON) using Ollama, a note that content is
   encrypted app-side (TLS optional), and the LAN-URL note. Placeholders only.
-- README: short "MCP access" subsection linking to `docs/mcp.md`.
+- README: short "MCP access" subsection linking to `docs/users/mcp.md`.
 
 ## Security notes
 
