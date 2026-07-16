@@ -6,6 +6,13 @@
 Self-hosted personal accounting. Local-only, no cloud dependencies, your
 bank data never leaves your network.
 
+## Documentation
+
+Full docs live in [`docs/`](docs/README.md) — split into a user track
+(install, importing, dashboard, security), a contributor track
+(architecture, code map, development, database), and a reference
+bucket (configuration, API, glossary).
+
 ## Features
 
 **Imports** — the core of Athena
