@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useEnvelopeReport, useUpsertAssignment } from '../../../lib/useEnvelopes';
+import { useEnvelopeReport, useUpsertAssignment, useReallocate } from '../../../lib/useEnvelopes';
+import type { EnvelopeReportRow } from '../../../api/types';
 import { PoolCard } from './PoolCard';
 import { EnvelopeRow } from './EnvelopeRow';
 import { AssignmentInput } from './AssignmentInput';
+import { ReallocateModal } from './ReallocateModal';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -26,6 +29,8 @@ export function Enveloppes(): JSX.Element {
 
   const reportQ = useEnvelopeReport(month);
   const upsertAsg = useUpsertAssignment();
+  const reallocate = useReallocate();
+  const [reallocSource, setReallocSource] = useState<EnvelopeReportRow | null>(null);
 
   const rows = reportQ.data?.rows ?? [];
   const pool = reportQ.data?.pool;
@@ -67,11 +72,20 @@ export function Enveloppes(): JSX.Element {
                 }
               />
             }
-            onReallocateClick={() => { /* wired in Task 12 */ }}
+            onReallocateClick={(row) => setReallocSource(row)}
             onSettingsClick={() => { /* wired in Task 14 */ }}
           />
         ))}
       </section>
+
+      <ReallocateModal
+        open={!!reallocSource}
+        source={reallocSource}
+        rows={rows}
+        month={month}
+        onClose={() => setReallocSource(null)}
+        onConfirm={(payload) => { reallocate.mutate(payload); setReallocSource(null); }}
+      />
     </div>
   );
 }
