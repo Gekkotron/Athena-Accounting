@@ -7,9 +7,11 @@ import { DEFAULTS, type Settings as SettingsShape } from '../lib/settings';
 import { RangePicker, type RangeKey } from '../components/RangePicker';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../api/mcp';
+import { useTips } from '../contexts/TipsContext';
 
 export function Settings(): JSX.Element {
   const { settings, isReady, patch, mutation } = useSettings();
+  const { reset: resetTips } = useTips();
   const [confirmReset, setConfirmReset] = useState(false);
   // "Enregistré" flash next to the field that just accepted a PATCH.
   const [flashKey, setFlashKey] = useState<keyof SettingsShape | null>(null);
@@ -187,6 +189,24 @@ export function Settings(): JSX.Element {
         <section className="pt-4 border-t border-ink-800/60">
           <button className="btn-ghost" onClick={() => setConfirmReset(true)}>
             Réinitialiser aux valeurs par défaut
+          </button>
+        </section>
+
+        <section className="pt-4 border-t border-ink-800/60">
+          <div className="label">Aide</div>
+          <p className="text-sm text-ink-400 mt-1 mb-3">
+            Réaffiche la visite guidée et tous les conseils de section masqués.
+          </p>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              if (window.confirm('Réafficher tous les conseils de première visite ?')) {
+                resetTips().catch(() => {});
+              }
+            }}
+          >
+            Rejouer la visite guidée
           </button>
         </section>
       </div>
