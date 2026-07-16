@@ -1,7 +1,6 @@
 ---
 title: For contributors
 sidebar_position: 1
-slug: /contributors
 ---
 
 # For contributors
