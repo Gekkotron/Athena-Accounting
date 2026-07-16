@@ -15,7 +15,6 @@ export function SettingsModal(props: {
       overspendPolicy: OverspendPolicy;
     };
   }) => void;
-  onDeleteTarget: (categoryId: number) => void;
 }): JSX.Element | null {
   const row = props.row;
   const [kind, setKind] = useState<TargetKind | ''>('');
@@ -89,7 +88,15 @@ export function SettingsModal(props: {
         <div className="flex justify-between gap-2">
           {row.target && (
             <button className="btn-ghost text-clay-300"
-                    onClick={() => props.onDeleteTarget(row.categoryId)}>
+                    onClick={() => props.onSave({
+                      categoryId: row.categoryId,
+                      body: {
+                        targetAmount: null,
+                        targetDate: null,
+                        targetKind: null,
+                        overspendPolicy: policy,
+                      },
+                    })}>
               Supprimer l'objectif
             </button>
           )}

@@ -39,6 +39,18 @@ describe('computeCategoryBalances — rollover_negative (default)', () => {
     expect(r.get(1)!.overspent).toBe(true);
     expect(r.get(1)!.absorbedByPool).toBe('0.00');
   });
+
+  it('carries prior-month balance when upToMonth has no activity', () => {
+    const r = computeCategoryBalances(
+      M(2026, 5),
+      [{ categoryId: 1, month: M(2026, 1), amount: '200.00' }],
+      [],
+      [],
+    );
+    expect(r.get(1)!.balance).toBe('200.00');
+    expect(r.get(1)!.overspent).toBe(false);
+    expect(r.get(1)!.absorbedByPool).toBe('0.00');
+  });
 });
 
 describe('computeCategoryBalances — reallocate_manual', () => {
@@ -79,6 +91,18 @@ describe('computeCategoryBalances — reallocate_manual', () => {
     // July carry = 0, August raw = 0 + 50 - 10 = 40
     expect(r.get(1)!.balance).toBe('40.00');
     expect(r.get(1)!.absorbedByPool).toBe('0.00');
+  });
+
+  it('under reallocate_manual, target month with no activity still reports carry from prior months', () => {
+    const r = computeCategoryBalances(
+      M(2026, 5),
+      [{ categoryId: 1, month: M(2026, 1), amount: '150.00' }],
+      [],
+      [{ categoryId: 1, overspendPolicy: 'reallocate_manual' }],
+    );
+    expect(r.get(1)!.balance).toBe('150.00');
+    expect(r.get(1)!.absorbedByPool).toBe('0.00');
+    expect(r.get(1)!.overspent).toBe(false);
   });
 });
 

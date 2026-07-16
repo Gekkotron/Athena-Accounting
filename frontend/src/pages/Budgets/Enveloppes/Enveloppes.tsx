@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold, useUpsertSettings, useDeleteSettings } from '../../../lib/useEnvelopes';
+import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold, useUpsertSettings } from '../../../lib/useEnvelopes';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { PoolCard } from './PoolCard';
 import { EnvelopeRow } from './EnvelopeRow';
@@ -35,7 +35,6 @@ export function Enveloppes(): JSX.Element {
   const reallocate = useReallocate();
   const upsertHold = useUpsertHold();
   const upsertSettings = useUpsertSettings();
-  const deleteSettings = useDeleteSettings();
   const [reallocSource, setReallocSource] = useState<EnvelopeReportRow | null>(null);
   const [holdOpen, setHoldOpen] = useState(false);
   const [settingsRow, setSettingsRow] = useState<EnvelopeReportRow | null>(null);
@@ -124,7 +123,6 @@ export function Enveloppes(): JSX.Element {
         row={settingsRow}
         onClose={() => setSettingsRow(null)}
         onSave={(args) => { upsertSettings.mutate(args); setSettingsRow(null); }}
-        onDeleteTarget={(categoryId) => { deleteSettings.mutate(categoryId); setSettingsRow(null); }}
       />
     </div>
   );

@@ -395,8 +395,8 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
         eq(envelopeMonthHolds.userId, uid),
         sql`${envelopeMonthHolds.month} in (${monthDate}::date, (${monthDate}::date - interval '1 month')::date)`,
       ));
-    const holdThis = holdRows.find((h) => h.month === monthDate)?.amount ?? '0.00';
-    const holdPrev = holdRows.find((h) => h.month !== monthDate)?.amount ?? '0.00';
+    const holdThis = holdRows.find((h) => String(h.month).slice(0, 10) === monthDate)?.amount ?? '0.00';
+    const holdPrev = holdRows.find((h) => String(h.month).slice(0, 10) !== monthDate)?.amount ?? '0.00';
 
     // 5) Settings (target + policy)
     const settingsRows = await db

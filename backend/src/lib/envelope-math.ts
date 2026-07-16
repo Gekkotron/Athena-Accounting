@@ -79,6 +79,15 @@ export function computeCategoryBalances(
       // When we've passed upToMonth (shouldn't happen given filter) stop.
     }
 
+    // If upToMonth itself had no assignment/spend activity, the loop above
+    // never hit the `mk === monthKey(upToMonth)` branch, so
+    // balanceAtUpToMonth would otherwise still be its 0 initialiser —
+    // discarding any carry accumulated from prior months. Propagate it.
+    const targetMk = monthKey(upToMonth);
+    if (!monthsSet.has(targetMk)) {
+      balanceAtUpToMonth = carry;
+    }
+
     // The balance is the raw balance at upToMonth (may be negative).
     // The carry is used internally for envelope logic but not reported.
     // If we processed no months for this cat, balanceAtUpToMonth stays 0.
