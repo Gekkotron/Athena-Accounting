@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { Account, FileImport } from '../../api/types';
 import { formatDateTime } from '../../lib/format';
 import { getAccountName } from '../../lib/accounts';
@@ -10,21 +11,22 @@ export function FileImportsList({
   accounts: Account[];
   onRequestDelete: (fileImport: FileImport) => void;
 }): JSX.Element {
+  const { t } = useTranslation('imports');
   return (
     <section>
-      <div className="section-rule mb-4">Historique</div>
+      <div className="section-rule mb-4">{t('fileImports.sectionTitle')}</div>
       <div className="surface overflow-hidden">
         <div className="table-scroll">
           <table className="w-full text-sm">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
-                <th className="px-4 py-3 label font-normal">Fichier</th>
-                <th className="px-4 py-3 label font-normal">Compte</th>
-                <th className="px-4 py-3 label font-normal">Format</th>
-                <th className="px-4 py-3 label font-normal text-right">Lues</th>
-                <th className="px-4 py-3 label font-normal text-right">Insérées</th>
-                <th className="px-4 py-3 label font-normal text-right">Dédup.</th>
-                <th className="px-4 py-3 label font-normal">Quand</th>
+                <th className="px-4 py-3 label font-normal">{t('fileImports.table.file')}</th>
+                <th className="px-4 py-3 label font-normal">{t('fileImports.table.account')}</th>
+                <th className="px-4 py-3 label font-normal">{t('fileImports.table.format')}</th>
+                <th className="px-4 py-3 label font-normal text-right">{t('fileImports.table.read')}</th>
+                <th className="px-4 py-3 label font-normal text-right">{t('fileImports.table.inserted')}</th>
+                <th className="px-4 py-3 label font-normal text-right">{t('fileImports.table.dedup')}</th>
+                <th className="px-4 py-3 label font-normal">{t('fileImports.table.when')}</th>
                 <th className="px-4 py-3 label font-normal w-8"></th>
               </tr>
             </thead>
@@ -32,7 +34,7 @@ export function FileImportsList({
               {imports.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-ink-500 display-italic">
-                    Aucun import pour l'instant.
+                    {t('fileImports.empty')}
                   </td>
                 </tr>
               ) : (
@@ -47,7 +49,7 @@ export function FileImportsList({
                         <Link
                           to={`/transactions?sourceFileId=${i.id}`}
                           className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline transition"
-                          title="Voir les transactions issues de cet import"
+                          title={t('fileImports.viewTransactionsTitle')}
                         >
                           {i.insertedCount}
                         </Link>
@@ -61,8 +63,8 @@ export function FileImportsList({
                       <button
                         className="text-ink-500 hover:text-clay-300 transition px-1"
                         onClick={() => onRequestDelete(i)}
-                        title="Supprimer cet import et toutes ses transactions"
-                        aria-label="Supprimer l'import"
+                        title={t('fileImports.deleteTitle')}
+                        aria-label={t('fileImports.deleteAriaLabel')}
                       >🗑</button>
                     </td>
                   </tr>

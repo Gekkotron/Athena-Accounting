@@ -1,0 +1,218 @@
+{
+  "errors": {
+    "accountRequiredForPdf": "Compte requis pour un PDF.",
+    "templateCancelled": "Template annulé.",
+    "previewFailed": "Erreur lors de la prévisualisation.",
+    "importFailed": "Erreur lors de l'import."
+  },
+  "uploadForm": {
+    "dropzone": {
+      "label": "Fichier(s) — .ofx · .qfx · .csv · .pdf",
+      "hint": "Glissez un fichier ici ou",
+      "browse": "parcourir"
+    },
+    "chooseFolder": "ou choisir un dossier",
+    "filesSelected_one": "{{count}} fichier sélectionné",
+    "filesSelected_other": "{{count}} fichiers sélectionnés",
+    "accountLabel": "Compte",
+    "photoLabel": "Photo (JPEG, PNG, HEIC)",
+    "submit": {
+      "importing": "Import…",
+      "one": "Importer",
+      "many_one": "Importer {{count}} fichier",
+      "many_other": "Importer {{count}} fichiers"
+    },
+    "errors": {
+      "accountRequiredPhoto": "Veuillez sélectionner un compte pour importer une photo.",
+      "accountRequiredPdf": "Veuillez sélectionner un compte pour importer des PDF.",
+      "photoImportFailed": "Erreur lors de l'import de la photo.",
+      "pdfImportFailed": "Erreur lors de l'import PDF."
+    }
+  },
+  "batchSummary": {
+    "processing": "Traitement…",
+    "filesImported_one": "{{count}} fichier importé",
+    "filesImported_other": "{{count}} fichiers importés",
+    "rowsInserted_one": "{{count}} insérée",
+    "rowsInserted_other": "{{count}} insérées",
+    "rowsSkipped_one": "{{count}} dédupliquée",
+    "rowsSkipped_other": "{{count}} dédupliquées",
+    "needsTemplate_one": "{{count}} PDF nécessite un template — importez-les individuellement : {{names}}",
+    "needsTemplate_other": "{{count}} PDF nécessitent un template — importez-les individuellement : {{names}}",
+    "errorCount": "{{count}} en erreur",
+    "retryAriaLabel": "Réessayer {{name}}",
+    "retry": "Réessayer",
+    "retryAll": "Réessayer tout"
+  },
+  "backup": {
+    "sectionTitle": "Sauvegarde complète",
+    "description": {
+      "exportWord": "Export",
+      "exportText": ": télécharge l'intégralité de vos comptes, catégories, règles et transactions au format JSON (avec dedup_key préservé, donc la réimportation est idempotente).",
+      "importWord": "Import",
+      "importText": ": remplace TOUTES les données par celles du fichier choisi — pratique pour basculer entre instances ou tester un roundtrip."
+    },
+    "export": {
+      "idle": "Exporter (JSON)",
+      "exporting": "Export…",
+      "failedFallback": "export failed"
+    },
+    "import": {
+      "idle": "Importer une sauvegarde…",
+      "pending": "Import en cours…",
+      "invalidFile": "Fichier JSON invalide."
+    },
+    "result": {
+      "header": "Sauvegarde restaurée",
+      "accounts_one": "{{count}} compte",
+      "accounts_other": "{{count}} comptes",
+      "categories_one": "{{count}} catégorie",
+      "categories_other": "{{count}} catégories",
+      "rules_one": "{{count}} règle",
+      "rules_other": "{{count}} règles",
+      "patterns_one": "{{count}} motif",
+      "patterns_other": "{{count}} motifs",
+      "transactions_one": "{{count}} transaction",
+      "transactions_other": "{{count}} transactions",
+      "fileImports_one": "{{count}} import",
+      "fileImports_other": "{{count}} imports",
+      "checkpoints_one": "{{count}} point de contrôle",
+      "checkpoints_other": "{{count}} points de contrôle",
+      "transferRules_one": "{{count}} règle de transfert (héritée)",
+      "transferRules_other": "{{count}} règles de transfert (héritées)"
+    },
+    "confirmDialog": {
+      "title": "Importer cette sauvegarde ?",
+      "descriptionPrefix": "Toutes",
+      "descriptionMiddle": "les données actuelles (comptes, catégories, règles, transactions) seront",
+      "descriptionErased": "effacées",
+      "descriptionSuffix": "puis remplacées par celles du fichier. L'opération est transactionnelle : si elle échoue à mi-chemin, rien n'est appliqué.",
+      "confirmLabel": "Effacer et restaurer"
+    }
+  },
+  "duplicates": {
+    "sectionTitle": "Possibles doublons",
+    "emptyState": "Aucun doublon détecté.",
+    "refresh": {
+      "title": "Recharger la liste des doublons",
+      "ariaLabel": "Rafraîchir la liste des doublons",
+      "idle": "↻ Rafraîchir",
+      "loading": "…"
+    },
+    "description": {
+      "prefix": "Ces transactions partagent compte + date + montant mais ont des libellés différents. Probable doublon entre un import OFX et un import PDF de la même transaction. Vérifiez et supprimez la version en trop via la page",
+      "suffix": "."
+    },
+    "thresholdLabel": "Seuil de similarité des libellés",
+    "thresholdAriaLabel": "Seuil de similarité",
+    "hiddenGroups_one": "{{count}} groupe masqué (labels trop différents)",
+    "hiddenGroups_other": "{{count}} groupes masqués (labels trop différents)",
+    "selectedCount_one": "sélectionnée",
+    "selectedCount_other": "sélectionnées",
+    "clearSelection": "Effacer la sélection",
+    "markNotDuplicate": "✓ Pas un doublon",
+    "markNotDuplicateTitle": "Marquer chaque ligne du groupe comme validée — le groupe ne réapparaîtra que si une nouvelle ligne du même montant/date arrive plus tard.",
+    "table": {
+      "account": "Compte",
+      "date": "Date",
+      "amount": "Montant",
+      "conflictingLabels": "Libellés en conflit",
+      "similarity": "Sim.",
+      "action": "Action"
+    },
+    "similarityTitle": "Similarité minimale des libellés du groupe (Jaccard sur tokens, hors mots-boilerplate).",
+    "selectTransactionAriaLabel": "Sélectionner la transaction #{{id}}",
+    "deleteTransactionTitle": "Supprimer la transaction #{{id}}",
+    "deleteTransactionAriaLabel": "Supprimer cette transaction"
+  },
+  "fileImports": {
+    "sectionTitle": "Historique",
+    "empty": "Aucun import pour l'instant.",
+    "table": {
+      "file": "Fichier",
+      "account": "Compte",
+      "format": "Format",
+      "read": "Lues",
+      "inserted": "Insérées",
+      "dedup": "Dédup.",
+      "when": "Quand"
+    },
+    "viewTransactionsTitle": "Voir les transactions issues de cet import",
+    "deleteTitle": "Supprimer cet import et toutes ses transactions",
+    "deleteAriaLabel": "Supprimer l'import"
+  },
+  "previewModal": {
+    "ariaLabel": "Prévisualiser l'import",
+    "status": {
+      "new": "Nouveau",
+      "duplicate": "Doublon"
+    },
+    "newCount_one": "{{count}} nouvelle",
+    "newCount_other": "{{count}} nouvelles",
+    "duplicateCount_one": "{{count}} dédupliquée",
+    "duplicateCount_other": "{{count}} dédupliquées",
+    "ofTotal": "sur {{count}}",
+    "table": {
+      "date": "Date",
+      "label": "Libellé",
+      "amount": "Montant",
+      "status": "État"
+    },
+    "showAll": "voir tout ({{count}} de plus)",
+    "confirm": "Importer",
+    "confirming": "Import…"
+  },
+  "wizard": {
+    "summary": {
+      "heading": "Dernier import PDF",
+      "linesRead_one": "lue",
+      "linesRead_other": "lues",
+      "inserted_one": "insérée",
+      "inserted_other": "insérées",
+      "skipped_one": "dédupliquée",
+      "skipped_other": "dédupliquées",
+      "skippedRowsSummary_one": "{{count}} ligne ignorée",
+      "skippedRowsSummary_other": "{{count}} lignes ignorées",
+      "importedTransactionsHeading": "Transactions importées",
+      "noTransactions": "Aucune transaction associée à ce fichier — soit c'était un doublon complet, soit toutes les lignes ont été ignorées.",
+      "table": {
+        "date": "Date",
+        "label": "Libellé",
+        "amount": "Montant"
+      },
+      "dedupedHeading": "Transactions lues mais dédupliquées",
+      "dedupedHint": "Ces lignes existaient déjà dans la base (compte + date + montant + libellé identiques). Aucune ligne n'a été insérée pour elles."
+    }
+  },
+  "templates": {
+    "sectionTitle": "Templates PDF",
+    "emptyState": "Aucun template enregistré. Ils sont créés automatiquement à la fin de l'assistant après votre premier import PDF d'une nouvelle banque.",
+    "description": "Un template décrit la mise en page d'une banque (zones du tableau, colonnes, pages du compte). Il est réutilisé automatiquement pour tous les prochains PDF de la même banque + compte.",
+    "legacyWarning_one": "{{count}} template utilise le filtrage par numéros de page absolus.",
+    "legacyWarning_other": "{{count}} templates utilisent le filtrage par numéros de page absolus.",
+    "legacyWarningSuffix": "Si un futur relevé contient plus de pages que l'exemple d'origine, des transactions peuvent être ignorées. Supprimez le template puis réimportez le PDF pour passer au filtrage par contenu.",
+    "table": {
+      "label": "Libellé",
+      "account": "Compte",
+      "pageFilter": "Filtre pages",
+      "origin": "Origine",
+      "updated": "Mis à jour",
+      "action": "Action"
+    },
+    "matchLabel": "match : ",
+    "matchTooltip": "Ligne exigée sur chaque page appartenant à ce compte",
+    "cutLabel": "coupe : ",
+    "cutTooltip": "Marqueurs d'autres comptes — les lignes en dessous sont ignorées",
+    "byContent": "Par contenu",
+    "byContentTitle": "Filtrage basé sur le contenu (marqueur automatique)",
+    "byPageNumber": "Par numéro (ancien)",
+    "byPageNumberTitle": "Filtrage par numéros de page absolus — recréez le template pour passer au filtrage par contenu",
+    "originInteractive": "Assistant",
+    "originHeuristic": "Heuristique",
+    "deleteDialog": {
+      "title": "Supprimer ce template ?",
+      "descriptionPrefix": "Le template",
+      "descriptionSuffix": "sera supprimé. Le prochain import PDF avec la même empreinte de banque relancera l'assistant. Les transactions déjà importées ne sont pas affectées."
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -20,6 +21,7 @@ interface BackupResult {
 }
 
 export function BackupPanel(): JSX.Element {
+  const { t } = useTranslation('imports');
   const qc = useQueryClient();
   const backupFileRef = useRef<HTMLInputElement>(null);
 
@@ -51,7 +53,7 @@ export function BackupPanel(): JSX.Element {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setBackupError(err instanceof Error ? err.message : 'export failed');
+      setBackupError(err instanceof Error ? err.message : t('backup.export.failedFallback'));
     } finally {
       setExporting(false);
     }
@@ -78,7 +80,7 @@ export function BackupPanel(): JSX.Element {
       const text = await f.text();
       json = JSON.parse(text);
     } catch {
-      setBackupError('Fichier JSON invalide.');
+      setBackupError(t('backup.import.invalidFile'));
       if (backupFileRef.current) backupFileRef.current.value = '';
       return;
     }
@@ -94,15 +96,13 @@ export function BackupPanel(): JSX.Element {
     <>
       {/* Backup section — export everything as JSON, or restore from one. */}
       <section>
-        <div className="section-rule mb-4">Sauvegarde complète</div>
+        <div className="section-rule mb-4">{t('backup.sectionTitle')}</div>
         <div className="surface p-5 md:p-6 flex flex-col gap-4">
           <p className="text-sm text-ink-400 max-w-2xl">
-            <span className="display-italic">Export</span> : télécharge l'intégralité de vos comptes,
-            catégories, règles et transactions au format JSON (avec dedup_key préservé, donc
-            la réimportation est idempotente).{' '}
-            <span className="display-italic">Import</span> : remplace TOUTES les données par
-            celles du fichier choisi — pratique pour basculer entre instances ou tester un
-            roundtrip.
+            <span className="display-italic">{t('backup.description.exportWord')}</span>{' '}
+            {t('backup.description.exportText')}{' '}
+            <span className="display-italic">{t('backup.description.importWord')}</span>{' '}
+            {t('backup.description.importText')}
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -111,11 +111,11 @@ export function BackupPanel(): JSX.Element {
               onClick={exportBackup}
               disabled={exporting}
             >
-              {exporting ? 'Export…' : 'Exporter (JSON)'}
+              {exporting ? t('backup.export.exporting') : t('backup.export.idle')}
             </button>
 
             <label className="btn-secondary cursor-pointer">
-              {importBackupMut.isPending ? 'Import en cours…' : 'Importer une sauvegarde…'}
+              {importBackupMut.isPending ? t('backup.import.pending') : t('backup.import.idle')}
               <input
                 ref={backupFileRef}
                 type="file"
@@ -135,20 +135,21 @@ export function BackupPanel(): JSX.Element {
 
           {backupResult && (
             <div className="rounded-lg border border-sage-800/50 bg-sage-900/15 px-4 py-3 text-sm">
-              <div className="text-sage-200 font-medium mb-1">Sauvegarde restaurée</div>
+              <div className="text-sage-200 font-medium mb-1">{t('backup.result.header')}</div>
               <div className="text-ink-300 font-mono text-xs leading-relaxed">
-                {backupResult.imported.accounts} compte(s) · {backupResult.imported.categories} catégorie(s) ·{' '}
-                {backupResult.imported.rules} règle(s) ·{' '}
-                {backupResult.imported.accountFilenamePatterns} motif(s) ·{' '}
-                {backupResult.imported.transactions} transaction(s)
+                {t('backup.result.accounts', { count: backupResult.imported.accounts })} ·{' '}
+                {t('backup.result.categories', { count: backupResult.imported.categories })} ·{' '}
+                {t('backup.result.rules', { count: backupResult.imported.rules })} ·{' '}
+                {t('backup.result.patterns', { count: backupResult.imported.accountFilenamePatterns })} ·{' '}
+                {t('backup.result.transactions', { count: backupResult.imported.transactions })}
                 {backupResult.imported.fileImports !== undefined && (
-                  <> · {backupResult.imported.fileImports} import(s)</>
+                  <> · {t('backup.result.fileImports', { count: backupResult.imported.fileImports })}</>
                 )}
                 {backupResult.imported.balanceCheckpoints !== undefined && (
-                  <> · {backupResult.imported.balanceCheckpoints} point(s) de contrôle</>
+                  <> · {t('backup.result.checkpoints', { count: backupResult.imported.balanceCheckpoints })}</>
                 )}
                 {backupResult.imported.transferRules > 0 && (
-                  <> · {backupResult.imported.transferRules} règle(s) de transfert (héritées)</>
+                  <> · {t('backup.result.transferRules', { count: backupResult.imported.transferRules })}</>
                 )}
               </div>
             </div>
@@ -158,16 +159,15 @@ export function BackupPanel(): JSX.Element {
 
       <ConfirmDialog
         open={!!pendingImport}
-        title="Importer cette sauvegarde ?"
+        title={t('backup.confirmDialog.title')}
         description={
           <>
-            <span className="display-italic">Toutes</span> les données actuelles (comptes,
-            catégories, règles, transactions) seront <span className="display-italic">effacées</span>
-            {' '}puis remplacées par celles du fichier. L'opération est transactionnelle :
-            si elle échoue à mi-chemin, rien n'est appliqué.
+            <span className="display-italic">{t('backup.confirmDialog.descriptionPrefix')}</span>{' '}
+            {t('backup.confirmDialog.descriptionMiddle')} <span className="display-italic">{t('backup.confirmDialog.descriptionErased')}</span>
+            {' '}{t('backup.confirmDialog.descriptionSuffix')}
           </>
         }
-        confirmLabel="Effacer et restaurer"
+        confirmLabel={t('backup.confirmDialog.confirmLabel')}
         destructive
         busy={importBackupMut.isPending}
         error={backupError}

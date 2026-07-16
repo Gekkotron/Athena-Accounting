@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Account } from '../../api/types';
 import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
@@ -25,6 +26,7 @@ export function UploadForm({
   onOfxCsvSuccess: (result: any) => void;
   onFileSelected: () => void;
 }): JSX.Element {
+  const { t } = useTranslation('imports');
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -86,7 +88,7 @@ export function UploadForm({
     // drive one request.
     if (photo) {
       if (accountId === '') {
-        setError('Veuillez sélectionner un compte pour importer une photo.');
+        setError(t('uploadForm.errors.accountRequiredPhoto'));
         return;
       }
       setError(null);
@@ -102,7 +104,7 @@ export function UploadForm({
         setPhoto(null);
         if (photoRef.current) photoRef.current.value = '';
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur lors de l\'import de la photo.');
+        setError(err instanceof Error ? err.message : t('uploadForm.errors.photoImportFailed'));
       }
       return;
     }
@@ -111,7 +113,7 @@ export function UploadForm({
 
     const hasAnyPdf = files.some((f) => f.name.toLowerCase().endsWith('.pdf'));
     if (hasAnyPdf && accountId === '') {
-      setError('Veuillez sélectionner un compte pour importer des PDF.');
+      setError(t('uploadForm.errors.accountRequiredPdf'));
       return;
     }
 
@@ -132,7 +134,7 @@ export function UploadForm({
             onPdfNeedsTemplate(r);
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'Erreur lors de l\'import PDF.');
+          setError(err instanceof Error ? err.message : t('uploadForm.errors.pdfImportFailed'));
         } finally {
           setBatch(null);
         }
@@ -155,7 +157,7 @@ export function UploadForm({
     for (let i = 0; i < files.length; i++) {
       const f = files[i]!;
       setBatch({ phase: 'running', current: i + 1, total, currentName: f.name });
-      const r = await runOne(f, accountId);
+      const r = await runOne(f, accountId, t);
       if (r.ok) {
         imported++;
         inserted += r.inserted;
@@ -192,9 +194,9 @@ export function UploadForm({
             className={`flex flex-col gap-1.5 flex-1 min-w-0 rounded-lg border-2 border-dashed p-3 transition ${dragOver ? 'border-sage-400 bg-sage-900/10' : 'border-ink-800/60'}`}
           >
             <label className="label">
-              Fichier(s) — .ofx · .qfx · .csv · .pdf
+              {t('uploadForm.dropzone.label')}
               <span className="ml-2 text-[10px] font-normal text-ink-500">
-                Glissez un fichier ici ou <span className="underline">parcourir</span>
+                {t('uploadForm.dropzone.hint')} <span className="underline">{t('uploadForm.dropzone.browse')}</span>
               </span>
             </label>
             <input
@@ -224,21 +226,21 @@ export function UploadForm({
                 disabled={pending}
                 onClick={() => folderRef.current?.click()}
               >
-                ou choisir un dossier
+                {t('uploadForm.chooseFolder')}
               </button>
               {files.length > 1 && (
                 <span className="font-mono text-ink-400">
-                  {files.length} fichiers sélectionnés
+                  {t('uploadForm.filesSelected', { count: files.length })}
                 </span>
               )}
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5 w-full md:w-60">
-            <label className="label">Compte</label>
+            <label className="label">{t('uploadForm.accountLabel')}</label>
             <select
               className="input"
-              aria-label="Compte"
+              aria-label={t('uploadForm.accountLabel')}
               value={accountId}
               onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
               disabled={pending}
@@ -251,12 +253,16 @@ export function UploadForm({
           </div>
 
           <button className="btn-primary" disabled={(files.length === 0 && !photo) || pending}>
-            {pending ? 'Import…' : files.length > 1 ? `Importer ${files.length} fichiers` : 'Importer'}
+            {pending
+              ? t('uploadForm.submit.importing')
+              : files.length > 1
+                ? t('uploadForm.submit.many', { count: files.length })
+                : t('uploadForm.submit.one')}
           </button>
         </div>
 
         <div className="flex flex-col gap-1.5 mt-4 pt-4 border-t border-ink-800/60">
-          <label htmlFor="photo-input" className="label">Photo (JPEG, PNG, HEIC)</label>
+          <label htmlFor="photo-input" className="label">{t('uploadForm.photoLabel')}</label>
           <input
             id="photo-input"
             ref={photoRef}

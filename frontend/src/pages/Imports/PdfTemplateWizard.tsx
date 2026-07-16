@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { PdfImportNeedsTemplate, PdfImportImported } from '../../api/pdf-templates';
 import type { Transaction } from '../../api/types';
@@ -37,6 +38,7 @@ export function PdfTemplateWizard({
 }
 
 function ImportSummary({ lastImported }: { lastImported: PdfImportImported }) {
+  const { t } = useTranslation(['imports', 'common']);
   const sourceFileId = lastImported.result.fileImportId;
 
   // Pull every transaction inserted from this specific file_import row so the
@@ -58,25 +60,25 @@ function ImportSummary({ lastImported }: { lastImported: PdfImportImported }) {
 
   return (
     <div className="surface p-5">
-      <div className="label mb-2">Dernier import PDF</div>
+      <div className="label mb-2">{t('wizard.summary.heading', { ns: 'imports' })}</div>
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div>
           <span className="display text-2xl text-ink-100">{lastImported.result.totalLines}</span>
-          <span className="text-ink-500 ml-2">lue{lastImported.result.totalLines !== 1 ? 's' : ''}</span>
+          <span className="text-ink-500 ml-2">{t('wizard.summary.linesRead', { ns: 'imports', count: lastImported.result.totalLines })}</span>
         </div>
         <div>
           <span className="display text-2xl text-sage-300">{lastImported.result.insertedCount}</span>
-          <span className="text-ink-500 ml-2">insérée{lastImported.result.insertedCount !== 1 ? 's' : ''}</span>
+          <span className="text-ink-500 ml-2">{t('wizard.summary.inserted', { ns: 'imports', count: lastImported.result.insertedCount })}</span>
         </div>
         <div>
           <span className="display text-2xl text-ink-400">{lastImported.result.dedupSkipped}</span>
-          <span className="text-ink-500 ml-2">dédupliquée{lastImported.result.dedupSkipped !== 1 ? 's' : ''}</span>
+          <span className="text-ink-500 ml-2">{t('wizard.summary.skipped', { ns: 'imports', count: lastImported.result.dedupSkipped })}</span>
         </div>
       </div>
 
       {lastImported.skippedRows.length > 0 && (
         <details className="mt-3 text-sm text-ink-400">
-          <summary className="cursor-pointer">{lastImported.skippedRows.length} ligne(s) ignorée(s)</summary>
+          <summary className="cursor-pointer">{t('wizard.summary.skippedRowsSummary', { ns: 'imports', count: lastImported.skippedRows.length })}</summary>
           <ul className="mt-2 space-y-1 font-mono text-xs">
             {lastImported.skippedRows.map((s, i) => (
               <li key={i}><code>{s.rowText}</code> — {s.reason}</li>
@@ -87,38 +89,38 @@ function ImportSummary({ lastImported }: { lastImported: PdfImportImported }) {
 
       <div className="mt-4 pt-4 border-t border-ink-800/60">
         <div className="text-sm text-ink-100 font-medium mb-2">
-          Transactions importées{' '}
+          {t('wizard.summary.importedTransactionsHeading', { ns: 'imports' })}{' '}
           <span className="text-ink-500 font-normal font-mono">
             ({rows.length})
           </span>
         </div>
         {txQ.isLoading ? (
-          <div className="text-xs text-ink-500 display-italic">Chargement…</div>
+          <div className="text-xs text-ink-500 display-italic">{t('loading', { ns: 'common' })}</div>
         ) : rows.length === 0 ? (
           <div className="text-xs text-ink-500 display-italic">
-            Aucune transaction associée à ce fichier — soit c'était un doublon complet, soit toutes les lignes ont été ignorées.
+            {t('wizard.summary.noTransactions', { ns: 'imports' })}
           </div>
         ) : (
           <div className="max-h-72 overflow-y-auto pr-1">
             <table className="w-full text-xs">
               <thead className="text-left text-ink-500">
                 <tr>
-                  <th className="py-1.5 pr-3 font-normal">Date</th>
-                  <th className="py-1.5 pr-3 font-normal">Libellé</th>
-                  <th className="py-1.5 pl-3 font-normal text-right">Montant</th>
+                  <th className="py-1.5 pr-3 font-normal">{t('wizard.summary.table.date', { ns: 'imports' })}</th>
+                  <th className="py-1.5 pr-3 font-normal">{t('wizard.summary.table.label', { ns: 'imports' })}</th>
+                  <th className="py-1.5 pl-3 font-normal text-right">{t('wizard.summary.table.amount', { ns: 'imports' })}</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((t) => (
-                  <tr key={t.id} className="border-t border-ink-800/40">
+                {rows.map((tx) => (
+                  <tr key={tx.id} className="border-t border-ink-800/40">
                     <td className="py-1.5 pr-3 font-mono text-ink-300 whitespace-nowrap">
-                      {formatDate(t.date)}
+                      {formatDate(tx.date)}
                     </td>
                     <td className="py-1.5 pr-3 text-ink-100">
-                      <div className="truncate max-w-[26rem]" title={t.rawLabel}>{t.rawLabel}</div>
+                      <div className="truncate max-w-[26rem]" title={tx.rawLabel}>{tx.rawLabel}</div>
                     </td>
-                    <td className={`py-1.5 pl-3 text-right font-mono tabular-nums whitespace-nowrap ${amountSignClass(t.amount)}`}>
-                      {formatAmount(t.amount)}
+                    <td className={`py-1.5 pl-3 text-right font-mono tabular-nums whitespace-nowrap ${amountSignClass(tx.amount)}`}>
+                      {formatAmount(tx.amount)}
                     </td>
                   </tr>
                 ))}
@@ -131,22 +133,21 @@ function ImportSummary({ lastImported }: { lastImported: PdfImportImported }) {
       {lastImported.result.dedupSkippedRows && lastImported.result.dedupSkippedRows.length > 0 && (
         <div className="mt-4 pt-4 border-t border-ink-800/60">
           <div className="text-sm text-ink-100 font-medium mb-2">
-            Transactions lues mais dédupliquées{' '}
+            {t('wizard.summary.dedupedHeading', { ns: 'imports' })}{' '}
             <span className="text-ink-500 font-normal font-mono">
               ({lastImported.result.dedupSkippedRows.length})
             </span>
           </div>
           <p className="text-xs text-ink-500 mb-2">
-            Ces lignes existaient déjà dans la base (compte + date + montant + libellé identiques).
-            Aucune ligne n'a été insérée pour elles.
+            {t('wizard.summary.dedupedHint', { ns: 'imports' })}
           </p>
           <div className="max-h-72 overflow-y-auto pr-1">
             <table className="w-full text-xs">
               <thead className="text-left text-ink-500">
                 <tr>
-                  <th className="py-1.5 pr-3 font-normal">Date</th>
-                  <th className="py-1.5 pr-3 font-normal">Libellé</th>
-                  <th className="py-1.5 pl-3 font-normal text-right">Montant</th>
+                  <th className="py-1.5 pr-3 font-normal">{t('wizard.summary.table.date', { ns: 'imports' })}</th>
+                  <th className="py-1.5 pr-3 font-normal">{t('wizard.summary.table.label', { ns: 'imports' })}</th>
+                  <th className="py-1.5 pl-3 font-normal text-right">{t('wizard.summary.table.amount', { ns: 'imports' })}</th>
                 </tr>
               </thead>
               <tbody>

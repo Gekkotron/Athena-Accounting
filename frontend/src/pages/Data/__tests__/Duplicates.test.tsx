@@ -1,11 +1,22 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Duplicates } from '../Duplicates';
+import i18n from '../../../i18n';
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
   return { ...actual, api: vi.fn().mockResolvedValue({ groups: [] }) };
+});
+
+// DuplicatesPanel (rendered by this route) uses useTranslation for the
+// 'imports'/'common'/'transactions' namespaces. Preload them for both
+// locales so it never suspends mid-render, then pin the active language to
+// French so the existing French-literal assertion below keeps matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['imports', 'common', 'transactions']);
 });
 
 describe('Duplicates route', () => {

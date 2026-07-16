@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ImportPreview, ImportPreviewRow } from '../../api/imports';
 
 const COLLAPSE_LIMIT = 100;
 
-type Tagged = ImportPreviewRow & { status: 'Nouveau' | 'Doublon' };
+type Tagged = ImportPreviewRow & { status: 'new' | 'duplicate' };
 
 function formatAmount(amount: string): string {
   const n = Number(amount);
@@ -22,11 +23,12 @@ export function ImportPreviewModal({
   onCancel: () => void;
   pending?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation(['imports', 'common']);
   const [expanded, setExpanded] = useState(false);
 
   const rows: Tagged[] = useMemo(() => {
-    const n: Tagged[] = preview.newRows.map((r) => ({ ...r, status: 'Nouveau' as const }));
-    const d: Tagged[] = preview.duplicateRows.map((r) => ({ ...r, status: 'Doublon' as const }));
+    const n: Tagged[] = preview.newRows.map((r) => ({ ...r, status: 'new' as const }));
+    const d: Tagged[] = preview.duplicateRows.map((r) => ({ ...r, status: 'duplicate' as const }));
     return [...n, ...d];
   }, [preview.newRows, preview.duplicateRows]);
 
@@ -37,7 +39,7 @@ export function ImportPreviewModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Prévisualiser l'import"
+      aria-label={t('previewModal.ariaLabel', { ns: 'imports' })}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
     >
       <div className="surface w-full max-w-3xl max-h-[90vh] flex flex-col p-5 md:p-6">
@@ -45,14 +47,14 @@ export function ImportPreviewModal({
           <div className="font-mono text-sm text-ink-100 truncate">{preview.filename}</div>
           <div className="mt-2 text-sm text-ink-300">
             <span className="font-mono text-sage-300">
-              {`${preview.newRows.length} nouvelle${preview.newRows.length > 1 ? 's' : ''}`}
+              {t('previewModal.newCount', { ns: 'imports', count: preview.newRows.length })}
             </span>
             {' · '}
             <span className="font-mono text-ink-400">
-              {`${preview.duplicateRows.length} dédupliquée${preview.duplicateRows.length > 1 ? 's' : ''}`}
+              {t('previewModal.duplicateCount', { ns: 'imports', count: preview.duplicateRows.length })}
             </span>
             {' '}
-            <span className="text-ink-500">{`sur ${preview.totalRows}`}</span>
+            <span className="text-ink-500">{t('previewModal.ofTotal', { ns: 'imports', count: preview.totalRows })}</span>
           </div>
         </div>
 
@@ -60,24 +62,26 @@ export function ImportPreviewModal({
           <table className="w-full text-sm">
             <thead className="text-[11px] uppercase tracking-wide text-ink-500 bg-ink-900/50 sticky top-0">
               <tr>
-                <th className="text-left px-3 py-2">Date</th>
-                <th className="text-left px-3 py-2">Libellé</th>
-                <th className="text-right px-3 py-2">Montant</th>
-                <th className="text-left px-3 py-2">État</th>
+                <th className="text-left px-3 py-2">{t('previewModal.table.date', { ns: 'imports' })}</th>
+                <th className="text-left px-3 py-2">{t('previewModal.table.label', { ns: 'imports' })}</th>
+                <th className="text-right px-3 py-2">{t('previewModal.table.amount', { ns: 'imports' })}</th>
+                <th className="text-left px-3 py-2">{t('previewModal.table.status', { ns: 'imports' })}</th>
               </tr>
             </thead>
             <tbody>
               {shown.map((r, i) => (
                 <tr
                   key={`${r.date}-${r.rawLabel}-${i}`}
-                  className={r.status === 'Doublon' ? 'text-ink-500' : 'text-ink-200'}
+                  className={r.status === 'duplicate' ? 'text-ink-500' : 'text-ink-200'}
                 >
                   <td className="px-3 py-1.5 font-mono">{r.date}</td>
                   <td className="px-3 py-1.5">{r.rawLabel}</td>
                   <td className="px-3 py-1.5 text-right font-mono">{formatAmount(r.amount)}</td>
                   <td className="px-3 py-1.5">
-                    <span className={r.status === 'Nouveau' ? 'text-sage-300' : 'text-ink-500'}>
-                      {r.status}
+                    <span className={r.status === 'new' ? 'text-sage-300' : 'text-ink-500'}>
+                      {r.status === 'new'
+                        ? t('previewModal.status.new', { ns: 'imports' })
+                        : t('previewModal.status.duplicate', { ns: 'imports' })}
                     </span>
                   </td>
                 </tr>
@@ -92,7 +96,7 @@ export function ImportPreviewModal({
             onClick={() => setExpanded(true)}
             className="mt-2 text-[11px] text-ink-500 hover:text-ink-100 transition self-start"
           >
-            voir tout ({hidden} de plus)
+            {t('previewModal.showAll', { ns: 'imports', count: hidden })}
           </button>
         )}
 
@@ -103,7 +107,7 @@ export function ImportPreviewModal({
             onClick={onCancel}
             disabled={pending}
           >
-            Annuler
+            {t('cancel', { ns: 'common' })}
           </button>
           <button
             type="button"
@@ -111,7 +115,7 @@ export function ImportPreviewModal({
             onClick={onConfirm}
             disabled={pending}
           >
-            {pending ? 'Import…' : 'Importer'}
+            {pending ? t('previewModal.confirming', { ns: 'imports' }) : t('previewModal.confirm', { ns: 'imports' })}
           </button>
         </div>
       </div>

@@ -1,0 +1,218 @@
+{
+  "errors": {
+    "accountRequiredForPdf": "Account required for a PDF.",
+    "templateCancelled": "Template cancelled.",
+    "previewFailed": "Error while generating the preview.",
+    "importFailed": "Error during import."
+  },
+  "uploadForm": {
+    "dropzone": {
+      "label": "File(s) — .ofx · .qfx · .csv · .pdf",
+      "hint": "Drop a file here or",
+      "browse": "browse"
+    },
+    "chooseFolder": "or choose a folder",
+    "filesSelected_one": "{{count}} file selected",
+    "filesSelected_other": "{{count}} files selected",
+    "accountLabel": "Account",
+    "photoLabel": "Photo (JPEG, PNG, HEIC)",
+    "submit": {
+      "importing": "Import…",
+      "one": "Import",
+      "many_one": "Import {{count}} file",
+      "many_other": "Import {{count}} files"
+    },
+    "errors": {
+      "accountRequiredPhoto": "Please select an account to import a photo.",
+      "accountRequiredPdf": "Please select an account to import PDFs.",
+      "photoImportFailed": "Error while importing the photo.",
+      "pdfImportFailed": "Error while importing the PDF."
+    }
+  },
+  "batchSummary": {
+    "processing": "Processing…",
+    "filesImported_one": "{{count}} file imported",
+    "filesImported_other": "{{count}} files imported",
+    "rowsInserted_one": "{{count}} inserted",
+    "rowsInserted_other": "{{count}} inserted",
+    "rowsSkipped_one": "{{count}} duplicate",
+    "rowsSkipped_other": "{{count}} duplicates",
+    "needsTemplate_one": "{{count}} PDF needs a template — import it individually: {{names}}",
+    "needsTemplate_other": "{{count}} PDFs need a template — import them individually: {{names}}",
+    "errorCount": "{{count}} failed",
+    "retryAriaLabel": "Retry {{name}}",
+    "retry": "Retry",
+    "retryAll": "Retry all"
+  },
+  "backup": {
+    "sectionTitle": "Full backup",
+    "description": {
+      "exportWord": "Export",
+      "exportText": ": downloads all of your accounts, categories, rules and transactions as JSON (with dedup_key preserved, so re-importing it is idempotent).",
+      "importWord": "Import",
+      "importText": ": replaces ALL data with the contents of the chosen file — handy for switching between instances or testing a roundtrip."
+    },
+    "export": {
+      "idle": "Export (JSON)",
+      "exporting": "Export…",
+      "failedFallback": "export failed"
+    },
+    "import": {
+      "idle": "Import a backup…",
+      "pending": "Import in progress…",
+      "invalidFile": "Invalid JSON file."
+    },
+    "result": {
+      "header": "Backup restored",
+      "accounts_one": "{{count}} account",
+      "accounts_other": "{{count}} accounts",
+      "categories_one": "{{count}} category",
+      "categories_other": "{{count}} categories",
+      "rules_one": "{{count}} rule",
+      "rules_other": "{{count}} rules",
+      "patterns_one": "{{count}} pattern",
+      "patterns_other": "{{count}} patterns",
+      "transactions_one": "{{count}} transaction",
+      "transactions_other": "{{count}} transactions",
+      "fileImports_one": "{{count}} import",
+      "fileImports_other": "{{count}} imports",
+      "checkpoints_one": "{{count}} checkpoint",
+      "checkpoints_other": "{{count}} checkpoints",
+      "transferRules_one": "{{count}} legacy transfer rule",
+      "transferRules_other": "{{count}} legacy transfer rules"
+    },
+    "confirmDialog": {
+      "title": "Import this backup?",
+      "descriptionPrefix": "ALL",
+      "descriptionMiddle": "current data (accounts, categories, rules, transactions) will be",
+      "descriptionErased": "erased",
+      "descriptionSuffix": "then replaced with the contents of the file. The operation is transactional: if it fails partway through, nothing is applied.",
+      "confirmLabel": "Erase and restore"
+    }
+  },
+  "duplicates": {
+    "sectionTitle": "Possible duplicates",
+    "emptyState": "No duplicates detected.",
+    "refresh": {
+      "title": "Reload the duplicates list",
+      "ariaLabel": "Refresh the duplicates list",
+      "idle": "↻ Refresh",
+      "loading": "…"
+    },
+    "description": {
+      "prefix": "These transactions share account + date + amount but have different labels. Likely a duplicate between an OFX import and a PDF import of the same transaction. Check and delete the extra one via the",
+      "suffix": "page."
+    },
+    "thresholdLabel": "Label similarity threshold",
+    "thresholdAriaLabel": "Similarity threshold",
+    "hiddenGroups_one": "{{count}} group hidden (labels too different)",
+    "hiddenGroups_other": "{{count}} groups hidden (labels too different)",
+    "selectedCount_one": "selected",
+    "selectedCount_other": "selected",
+    "clearSelection": "Clear selection",
+    "markNotDuplicate": "✓ Not a duplicate",
+    "markNotDuplicateTitle": "Mark every row in the group as validated — the group will only reappear if a new row with the same amount/date shows up later.",
+    "table": {
+      "account": "Account",
+      "date": "Date",
+      "amount": "Amount",
+      "conflictingLabels": "Conflicting labels",
+      "similarity": "Sim.",
+      "action": "Action"
+    },
+    "similarityTitle": "Minimum label similarity of the group (Jaccard on tokens, excluding boilerplate words).",
+    "selectTransactionAriaLabel": "Select transaction #{{id}}",
+    "deleteTransactionTitle": "Delete transaction #{{id}}",
+    "deleteTransactionAriaLabel": "Delete this transaction"
+  },
+  "fileImports": {
+    "sectionTitle": "History",
+    "empty": "No imports yet.",
+    "table": {
+      "file": "File",
+      "account": "Account",
+      "format": "Format",
+      "read": "Read",
+      "inserted": "Inserted",
+      "dedup": "Dedup.",
+      "when": "When"
+    },
+    "viewTransactionsTitle": "View the transactions from this import",
+    "deleteTitle": "Delete this import and all its transactions",
+    "deleteAriaLabel": "Delete the import"
+  },
+  "previewModal": {
+    "ariaLabel": "Preview the import",
+    "status": {
+      "new": "New",
+      "duplicate": "Duplicate"
+    },
+    "newCount_one": "{{count}} new",
+    "newCount_other": "{{count}} new",
+    "duplicateCount_one": "{{count}} duplicate",
+    "duplicateCount_other": "{{count}} duplicates",
+    "ofTotal": "of {{count}}",
+    "table": {
+      "date": "Date",
+      "label": "Label",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "showAll": "see all ({{count}} more)",
+    "confirm": "Import",
+    "confirming": "Import…"
+  },
+  "wizard": {
+    "summary": {
+      "heading": "Last PDF import",
+      "linesRead_one": "read",
+      "linesRead_other": "read",
+      "inserted_one": "inserted",
+      "inserted_other": "inserted",
+      "skipped_one": "deduplicated",
+      "skipped_other": "deduplicated",
+      "skippedRowsSummary_one": "{{count}} row ignored",
+      "skippedRowsSummary_other": "{{count}} rows ignored",
+      "importedTransactionsHeading": "Imported transactions",
+      "noTransactions": "No transaction associated with this file — either it was a complete duplicate, or every row was ignored.",
+      "table": {
+        "date": "Date",
+        "label": "Label",
+        "amount": "Amount"
+      },
+      "dedupedHeading": "Read but deduplicated transactions",
+      "dedupedHint": "These rows already existed in the database (identical account + date + amount + label). No row was inserted for them."
+    }
+  },
+  "templates": {
+    "sectionTitle": "PDF templates",
+    "emptyState": "No template saved yet. Templates are created automatically at the end of the wizard after your first PDF import from a new bank.",
+    "description": "A template describes a bank's layout (table zones, columns, account pages). It's reused automatically for every future PDF from the same bank + account.",
+    "legacyWarning_one": "{{count}} template uses absolute page-number filtering.",
+    "legacyWarning_other": "{{count}} templates use absolute page-number filtering.",
+    "legacyWarningSuffix": "If a future statement has more pages than the original example, transactions may be skipped. Delete the template then re-import the PDF to switch to content-based filtering.",
+    "table": {
+      "label": "Label",
+      "account": "Account",
+      "pageFilter": "Page filter",
+      "origin": "Origin",
+      "updated": "Updated",
+      "action": "Action"
+    },
+    "matchLabel": "match: ",
+    "matchTooltip": "Line required on every page belonging to this account",
+    "cutLabel": "cut: ",
+    "cutTooltip": "Markers of other accounts — the lines below are ignored",
+    "byContent": "By content",
+    "byContentTitle": "Content-based filtering (automatic marker)",
+    "byPageNumber": "By page number (legacy)",
+    "byPageNumberTitle": "Filtering by absolute page numbers — recreate the template to switch to content-based filtering",
+    "originInteractive": "Wizard",
+    "originHeuristic": "Heuristic",
+    "deleteDialog": {
+      "title": "Delete this template?",
+      "descriptionPrefix": "The template",
+      "descriptionSuffix": "will be deleted. The next PDF import with the same bank fingerprint will relaunch the wizard. Already-imported transactions are not affected."
+    }
+  }
+}

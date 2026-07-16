@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
@@ -7,6 +8,7 @@ import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
 
 export function DuplicatesPanel(): JSX.Element {
+  const { t } = useTranslation(['imports', 'common', 'transactions']);
   const qc = useQueryClient();
 
   const accountsQ = useQuery({
@@ -135,7 +137,7 @@ export function DuplicatesPanel(): JSX.Element {
     () =>
       rawGroups.map((g) => ({
         group: g,
-        similarity: groupMinPairwiseSimilarity(g.transactions.map((t) => t.raw_label)),
+        similarity: groupMinPairwiseSimilarity(g.transactions.map((tx) => tx.raw_label)),
       })),
     [rawGroups],
   );
@@ -149,11 +151,11 @@ export function DuplicatesPanel(): JSX.Element {
       type="button"
       onClick={() => dupsQ.refetch()}
       disabled={dupsQ.isFetching}
-      title="Recharger la liste des doublons"
-      aria-label="Rafraîchir la liste des doublons"
+      title={t('duplicates.refresh.title')}
+      aria-label={t('duplicates.refresh.ariaLabel')}
       className="text-[11px] text-ink-400 hover:text-ink-100 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition disabled:opacity-40"
     >
-      {dupsQ.isFetching ? '…' : '↻ Rafraîchir'}
+      {dupsQ.isFetching ? t('duplicates.refresh.loading') : t('duplicates.refresh.idle')}
     </button>
   );
 
@@ -161,11 +163,11 @@ export function DuplicatesPanel(): JSX.Element {
     return (
       <section>
         <div className="flex items-center justify-between mb-4">
-          <div className="section-rule flex-1">Possibles doublons</div>
+          <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
           {refreshButton}
         </div>
         <div className="surface p-5 text-sm text-ink-500 display-italic">
-          Aucun doublon détecté.
+          {t('duplicates.emptyState')}
         </div>
       </section>
     );
@@ -174,18 +176,18 @@ export function DuplicatesPanel(): JSX.Element {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <div className="section-rule flex-1">Possibles doublons</div>
+        <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
         {refreshButton}
       </div>
       <div className="surface p-5">
         <p className="text-sm text-ink-300 mb-3">
-          Ces transactions partagent compte + date + montant mais ont des libellés différents.
-          Probable doublon entre un import OFX et un import PDF de la même transaction. Vérifiez et
-          supprimez la version en trop via la page <span className="display-italic">Transactions</span>.
+          {t('duplicates.description.prefix')}{' '}
+          <span className="display-italic">{t('title', { ns: 'transactions' })}</span>
+          {t('duplicates.description.suffix')}
         </p>
         <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-ink-400">
           <label className="flex items-center gap-2">
-            <span>Seuil de similarité des libellés</span>
+            <span>{t('duplicates.thresholdLabel')}</span>
             <input
               type="range"
               min={0}
@@ -193,41 +195,41 @@ export function DuplicatesPanel(): JSX.Element {
               value={threshold}
               onChange={(e) => setThreshold(Number(e.target.value))}
               className="accent-sage-300 w-40"
-              aria-label="Seuil de similarité"
+              aria-label={t('duplicates.thresholdAriaLabel')}
             />
             <span className="font-mono text-ink-200 w-10">{threshold}%</span>
           </label>
           {hiddenCount > 0 && (
             <span className="text-ink-500 font-mono">
-              {hiddenCount} groupe{hiddenCount > 1 ? 's' : ''} masqué{hiddenCount > 1 ? 's' : ''} (labels trop différents)
+              {t('duplicates.hiddenGroups', { count: hiddenCount })}
             </span>
           )}
         </div>
         {selectedIds.size > 0 && (
           <div className="mb-3 rounded-lg border border-sage-800/40 bg-sage-900/15 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="text-ink-100">
-              <span className="font-mono">{selectedIds.size}</span> sélectionnée{selectedIds.size > 1 ? 's' : ''}
+              <span className="font-mono">{selectedIds.size}</span> {t('duplicates.selectedCount', { count: selectedIds.size })}
             </span>
             <div className="flex items-center gap-2">
               <button
                 className="text-[11px] text-ink-500 hover:text-ink-100 transition"
                 onClick={() => { setSelectedIds(new Set()); setBulkError(null); }}
               >
-                Effacer la sélection
+                {t('duplicates.clearSelection')}
               </button>
               <button
                 className="text-xs text-sage-300 hover:text-sage-200 border border-sage-300/40 hover:border-sage-300 rounded-md px-2 py-1 transition disabled:opacity-40"
                 disabled={bulkMarkNotDupMut.isPending || bulkDeleteMut.isPending}
                 onClick={() => bulkMarkNotDupMut.mutate(Array.from(selectedIds))}
               >
-                ✓ Pas un doublon
+                {t('duplicates.markNotDuplicate')}
               </button>
               <button
                 className="text-xs text-clay-300 hover:text-clay-200 border border-clay-800/60 hover:border-clay-700 rounded-md px-2 py-1 transition disabled:opacity-40"
                 disabled={bulkDeleteMut.isPending || bulkMarkNotDupMut.isPending}
                 onClick={() => bulkDeleteMut.mutate(Array.from(selectedIds))}
               >
-                Supprimer
+                {t('delete', { ns: 'common' })}
               </button>
             </div>
           </div>
@@ -241,12 +243,12 @@ export function DuplicatesPanel(): JSX.Element {
           <table className="w-full text-sm">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
-                <th className="px-4 py-3 label font-normal">Compte</th>
-                <th className="px-4 py-3 label font-normal">Date</th>
-                <th className="px-4 py-3 label font-normal text-right">Montant</th>
-                <th className="px-4 py-3 label font-normal">Libellés en conflit</th>
-                <th className="px-4 py-3 label font-normal text-right w-20">Sim.</th>
-                <th className="px-4 py-3 label font-normal text-right w-44">Action</th>
+                <th className="px-4 py-3 label font-normal">{t('duplicates.table.account')}</th>
+                <th className="px-4 py-3 label font-normal">{t('duplicates.table.date')}</th>
+                <th className="px-4 py-3 label font-normal text-right">{t('duplicates.table.amount')}</th>
+                <th className="px-4 py-3 label font-normal">{t('duplicates.table.conflictingLabels')}</th>
+                <th className="px-4 py-3 label font-normal text-right w-20">{t('duplicates.table.similarity')}</th>
+                <th className="px-4 py-3 label font-normal text-right w-44">{t('duplicates.table.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -259,37 +261,37 @@ export function DuplicatesPanel(): JSX.Element {
                   </td>
                   <td className="px-4 py-2.5">
                     <ul className="space-y-1">
-                      {g.transactions.map((t) => {
-                        const confirming = confirmDeleteTxId === t.id;
+                      {g.transactions.map((tx) => {
+                        const confirming = confirmDeleteTxId === tx.id;
                         return (
-                          <li key={t.id} className="flex items-baseline gap-2">
+                          <li key={tx.id} className="flex items-baseline gap-2">
                             <input
                               type="checkbox"
                               className="accent-sage-300"
-                              checked={selectedIds.has(t.id)}
-                              onChange={(e) => toggleSelect(t.id, e.target.checked)}
-                              aria-label={`Sélectionner la transaction #${t.id}`}
+                              checked={selectedIds.has(tx.id)}
+                              onChange={(e) => toggleSelect(tx.id, e.target.checked)}
+                              aria-label={t('duplicates.selectTransactionAriaLabel', { id: tx.id })}
                             />
-                            <code className="text-xs text-ink-500 min-w-[3.5rem]">#{t.id}</code>
-                            <span className="font-mono text-xs text-ink-100 flex-1">{t.raw_label}</span>
+                            <code className="text-xs text-ink-500 min-w-[3.5rem]">#{tx.id}</code>
+                            <span className="font-mono text-xs text-ink-100 flex-1">{tx.raw_label}</span>
                             {confirming ? (
                               <span className="flex items-center gap-1">
                                 <button
                                   className="px-2 py-0.5 rounded-md bg-clay-300 text-ink-950 text-xs font-medium hover:bg-clay-200 transition disabled:opacity-40"
                                   disabled={deleteTxMut.isPending}
-                                  onClick={() => deleteTxMut.mutate(t.id)}
-                                >{deleteTxMut.isPending ? '…' : 'Supprimer'}</button>
+                                  onClick={() => deleteTxMut.mutate(tx.id)}
+                                >{deleteTxMut.isPending ? '…' : t('delete', { ns: 'common' })}</button>
                                 <button
                                   className="px-2 py-0.5 rounded-md border border-ink-700 text-ink-200 text-xs hover:bg-ink-850 transition"
                                   onClick={() => { setConfirmDeleteTxId(null); setDupDeleteError(null); }}
-                                >Annuler</button>
+                                >{t('cancel', { ns: 'common' })}</button>
                               </span>
                             ) : (
                               <button
                                 className="text-ink-500 hover:text-clay-300 transition px-1"
-                                onClick={() => { setConfirmDeleteTxId(t.id); setDupDeleteError(null); }}
-                                title={`Supprimer la transaction #${t.id}`}
-                                aria-label="Supprimer cette transaction"
+                                onClick={() => { setConfirmDeleteTxId(tx.id); setDupDeleteError(null); }}
+                                title={t('duplicates.deleteTransactionTitle', { id: tx.id })}
+                                aria-label={t('duplicates.deleteTransactionAriaLabel')}
                               >🗑</button>
                             )}
                           </li>
@@ -297,21 +299,21 @@ export function DuplicatesPanel(): JSX.Element {
                       })}
                     </ul>
                     {dupDeleteError && confirmDeleteTxId !== null &&
-                      g.transactions.some((t) => t.id === confirmDeleteTxId) && (
+                      g.transactions.some((tx) => tx.id === confirmDeleteTxId) && (
                         <p className="mt-2 text-xs text-clay-300">{dupDeleteError}</p>
                       )}
                   </td>
-                  <td className="px-4 py-2.5 text-right align-top font-mono text-xs text-ink-400" title="Similarité minimale des libellés du groupe (Jaccard sur tokens, hors mots-boilerplate).">
+                  <td className="px-4 py-2.5 text-right align-top font-mono text-xs text-ink-400" title={t('duplicates.similarityTitle')}>
                     {Math.round(similarity * 100)}%
                   </td>
                   <td className="px-4 py-2.5 text-right align-top">
                     <button
                       className="text-xs text-sage-300 hover:text-sage-200 border border-sage-300/40 hover:border-sage-300 rounded-md px-2 py-1 transition disabled:opacity-40"
                       disabled={markNotDuplicateMut.isPending}
-                      onClick={() => markNotDuplicateMut.mutate(g.transactions.map((t) => t.id))}
-                      title="Marquer chaque ligne du groupe comme validée — le groupe ne réapparaîtra que si une nouvelle ligne du même montant/date arrive plus tard."
+                      onClick={() => markNotDuplicateMut.mutate(g.transactions.map((tx) => tx.id))}
+                      title={t('duplicates.markNotDuplicateTitle')}
                     >
-                      ✓ Pas un doublon
+                      {t('duplicates.markNotDuplicate')}
                     </button>
                   </td>
                 </tr>

@@ -1,6 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useImportPreview } from '../useImportPreview';
+import i18n from '../../../i18n';
+
+// useImportPreview calls useTranslation('imports') for its error-message
+// fallbacks. Preload the namespace for both locales so the hook never
+// suspends, then pin the active language to French so the existing
+// French-literal assertions (if any) keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['imports']);
+});
 
 vi.mock('../../../api/imports', () => ({ previewImport: vi.fn() }));
 vi.mock('../../../api/client', async () => {

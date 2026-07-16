@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Account } from '../../api/types';
@@ -18,6 +19,7 @@ function shortIsoDate(ts: string): string {
 }
 
 export function PdfTemplatesPanel(): JSX.Element {
+  const { t } = useTranslation(['imports', 'common']);
   const qc = useQueryClient();
 
   const accountsQ = useQuery({
@@ -47,7 +49,7 @@ export function PdfTemplatesPanel(): JSX.Element {
   if (templatesQ.isLoading) {
     return (
       <section>
-        <div className="section-rule mb-4">Templates PDF</div>
+        <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
         <div className="surface p-5 h-20 animate-pulse rounded-lg bg-ink-900" />
       </section>
     );
@@ -56,97 +58,90 @@ export function PdfTemplatesPanel(): JSX.Element {
   if (templates.length === 0) {
     return (
       <section>
-        <div className="section-rule mb-4">Templates PDF</div>
+        <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
         <div className="surface p-5 text-sm text-ink-400 display-italic">
-          Aucun template enregistré. Ils sont créés automatiquement à la fin de l'assistant
-          après votre premier import PDF d'une nouvelle banque.
+          {t('templates.emptyState')}
         </div>
       </section>
     );
   }
 
-  const legacyCount = templates.filter((t) => !t.hasPageAnchor).length;
+  const legacyCount = templates.filter((tpl) => !tpl.hasPageAnchor).length;
 
   return (
     <section>
-      <div className="section-rule mb-4">Templates PDF</div>
+      <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
       <div className="surface p-5">
         <p className="text-sm text-ink-300 mb-3">
-          Un template décrit la mise en page d'une banque (zones du tableau, colonnes, pages du
-          compte). Il est réutilisé automatiquement pour tous les prochains PDF de la même
-          banque + compte.
+          {t('templates.description')}
         </p>
         {legacyCount > 0 && (
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/25 px-3 py-2 mb-3 text-sm text-clay-200">
-            {legacyCount === 1
-              ? '1 template utilise le filtrage par numéros de page absolus.'
-              : `${legacyCount} templates utilisent le filtrage par numéros de page absolus.`}{' '}
-            Si un futur relevé contient plus de pages que l'exemple d'origine, des transactions
-            peuvent être ignorées. Supprimez le template puis réimportez le PDF pour passer au
-            filtrage par contenu.
+            {t('templates.legacyWarning', { count: legacyCount })}{' '}
+            {t('templates.legacyWarningSuffix')}
           </div>
         )}
         <div className="table-scroll">
           <table className="w-full text-sm">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
-                <th className="px-3 py-2 label font-normal">Libellé</th>
-                <th className="px-3 py-2 label font-normal">Compte</th>
-                <th className="px-3 py-2 label font-normal">Filtre pages</th>
-                <th className="px-3 py-2 label font-normal">Origine</th>
-                <th className="px-3 py-2 label font-normal whitespace-nowrap">Mis à jour</th>
-                <th className="px-3 py-2 label font-normal text-right w-24">Action</th>
+                <th className="px-3 py-2 label font-normal">{t('templates.table.label')}</th>
+                <th className="px-3 py-2 label font-normal">{t('templates.table.account')}</th>
+                <th className="px-3 py-2 label font-normal">{t('templates.table.pageFilter')}</th>
+                <th className="px-3 py-2 label font-normal">{t('templates.table.origin')}</th>
+                <th className="px-3 py-2 label font-normal whitespace-nowrap">{t('templates.table.updated')}</th>
+                <th className="px-3 py-2 label font-normal text-right w-24">{t('templates.table.action')}</th>
               </tr>
             </thead>
             <tbody>
-              {templates.map((t) => (
-                <tr key={t.id} className="border-b border-ink-800/40 last:border-0 align-top">
+              {templates.map((tpl) => (
+                <tr key={tpl.id} className="border-b border-ink-800/40 last:border-0 align-top">
                   <td className="px-3 py-2 text-ink-100 max-w-[18rem]">
-                    <div className="truncate" title={t.label}>{t.label}</div>
-                    {(t.pageAnchor || t.otherAnchors.length > 0) && (
+                    <div className="truncate" title={tpl.label}>{tpl.label}</div>
+                    {(tpl.pageAnchor || tpl.otherAnchors.length > 0) && (
                       <div className="mt-1 text-[10px] text-ink-500 font-mono leading-relaxed">
-                        {t.pageAnchor && (
-                          <div title="Ligne exigée sur chaque page appartenant à ce compte">
-                            <span className="text-ink-600">match&nbsp;: </span>
-                            <span className="text-ink-300">{t.pageAnchor}</span>
+                        {tpl.pageAnchor && (
+                          <div title={t('templates.matchTooltip')}>
+                            <span className="text-ink-600">{t('templates.matchLabel')}</span>
+                            <span className="text-ink-300">{tpl.pageAnchor}</span>
                           </div>
                         )}
-                        {t.otherAnchors.length > 0 && (
-                          <div title="Marqueurs d'autres comptes — les lignes en dessous sont ignorées">
-                            <span className="text-ink-600">coupe&nbsp;: </span>
-                            <span className="text-ink-300">{t.otherAnchors.join(' · ')}</span>
+                        {tpl.otherAnchors.length > 0 && (
+                          <div title={t('templates.cutTooltip')}>
+                            <span className="text-ink-600">{t('templates.cutLabel')}</span>
+                            <span className="text-ink-300">{tpl.otherAnchors.join(' · ')}</span>
                           </div>
                         )}
                       </div>
                     )}
                   </td>
                   <td className="px-3 py-2 text-ink-300">
-                    {t.accountId !== null ? getAccountName(accounts, t.accountId) : '—'}
+                    {tpl.accountId !== null ? getAccountName(accounts, tpl.accountId) : '—'}
                   </td>
                   <td className="px-3 py-2">
-                    {t.hasPageAnchor ? (
-                      <span className="text-xs text-sage-300" title="Filtrage basé sur le contenu (marqueur automatique)">
-                        Par contenu
+                    {tpl.hasPageAnchor ? (
+                      <span className="text-xs text-sage-300" title={t('templates.byContentTitle')}>
+                        {t('templates.byContent')}
                       </span>
                     ) : (
-                      <span className="text-xs text-clay-300" title="Filtrage par numéros de page absolus — recréez le template pour passer au filtrage par contenu">
-                        Par numéro (ancien)
+                      <span className="text-xs text-clay-300" title={t('templates.byPageNumberTitle')}>
+                        {t('templates.byPageNumber')}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-ink-400 text-xs">
-                    {t.source === 'interactive' ? 'Assistant' : 'Heuristique'}
+                    {tpl.source === 'interactive' ? t('templates.originInteractive') : t('templates.originHeuristic')}
                   </td>
                   <td className="px-3 py-2 text-ink-400 font-mono text-xs whitespace-nowrap">
-                    {shortIsoDate(t.updatedAt)}
+                    {shortIsoDate(tpl.updatedAt)}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <button
                       className="text-xs text-clay-300 hover:text-clay-200 border border-clay-800/60 hover:border-clay-700 rounded-md px-2 py-1 transition disabled:opacity-40"
                       disabled={deleteMut.isPending}
-                      onClick={() => { setPending(t); setDeleteError(null); }}
+                      onClick={() => { setPending(tpl); setDeleteError(null); }}
                     >
-                      Supprimer
+                      {t('delete', { ns: 'common' })}
                     </button>
                   </td>
                 </tr>
@@ -158,17 +153,16 @@ export function PdfTemplatesPanel(): JSX.Element {
 
       <ConfirmDialog
         open={!!pending}
-        title="Supprimer ce template ?"
+        title={t('templates.deleteDialog.title')}
         description={
           pending ? (
             <>
-              Le template <span className="display-italic">{pending.label}</span> sera supprimé.
-              Le prochain import PDF avec la même empreinte de banque relancera l'assistant.
-              Les transactions déjà importées ne sont pas affectées.
+              {t('templates.deleteDialog.descriptionPrefix')} <span className="display-italic">{pending.label}</span>{' '}
+              {t('templates.deleteDialog.descriptionSuffix')}
             </>
           ) : null
         }
-        confirmLabel="Supprimer"
+        confirmLabel={t('delete', { ns: 'common' })}
         destructive
         busy={deleteMut.isPending}
         error={deleteError}

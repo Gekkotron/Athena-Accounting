@@ -1,7 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PdfTemplateWizard } from '../PdfTemplateWizard';
+import i18n from '../../../i18n';
+
+// PdfTemplateWizard's ImportSummary sub-component renders French strings by
+// default (the app's current UI language). Preload the namespaces it
+// consumes for both locales so `useTranslation` never suspends mid-render,
+// then pin the active language to French so the existing French-literal
+// assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['imports', 'common']);
+});
 
 // The lastImported banner now fetches transactions by sourceFileId to
 // display the "Transactions importées" list. Stub the api client so the

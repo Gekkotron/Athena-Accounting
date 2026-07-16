@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { runOne } from './run-import';
 import type { BatchState } from './BatchSummaryPanel';
 import type { PdfImportNeedsTemplate } from '../../api/pdf-templates';
@@ -17,6 +18,7 @@ export function useBatchRetry(opts: {
   invalidate: () => void;
   onNeedsTemplate: (r: PdfImportNeedsTemplate) => Promise<boolean>;
 }) {
+  const { t } = useTranslation('imports');
   const applyOutcome = (file: File, outcome:
     | { ok: true; inserted: number; skipped: number }
     | { ok: false; message: string }
@@ -44,13 +46,13 @@ export function useBatchRetry(opts: {
   };
 
   const retryFile = async (file: File) => {
-    const r = await runOne(file, opts.accountId);
+    const r = await runOne(file, opts.accountId, t);
     if (r.ok) return applyOutcome(file, r);
     if ('needsTemplate' in r) {
       const success = await opts.onNeedsTemplate(r.needsTemplate);
       applyOutcome(file, success
         ? { ok: true, inserted: 0, skipped: 0 }
-        : { ok: false, message: 'Template annulé.' });
+        : { ok: false, message: t('errors.templateCancelled') });
       return;
     }
     applyOutcome(file, { ok: false, message: r.message });

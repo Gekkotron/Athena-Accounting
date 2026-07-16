@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { previewImport, type ImportPreview } from '../../api/imports';
 import { apiUpload, ApiError } from '../../api/client';
 
@@ -15,6 +16,7 @@ export function useImportPreview(opts: {
   onSuccess: () => void;
   invalidate: () => void;
 }) {
+  const { t } = useTranslation('imports');
   const [state, setState] = useState<{
     file: File;
     data: ImportPreview;
@@ -26,7 +28,7 @@ export function useImportPreview(opts: {
       const data = await previewImport(file, accountId);
       setState({ file, data, confirming: false });
     } catch (err) {
-      opts.onError(err instanceof ApiError ? err.message : 'Erreur lors de la prévisualisation.');
+      opts.onError(err instanceof ApiError ? err.message : t('errors.previewFailed'));
     }
   };
 
@@ -49,7 +51,7 @@ export function useImportPreview(opts: {
       setState(null);
       opts.onSuccess();
     } catch (err) {
-      opts.onError(err instanceof ApiError ? err.message : 'Erreur lors de l\'import.');
+      opts.onError(err instanceof ApiError ? err.message : t('errors.importFailed'));
       setState(null);
     }
   };
