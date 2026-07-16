@@ -11,6 +11,7 @@ import { mcpRpcRoutes } from './http/routes/mcp/index.js';
 import { accountsRoutes } from './http/routes/accounts.js';
 import { patternRoutes } from './http/routes/account-patterns.js';
 import { importsRoutes } from './http/routes/imports.js';
+import { importsPreviewRoutes } from './http/routes/imports-preview.js';
 import { categoriesRoutes } from './http/routes/categories.js';
 import { startDraftSweeper } from './domain/imports/pdf/draft-sweeper.js';
 import { rulesRoutes } from './http/routes/rules.js';
@@ -61,6 +62,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(accountsRoutes);
   await app.register(patternRoutes);
   await app.register(importsRoutes);
+  await app.register(importsPreviewRoutes);
   await app.register(categoriesRoutes);
   await app.register(rulesRoutes);
   await app.register(transferRulesRoutes);
