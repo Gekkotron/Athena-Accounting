@@ -26,6 +26,7 @@ import { settingsRoutes } from './http/routes/settings.js';
 import { tipsRoutes } from './http/routes/tips/index.js';
 import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
+import { envelopesRoutes } from './http/routes/envelopes.js';
 import { reconcileRoutes } from './http/routes/reconcile.js';
 import { metricsPlugin } from './http/plugins/metrics.js';
 
@@ -77,6 +78,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(tipsRoutes);
   await app.register(mcpSettingsRoutes);
   await app.register(budgetsRoutes);
+  await app.register(envelopesRoutes);
   await app.register(reconcileRoutes);
 
   startDraftSweeper(app);
