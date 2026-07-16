@@ -5,6 +5,8 @@ import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImpo
 import { useImportPreview } from './useImportPreview';
 import { ImportPreviewModal } from './ImportPreviewModal';
 import { runOne } from './run-import';
+import { collectDroppedFiles } from './drop-utils';
+import { BatchSummaryPanel, type BatchState } from './BatchSummaryPanel';
 
 export function UploadForm({
   accounts,
@@ -28,11 +30,7 @@ export function UploadForm({
   const [photo, setPhoto] = useState<File | null>(null);
   const [accountId, setAccountId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
-  const [batch, setBatch] = useState<
-    | { phase: 'running'; current: number; total: number; currentName: string }
-    | { phase: 'done'; imported: number; inserted: number; skipped: number; needsTemplate: string[]; errors: { file: string; message: string }[] }
-    | null
-  >(null);
+  const [batch, setBatch] = useState<BatchState | null>(null);
   const pending = batch?.phase === 'running';
 
   // Bank statements only ship as .ofx/.qfx/.csv/.pdf. Drop anything else so a
@@ -42,6 +40,19 @@ export function UploadForm({
   const pickFiles = (list: FileList | null) => {
     if (!list) { setFiles([]); return; }
     const kept = Array.from(list).filter((f) => acceptFile(f.name));
+    setFiles(kept);
+    setError(null);
+    onFileSelected();
+  };
+
+  const [dragOver, setDragOver] = useState(false);
+  const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    if (pending) return;
+    const collected = await collectDroppedFiles(e.dataTransfer);
+    const kept = collected.filter((f) => acceptFile(f.name));
     setFiles(kept);
     setError(null);
     onFileSelected();
@@ -163,8 +174,20 @@ export function UploadForm({
     <>
       <form onSubmit={submit} className="surface p-5 md:p-6">
         <div className="flex flex-col md:flex-row md:items-end gap-4">
-          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-            <label className="label">Fichier(s) — .ofx · .qfx · .csv · .pdf</label>
+          <div
+            data-testid="upload-drop-zone"
+            onDrop={onDrop}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            className={`flex flex-col gap-1.5 flex-1 min-w-0 rounded-lg border-2 border-dashed p-3 transition ${dragOver ? 'border-sage-400 bg-sage-900/10' : 'border-ink-800/60'}`}
+          >
+            <label className="label">
+              Fichier(s) — .ofx · .qfx · .csv · .pdf
+              <span className="ml-2 text-[10px] font-normal text-ink-500">
+                Glissez un fichier ici ou <span className="underline">parcourir</span>
+              </span>
+            </label>
             <input
               ref={fileRef}
               type="file"
@@ -237,48 +260,7 @@ export function UploadForm({
         </div>
       </form>
 
-      {batch?.phase === 'running' && batch.total > 1 && (
-        <div className="rounded-lg border border-ink-800/60 bg-ink-900/50 px-4 py-3 text-sm text-ink-200">
-          Traitement… <span className="font-mono">{batch.current} / {batch.total}</span>{' '}
-          <span className="text-ink-500">— {batch.currentName}</span>
-        </div>
-      )}
-
-      {batch?.phase === 'done' && (
-        <div className="rounded-lg border border-sage-800/40 bg-sage-900/15 px-4 py-3 text-sm text-ink-100 space-y-1">
-          <div>
-            <span className="font-mono">{batch.imported}</span> fichier{batch.imported > 1 ? 's' : ''} importé{batch.imported > 1 ? 's' : ''} ·{' '}
-            <span className="font-mono">{batch.inserted}</span> insérée{batch.inserted > 1 ? 's' : ''} ·{' '}
-            <span className="font-mono">{batch.skipped}</span> dédupliquée{batch.skipped > 1 ? 's' : ''}
-          </div>
-          {batch.needsTemplate.length > 0 && (
-            <div className="text-amber-300/90 text-xs">
-              {batch.needsTemplate.length} PDF nécessite{batch.needsTemplate.length > 1 ? 'nt' : ''} un template — importez-les individuellement&nbsp;: {batch.needsTemplate.join(', ')}
-            </div>
-          )}
-          {batch.errors.length > 0 && (
-            <details className="text-clay-300 text-xs">
-              <summary className="cursor-pointer">
-                {batch.errors.length} en erreur
-              </summary>
-              <ul className="mt-1 space-y-0.5 pl-2">
-                {batch.errors.map((e) => (
-                  <li key={e.file} className="font-mono">
-                    {e.file}: {e.message}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-          <button
-            type="button"
-            className="text-[11px] text-ink-500 hover:text-ink-100 transition"
-            onClick={() => setBatch(null)}
-          >
-            Fermer
-          </button>
-        </div>
-      )}
+      {batch && <BatchSummaryPanel batch={batch} onClose={() => setBatch(null)} />}
 
       {previewCtl.preview && (
         <ImportPreviewModal

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UploadForm } from '../UploadForm';
@@ -279,6 +279,40 @@ describe('UploadForm', () => {
     await user.upload(fileInput, [junk, good]);
     // Only 1 file survives → single-file mode → submit label stays "Importer".
     expect(screen.getByRole('button', { name: 'Importer' })).toBeInTheDocument();
+  });
+
+  it('accepts files dropped onto the drop zone', async () => {
+    renderForm();
+    const zone = screen.getByTestId('upload-drop-zone');
+    const file = new File(['x'], 'dropped.csv', { type: 'text/csv' });
+    const dataTransfer = {
+      files: [file] as unknown as FileList,
+      items: [] as unknown as DataTransferItemList,
+      types: ['Files'],
+    };
+    fireEvent.drop(zone, { dataTransfer });
+    await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /^Importer$/ });
+      expect(btn).not.toBeDisabled();
+    });
+  });
+
+  it('filters out unsupported extensions from a drop', async () => {
+    renderForm();
+    const zone = screen.getByTestId('upload-drop-zone');
+    const junk = new File(['x'], '.DS_Store', { type: '' });
+    const good = new File(['x'], 'ok.csv', { type: 'text/csv' });
+    const dataTransfer = {
+      files: [junk, good] as unknown as FileList,
+      items: [] as unknown as DataTransferItemList,
+      types: ['Files'],
+    };
+    fireEvent.drop(zone, { dataTransfer });
+    await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /^Importer$/ });
+      expect(btn).not.toBeDisabled();
+    });
+    expect(screen.queryByText(/2 fichiers sélectionnés/)).not.toBeInTheDocument();
   });
 
   it('routes a JPEG upload to /api/imports/photo', async () => {
