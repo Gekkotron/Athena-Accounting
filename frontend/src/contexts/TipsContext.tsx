@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -33,6 +34,14 @@ export function useTips(): TipsContextValue {
 export function TipsProvider({ children }: { children: ReactNode }) {
   const [dismissed, setDismissed] = useState<Record<string, string>>({});
   const [ready, setReady] = useState(false);
+  // Mirrors `dismissed` for the mutation callbacks below so they can read
+  // the latest value for rollback without depending on `dismissed` itself —
+  // a `useCallback` dep on `dismissed` would recreate dismiss/undismiss/reset
+  // (and re-render every useTips() consumer) on every dismissal.
+  const dismissedRef = useRef(dismissed);
+  useEffect(() => {
+    dismissedRef.current = dismissed;
+  }, [dismissed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +61,7 @@ export function TipsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const dismiss = useCallback(async (id: TipId) => {
-    const prev = dismissed;
+    const prev = dismissedRef.current;
     setDismissed({ ...prev, [id]: new Date().toISOString() });
     try {
       await api('/api/tips/dismiss', { method: 'POST', json: { id } });
@@ -60,10 +69,10 @@ export function TipsProvider({ children }: { children: ReactNode }) {
       setDismissed(prev);
       throw err;
     }
-  }, [dismissed]);
+  }, []);
 
   const undismiss = useCallback(async (id: TipId) => {
-    const prev = dismissed;
+    const prev = dismissedRef.current;
     const next = { ...prev };
     delete next[id];
     setDismissed(next);
@@ -73,10 +82,10 @@ export function TipsProvider({ children }: { children: ReactNode }) {
       setDismissed(prev);
       throw err;
     }
-  }, [dismissed]);
+  }, []);
 
   const reset = useCallback(async () => {
-    const prev = dismissed;
+    const prev = dismissedRef.current;
     setDismissed({});
     try {
       await api('/api/tips/reset', { method: 'POST' });
@@ -84,7 +93,7 @@ export function TipsProvider({ children }: { children: ReactNode }) {
       setDismissed(prev);
       throw err;
     }
-  }, [dismissed]);
+  }, []);
 
   const value = useMemo<TipsContextValue>(
     () => ({

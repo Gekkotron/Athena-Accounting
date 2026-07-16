@@ -4,6 +4,7 @@ import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { SectionTip } from '../../components/SectionTip';
+import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 import type { PdfImportNeedsTemplate, PdfImportImported } from '../../api/pdf-templates';
 import { PdfTemplateWizard } from '../Imports/PdfTemplateWizard';
 import { FileImportsList } from '../Imports/FileImportsList';
@@ -61,10 +62,18 @@ export function Imports() {
 
   return (
     <div className="flex flex-col gap-8">
+      <div className="page-header">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Imports</h1>
+            <SectionTipHelpIcon id="section:imports" />
+          </div>
+          <p className="page-subtitle">
+            OFX (Latin-1/UTF-8), CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA) ou PDF relevé bancaire.
+          </p>
+        </div>
+      </div>
       <SectionTip id="section:imports" />
-      <p className="page-subtitle">
-        OFX (Latin-1/UTF-8), CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA) ou PDF relevé bancaire.
-      </p>
 
       <UploadForm
         accounts={accountsQ.data?.accounts ?? []}

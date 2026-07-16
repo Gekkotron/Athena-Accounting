@@ -166,5 +166,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
     const rows = await db.select().from(userSettings)
       .where(eq(userSettings.userId, u.id));
     expect(rows[0]?.dismissedTips).toEqual({});
+
+    await db.delete(users).where(eq(users.id, u.id));
   });
 });

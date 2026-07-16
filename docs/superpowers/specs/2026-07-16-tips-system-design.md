@@ -60,7 +60,8 @@ ALTER TABLE user_settings
   ADD COLUMN dismissed_tips JSONB NOT NULL DEFAULT '{}'::jsonb;
 ```
 
-Migration file: `backend/src/db/migrations/0021_dismissed_tips.sql`.
+Migration file: `backend/src/db/migrations/0023_dismissed_tips.sql` (0021 and
+0022 were consumed by parallel budgets work by the time this shipped).
 
 Drizzle schema addition in `backend/src/db/schema.ts`:
 
@@ -385,7 +386,7 @@ Replay path via (?) icon:
 
 ## Migration and rollout
 
-- One migration file: `0021_dismissed_tips.sql`. `ADD COLUMN … DEFAULT
+- One migration file: `0023_dismissed_tips.sql`. `ADD COLUMN … DEFAULT
   '{}'::jsonb NOT NULL`. Safe on an in-use table because Postgres treats
   the default as a metadata-only rewrite for JSONB defaults on modern
   versions — but the app is LAN-only single-user, so this consideration

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { SectionTip } from '../../components/SectionTip';
+import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { formatAmount, amountSignClass } from '../../lib/format';
@@ -90,6 +91,14 @@ export function Dashboard(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-10">
+      <div className="page-header">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Tableau de bord</h1>
+            <SectionTipHelpIcon id="section:dashboard" />
+          </div>
+        </div>
+      </div>
       <SectionTip id="section:dashboard" />
       <DashboardHero primary={primary} />
 

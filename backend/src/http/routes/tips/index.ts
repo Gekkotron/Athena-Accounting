@@ -8,6 +8,12 @@ import { TIP_IDS } from './tip-ids.js';
 
 const idBody = z.object({ id: z.enum(TIP_IDS) });
 
+// None of the mutating endpoints below bump `updatedAt` on user_settings.
+// That column's semantics elsewhere (see routes/settings.ts) is "the
+// settings JSONB blob changed" — dismissed_tips shares the row but isn't
+// user-facing settings, so bumping it here would make a tip dismissal look
+// like a settings change to any downstream cache-invalidation logic keyed
+// on updatedAt.
 export async function tipsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
@@ -34,7 +40,6 @@ export async function tipsRoutes(app: FastifyInstance): Promise<void> {
         target: userSettings.userId,
         set: {
           dismissedTips: sql`${userSettings.dismissedTips} || ${JSON.stringify({ [id]: now })}::jsonb`,
-          updatedAt: new Date(),
         },
       });
     return reply.code(204).send();
@@ -48,7 +53,6 @@ export async function tipsRoutes(app: FastifyInstance): Promise<void> {
       .update(userSettings)
       .set({
         dismissedTips: sql`${userSettings.dismissedTips} - ${parsed.data.id}::text`,
-        updatedAt: new Date(),
       })
       .where(eq(userSettings.userId, uid));
     return reply.code(204).send();
@@ -58,7 +62,7 @@ export async function tipsRoutes(app: FastifyInstance): Promise<void> {
     const uid = userId(req);
     await db
       .update(userSettings)
-      .set({ dismissedTips: {}, updatedAt: new Date() })
+      .set({ dismissedTips: {} })
       .where(eq(userSettings.userId, uid));
     return reply.code(204).send();
   });

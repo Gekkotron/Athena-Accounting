@@ -93,4 +93,17 @@ describe('<WelcomeTour />', () => {
       );
     });
   });
+
+  it('Tab from the last focusable element wraps focus to the first', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true, status: 200, text: async () => JSON.stringify({ dismissed: {} }),
+    });
+    renderAt('/');
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    const buttons = screen.getAllByRole('button');
+    const last = buttons[buttons.length - 1]!;
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(document.activeElement).toBe(buttons[0]);
+  });
 });

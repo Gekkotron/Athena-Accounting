@@ -11,6 +11,7 @@ export function WelcomeTour(): JSX.Element | null {
   const location = useLocation();
   const [step, setStep] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const previousActiveRef = useRef<HTMLElement | null>(null);
 
   const shouldShow = ready && !isDismissed('welcome_tour') && location.pathname === '/';
 
@@ -24,14 +25,47 @@ export function WelcomeTour(): JSX.Element | null {
   useEffect(() => {
     if (!shouldShow) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
+      if (e.key === 'Escape') {
+        close();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      // Focus trap: Tab from the last focusable element wraps to the
+      // first, Shift+Tab from the first wraps to the last, so keyboard
+      // focus never escapes to the underlying page while the tour is open.
+      const focusables = dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [shouldShow, close]);
 
+  // Capture the previously focused element on open and set initial focus
+  // inside the dialog. On close (shouldShow flips false) or unmount, restore
+  // focus to whatever was focused before the tour opened.
   useEffect(() => {
-    if (shouldShow) dialogRef.current?.focus();
+    if (!shouldShow) return;
+    previousActiveRef.current = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    return () => {
+      previousActiveRef.current?.focus();
+      previousActiveRef.current = null;
+    };
   }, [shouldShow]);
 
   if (!shouldShow) return null;
