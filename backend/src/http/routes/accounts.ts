@@ -313,15 +313,30 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
         `);
       }
 
-      // Step B — delete source transactions that collide by dedup_key with
-      // an existing target transaction. Target's copy wins.
+      // Step B — delete source transactions that collide with an existing
+      // target transaction. Target's copy wins.
+      //
+      // We cannot compare dedup_keys directly: computeDedupKey hashes
+      // account_id into its material, so two logically-identical rows on
+      // different accounts get different keys. Instead, match on content:
+      // FITID (bank-provided globally-unique id) if both sides have one,
+      // otherwise on (date, amount, normalized_label).
       const dedupDropped = await tx.execute<{ id: number }>(sql`
-        DELETE FROM transactions
-         WHERE account_id = ${sourceId}
-           AND dedup_key IN (
-             SELECT dedup_key FROM transactions WHERE account_id = ${targetId}
+        DELETE FROM transactions src
+         WHERE src.account_id = ${sourceId}
+           AND EXISTS (
+             SELECT 1 FROM transactions tgt
+              WHERE tgt.account_id = ${targetId}
+                AND (
+                  (src.fitid IS NOT NULL AND tgt.fitid IS NOT NULL AND src.fitid = tgt.fitid)
+                  OR (
+                    src.date = tgt.date
+                    AND src.amount = tgt.amount
+                    AND src.normalized_label = tgt.normalized_label
+                  )
+                )
            )
-        RETURNING id
+        RETURNING src.id
       `);
       const dedupCollisionsDropped = dedupDropped.rows.length;
 
@@ -345,11 +360,13 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
       `);
       const doomedIds = doomed.rows.map((r) => r.transfer_group_id);
       if (doomedIds.length > 0) {
-        await tx.execute(sql`
-          UPDATE transactions
-             SET transfer_group_id = NULL
-           WHERE transfer_group_id = ANY(${doomedIds}::uuid[])
-        `);
+        // Use the typed builder with inArray — Drizzle's `sql\`... ANY(${js
+        // array}::uuid[])\`` template passes the array through as a bare
+        // string, which Postgres rejects with "malformed array literal".
+        await tx
+          .update(transactions)
+          .set({ transferGroupId: null })
+          .where(inArray(transactions.transferGroupId, doomedIds));
       }
       const transferGroupsCollapsed = doomedIds.length;
 
