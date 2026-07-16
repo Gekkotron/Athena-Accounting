@@ -165,3 +165,67 @@ describe.skipIf(!RUN)('/api/envelopes/reallocate', () => {
     expect(r.json().error).toBe('same_category');
   });
 });
+
+describe.skipIf(!RUN)('/api/envelopes/categories', () => {
+  let cat: number;
+  beforeAll(async () => {
+    const { buildApp } = await import('./helpers/build-app.js');
+    app = await buildApp();
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'settings-user', password: 'settings-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'settings-user', password: 'settings-1234' },
+    });
+    cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
+    const c = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Vacances', kind: 'expense' },
+    });
+    cat = c.json().category.id;
+  });
+
+  it('upserts settings for a category', async () => {
+    const r = await app.inject({
+      method: 'PUT', url: `/api/envelopes/categories/${cat}`, headers: { cookie },
+      payload: {
+        targetAmount: '1200.00',
+        targetDate: '2026-12-01',
+        targetKind: 'save_by_date',
+        overspendPolicy: 'reallocate_manual',
+      },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().settings.targetAmount).toBe('1200.00');
+    expect(r.json().settings.overspendPolicy).toBe('reallocate_manual');
+  });
+
+  it('rejects bad targetKind', async () => {
+    const r = await app.inject({
+      method: 'PUT', url: `/api/envelopes/categories/${cat}`, headers: { cookie },
+      payload: { targetKind: 'bogus' },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it('lists settings for user', async () => {
+    const r = await app.inject({
+      method: 'GET', url: '/api/envelopes/categories', headers: { cookie },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().settings).toHaveLength(1);
+  });
+
+  it('deletes settings', async () => {
+    const r = await app.inject({
+      method: 'DELETE', url: `/api/envelopes/categories/${cat}`, headers: { cookie },
+    });
+    expect(r.statusCode).toBe(204);
+    const list = await app.inject({
+      method: 'GET', url: '/api/envelopes/categories', headers: { cookie },
+    });
+    expect(list.json().settings).toHaveLength(0);
+  });
+});
