@@ -1,7 +1,9 @@
+import type { TFunction } from 'i18next';
 import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
 
 export type InsightTone = 'sage' | 'clay' | 'neutral';
+export type InsightLang = 'en' | 'fr';
 
 export interface Insight {
   key: string;
@@ -19,18 +21,21 @@ const MOVER_ABS_MIN = 50;
 const MOVER_PCT_MIN = 30;
 const TOP_N = 4;
 
-const MONTH_NAMES = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-];
-
-export function monthLabel(key: string): string {
-  const [, m] = key.split('-');
-  return MONTH_NAMES[Number(m) - 1] ?? key;
+// Calendar month name, localized via Intl (not a translation-file lookup —
+// there's no "vocabulary" to maintain, just the standard CLDR month names).
+export function monthLabel(key: string, lang: InsightLang = 'fr'): string {
+  const [year, month] = key.split('-');
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'fr-FR', {
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(date);
 }
 
 // "+18,0 %" / "-3,5 %". Positive gets an explicit '+'; negatives already
 // carry '-' from toFixed. Never called with a non-finite value.
+// NOTE: intentionally NOT locale-aware — mirrors `formatAmount`, which is
+// still hardcoded to fr-FR pending Task 11's number-formatting cleanup pass.
 function signedPct(pct: number): string {
   const sign = pct > 0 ? '+' : '';
   return `${sign}${pct.toFixed(1).replace('.', ',')} %`;
@@ -69,6 +74,8 @@ export function buildInsights(
   months: string[],
   referenceMonth: string,
   currency: string,
+  t: TFunction,
+  lang: InsightLang = 'fr',
 ): Insight[] {
   const idxOf = new Map(months.map((m, i) => [m, i] as const));
   const refIdx = idxOf.get(referenceMonth) ?? -1;
@@ -99,7 +106,7 @@ export function buildInsights(
       let c = catSpend.get(rootId);
       if (!c) {
         const rootName = rootId != null ? byId.get(rootId)?.name : null;
-        c = { name: rootName ?? r.category_name ?? 'Sans catégorie', spark: new Array(months.length).fill(0) };
+        c = { name: rootName ?? r.category_name ?? t('insights.uncategorized'), spark: new Array(months.length).fill(0) };
         catSpend.set(rootId, c);
       }
       c.spark[i] += -amt;
@@ -127,14 +134,22 @@ export function buildInsights(
     if (prevSpend > 0) {
       const pct = ((curSpend - prevSpend) / prevSpend) * 100;
       if (Math.abs(pct) >= DELTA_PCT_MIN) {
-        let detail = `${signedPct(pct)} vs ${monthLabel(prevMonth)}`;
+        let detail = t('insights.spendDelta.detail', {
+          pct: signedPct(pct),
+          month: monthLabel(prevMonth, lang),
+        });
         if (avgSpend > 0 && Math.abs((curSpend - avgSpend) / avgSpend) * 100 >= DELTA_PCT_MIN) {
-          detail += curSpend > avgSpend ? ' · au-dessus de votre moyenne' : ' · en-dessous de votre moyenne';
+          detail += curSpend > avgSpend
+            ? t('insights.spendDelta.aboveAverage')
+            : t('insights.spendDelta.belowAverage');
         }
         insights.push({
           key: 'spend-delta',
           icon: pct > 0 ? '📈' : '📉',
-          headline: `Vos dépenses de ${monthLabel(referenceMonth)} : ${formatAmount(curSpend, currency)}`,
+          headline: t('insights.spendDelta.headline', {
+            month: monthLabel(referenceMonth, lang),
+            amount: formatAmount(curSpend, currency),
+          }),
           detail,
           tone: tone(false, curSpend - prevSpend),
           score: Math.abs(pct),
@@ -152,8 +167,14 @@ export function buildInsights(
         insights.push({
           key: 'income-delta',
           icon: pct > 0 ? '📈' : '📉',
-          headline: `Vos revenus de ${monthLabel(referenceMonth)} : ${formatAmount(curIncome, currency)}`,
-          detail: `${signedPct(pct)} vs ${monthLabel(prevMonth)}`,
+          headline: t('insights.incomeDelta.headline', {
+            month: monthLabel(referenceMonth, lang),
+            amount: formatAmount(curIncome, currency),
+          }),
+          detail: t('insights.incomeDelta.detail', {
+            pct: signedPct(pct),
+            month: monthLabel(prevMonth, lang),
+          }),
           tone: tone(true, curIncome - prevIncome),
           score: Math.abs(pct),
           spark: sparkOf(incomeByMonth),
@@ -169,8 +190,8 @@ export function buildInsights(
       insights.push({
         key: 'savings',
         icon: '⚠️',
-        headline: `Vous avez dépensé plus que vos revenus en ${monthLabel(referenceMonth)}`,
-        detail: `Solde : ${formatAmount(savings, currency)}`,
+        headline: t('insights.overspent.headline', { month: monthLabel(referenceMonth, lang) }),
+        detail: t('insights.overspent.detail', { amount: formatAmount(savings, currency) }),
         tone: 'clay',
         score: 100,
       });
@@ -183,8 +204,14 @@ export function buildInsights(
         insights.push({
           key: 'savings',
           icon: '🐷',
-          headline: `Vous avez épargné ${formatAmount(savings, currency)} en ${monthLabel(referenceMonth)} (${Math.round(rate)} % de vos revenus)`,
-          detail: rate > avgRate ? 'Au-dessus de votre taux d’épargne habituel' : 'En-dessous de votre taux d’épargne habituel',
+          headline: t('insights.savingsRate.headline', {
+            amount: formatAmount(savings, currency),
+            month: monthLabel(referenceMonth, lang),
+            rate: Math.round(rate),
+          }),
+          detail: rate > avgRate
+            ? t('insights.savingsRate.aboveUsual')
+            : t('insights.savingsRate.belowUsual'),
           tone: tone(true, rate - avgRate),
           score: dev,
         });
@@ -213,10 +240,14 @@ export function buildInsights(
       insights.push({
         key: 'top-increase',
         icon: '🔺',
-        headline: `Plus forte hausse : ${topInc.name}`,
+        headline: t('insights.topIncrease.headline', { category: topInc.name }),
         detail: topInc.fromZero
-          ? 'nouveau'
-          : `${signedAmount(topInc.d, currency)} (${signedPct(topInc.pct)}) vs ${monthLabel(prevMonth)}`,
+          ? t('insights.topIncrease.new')
+          : t('insights.topIncrease.detail', {
+              amount: signedAmount(topInc.d, currency),
+              pct: signedPct(topInc.pct),
+              month: monthLabel(prevMonth, lang),
+            }),
         tone: 'clay',
         score: Math.min(Math.abs(topInc.pct), 100),
       });
@@ -225,8 +256,12 @@ export function buildInsights(
       insights.push({
         key: 'top-decrease',
         icon: '🔻',
-        headline: `Plus forte baisse : ${topDec.name}`,
-        detail: `${signedAmount(topDec.d, currency)} (${signedPct(topDec.pct)}) vs ${monthLabel(prevMonth)}`,
+        headline: t('insights.topDecrease.headline', { category: topDec.name }),
+        detail: t('insights.topDecrease.detail', {
+          amount: signedAmount(topDec.d, currency),
+          pct: signedPct(topDec.pct),
+          month: monthLabel(prevMonth, lang),
+        }),
         tone: 'sage',
         score: Math.min(Math.abs(topDec.pct), 100),
       });
@@ -238,11 +273,13 @@ export function buildInsights(
   if (over.length > 0) {
     const names = over.map((r) => r.name);
     const shown = names.slice(0, 3).join(', ') + (names.length > 3 ? '…' : '');
-    const plural = over.length > 1 ? 's' : '';
     insights.push({
       key: 'budget-overruns',
       icon: '⚠️',
-      headline: `${over.length} budget${plural} dépassé${plural} en ${monthLabel(referenceMonth)}`,
+      headline: t('insights.budgetOverruns.headline', {
+        count: over.length,
+        month: monthLabel(referenceMonth, lang),
+      }),
       detail: shown,
       tone: 'clay',
       score: 50 + 10 * over.length,

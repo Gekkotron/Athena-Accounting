@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import i18next from 'i18next';
 import { buildInsights, monthLabel } from '../insights';
 import type { Category, CategoryReportRow, BudgetReportRow } from '../../../api/types';
+import frDashboard from '../../../locales/fr/dashboard.json';
 
 function row(p: Partial<CategoryReportRow>): CategoryReportRow {
   return {
@@ -18,8 +20,22 @@ function row(p: Partial<CategoryReportRow>): CategoryReportRow {
 const MONTHS = ['2026-04', '2026-05', '2026-06'];
 const REF = '2026-06';
 
+// buildInsights takes a real i18next `t` — rather than hand-rolling fake
+// French strings here (which would drift from the actual translation file),
+// spin up a standalone i18next instance loaded with the same fr/dashboard.json
+// bundle the app ships, and get a fixed translator off it. `initImmediate:
+// false` makes `.init()` resolve synchronously so no `await` is needed.
+const testI18n = i18next.createInstance();
+testI18n.init({
+  lng: 'fr',
+  resources: { fr: { dashboard: frDashboard } },
+  interpolation: { escapeValue: false },
+  initImmediate: false,
+});
+const t = testI18n.getFixedT('fr', 'dashboard');
+
 function build(rows: CategoryReportRow[], budgets: BudgetReportRow[] = [], categories: Category[] = []) {
-  return buildInsights(rows, categories, budgets, MONTHS, REF, 'EUR');
+  return buildInsights(rows, categories, budgets, MONTHS, REF, 'EUR', t, 'fr');
 }
 
 describe('monthLabel', () => {

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { Account, Category, CategoryReportRow } from '../../api/types';
 import {
@@ -35,6 +36,7 @@ export function SankeySection({
   onAccountChange,
   primaryCurrency,
 }: Props): JSX.Element {
+  const { t } = useTranslation('dashboard');
   const fromDate = fromDateFor(range);
   const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
 
@@ -69,7 +71,7 @@ export function SankeySection({
     <section className="surface p-5 md:p-6">
       <div className="mb-4 flex items-center gap-3 flex-wrap">
         <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
-          Flux · {currency}{' '}
+          {t('sankey.title', { currency })}{' '}
           <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
             — {rangeSuffixLabel(range)}
           </span>
@@ -89,9 +91,9 @@ export function SankeySection({
       {isLoading ? (
         <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
       ) : isError ? (
-        <div className="text-sm text-clay-300">Erreur de chargement du flux.</div>
+        <div className="text-sm text-clay-300">{t('sankey.loadError')}</div>
       ) : model.totalIncome <= 0 ? (
-        <div className="text-sm text-ink-400 display-italic">Pas de revenus sur la période.</div>
+        <div className="text-sm text-ink-400 display-italic">{t('sankey.noIncome')}</div>
       ) : (
         <Sankey model={model} />
       )}

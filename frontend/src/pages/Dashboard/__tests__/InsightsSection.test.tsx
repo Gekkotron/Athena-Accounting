@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InsightsSection } from '../InsightsSection';
+import i18n from '../../../i18n';
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -20,7 +21,19 @@ function renderWithProviders(currency = 'EUR') {
   );
 }
 
-beforeEach(() => {
+// InsightsSection renders French strings by default (the app's current UI
+// language). Preload the 'dashboard' namespace for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text (per the i18n migration recipe's locale-preserving-
+// helper fallback).
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['dashboard']);
+});
+
+beforeEach(async () => {
+  await i18n.changeLanguage('fr');
   apiMock.mockReset();
   // Pin the clock so referenceMonth === '2026-06' deterministically. Fake ONLY
   // Date — leaving setTimeout/setInterval real so Testing Library's findBy/

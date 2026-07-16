@@ -1,0 +1,87 @@
+{
+  "title": "Dashboard",
+  "hero": {
+    "netBalance": "Net balance",
+    "available": "Available",
+    "sumWord": "sum",
+    "accountsSuffix_one": "of {{count}} account · {{currency}}",
+    "accountsSuffix_other": "of {{count}} accounts · {{currency}}",
+    "investedSuffix": "invested",
+    "blockedSuffix": "blocked"
+  },
+  "sections": {
+    "evolution": "Trend · {{currency}}",
+    "categoryBreakdown": "Breakdown by category"
+  },
+  "moyennes": {
+    "title": "Monthly averages",
+    "window_one": "— over the last {{count}} month",
+    "window_other": "— over the last {{count}} months",
+    "noHistory": "— no history yet",
+    "emptyState": "Import at least one complete month of transactions to see averages.",
+    "avgSpend": {
+      "label": "Average monthly spending",
+      "hint_one": "Average of outflows (excluding internal transfers) over {{count}} month.",
+      "hint_other": "Average of outflows (excluding internal transfers) over {{count}} months."
+    },
+    "avgIncome": {
+      "label": "Average monthly income",
+      "hint_one": "Average of inflows over {{count}} month.",
+      "hint_other": "Average of inflows over {{count}} months."
+    },
+    "avgSavings": {
+      "label": "Average monthly savings",
+      "hint": "Income − spending, monthly average."
+    }
+  },
+  "insights": {
+    "title": "Insights",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "loadError": "Error loading insights.",
+    "empty": "Nothing notable this month.",
+    "trendAriaLabel": "trend {{month}}",
+    "uncategorized": "Uncategorized",
+    "spendDelta": {
+      "headline": "Your {{month}} spending: {{amount}}",
+      "detail": "{{pct}} vs {{month}}",
+      "aboveAverage": " · above your average",
+      "belowAverage": " · below your average"
+    },
+    "incomeDelta": {
+      "headline": "Your {{month}} income: {{amount}}",
+      "detail": "{{pct}} vs {{month}}"
+    },
+    "overspent": {
+      "headline": "You spent more than you earned in {{month}}",
+      "detail": "Balance: {{amount}}"
+    },
+    "savingsRate": {
+      "headline": "You saved {{amount}} in {{month}} ({{rate}}% of your income)",
+      "aboveUsual": "Above your usual savings rate",
+      "belowUsual": "Below your usual savings rate"
+    },
+    "topIncrease": {
+      "headline": "Biggest increase: {{category}}",
+      "new": "new",
+      "detail": "{{amount}} ({{pct}}) vs {{month}}"
+    },
+    "topDecrease": {
+      "headline": "Biggest decrease: {{category}}",
+      "detail": "{{amount}} ({{pct}}) vs {{month}}"
+    },
+    "budgetOverruns": {
+      "headline_one": "{{count}} budget exceeded in {{month}}",
+      "headline_other": "{{count}} budgets exceeded in {{month}}"
+    }
+  },
+  "sankey": {
+    "title": "Cash flow · {{currency}}",
+    "loadError": "Error loading the cash flow.",
+    "noIncome": "No income for this period."
+  },
+  "accountSelect": {
+    "allAccounts": "All accounts",
+    "ariaLabel": "Displayed account"
+  }
+}

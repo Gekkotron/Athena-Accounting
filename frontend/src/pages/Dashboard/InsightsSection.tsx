@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/types';
 import { Sparkline } from '../../components/Sparkline';
@@ -28,6 +29,8 @@ interface Props {
 }
 
 export function InsightsSection({ currency }: Props): JSX.Element | null {
+  const { t, i18n } = useTranslation('dashboard');
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'fr';
   const months = useMemo(() => completeMonthWindow(AVG_WINDOW_MONTHS, new Date()), []);
   // 0 = last complete month; higher steps further back. Capped so a prior month
   // always remains in-window for the month-over-month comparison.
@@ -61,14 +64,16 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
         months,
         referenceMonth,
         currency,
+        t,
+        lang,
       ),
-    [catQ.data, categoriesQ.data, budgetQ.data, months, referenceMonth, currency],
+    [catQ.data, categoriesQ.data, budgetQ.data, months, referenceMonth, currency, t, lang],
   );
 
   if (catQ.isLoading) {
     return (
       <section>
-        <div className="section-rule mb-4">Insights</div>
+        <div className="section-rule mb-4">{t('insights.title')}</div>
         <div className="h-32 animate-pulse rounded-lg bg-ink-900" />
       </section>
     );
@@ -78,9 +83,9 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
     <section>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div className="section-rule">
-          Insights{' '}
+          {t('insights.title')}{' '}
           <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
-            — {monthLabel(referenceMonth)} {referenceMonth.slice(0, 4)}
+            — {monthLabel(referenceMonth, lang)} {referenceMonth.slice(0, 4)}
           </span>
         </div>
         <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
@@ -88,7 +93,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
             onClick={() => setMonthOffset((o) => Math.min(o + 1, maxOffset))}
             disabled={monthOffset >= maxOffset}
             className="px-2.5 py-1.5 rounded-md text-ink-400 transition hover:text-ink-100 disabled:opacity-30 disabled:hover:text-ink-400"
-            aria-label="Mois précédent"
+            aria-label={t('insights.prevMonth')}
           >
             ‹
           </button>
@@ -96,7 +101,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
             onClick={() => setMonthOffset((o) => Math.max(o - 1, 0))}
             disabled={monthOffset === 0}
             className="px-2.5 py-1.5 rounded-md text-ink-400 transition hover:text-ink-100 disabled:opacity-30 disabled:hover:text-ink-400"
-            aria-label="Mois suivant"
+            aria-label={t('insights.nextMonth')}
           >
             ›
           </button>
@@ -105,11 +110,11 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
 
       {catQ.isError ? (
         <div className="surface p-5 text-sm text-clay-300">
-          Erreur de chargement des insights.
+          {t('insights.loadError')}
         </div>
       ) : insights.length === 0 ? (
         <div className="surface p-5 text-sm text-ink-400 display-italic">
-          Rien de notable ce mois-ci.
+          {t('insights.empty')}
         </div>
       ) : (
         <div className="surface divide-y divide-ink-850">
@@ -125,7 +130,10 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
                 )}
               </div>
               {ins.spark && (
-                <Sparkline values={ins.spark} aria-label={`tendance ${monthLabel(referenceMonth)}`} />
+                <Sparkline
+                  values={ins.spark}
+                  aria-label={t('insights.trendAriaLabel', { month: monthLabel(referenceMonth, lang) })}
+                />
               )}
             </div>
           ))}

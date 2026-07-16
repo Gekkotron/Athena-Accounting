@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Dashboard } from '../Dashboard';
 import { withTips } from '../../test/renderWithProviders';
+import i18n from '../../i18n';
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
@@ -44,7 +45,19 @@ function renderDashboard() {
   );
 }
 
-beforeEach(() => {
+// Dashboard renders French strings by default (the app's current UI
+// language). Preload the 'dashboard' namespace for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text (per the i18n migration recipe's locale-preserving-
+// helper fallback).
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['dashboard', 'common']);
+});
+
+beforeEach(async () => {
+  await i18n.changeLanguage('fr');
   apiMock.mockReset();
   localStorage.clear();
 });

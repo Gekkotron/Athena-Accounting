@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { SectionTip } from '../../components/SectionTip';
 import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
@@ -17,6 +18,7 @@ import { SankeySection } from './SankeySection';
 import { AccountSelect } from './AccountSelect';
 
 export function Dashboard(): JSX.Element {
+  const { t } = useTranslation('dashboard');
   const accountsQ = useQuery({
     queryKey: ['accounts'],
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
@@ -94,7 +96,7 @@ export function Dashboard(): JSX.Element {
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="page-title">Tableau de bord</h1>
+            <h1 className="page-title">{t('title')}</h1>
             <SectionTipHelpIcon id="section:dashboard" />
           </div>
         </div>
@@ -127,7 +129,7 @@ export function Dashboard(): JSX.Element {
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Évolution · {chartCurrency}</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <AccountSelect
@@ -156,7 +158,7 @@ export function Dashboard(): JSX.Element {
       {currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Répartition par catégorie</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <AccountSelect

@@ -1,0 +1,87 @@
+{
+  "title": "Tableau de bord",
+  "hero": {
+    "netBalance": "Solde net",
+    "available": "Disponible",
+    "sumWord": "somme",
+    "accountsSuffix_one": "de {{count}} compte · {{currency}}",
+    "accountsSuffix_other": "de {{count}} comptes · {{currency}}",
+    "investedSuffix": "placés",
+    "blockedSuffix": "bloqués"
+  },
+  "sections": {
+    "evolution": "Évolution · {{currency}}",
+    "categoryBreakdown": "Répartition par catégorie"
+  },
+  "moyennes": {
+    "title": "Moyennes mensuelles",
+    "window_one": "— sur {{count}} mois glissant",
+    "window_other": "— sur {{count}} mois glissants",
+    "noHistory": "— pas encore d'historique",
+    "emptyState": "Importez au moins un mois complet de transactions pour voir les moyennes.",
+    "avgSpend": {
+      "label": "Dépense moyenne mensuelle",
+      "hint_one": "Moyenne des sorties (hors virements internes) sur {{count}} mois.",
+      "hint_other": "Moyenne des sorties (hors virements internes) sur {{count}} mois."
+    },
+    "avgIncome": {
+      "label": "Revenu moyen mensuel",
+      "hint_one": "Moyenne des entrées sur {{count}} mois.",
+      "hint_other": "Moyenne des entrées sur {{count}} mois."
+    },
+    "avgSavings": {
+      "label": "Épargne moyenne mensuelle",
+      "hint": "Revenus − dépenses, moyenne mensuelle."
+    }
+  },
+  "insights": {
+    "title": "Insights",
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "loadError": "Erreur de chargement des insights.",
+    "empty": "Rien de notable ce mois-ci.",
+    "trendAriaLabel": "tendance {{month}}",
+    "uncategorized": "Sans catégorie",
+    "spendDelta": {
+      "headline": "Vos dépenses de {{month}} : {{amount}}",
+      "detail": "{{pct}} vs {{month}}",
+      "aboveAverage": " · au-dessus de votre moyenne",
+      "belowAverage": " · en-dessous de votre moyenne"
+    },
+    "incomeDelta": {
+      "headline": "Vos revenus de {{month}} : {{amount}}",
+      "detail": "{{pct}} vs {{month}}"
+    },
+    "overspent": {
+      "headline": "Vous avez dépensé plus que vos revenus en {{month}}",
+      "detail": "Solde : {{amount}}"
+    },
+    "savingsRate": {
+      "headline": "Vous avez épargné {{amount}} en {{month}} ({{rate}} % de vos revenus)",
+      "aboveUsual": "Au-dessus de votre taux d’épargne habituel",
+      "belowUsual": "En-dessous de votre taux d’épargne habituel"
+    },
+    "topIncrease": {
+      "headline": "Plus forte hausse : {{category}}",
+      "new": "nouveau",
+      "detail": "{{amount}} ({{pct}}) vs {{month}}"
+    },
+    "topDecrease": {
+      "headline": "Plus forte baisse : {{category}}",
+      "detail": "{{amount}} ({{pct}}) vs {{month}}"
+    },
+    "budgetOverruns": {
+      "headline_one": "{{count}} budget dépassé en {{month}}",
+      "headline_other": "{{count}} budgets dépassés en {{month}}"
+    }
+  },
+  "sankey": {
+    "title": "Flux · {{currency}}",
+    "loadError": "Erreur de chargement du flux.",
+    "noIncome": "Pas de revenus sur la période."
+  },
+  "accountSelect": {
+    "allAccounts": "Tous les comptes",
+    "ariaLabel": "Compte affiché"
+  }
+}

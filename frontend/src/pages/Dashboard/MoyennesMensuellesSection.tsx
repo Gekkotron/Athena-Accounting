@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { CategoryReportRow } from '../../api/types';
 import { StatWidget } from '../../components/StatWidget';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function MoyennesMensuellesSection({ currency }: Props): JSX.Element | null {
+  const { t } = useTranslation('dashboard');
   const statsFromDate = monthAgoISODate(AVG_WINDOW_MONTHS);
   const statsToDate = lastDayOfPrevMonthISODate();
   const statsQ = useQuery({
@@ -61,43 +63,43 @@ export function MoyennesMensuellesSection({ currency }: Props): JSX.Element | nu
   return (
     <section>
       <div className="section-rule mb-4">
-        Moyennes mensuelles{' '}
+        {t('moyennes.title')}{' '}
         <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
           {hasHistory
-            ? `— sur ${monthlyStats.monthCount} mois glissant${monthlyStats.monthCount > 1 ? 's' : ''}`
-            : "— pas encore d'historique"}
+            ? t('moyennes.window', { count: monthlyStats.monthCount })
+            : t('moyennes.noHistory')}
         </span>
       </div>
       {hasHistory ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <StatWidget
             icon="💸"
-            label="Dépense moyenne mensuelle"
+            label={t('moyennes.avgSpend.label')}
             value={monthlyStats.avgSpend}
             currency={currency}
             tone="clay"
-            hint={`Moyenne des sorties (hors virements internes) sur ${monthlyStats.monthCount} mois.`}
+            hint={t('moyennes.avgSpend.hint', { count: monthlyStats.monthCount })}
           />
           <StatWidget
             icon="💰"
-            label="Revenu moyen mensuel"
+            label={t('moyennes.avgIncome.label')}
             value={monthlyStats.avgIncome}
             currency={currency}
             tone="sage"
-            hint={`Moyenne des entrées sur ${monthlyStats.monthCount} mois.`}
+            hint={t('moyennes.avgIncome.hint', { count: monthlyStats.monthCount })}
           />
           <StatWidget
             icon="📈"
-            label="Épargne moyenne mensuelle"
+            label={t('moyennes.avgSavings.label')}
             value={monthlyStats.avgSavings}
             currency={currency}
             tone="auto"
-            hint="Revenus − dépenses, moyenne mensuelle."
+            hint={t('moyennes.avgSavings.hint')}
           />
         </div>
       ) : (
         <div className="surface p-5 text-sm text-ink-400 display-italic">
-          Importez au moins un mois complet de transactions pour voir les moyennes.
+          {t('moyennes.emptyState')}
         </div>
       )}
     </section>
