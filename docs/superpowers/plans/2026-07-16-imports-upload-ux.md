@@ -19,6 +19,7 @@
 - **PDF single-file, photo, and batch (>1 file) paths all skip the preview modal** — they keep today's behavior verbatim.
 - **Preview endpoint is read-only** — it must never create a `fileImports` row and must never insert into `transactions`.
 - **No new file formats and no new sources/connectors in this plan** — those are deferred sub-projects (see the design doc for scope split).
+- **Every file touched by this plan must end under 300 lines.** Files I don't need to touch are grandfathered as-is, but any file this plan creates or modifies (including baseline files that are already over 300, like `frontend/src/pages/Imports/UploadForm.tsx` at 329 lines) must come out under 300. That means: put the new backend preview route in its own file (Task 1 now creates `backend/src/http/routes/imports-preview.ts` instead of appending to `imports.ts`, and only registers it in `server.ts`), and extract subcomponents / hooks from `UploadForm.tsx` as new features land (Tasks 4/5/6 each create one extraction so the coordinator stays small).
 
 ---
 
@@ -26,7 +27,8 @@
 
 **Files:**
 - Create: `backend/src/domain/imports/preview-service.ts`
-- Modify: `backend/src/http/routes/imports.ts` (add one route above `app.post('/api/imports', …)` at line 49)
+- Create: `backend/src/http/routes/imports-preview.ts` (new Fastify plugin file; keeps `imports.ts` untouched to respect the 300-line constraint)
+- Modify: `backend/src/server.ts` (register the new plugin alongside `importsRoutes`)
 - Create: `backend/tests/imports-preview-route.test.ts`
 
 **Interfaces:**
@@ -361,17 +363,19 @@ cd backend && RUN_DB_TESTS=1 npm test -- imports-preview-route
 
 Expected: FAIL — route not registered, `POST /api/imports/preview` returns 404.
 
-- [ ] **Step 7: Register the route in `imports.ts`**
+- [ ] **Step 7: Create the preview route plugin file**
 
-Modify `backend/src/http/routes/imports.ts`. Add these imports near line 8 (alongside the existing `runImport` import):
+Create `backend/src/http/routes/imports-preview.ts`:
 
 ```ts
+import type { FastifyInstance } from 'fastify';
+import { inferFormat, resolveAccountFromFilename } from '../../domain/imports/import-service.js';
 import { previewImport } from '../../domain/imports/preview-service.js';
-```
+import { userId } from '../plugins/auth.js';
 
-Then insert this route inside `importsRoutes` immediately **after** the `app.addHook('preHandler', app.requireAuth);` line (line 47), so it lives before the existing `POST /api/imports`:
+export async function importsPreviewRoutes(app: FastifyInstance): Promise<void> {
+  app.addHook('preHandler', app.requireAuth);
 
-```ts
   app.post('/api/imports/preview', async (req, reply) => {
     if (!req.isMultipart()) return reply.code(400).send({ error: 'no file uploaded' });
     const data = await req.file({ limits: { fileSize: 20 * 1024 * 1024 } });
@@ -416,6 +420,21 @@ Then insert this route inside `importsRoutes` immediately **after** the `app.add
       });
     }
   });
+}
+```
+
+- [ ] **Step 7b: Register the plugin in `server.ts`**
+
+Modify `backend/src/server.ts`. Add the import near the existing `importsRoutes` import (line 13):
+
+```ts
+import { importsPreviewRoutes } from './http/routes/imports-preview.js';
+```
+
+Then add the registration line immediately below `await app.register(importsRoutes);` (line 63):
+
+```ts
+  await app.register(importsPreviewRoutes);
 ```
 
 - [ ] **Step 8: Run the route test to verify it passes**
@@ -440,7 +459,8 @@ Expected: no TypeScript errors. The build only compiles; it doesn't need Postgre
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com add \
   backend/src/domain/imports/preview-service.ts \
   backend/src/domain/imports/__tests__/preview-service.test.ts \
-  backend/src/http/routes/imports.ts \
+  backend/src/http/routes/imports-preview.ts \
+  backend/src/server.ts \
   backend/tests/imports-preview-route.test.ts
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com commit -m "$(cat <<'EOF'
 feat(imports): add POST /api/imports/preview for OFX/CSV dry-run
@@ -840,12 +860,14 @@ EOF
 ### Task 4: Frontend — wire preview modal into `UploadForm`'s OFX/CSV single-file path
 
 **Files:**
-- Modify: `frontend/src/pages/Imports/UploadForm.tsx` (single-file OFX/CSV branch in `submit`, around lines 122–142; add state + modal render)
-- Modify: `frontend/src/pages/Imports/__tests__/UploadForm.test.tsx` (add tests for the preview flow)
+- Create: `frontend/src/pages/Imports/useImportPreview.ts` (extracted hook — owns preview state and confirm/cancel; keeps `UploadForm.tsx` under 300 lines)
+- Create: `frontend/src/pages/Imports/__tests__/useImportPreview.test.tsx` (hook unit tests)
+- Modify: `frontend/src/pages/Imports/UploadForm.tsx` (single-file OFX/CSV branch in `submit`, around lines 122–142; call the hook, render the modal)
+- Modify: `frontend/src/pages/Imports/__tests__/UploadForm.test.tsx` (add integration tests for the preview flow)
 
 **Interfaces:**
 - Consumes: `previewImport` from `../../api/imports` (Task 2), `ImportPreviewModal` from `./ImportPreviewModal` (Task 3), the existing `apiUpload` used by the confirm step.
-- Produces: no new external props. `UploadForm`'s public prop signature is unchanged — this is an internal state addition.
+- Produces: `useImportPreview({ onImported, invalidate })` hook returning `{ preview, pending, start(file, accountId?), confirm(), cancel() }`. `UploadForm`'s public prop signature is unchanged — this is an internal refactor.
 
 - [ ] **Step 1: Add the failing preview tests**
 
@@ -966,88 +988,205 @@ cd frontend && npm test -- UploadForm
 
 Expected: the five new tests FAIL — `previewImport` isn't called yet by `UploadForm`; the modal never opens.
 
-- [ ] **Step 3: Wire the preview into `UploadForm`**
+- [ ] **Step 3: Extract the `useImportPreview` hook**
+
+Create `frontend/src/pages/Imports/useImportPreview.ts`:
+
+```tsx
+import { useState } from 'react';
+import { previewImport, type ImportPreview } from '../../api/imports';
+import { apiUpload, ApiError } from '../../api/client';
+
+interface OfxCsvSuccess {
+  filename: string;
+  inserted: number;
+  skipped: number;
+  total: number;
+}
+
+export function useImportPreview(opts: {
+  onImported: (result: OfxCsvSuccess) => void;
+  onError: (message: string) => void;
+  onSuccess: () => void;
+  invalidate: () => void;
+}) {
+  const [state, setState] = useState<{
+    file: File;
+    data: ImportPreview;
+    confirming: boolean;
+  } | null>(null);
+
+  const start = async (file: File, accountId?: number) => {
+    try {
+      const data = await previewImport(file, accountId);
+      setState({ file, data, confirming: false });
+    } catch (err) {
+      opts.onError(err instanceof ApiError ? err.message : 'Erreur lors de la prévisualisation.');
+    }
+  };
+
+  const confirm = async () => {
+    if (!state) return;
+    setState({ ...state, confirming: true });
+    try {
+      const data = await apiUpload<{
+        filename: string; insertedCount: number; dedupSkipped: number; totalLines: number;
+      }>('/api/imports', state.file, {
+        query: state.data.accountId ? { accountId: state.data.accountId } : undefined,
+      });
+      opts.onImported({
+        filename: state.file.name,
+        inserted: data.insertedCount,
+        skipped: data.dedupSkipped,
+        total: data.totalLines,
+      });
+      opts.invalidate();
+      setState(null);
+      opts.onSuccess();
+    } catch (err) {
+      opts.onError(err instanceof ApiError ? err.message : 'Erreur lors de l\'import.');
+      setState(null);
+    }
+  };
+
+  const cancel = () => setState(null);
+
+  return { preview: state?.data ?? null, pending: state?.confirming ?? false, start, confirm, cancel };
+}
+```
+
+Create the hook unit test `frontend/src/pages/Imports/__tests__/useImportPreview.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { useImportPreview } from '../useImportPreview';
+
+vi.mock('../../../api/imports', () => ({ previewImport: vi.fn() }));
+vi.mock('../../../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
+  return { ...actual, apiUpload: vi.fn() };
+});
+import { previewImport } from '../../../api/imports';
+import { apiUpload } from '../../../api/client';
+const previewMock = vi.mocked(previewImport);
+const uploadMock = vi.mocked(apiUpload);
+
+beforeEach(() => { previewMock.mockReset(); uploadMock.mockReset(); });
+
+const cbs = () => ({ onImported: vi.fn(), onError: vi.fn(), onSuccess: vi.fn(), invalidate: vi.fn() });
+
+describe('useImportPreview', () => {
+  it('start() populates preview state with the returned ImportPreview', async () => {
+    previewMock.mockResolvedValue({
+      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 1,
+      newRows: [{ date: '2026-06-15', amount: '-1.00', rawLabel: 'X', memo: null }],
+      duplicateRows: [],
+    });
+    const c = cbs();
+    const { result } = renderHook(() => useImportPreview(c));
+    await act(async () => { await result.current.start(new File(['x'], 'x.csv'), 3); });
+    expect(result.current.preview?.filename).toBe('x.csv');
+    expect(c.onError).not.toHaveBeenCalled();
+  });
+
+  it('confirm() calls apiUpload with the retained file and invokes onImported', async () => {
+    previewMock.mockResolvedValue({
+      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 1, newRows: [], duplicateRows: [],
+    });
+    uploadMock.mockResolvedValue({ filename: 'x.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 });
+    const c = cbs();
+    const { result } = renderHook(() => useImportPreview(c));
+    const file = new File(['x'], 'x.csv');
+    await act(async () => { await result.current.start(file, 3); });
+    await act(async () => { await result.current.confirm(); });
+    expect(uploadMock).toHaveBeenCalledWith('/api/imports', file, { query: { accountId: 3 } });
+    expect(c.onImported).toHaveBeenCalledWith({ filename: 'x.csv', inserted: 1, skipped: 0, total: 1 });
+    expect(c.invalidate).toHaveBeenCalled();
+    expect(c.onSuccess).toHaveBeenCalled();
+    expect(result.current.preview).toBeNull();
+  });
+
+  it('cancel() clears preview state without calling apiUpload', async () => {
+    previewMock.mockResolvedValue({
+      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 0, newRows: [], duplicateRows: [],
+    });
+    const c = cbs();
+    const { result } = renderHook(() => useImportPreview(c));
+    await act(async () => { await result.current.start(new File(['x'], 'x.csv'), 3); });
+    act(() => { result.current.cancel(); });
+    expect(result.current.preview).toBeNull();
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it('preview error surfaces via onError and leaves preview null', async () => {
+    previewMock.mockRejectedValue(new Error('boom'));
+    const c = cbs();
+    const { result } = renderHook(() => useImportPreview(c));
+    await act(async () => { await result.current.start(new File(['x'], 'x.csv'), 3); });
+    expect(c.onError).toHaveBeenCalled();
+    expect(result.current.preview).toBeNull();
+  });
+});
+```
+
+Run the hook tests: `cd frontend && npm test -- useImportPreview` — expected PASS (4 tests).
+
+- [ ] **Step 4: Wire the hook into `UploadForm.tsx`**
 
 Modify `frontend/src/pages/Imports/UploadForm.tsx`:
 
 **A. Add imports at the top of the file:**
 
 ```tsx
-import { previewImport, type ImportPreview } from '../../api/imports';
+import { useImportPreview } from './useImportPreview';
 import { ImportPreviewModal } from './ImportPreviewModal';
 ```
 
-**B. Add preview state next to the existing `useState` calls (around line 25–33):**
+**B. Call the hook inside the component body, near the other `useState`s:**
 
 ```tsx
-const [preview, setPreview] = useState<{
-  file: File;
-  data: ImportPreview;
-  confirming: boolean;
-} | null>(null);
+const previewCtl = useImportPreview({
+  onImported: (r) => onOfxCsvSuccess(r),
+  onError: (msg) => setError(msg),
+  onSuccess: () => {
+    setFiles([]);
+    if (fileRef.current) fileRef.current.value = '';
+  },
+  invalidate: invalidateAll,
+});
 ```
 
-**C. Replace the single-file OFX/CSV branch in `submit` (currently lines 122–142) with:**
+**C. Replace the OFX/CSV single-file branch in `submit` (currently lines 122–142) with:**
 
 ```tsx
       // OFX / CSV single-file — dry-run first, then confirm through the modal.
-      try {
-        const data = await previewImport(f, accountId ? (accountId as number) : undefined);
-        setPreview({ file: f, data, confirming: false });
-      } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Erreur lors de la prévisualisation.');
-      }
+      await previewCtl.start(f, accountId ? (accountId as number) : undefined);
       return;
 ```
 
-**D. Add a confirm handler above `return (` in the component body:**
+**D. Render the modal after the existing `{error && …}` block, before the closing `</>`:**
 
 ```tsx
-const confirmPreview = async () => {
-  if (!preview) return;
-  setPreview({ ...preview, confirming: true });
-  try {
-    const data = await apiUpload<{
-      filename: string;
-      insertedCount: number;
-      dedupSkipped: number;
-      totalLines: number;
-    }>('/api/imports', preview.file, {
-      query: preview.data.accountId ? { accountId: preview.data.accountId } : undefined,
-    });
-    onOfxCsvSuccess({
-      filename: preview.file.name,
-      inserted: data.insertedCount,
-      skipped: data.dedupSkipped,
-      total: data.totalLines,
-    });
-    invalidateAll();
-    setPreview(null);
-    setFiles([]);
-    if (fileRef.current) fileRef.current.value = '';
-  } catch (err) {
-    setError(err instanceof ApiError ? err.message : 'Erreur lors de l\'import.');
-    setPreview(null);
-  }
-};
-
-const cancelPreview = () => setPreview(null);
-```
-
-**E. Render the modal after the existing `{error && …}` block, before the closing `</>`:**
-
-```tsx
-{preview && (
+{previewCtl.preview && (
   <ImportPreviewModal
-    preview={preview.data}
-    onConfirm={confirmPreview}
-    onCancel={cancelPreview}
-    pending={preview.confirming}
+    preview={previewCtl.preview}
+    onConfirm={previewCtl.confirm}
+    onCancel={previewCtl.cancel}
+    pending={previewCtl.pending}
   />
 )}
 ```
 
-- [ ] **Step 4: Run all UploadForm tests to verify they pass**
+- [ ] **Step 4b: Verify UploadForm.tsx line count**
+
+```bash
+wc -l frontend/src/pages/Imports/UploadForm.tsx
+```
+
+Expected: fewer than 300 lines. If it's still over, move the "batch loop" body (currently lines 148–195 of the original file) into a local helper function inside `UploadForm` — the extraction that trims the most is done in Task 6, so a slight overshoot here is acceptable if the trend is clearly downward.
+
+- [ ] **Step 5: Run all UploadForm tests to verify they pass**
 
 ```bash
 cd frontend && npm test -- UploadForm
@@ -1055,7 +1194,7 @@ cd frontend && npm test -- UploadForm
 
 Expected: PASS — all existing tests plus the five new ones. If an old test breaks because it expected the OFX/CSV single-file path to fire `apiUpload` synchronously (without the preview modal), update it: it must now go through the modal (see the new test at Step 1 for the exact interaction).
 
-- [ ] **Step 5: Type-check frontend**
+- [ ] **Step 6: Type-check frontend**
 
 ```bash
 cd frontend && npm run build
@@ -1063,10 +1202,12 @@ cd frontend && npm run build
 
 Expected: no TypeScript errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com add \
+  frontend/src/pages/Imports/useImportPreview.ts \
+  frontend/src/pages/Imports/__tests__/useImportPreview.test.tsx \
   frontend/src/pages/Imports/UploadForm.tsx \
   frontend/src/pages/Imports/__tests__/UploadForm.test.tsx
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com commit -m "$(cat <<'EOF'
@@ -1085,12 +1226,14 @@ EOF
 ### Task 5: Frontend — drag-and-drop zone in `UploadForm`
 
 **Files:**
-- Modify: `frontend/src/pages/Imports/UploadForm.tsx` (wrap the file-column with a drop target; add drop handler)
-- Modify: `frontend/src/pages/Imports/__tests__/UploadForm.test.tsx` (add drag-and-drop tests)
+- Create: `frontend/src/pages/Imports/drop-utils.ts` (folder-recursing `collectDroppedFiles(dataTransfer)` helper — kept out of the component so `UploadForm.tsx` stays lean)
+- Create: `frontend/src/pages/Imports/__tests__/drop-utils.test.ts`
+- Modify: `frontend/src/pages/Imports/UploadForm.tsx` (wrap the file-column with a drop target; wire the helper)
+- Modify: `frontend/src/pages/Imports/__tests__/UploadForm.test.tsx` (drag-and-drop integration tests)
 
 **Interfaces:**
-- Consumes: existing `pickFiles(list: FileList | null)` helper inside `UploadForm` (line 40).
-- Produces: no new external interface.
+- Consumes: existing `pickFiles(list: FileList | null)` helper inside `UploadForm` (line 40); new `collectDroppedFiles`.
+- Produces: `collectDroppedFiles(dt: DataTransfer): Promise<File[]>` — reusable helper, no framework dependency.
 
 - [ ] **Step 1: Add the failing tests**
 
@@ -1151,67 +1294,120 @@ cd frontend && npm test -- UploadForm
 
 Expected: the two new tests FAIL — no `upload-drop-zone` testid exists yet.
 
-- [ ] **Step 3: Add the drop zone**
+- [ ] **Step 3: Create the folder-walker helper**
 
-Modify `frontend/src/pages/Imports/UploadForm.tsx`:
+Create `frontend/src/pages/Imports/drop-utils.ts`:
 
-**A. Add a drop handler above the existing `pickFiles` (near line 40):**
-
-```tsx
-const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  e.stopPropagation();
-  if (pending) return;
-
-  const dt = e.dataTransfer;
+```ts
+// Recursively collects all File objects from a drag-and-drop DataTransfer,
+// walking into any subdirectories via the webkit entry API. Files that never
+// resolve (e.g. permissions errors) are silently dropped — the caller sees
+// only what it can actually read.
+export async function collectDroppedFiles(dt: DataTransfer): Promise<File[]> {
   const collected: File[] = [];
-
-  // Prefer the DataTransferItemList webkit API so folder drops recurse.
   const items = dt.items;
-  const hasItems = items && items.length > 0 && typeof (items[0] as any)?.webkitGetAsEntry === 'function';
+  const hasItemsApi = items && items.length > 0 &&
+    typeof (items[0] as any)?.webkitGetAsEntry === 'function';
 
-  if (hasItems) {
-    const walkEntry = async (entry: any): Promise<void> => {
+  if (hasItemsApi) {
+    const walk = async (entry: any): Promise<void> => {
+      if (!entry) return;
       if (entry.isFile) {
         await new Promise<void>((resolve) => {
-          entry.file((file: File) => { collected.push(file); resolve(); });
+          entry.file(
+            (file: File) => { collected.push(file); resolve(); },
+            () => resolve(),
+          );
         });
       } else if (entry.isDirectory) {
         const reader = entry.createReader();
         await new Promise<void>((resolve) => {
           const readBatch = () => {
-            reader.readEntries(async (entries: any[]) => {
-              if (entries.length === 0) return resolve();
-              for (const child of entries) await walkEntry(child);
-              readBatch();
-            });
+            reader.readEntries(
+              async (entries: any[]) => {
+                if (entries.length === 0) return resolve();
+                for (const child of entries) await walk(child);
+                readBatch();
+              },
+              () => resolve(),
+            );
           };
           readBatch();
         });
       }
     };
-    const entries: any[] = [];
     for (let i = 0; i < items.length; i++) {
-      const entry = (items[i] as any).webkitGetAsEntry?.();
-      if (entry) entries.push(entry);
+      await walk((items[i] as any).webkitGetAsEntry?.());
     }
-    for (const e of entries) await walkEntry(e);
   }
 
   if (collected.length === 0 && dt.files && dt.files.length > 0) {
     collected.push(...Array.from(dt.files));
   }
+  return collected;
+}
+```
 
+Create `frontend/src/pages/Imports/__tests__/drop-utils.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { collectDroppedFiles } from '../drop-utils';
+
+function fakeDataTransfer(files: File[]): DataTransfer {
+  return {
+    files: files as unknown as FileList,
+    items: [] as unknown as DataTransferItemList,
+    types: ['Files'],
+  } as unknown as DataTransfer;
+}
+
+describe('collectDroppedFiles', () => {
+  it('falls back to dt.files when webkitGetAsEntry is unavailable', async () => {
+    const a = new File(['x'], 'a.csv', { type: 'text/csv' });
+    const b = new File(['x'], 'b.csv', { type: 'text/csv' });
+    const result = await collectDroppedFiles(fakeDataTransfer([a, b]));
+    expect(result.map((f) => f.name)).toEqual(['a.csv', 'b.csv']);
+  });
+
+  it('returns [] for an empty DataTransfer', async () => {
+    const result = await collectDroppedFiles(fakeDataTransfer([]));
+    expect(result).toEqual([]);
+  });
+});
+```
+
+Run: `cd frontend && npm test -- drop-utils` — expected PASS (2 tests).
+
+- [ ] **Step 4: Add the drop zone to `UploadForm.tsx`**
+
+Modify `frontend/src/pages/Imports/UploadForm.tsx`:
+
+**A. Add the import at the top of the file:**
+
+```tsx
+import { collectDroppedFiles } from './drop-utils';
+```
+
+**B. Add drop state and handler near the other hooks (below the existing `useState` calls):**
+
+```tsx
+const [dragOver, setDragOver] = useState(false);
+
+const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragOver(false);
+  if (pending) return;
+  const collected = await collectDroppedFiles(e.dataTransfer);
   const kept = collected.filter((f) => acceptFile(f.name));
   setFiles(kept);
   setError(null);
   onFileSelected();
 };
-
-const [dragOver, setDragOver] = useState(false);
 ```
 
-**B. Wrap the "Fichier(s)" column in the JSX. Locate the outer `<div className="flex flex-col gap-1.5 flex-1 min-w-0">` around line 201 and change it to:**
+**C. Wrap the "Fichier(s)" column in the JSX. Locate the outer `<div className="flex flex-col gap-1.5 flex-1 min-w-0">` around line 201 and change it to:**
 
 ```tsx
 <div
@@ -1236,18 +1432,28 @@ const [dragOver, setDragOver] = useState(false);
 
 Keep everything inside that wrapper `<div>` as it is today (the file input, the hidden folder input, the "ou choisir un dossier" link, the "N fichiers sélectionnés" span). Close the wrapper `</div>` where the original column closed.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [ ] **Step 5: Run tests to verify they pass**
 
 ```bash
-cd frontend && npm test -- UploadForm
+cd frontend && npm test -- UploadForm drop-utils
 ```
 
-Expected: PASS — all previous + preview tests + the two drop tests.
+Expected: PASS — all previous + preview tests + the two drop tests + the drop-utils tests.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Verify UploadForm.tsx line count**
+
+```bash
+wc -l frontend/src/pages/Imports/UploadForm.tsx
+```
+
+Expected: fewer than 300 lines. Task 6's extraction is the largest, so this task can end within a few lines of 300 if the trend is downward — but do not exceed 300 by this task's commit.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com add \
+  frontend/src/pages/Imports/drop-utils.ts \
+  frontend/src/pages/Imports/__tests__/drop-utils.test.ts \
   frontend/src/pages/Imports/UploadForm.tsx \
   frontend/src/pages/Imports/__tests__/UploadForm.test.tsx
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com commit -m "$(cat <<'EOF'
@@ -1268,9 +1474,11 @@ EOF
 ### Task 6: Frontend — retry failed items on the batch summary panel + wizard-resolved callback
 
 **Files:**
-- Modify: `frontend/src/pages/Imports/UploadForm.tsx` (change `errors` shape to retain `File`; add per-row and "all" retry buttons; add optional `onPdfWizardResolved` handling)
+- Create: `frontend/src/pages/Imports/BatchSummaryPanel.tsx` (extracted panel — renders the running-progress line, done-summary, error list with Réessayer buttons; keeps `UploadForm.tsx` under 300 lines)
+- Create: `frontend/src/pages/Imports/__tests__/BatchSummaryPanel.test.tsx`
+- Modify: `frontend/src/pages/Imports/UploadForm.tsx` (change `errors` shape to retain `File`; delegate rendering to `BatchSummaryPanel`; add retry helpers)
 - Modify: `frontend/src/pages/Data/Imports.tsx` (wire the wizard-resolved callback so cancel/finalize propagate back to `UploadForm`)
-- Modify: `frontend/src/pages/Imports/__tests__/UploadForm.test.tsx` (retry tests)
+- Modify: `frontend/src/pages/Imports/__tests__/UploadForm.test.tsx` (retry integration tests)
 
 **Interfaces:**
 - Consumes: existing `apiUpload`, `submitPdf` (from `../../api/pdf-templates`), the parent's `onPdfNeedsTemplate` callback (now takes an optional second arg — see below).
@@ -1361,9 +1569,10 @@ Expected: the three new tests FAIL — no retry button exists yet.
 
 - [ ] **Step 3: Change the `errors` state shape and add retry handlers in `UploadForm.tsx`**
 
-**A. Change the `batch` state's `errors` type** (currently around lines 29–33):
+**A. Change the `batch` state's `errors` type** (currently around lines 29–33). Since Step F will replace this with an import from `BatchSummaryPanel`, the immediate change here is temporary — just to make the batch-loop typecheck while you write the rest of the file. The final shape lands in Step F:
 
 ```tsx
+// TEMPORARY (replaced in Step F with `import { type BatchState } from './BatchSummaryPanel'`)
 const [batch, setBatch] = useState<
   | { phase: 'running'; current: number; total: number; currentName: string }
   | {
@@ -1476,40 +1685,199 @@ onPdfNeedsTemplate: (
 ) => void;
 ```
 
-**F. Update the summary panel's error section** (currently around lines 298–311) to render retry buttons:
+**F. Extract the batch summary panel to its own component.**
+
+Create `frontend/src/pages/Imports/BatchSummaryPanel.tsx`:
 
 ```tsx
-{batch.errors.length > 0 && (
-  <details className="text-clay-300 text-xs">
-    <summary className="cursor-pointer">
-      {batch.errors.length} en erreur
-    </summary>
-    <ul className="mt-1 space-y-1 pl-2">
-      {batch.errors.map((e, i) => (
-        <li key={`${e.file.name}-${i}`} className="font-mono flex items-center gap-2">
-          <button
-            type="button"
-            className="text-ink-400 hover:text-ink-100 transition"
-            onClick={() => retryOne(i)}
-            aria-label={`Réessayer ${e.file.name}`}
-          >
-            Réessayer
-          </button>
-          <span>{e.file.name}: {e.message}</span>
-        </li>
-      ))}
-    </ul>
-    {batch.errors.length > 1 && (
+export type BatchState =
+  | { phase: 'running'; current: number; total: number; currentName: string }
+  | {
+      phase: 'done';
+      imported: number;
+      inserted: number;
+      skipped: number;
+      needsTemplate: string[];
+      errors: { file: File; message: string }[];
+    };
+
+export function BatchSummaryPanel({
+  batch,
+  onRetryOne,
+  onRetryAll,
+  onClose,
+}: {
+  batch: BatchState;
+  onRetryOne: (index: number) => void;
+  onRetryAll: () => void;
+  onClose: () => void;
+}): JSX.Element {
+  if (batch.phase === 'running') {
+    if (batch.total <= 1) return <></>;
+    return (
+      <div className="rounded-lg border border-ink-800/60 bg-ink-900/50 px-4 py-3 text-sm text-ink-200">
+        Traitement… <span className="font-mono">{batch.current} / {batch.total}</span>{' '}
+        <span className="text-ink-500">— {batch.currentName}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-sage-800/40 bg-sage-900/15 px-4 py-3 text-sm text-ink-100 space-y-1">
+      <div>
+        <span className="font-mono">{batch.imported}</span> fichier{batch.imported > 1 ? 's' : ''} importé{batch.imported > 1 ? 's' : ''} ·{' '}
+        <span className="font-mono">{batch.inserted}</span> insérée{batch.inserted > 1 ? 's' : ''} ·{' '}
+        <span className="font-mono">{batch.skipped}</span> dédupliquée{batch.skipped > 1 ? 's' : ''}
+      </div>
+      {batch.needsTemplate.length > 0 && (
+        <div className="text-amber-300/90 text-xs">
+          {batch.needsTemplate.length} PDF nécessite{batch.needsTemplate.length > 1 ? 'nt' : ''} un template — importez-les individuellement&nbsp;: {batch.needsTemplate.join(', ')}
+        </div>
+      )}
+      {batch.errors.length > 0 && (
+        <details className="text-clay-300 text-xs">
+          <summary className="cursor-pointer">
+            {batch.errors.length} en erreur
+          </summary>
+          <ul className="mt-1 space-y-1 pl-2">
+            {batch.errors.map((e, i) => (
+              <li key={`${e.file.name}-${i}`} className="font-mono flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-ink-400 hover:text-ink-100 transition"
+                  onClick={() => onRetryOne(i)}
+                  aria-label={`Réessayer ${e.file.name}`}
+                >
+                  Réessayer
+                </button>
+                <span>{e.file.name}: {e.message}</span>
+              </li>
+            ))}
+          </ul>
+          {batch.errors.length > 1 && (
+            <button
+              type="button"
+              className="mt-2 text-[11px] text-ink-500 hover:text-ink-100 transition"
+              onClick={onRetryAll}
+            >
+              Réessayer tout
+            </button>
+          )}
+        </details>
+      )}
       <button
         type="button"
-        className="mt-2 text-[11px] text-ink-500 hover:text-ink-100 transition"
-        onClick={retryAll}
+        className="text-[11px] text-ink-500 hover:text-ink-100 transition"
+        onClick={onClose}
       >
-        Réessayer tout
+        Fermer
       </button>
-    )}
-  </details>
+    </div>
+  );
+}
+```
+
+Create the component's test file `frontend/src/pages/Imports/__tests__/BatchSummaryPanel.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { BatchSummaryPanel, type BatchState } from '../BatchSummaryPanel';
+
+const doneWithErrors: BatchState = {
+  phase: 'done', imported: 1, inserted: 3, skipped: 0, needsTemplate: [],
+  errors: [
+    { file: new File(['x'], 'a.csv'), message: 'boom' },
+    { file: new File(['x'], 'b.csv'), message: 'kaboom' },
+  ],
+};
+
+describe('BatchSummaryPanel', () => {
+  it('renders "N en erreur" and one Réessayer button per error', async () => {
+    const user = userEvent.setup();
+    const onRetryOne = vi.fn();
+    render(<BatchSummaryPanel batch={doneWithErrors} onRetryOne={onRetryOne} onRetryAll={vi.fn()} onClose={vi.fn()} />);
+    await user.click(screen.getByText(/2 en erreur/));
+    expect(screen.getAllByRole('button', { name: /Réessayer a\.csv|Réessayer b\.csv/ })).toHaveLength(2);
+    await user.click(screen.getAllByRole('button', { name: /Réessayer a\.csv|Réessayer b\.csv/ })[0]!);
+    expect(onRetryOne).toHaveBeenCalledWith(0);
+  });
+
+  it('shows "Réessayer tout" only when 2+ errors and calls onRetryAll', async () => {
+    const user = userEvent.setup();
+    const onRetryAll = vi.fn();
+    render(<BatchSummaryPanel batch={doneWithErrors} onRetryOne={vi.fn()} onRetryAll={onRetryAll} onClose={vi.fn()} />);
+    await user.click(screen.getByText(/2 en erreur/));
+    await user.click(screen.getByRole('button', { name: 'Réessayer tout' }));
+    expect(onRetryAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT show "Réessayer tout" when exactly one error remains', async () => {
+    const user = userEvent.setup();
+    const oneError: BatchState = {
+      ...doneWithErrors,
+      errors: [{ file: new File(['x'], 'a.csv'), message: 'boom' }],
+    };
+    render(<BatchSummaryPanel batch={oneError} onRetryOne={vi.fn()} onRetryAll={vi.fn()} onClose={vi.fn()} />);
+    await user.click(screen.getByText(/1 en erreur/));
+    expect(screen.queryByRole('button', { name: 'Réessayer tout' })).not.toBeInTheDocument();
+  });
+
+  it('renders nothing for a single-file running phase', () => {
+    render(<BatchSummaryPanel
+      batch={{ phase: 'running', current: 1, total: 1, currentName: 'x.csv' }}
+      onRetryOne={vi.fn()} onRetryAll={vi.fn()} onClose={vi.fn()}
+    />);
+    expect(screen.queryByText(/Traitement/)).not.toBeInTheDocument();
+  });
+
+  it('renders running progress for a batch of 2+', () => {
+    render(<BatchSummaryPanel
+      batch={{ phase: 'running', current: 1, total: 3, currentName: 'x.csv' }}
+      onRetryOne={vi.fn()} onRetryAll={vi.fn()} onClose={vi.fn()}
+    />);
+    expect(screen.getByText(/Traitement/)).toBeInTheDocument();
+    expect(screen.getByText(/1 \/ 3/)).toBeInTheDocument();
+  });
+
+  it('Fermer calls onClose', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<BatchSummaryPanel batch={doneWithErrors} onRetryOne={vi.fn()} onRetryAll={vi.fn()} onClose={onClose} />);
+    await user.click(screen.getByRole('button', { name: 'Fermer' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+Run: `cd frontend && npm test -- BatchSummaryPanel` — expected PASS (6 tests).
+
+**G. Replace both the running-phase JSX (currently lines 279–284) AND the done-phase JSX (lines 286–320) inside `UploadForm.tsx` with a single call:**
+
+```tsx
+{batch && (
+  <BatchSummaryPanel
+    batch={batch}
+    onRetryOne={retryOne}
+    onRetryAll={retryAll}
+    onClose={() => setBatch(null)}
+  />
 )}
+```
+
+Add the import at the top:
+
+```tsx
+import { BatchSummaryPanel } from './BatchSummaryPanel';
+```
+
+Also delete the `BatchState` type inlined in the `useState` generic (Step 3-A) and instead import it: since the state shape now lives in `BatchSummaryPanel.tsx`, use it as the single source of truth:
+
+```tsx
+import { BatchSummaryPanel, type BatchState } from './BatchSummaryPanel';
+
+const [batch, setBatch] = useState<BatchState | null>(null);
 ```
 
 - [ ] **Step 4: Update `Imports.tsx` to pass the wizard-resolved callback**
@@ -1566,7 +1934,21 @@ cd frontend && npm test
 
 Expected: PASS across the whole suite. Any existing UploadForm test that referenced `errors` items by string name (e.g. `errors.find(e => e === 'x.csv')`) needs updating to the `{ file, message }` shape — sweep for such assertions and fix them if they show up in the failure list.
 
-- [ ] **Step 6: Type-check frontend**
+- [ ] **Step 6: Verify every touched file is under 300 lines**
+
+```bash
+wc -l \
+  frontend/src/pages/Imports/UploadForm.tsx \
+  frontend/src/pages/Imports/BatchSummaryPanel.tsx \
+  frontend/src/pages/Imports/useImportPreview.ts \
+  frontend/src/pages/Imports/ImportPreviewModal.tsx \
+  frontend/src/pages/Imports/drop-utils.ts \
+  frontend/src/pages/Data/Imports.tsx
+```
+
+Expected: every listed file reports fewer than 300 lines. If `UploadForm.tsx` is still over 300 after this task's extractions, find the next-largest self-contained block (usually the batch loop's for-body) and move it into a local helper function file `frontend/src/pages/Imports/run-batch.ts` before committing.
+
+- [ ] **Step 7: Type-check frontend**
 
 ```bash
 cd frontend && npm run build
@@ -1574,10 +1956,12 @@ cd frontend && npm run build
 
 Expected: no TypeScript errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com add \
+  frontend/src/pages/Imports/BatchSummaryPanel.tsx \
+  frontend/src/pages/Imports/__tests__/BatchSummaryPanel.test.tsx \
   frontend/src/pages/Imports/UploadForm.tsx \
   frontend/src/pages/Data/Imports.tsx \
   frontend/src/pages/Imports/__tests__/UploadForm.test.tsx
