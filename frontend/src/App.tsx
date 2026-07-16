@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
+import { TipsProvider } from './contexts/TipsContext';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
 import { Login } from './pages/Login';
@@ -89,41 +90,43 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route element={<Layout user={user} />}>
-        <Route index element={<Dashboard />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/budgets" element={<Budgets />} />
+    <TipsProvider>
+      <Routes>
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route element={<Layout user={user} />}>
+          <Route index element={<Dashboard />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/budgets" element={<Budgets />} />
 
-        {/* Règles hub */}
-        <Route path="/regles" element={<HubLayout title="Règles" tabs={RULES_TABS} />}>
-          <Route index element={<Navigate to="tri" replace />} />
-          <Route path="tri" element={<Tri />} />
-          <Route path="liste" element={<Rules />} />
-          <Route path="categories" element={<Categories />} />
+          {/* Règles hub */}
+          <Route path="/regles" element={<HubLayout title="Règles" tabs={RULES_TABS} />}>
+            <Route index element={<Navigate to="tri" replace />} />
+            <Route path="tri" element={<Tri />} />
+            <Route path="liste" element={<Rules />} />
+            <Route path="categories" element={<Categories />} />
+          </Route>
+
+          {/* Comptes hub */}
+          <Route path="/comptes" element={<HubLayout title="Comptes" tabs={COMPTES_TABS} />}>
+            <Route index element={<Accounts />} />
+            <Route path="motifs" element={<Patterns />} />
+          </Route>
+
+          {/* Données hub */}
+          <Route path="/donnees" element={<HubLayout title="Données" tabs={DONNEES_TABS} />}>
+            <Route index element={<Navigate to="imports" replace />} />
+            <Route path="imports" element={<Imports />} />
+            <Route path="doublons" element={<Duplicates />} />
+            <Route path="modeles" element={<PdfTemplates />} />
+            <Route path="sauvegarde" element={<Backup />} />
+          </Route>
+
+          <Route path="/profil" element={<Profile />} />
+          <Route path="/reglages" element={<Settings />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-
-        {/* Comptes hub */}
-        <Route path="/comptes" element={<HubLayout title="Comptes" tabs={COMPTES_TABS} />}>
-          <Route index element={<Accounts />} />
-          <Route path="motifs" element={<Patterns />} />
-        </Route>
-
-        {/* Données hub */}
-        <Route path="/donnees" element={<HubLayout title="Données" tabs={DONNEES_TABS} />}>
-          <Route index element={<Navigate to="imports" replace />} />
-          <Route path="imports" element={<Imports />} />
-          <Route path="doublons" element={<Duplicates />} />
-          <Route path="modeles" element={<PdfTemplates />} />
-          <Route path="sauvegarde" element={<Backup />} />
-        </Route>
-
-        <Route path="/profil" element={<Profile />} />
-        <Route path="/reglages" element={<Settings />} />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </TipsProvider>
   );
 }
