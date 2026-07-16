@@ -8,6 +8,7 @@ import { AssignmentInput } from './AssignmentInput';
 import { ReallocateModal } from './ReallocateModal';
 import { HoldModal } from './HoldModal';
 import { SettingsModal } from './SettingsModal';
+import { UnbudgetedInline } from './UnbudgetedInline';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -63,8 +64,11 @@ export function Enveloppes(): JSX.Element {
       <section className="flex flex-col gap-2">
         <div className="label px-2">Enveloppes</div>
         {rows.length === 0 && reportQ.isSuccess && (
-          <div className="surface p-6 text-center text-ink-300">
-            Aucune enveloppe pour ce mois. Créez votre première enveloppe pour commencer.
+          <div className="surface p-6 text-center flex flex-col gap-3">
+            <div className="display text-lg">Aucune enveloppe pour ce mois</div>
+            <div className="text-sm text-ink-400">
+              Créez votre première enveloppe pour commencer.
+            </div>
           </div>
         )}
         {rows.map((row) => (
@@ -84,6 +88,19 @@ export function Enveloppes(): JSX.Element {
           />
         ))}
       </section>
+
+      {rows.some((r) => Number(r.spend) > 0 && Number(r.assignment) === 0 && Number(r.balancePriorMonth) === 0) && (
+        <UnbudgetedInline
+          rows={rows.filter((r) =>
+            Number(r.spend) > 0 &&
+            Number(r.assignment) === 0 &&
+            Number(r.balancePriorMonth) === 0
+          )}
+          onCreate={(categoryId, suggestedAmount) =>
+            upsertAsg.mutate({ categoryId, month, amount: suggestedAmount })
+          }
+        />
+      )}
 
       <ReallocateModal
         open={!!reallocSource}

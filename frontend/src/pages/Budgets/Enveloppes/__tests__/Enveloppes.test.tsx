@@ -56,4 +56,50 @@ describe('Enveloppes page', () => {
       })),
     );
   });
+
+  it('shows empty-state CTA when the report has no rows', async () => {
+    vi.mocked(api).mockImplementation((url: string) => {
+      if (url.includes('/report')) return Promise.resolve({
+        month: '2026-07',
+        pool: { incomeCumulative: '0.00', assignedCumulative: '0.00',
+                heldFromPriorMonths: '0.00', heldForNextMonth: '0.00', available: '0.00' },
+        rows: [],
+      });
+      return Promise.resolve({});
+    });
+    render(wrap(<Enveloppes />));
+    expect(await screen.findByText(/Aucune enveloppe/i)).toBeInTheDocument();
+  });
+
+  it('shows negative-pool banner when available < 0', async () => {
+    vi.mocked(api).mockImplementation((url: string) => {
+      if (url.includes('/report')) return Promise.resolve({
+        month: '2026-07',
+        pool: { incomeCumulative: '100.00', assignedCumulative: '500.00',
+                heldFromPriorMonths: '0.00', heldForNextMonth: '0.00', available: '-400.00' },
+        rows: [],
+      });
+      return Promise.resolve({});
+    });
+    render(wrap(<Enveloppes />));
+    expect(await screen.findByText(/sur-budgété/i)).toBeInTheDocument();
+  });
+
+  it('surfaces Non budgétées section when a category has spend but no envelope', async () => {
+    vi.mocked(api).mockImplementation((url: string) => {
+      if (url.includes('/report')) return Promise.resolve({
+        month: '2026-07',
+        pool: { incomeCumulative: '1000.00', assignedCumulative: '0.00',
+                heldFromPriorMonths: '0.00', heldForNextMonth: '0.00', available: '1000.00' },
+        rows: [{ categoryId: 42, categoryName: 'Restaurants',
+                 balancePriorMonth: '0.00', assignment: '0.00', spend: '80.00',
+                 balance: '-80.00', target: null,
+                 overspendPolicy: 'rollover_negative', overspent: true,
+                 absorbedByPool: '0.00', monthsToTarget: null }],
+      });
+      return Promise.resolve({});
+    });
+    render(wrap(<Enveloppes />));
+    expect(await screen.findByText(/Non budgétées ce mois \(1\)/)).toBeInTheDocument();
+  });
 });
