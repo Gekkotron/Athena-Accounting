@@ -154,9 +154,17 @@ describe.skipIf(!RUN)('/api/settings', () => {
 
   it('user_settings has a dismissed_tips column defaulting to {}', async () => {
     const { db } = await import('../src/db/client.js');
-    const { userSettings } = await import('../src/db/schema.js');
-    await db.insert(userSettings).values({ userId: 1 }).onConflictDoNothing();
-    const rows = await db.select().from(userSettings);
+    const { eq } = await import('drizzle-orm');
+    const { users, userSettings } = await import('../src/db/schema.js');
+
+    const [u] = await db.insert(users).values({
+      username: 'tips-smoke',
+      passwordHash: 'x',
+    }).returning();
+
+    await db.insert(userSettings).values({ userId: u.id });
+    const rows = await db.select().from(userSettings)
+      .where(eq(userSettings.userId, u.id));
     expect(rows[0]?.dismissedTips).toEqual({});
   });
 });
