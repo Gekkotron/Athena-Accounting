@@ -297,7 +297,7 @@ describe.skipIf(!RUN)('POST /api/accounts/:sourceId/merge — side tables + fina
     });
     await db.insert(pdfStatementTemplates).values({
       userId: uid, accountId: src, fingerprint: 'side-fp', label: 'side',
-      zones: {}, source: 'user',
+      zones: {}, source: 'interactive',
     });
 
     const res = await app.inject({
