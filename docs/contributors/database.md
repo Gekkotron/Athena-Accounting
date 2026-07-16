@@ -1,3 +1,8 @@
+---
+title: Database
+sidebar_position: 4
+---
+
 # Database
 
 **Status:** draft — content coming.

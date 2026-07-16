@@ -1,3 +1,8 @@
+---
+title: MCP access
+sidebar_position: 8
+---
+
 # MCP access
 
 Athena ships an optional [Model Context Protocol](https://modelcontextprotocol.io)

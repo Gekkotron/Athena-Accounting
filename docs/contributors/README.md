@@ -1,3 +1,9 @@
+---
+title: For contributors
+sidebar_position: 1
+slug: /contributors
+---
+
 # For contributors
 
 You want to read, fix, or extend Athena. Start with

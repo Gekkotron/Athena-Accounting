@@ -1,3 +1,8 @@
+---
+title: Getting started
+sidebar_position: 2
+---
+
 # Getting started
 
 This page takes you from an empty machine to a running Athena instance

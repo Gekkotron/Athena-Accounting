@@ -1,3 +1,8 @@
+---
+title: Code map
+sidebar_position: 3
+---
+
 # Code map
 
 **Status:** draft — content coming.

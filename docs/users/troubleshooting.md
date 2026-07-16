@@ -1,3 +1,8 @@
+---
+title: Troubleshooting
+sidebar_position: 9
+---
+
 # Troubleshooting
 
 **Status:** draft — content coming.

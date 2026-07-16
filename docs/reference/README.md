@@ -1,3 +1,9 @@
+---
+title: Reference
+sidebar_position: 1
+slug: /reference
+---
+
 # Reference
 
 Pure lookup, no narrative.

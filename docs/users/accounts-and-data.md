@@ -1,3 +1,8 @@
+---
+title: Accounts and data
+sidebar_position: 6
+---
+
 # Accounts and data
 
 **Status:** draft — content coming.

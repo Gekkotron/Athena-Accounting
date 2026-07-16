@@ -1,8 +1,14 @@
+---
+title: Documentation home
+sidebar_position: 0
+slug: /
+---
+
 # Athena-Accounting Documentation
 
 Athena-Accounting is self-hosted personal accounting for people who
 want their bank data to stay on their own network. This is the deep
-dive; if you just want to install and run, the [top-level README](../README.md)
+dive; if you just want to install and run, the [top-level README](https://github.com/Gekkotron/Athena-Accounting#readme)
 covers the quickstart.
 
 The docs are split into two tracks and a reference bucket.
@@ -51,7 +57,7 @@ Pure lookup, no narrative.
 
 ## Not what you're looking for?
 
-- The **[top-level README](../README.md)** is the entry point for
+- The **[top-level README](https://github.com/Gekkotron/Athena-Accounting#readme)** is the entry point for
   installing Athena.
 - **Bugs and requests** live on the [issue tracker](https://github.com/Gekkotron/Athena-Accounting/issues).
 - If Athena helps you, consider **[sponsoring the project](https://github.com/sponsors/Gekkotron)**.

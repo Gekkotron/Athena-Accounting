@@ -1,3 +1,9 @@
+---
+title: For users
+sidebar_position: 1
+slug: /users
+---
+
 # For users
 
 You installed Athena or plan to. Start here.

@@ -1,3 +1,8 @@
+---
+title: Importing
+sidebar_position: 3
+---
+
 # Importing
 
 Importing is the core of Athena. This page covers every format Athena

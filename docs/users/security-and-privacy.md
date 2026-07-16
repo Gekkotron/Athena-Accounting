@@ -1,3 +1,8 @@
+---
+title: Security and privacy
+sidebar_position: 7
+---
+
 # Security and privacy
 
 **Status:** draft — content coming.

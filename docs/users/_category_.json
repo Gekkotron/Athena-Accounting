@@ -1,0 +1,6 @@
+{
+  "label": "For users",
+  "position": 1,
+  "link": { "type": "doc", "id": "users/README" },
+  "collapsed": false
+}

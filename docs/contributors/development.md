@@ -1,3 +1,8 @@
+---
+title: Development
+sidebar_position: 5
+---
+
 # Development
 
 How to run Athena locally, how to run the tests, and how to submit a

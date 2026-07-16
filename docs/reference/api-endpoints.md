@@ -1,3 +1,8 @@
+---
+title: API endpoints
+sidebar_position: 3
+---
+
 # API endpoints
 
 **Status:** draft — content coming.

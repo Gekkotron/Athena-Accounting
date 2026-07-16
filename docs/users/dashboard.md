@@ -1,3 +1,8 @@
+---
+title: Dashboard
+sidebar_position: 5
+---
+
 # Dashboard
 
 **Status:** draft — content coming.

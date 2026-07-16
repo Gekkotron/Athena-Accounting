@@ -1,3 +1,8 @@
+---
+title: Categorization
+sidebar_position: 4
+---
+
 # Categorization
 
 **Status:** draft — content coming.
