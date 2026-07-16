@@ -415,6 +415,10 @@ export const userSettings = pgTable('user_settings', {
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   settings: jsonb('settings').notNull().default({}),
+  dismissedTips: jsonb('dismissed_tips')
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
   mcpEnabled: boolean('mcp_enabled').notNull().default(false),
   mcpKeyWrapped: text('mcp_key_wrapped'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

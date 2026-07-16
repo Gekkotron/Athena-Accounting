@@ -151,4 +151,12 @@ describe.skipIf(!RUN)('/api/settings', () => {
     const rows = await db.select().from(userSettings).where(eq(userSettings.userId, uid));
     expect(rows).toHaveLength(0);
   });
+
+  it('user_settings has a dismissed_tips column defaulting to {}', async () => {
+    const { db } = await import('../src/db/client.js');
+    const { userSettings } = await import('../src/db/schema.js');
+    await db.insert(userSettings).values({ userId: 1 }).onConflictDoNothing();
+    const rows = await db.select().from(userSettings);
+    expect(rows[0]?.dismissedTips).toEqual({});
+  });
 });
