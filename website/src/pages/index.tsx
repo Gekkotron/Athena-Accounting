@@ -6,15 +6,14 @@ import Heading from '@theme/Heading';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import styles from './index.module.css';
 
-function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext();
+function HomepageHeader({ title, tagline }: { title: string; tagline: string }) {
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container">
         <Heading as="h1" className="hero__title">
-          {siteConfig.title}
+          {title}
         </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <p className="hero__subtitle">{tagline}</p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
@@ -38,7 +37,7 @@ export default function Home(): React.JSX.Element {
     <Layout
       title={siteConfig.title}
       description="Self-hosted personal accounting. Local-only, no cloud dependencies.">
-      <HomepageHeader />
+      <HomepageHeader title={siteConfig.title} tagline={siteConfig.tagline} />
       <main>
         <HomepageFeatures />
       </main>

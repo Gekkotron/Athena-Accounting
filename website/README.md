@@ -25,4 +25,6 @@ Add a `.md` file under `docs/` in the repo root. It appears automatically in the
 
 ## French translations
 
-FR translations live in `website/i18n/fr/docusaurus-plugin-content-docs/current/`. Missing pages fall back to English. Currently only the `users/` track is translated.
+FR translations of Docusaurus theme strings (navbar, footer, common UI) live in `website/i18n/fr/`. All doc content currently falls back to English — per-page translations will be added in a follow-up plan.
+
+Docusaurus's `npm run write-translations -- --locale fr` regenerates the theme JSON from bundled defaults. It may also emit `docusaurus-plugin-content-blog/options.json` and `docusaurus-plugin-content-docs/current.json`; those are intentionally not committed since bundled defaults already cover them. Do not `git add` them by accident.

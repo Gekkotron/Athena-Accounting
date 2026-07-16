@@ -7,6 +7,9 @@ on:
       - 'docs/**'
       - 'website/**'
       - '.github/workflows/docs.yml'
+    paths-ignore:
+      - 'docs/superpowers/**'
+      - 'docs/standalone-app-distribution.md'
   workflow_dispatch:
 
 permissions:
