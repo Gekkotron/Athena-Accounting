@@ -1,15 +1,17 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export type HubTab = { to: string; label: string; end?: boolean };
 
 export function HubLayout({ title, tabs }: { title: string; tabs: HubTab[] }) {
+  const { t } = useTranslation('layout');
   return (
     <div className="flex flex-col gap-6">
       <div className="page-header">
         <h1 className="page-title">{title}</h1>
       </div>
       <nav
-        aria-label={`Sous-navigation ${title}`}
+        aria-label={t('subNav.ariaLabel', { title })}
         className="flex flex-wrap gap-1 border-b border-ink-800/70"
       >
         {tabs.map((t) => (

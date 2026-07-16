@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { User } from '../api/types';
 import { Logo } from './Logo';
@@ -8,62 +9,62 @@ import { navIcons, type NavIconName } from './NavIcons';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
 
-type NavChild = { to: string; label: string; end?: boolean };
+type NavChild = { to: string; labelKey: string; end?: boolean };
 type NavItem = {
   to: string;
-  label: string;
+  labelKey: string;
   end?: boolean;
   icon: NavIconName;
   children?: NavChild[];
 };
-type NavSection = { title: string; items: NavItem[] };
+type NavSection = { titleKey: string; items: NavItem[] };
 
 const nav: NavSection[] = [
   {
-    title: 'Tous les jours',
+    titleKey: 'nav.sections.daily',
     items: [
-      { to: '/', label: 'Dashboard', end: true, icon: 'dashboard' },
-      { to: '/transactions', label: 'Transactions', icon: 'transactions' },
-      { to: '/budgets', label: 'Budgets', icon: 'budgets' },
+      { to: '/', labelKey: 'nav.items.dashboard', end: true, icon: 'dashboard' },
+      { to: '/transactions', labelKey: 'nav.items.transactions', icon: 'transactions' },
+      { to: '/budgets', labelKey: 'nav.items.budgets', icon: 'budgets' },
     ],
   },
   {
-    title: 'Classification',
+    titleKey: 'nav.sections.classification',
     items: [
       {
         to: '/regles',
-        label: 'Règles',
+        labelKey: 'nav.items.rules',
         icon: 'rules',
         children: [
-          { to: '/regles/tri', label: 'Tri' },
-          { to: '/regles/liste', label: 'Règles' },
-          { to: '/regles/categories', label: 'Catégories' },
+          { to: '/regles/tri', labelKey: 'nav.children.rules.sort' },
+          { to: '/regles/liste', labelKey: 'nav.children.rules.list' },
+          { to: '/regles/categories', labelKey: 'nav.children.rules.categories' },
         ],
       },
     ],
   },
   {
-    title: 'Structure',
+    titleKey: 'nav.sections.structure',
     items: [
       {
         to: '/comptes',
-        label: 'Comptes',
+        labelKey: 'nav.items.accounts',
         end: true,
         icon: 'accounts',
         children: [
-          { to: '/comptes', label: 'Comptes', end: true },
-          { to: '/comptes/motifs', label: 'Motifs de fichier' },
+          { to: '/comptes', labelKey: 'nav.children.accounts.list', end: true },
+          { to: '/comptes/motifs', labelKey: 'nav.children.accounts.patterns' },
         ],
       },
       {
         to: '/donnees',
-        label: 'Données',
+        labelKey: 'nav.items.data',
         icon: 'imports',
         children: [
-          { to: '/donnees/imports', label: 'Imports' },
-          { to: '/donnees/doublons', label: 'Doublons' },
-          { to: '/donnees/modeles', label: 'Modèles PDF' },
-          { to: '/donnees/sauvegarde', label: 'Sauvegarde' },
+          { to: '/donnees/imports', labelKey: 'nav.children.data.imports' },
+          { to: '/donnees/doublons', labelKey: 'nav.children.data.duplicates' },
+          { to: '/donnees/modeles', labelKey: 'nav.children.data.pdfTemplates' },
+          { to: '/donnees/sauvegarde', labelKey: 'nav.children.data.backup' },
         ],
       },
     ],
@@ -99,13 +100,14 @@ function NavTree({
   sections: NavSection[];
   onNavigate?: () => void;
 }) {
+  const { t } = useTranslation('layout');
   const location = useLocation();
   const badges = useNavBadgeCounts();
   return (
     <div className="flex flex-col gap-5">
       {sections.map((section) => (
-        <div key={section.title}>
-          <div className="label px-2 mb-2">{section.title}</div>
+        <div key={section.titleKey}>
+          <div className="label px-2 mb-2">{t(section.titleKey)}</div>
           <div className="flex flex-col gap-1">
             {section.items.map((item) => {
               const Icon = navIcons[item.icon];
@@ -128,10 +130,10 @@ function NavTree({
                     {({ isActive }) => (
                       <>
                         <Icon className={isActive || isActiveHub ? 'text-sage-300' : 'text-ink-500'} />
-                        <span>{item.label}</span>
+                        <span>{t(item.labelKey)}</span>
                         {rootBadge > 0 && (
                           <span
-                            aria-label={`${rootBadge} en attente`}
+                            aria-label={t('nav.badge', { count: rootBadge })}
                             className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-clay-500/25 text-clay-200 text-[10px] font-mono leading-none"
                           >
                             {rootBadge}
@@ -159,10 +161,10 @@ function NavTree({
                               }`
                             }
                           >
-                            <span>{child.label}</span>
+                            <span>{t(child.labelKey)}</span>
                             {badge !== null && (
                               <span
-                                aria-label={`${badge} en attente`}
+                                aria-label={t('nav.badge', { count: badge })}
                                 className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-clay-500/25 text-clay-200 text-[10px] font-mono leading-none"
                               >
                                 {badge}
@@ -184,6 +186,7 @@ function NavTree({
 }
 
 export function Layout({ user }: { user: User }) {
+  const { t } = useTranslation(['layout', 'common']);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -202,7 +205,7 @@ export function Layout({ user }: { user: User }) {
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-ink-800/70 bg-ink-950/85 backdrop-blur">
         <Brand />
         <button
-          aria-label="Menu"
+          aria-label={t('header.menu', { ns: 'layout' })}
           onClick={() => setDrawerOpen(true)}
           className="btn-secondary !min-h-0 !py-1.5 !px-2"
         >
@@ -222,7 +225,7 @@ export function Layout({ user }: { user: User }) {
             <div className="flex items-center justify-between mb-8">
               <Brand />
               <button
-                aria-label="Fermer"
+                aria-label={t('close', { ns: 'common' })}
                 onClick={() => setDrawerOpen(false)}
                 className="btn-ghost !min-h-0 !py-1.5 !px-2"
               >
@@ -265,6 +268,7 @@ export function Layout({ user }: { user: User }) {
 }
 
 function SiteFooter() {
+  const { t } = useTranslation('layout');
   return (
     <footer className="mt-16 pt-6 border-t border-ink-800/60 flex items-center justify-center gap-1.5 text-xs text-ink-500">
       <span>Athena Accounting</span>
@@ -276,7 +280,7 @@ function SiteFooter() {
         className="inline-flex items-center gap-1.5 text-ink-400 transition hover:text-ink-100 underline-offset-2 hover:underline"
       >
         <GitHubIcon />
-        Projet sur GitHub
+        {t('footer.githubLink')}
       </a>
     </footer>
   );
@@ -303,11 +307,12 @@ function Brand() {
 }
 
 function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const { t } = useTranslation('layout');
   const privacy = usePrivacy();
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60">
       <div className="flex items-center justify-between mb-1">
-        <div className="label">Connecté</div>
+        <div className="label">{t('header.connectedAs')}</div>
         <LanguageSwitcher />
       </div>
       <div className="flex items-center justify-between gap-2 mb-3">
@@ -318,14 +323,14 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
               isActive ? 'text-sage-300' : 'text-ink-100 hover:text-ink-50'
             }`
           }
-          title="Modifier mon profil"
+          title={t('user.editProfile')}
         >
           {user.username}
         </NavLink>
         <NavLink
           to="/reglages"
-          title="Réglages"
-          aria-label="Réglages"
+          title={t('user.settings')}
+          aria-label={t('user.settings')}
           className={({ isActive }) =>
             `btn-ghost !min-h-0 !py-1 !px-1.5 shrink-0 ${
               isActive ? 'text-sage-300' : 'text-ink-400 hover:text-ink-100'
@@ -338,16 +343,16 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
       <button
         className="btn-ghost w-full justify-start text-xs mb-1"
         onClick={privacy.toggle}
-        title={privacy.hidden ? 'Afficher les montants' : 'Masquer les montants (auto après 5 min)'}
+        title={privacy.hidden ? t('user.privacy.show') : t('user.privacy.hideTitle')}
       >
         {privacy.hidden ? <EyeOpenIcon /> : <EyeClosedIcon />}
-        {privacy.hidden ? 'Afficher les montants' : 'Masquer les montants'}
+        {privacy.hidden ? t('user.privacy.show') : t('user.privacy.hide')}
       </button>
       <button className="btn-ghost w-full justify-start text-xs" onClick={onLogout}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2M9 9l3-2-3-2M12 7H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        Se déconnecter
+        {t('user.logout')}
       </button>
     </div>
   );

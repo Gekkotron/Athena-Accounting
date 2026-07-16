@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "sections": {
+      "daily": "Everyday",
+      "classification": "Classification",
+      "structure": "Structure"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "transactions": "Transactions",
+      "budgets": "Budgets",
+      "rules": "Rules",
+      "accounts": "Accounts",
+      "data": "Data"
+    },
+    "children": {
+      "rules": {
+        "sort": "Sort",
+        "list": "Rules",
+        "categories": "Categories"
+      },
+      "accounts": {
+        "list": "Accounts",
+        "patterns": "File patterns"
+      },
+      "data": {
+        "imports": "Imports",
+        "duplicates": "Duplicates",
+        "pdfTemplates": "PDF templates",
+        "backup": "Backup"
+      }
+    },
+    "badge_one": "{{count}} pending",
+    "badge_other": "{{count}} pending"
+  },
+  "header": {
+    "menu": "Menu",
+    "connectedAs": "Signed in"
+  },
+  "footer": {
+    "githubLink": "View on GitHub"
+  },
+  "user": {
+    "editProfile": "Edit my profile",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "privacy": {
+      "show": "Show amounts",
+      "hideTitle": "Hide amounts (auto after 5 min)",
+      "hide": "Hide amounts"
+    }
+  },
+  "subNav": {
+    "ariaLabel": "Sub-navigation {{title}}"
+  }
+}
