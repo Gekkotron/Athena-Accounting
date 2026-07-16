@@ -6,6 +6,7 @@ import type { User } from '../api/types';
 import { Logo } from './Logo';
 import { navIcons, type NavIconName } from './NavIcons';
 import { usePrivacy } from '../contexts/PrivacyContext';
+import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
 
 type NavChild = { to: string; label: string; end?: boolean };
 type NavItem = {
@@ -305,7 +306,10 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const privacy = usePrivacy();
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60">
-      <div className="label mb-1">Connecté</div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="label">Connecté</div>
+        <LanguageSwitcher />
+      </div>
       <div className="flex items-center justify-between gap-2 mb-3">
         <NavLink
           to="/profil"
