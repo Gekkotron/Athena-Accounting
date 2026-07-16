@@ -1,0 +1,13 @@
+.features {
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+  width: 100%;
+}
+
+.featureCard {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--ifm-card-background-color, transparent);
+  height: 100%;
+}

@@ -14,7 +14,7 @@ const config: Config = {
   projectName: 'Athena-Accounting',
   trailingSlash: false,
 
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
 
   i18n: {
