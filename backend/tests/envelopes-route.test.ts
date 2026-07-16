@@ -278,3 +278,78 @@ describe.skipIf(!RUN)('/api/envelopes/holds', () => {
     expect(list.json().holds).toHaveLength(0);
   });
 });
+
+describe.skipIf(!RUN)('GET /api/envelopes/report', () => {
+  let expA: number;
+  let incC: number;
+  let acct: number;
+  beforeAll(async () => {
+    const { buildApp } = await import('./helpers/build-app.js');
+    app = await buildApp();
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'report-user', password: 'report-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'report-user', password: 'report-1234' },
+    });
+    cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
+    const a = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Alimentation', kind: 'expense' },
+    });
+    expA = a.json().category.id;
+    const inc = await app.inject({
+      method: 'POST', url: '/api/categories', headers: { cookie },
+      payload: { name: 'Salaire', kind: 'income' },
+    });
+    incC = inc.json().category.id;
+    const ac = await app.inject({
+      method: 'POST', url: '/api/accounts', headers: { cookie },
+      payload: { name: 'Compte', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2026-01-01' },
+    });
+    acct = ac.json().account.id;
+    // Income of 1000 in June, spend of 200 in June under Alimentation.
+    await app.inject({
+      method: 'POST', url: '/api/transactions', headers: { cookie },
+      payload: {
+        accountId: acct, date: '2026-06-01', amount: '1000.00',
+        rawLabel: 'Salaire', normalizedLabel: 'salaire',
+        categoryId: incC, dedupKey: 'inc-1',
+      },
+    });
+    await app.inject({
+      method: 'POST', url: '/api/transactions', headers: { cookie },
+      payload: {
+        accountId: acct, date: '2026-06-15', amount: '-200.00',
+        rawLabel: 'Courses', normalizedLabel: 'courses',
+        categoryId: expA, dedupKey: 'sp-1',
+      },
+    });
+    // Assign 300 in June under Alimentation
+    await app.inject({
+      method: 'PUT', url: '/api/envelopes/assignments', headers: { cookie },
+      payload: { categoryId: expA, month: '2026-06', amount: '300.00' },
+    });
+  });
+
+  it('returns pool + rows for the requested month', async () => {
+    const r = await app.inject({
+      method: 'GET', url: '/api/envelopes/report?month=2026-06',
+      headers: { cookie },
+    });
+    expect(r.statusCode).toBe(200);
+    const body = r.json();
+    expect(body.month).toBe('2026-06');
+    expect(body.pool.incomeCumulative).toBe('1000.00');
+    expect(body.pool.assignedCumulative).toBe('300.00');
+    expect(body.pool.available).toBe('700.00');
+    expect(body.rows).toHaveLength(1);
+    expect(body.rows[0].categoryId).toBe(expA);
+    expect(body.rows[0].assignment).toBe('300.00');
+    expect(body.rows[0].spend).toBe('200.00');
+    expect(body.rows[0].balance).toBe('100.00');
+    expect(body.rows[0].overspent).toBe(false);
+  });
+});
