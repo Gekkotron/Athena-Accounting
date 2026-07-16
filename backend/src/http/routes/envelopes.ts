@@ -155,7 +155,10 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
               amount: sql`${envelopeAssignments.amount} + ${delta}::numeric`,
               updatedAt: new Date(),
             })
-            .where(eq(envelopeAssignments.id, existing.id))
+            .where(and(
+              eq(envelopeAssignments.id, existing.id),
+              eq(envelopeAssignments.userId, uid),
+            ))
             .returning();
           return updated!;
         }
