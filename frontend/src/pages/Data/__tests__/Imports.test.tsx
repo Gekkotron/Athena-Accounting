@@ -72,14 +72,23 @@ describe('Imports page (characterization)', () => {
     expect(await screen.findByText('file-1.csv')).toBeInTheDocument();
   });
 
-  it('uploads a CSV file and shows the "Dernier import" success banner', async () => {
+  it('uploads a CSV file, walks the preview modal, and shows the "Dernier import" success banner', async () => {
     let uploaded = false;
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
       if (path === '/api/imports') return { imports: uploaded ? [fileImport(99, { filename: 'new.csv' })] : [] };
       throw new Error(`unexpected: ${path}`);
     });
-    uploadMock.mockImplementation(async () => {
+    // apiUpload now serves two endpoints: /api/imports/preview (dry-run) and
+    // /api/imports (commit). Branch on the path so both flows are exercised.
+    uploadMock.mockImplementation(async (path: string) => {
+      if (path === '/api/imports/preview') {
+        return {
+          filename: 'new.csv', format: 'csv', accountId: 1, totalRows: 1,
+          newRows: [{ date: '2026-06-15', amount: '-10.00', rawLabel: 'A', memo: null }],
+          duplicateRows: [],
+        };
+      }
       uploaded = true;
       return { filename: 'new.csv', insertedCount: 5, dedupSkipped: 1, totalLines: 6 };
     });
@@ -95,10 +104,13 @@ describe('Imports page (characterization)', () => {
     await user.selectOptions(fieldFor('Compte'), '1');
     await user.click(screen.getByRole('button', { name: 'Importer' }));
 
-    await waitFor(() => expect(uploadMock).toHaveBeenCalled());
+    // Preview modal opens; click its "Importer" to commit.
+    await screen.findByRole('dialog', { name: /Prévisualiser/ });
+    const modalImporter = screen.getAllByRole('button', { name: /^(Importer|Import…)$/ })
+      .find((b) => b.closest('[role="dialog"]'));
+    await user.click(modalImporter!);
+
     // "Dernier import" banner shows the uploaded filename and inserted count.
-    // The filename appears twice (banner + refreshed history row), so assert
-    // on the "insérée(s)" stat directly under the banner heading.
     await screen.findByText('Dernier import');
     expect(await screen.findAllByText('new.csv')).toHaveLength(2);
     expect(screen.getByText('5')).toBeInTheDocument();

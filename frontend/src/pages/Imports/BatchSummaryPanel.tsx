@@ -6,14 +6,18 @@ export type BatchState =
       inserted: number;
       skipped: number;
       needsTemplate: string[];
-      errors: { file: string; message: string }[];
+      errors: { file: File; message: string }[];
     };
 
 export function BatchSummaryPanel({
   batch,
+  onRetryOne,
+  onRetryAll,
   onClose,
 }: {
   batch: BatchState;
+  onRetryOne: (index: number) => void;
+  onRetryAll: () => void;
   onClose: () => void;
 }): JSX.Element | null {
   if (batch.phase === 'running') {
@@ -43,13 +47,30 @@ export function BatchSummaryPanel({
           <summary className="cursor-pointer">
             {batch.errors.length} en erreur
           </summary>
-          <ul className="mt-1 space-y-0.5 pl-2">
-            {batch.errors.map((e) => (
-              <li key={e.file} className="font-mono">
-                {e.file}: {e.message}
+          <ul className="mt-1 space-y-1 pl-2">
+            {batch.errors.map((e, i) => (
+              <li key={`${e.file.name}-${i}`} className="font-mono flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-ink-400 hover:text-ink-100 transition"
+                  onClick={() => onRetryOne(i)}
+                  aria-label={`Réessayer ${e.file.name}`}
+                >
+                  Réessayer
+                </button>
+                <span>{e.file.name}: {e.message}</span>
               </li>
             ))}
           </ul>
+          {batch.errors.length > 1 && (
+            <button
+              type="button"
+              className="mt-2 text-[11px] text-ink-500 hover:text-ink-100 transition"
+              onClick={onRetryAll}
+            >
+              Réessayer tout
+            </button>
+          )}
         </details>
       )}
       <button

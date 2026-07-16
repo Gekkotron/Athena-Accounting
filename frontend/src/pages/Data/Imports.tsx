@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
@@ -21,6 +21,10 @@ export function Imports() {
   // PDF-specific state
   const [needsTpl, setNeedsTpl] = useState<PdfImportNeedsTemplate | null>(null);
   const [lastImported, setLastImported] = useState<PdfImportImported | null>(null);
+  // When a batch retry opens the wizard, UploadForm passes a resolver so we
+  // can report back whether the wizard finalized (true) or was cancelled
+  // (false). Cleared after firing.
+  const wizardResolverRef = useRef<((success: boolean) => void) | null>(null);
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -62,7 +66,11 @@ export function Imports() {
 
       <UploadForm
         accounts={accountsQ.data?.accounts ?? []}
-        onPdfNeedsTemplate={(p) => { setNeedsTpl(p); setLastImported(null); }}
+        onPdfNeedsTemplate={(p, ctx) => {
+          wizardResolverRef.current = ctx?.resolve ?? null;
+          setNeedsTpl(p);
+          setLastImported(null);
+        }}
         onPdfImported={(p) => { setLastImported(p); setNeedsTpl(null); }}
         onOfxCsvSuccess={(r) => { setLastResult(r); }}
         onFileSelected={() => {
@@ -88,8 +96,14 @@ export function Imports() {
           // clusters — refresh the "Possibles doublons" panel so those
           // show up without a page reload.
           qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+          wizardResolverRef.current?.(true);
+          wizardResolverRef.current = null;
         }}
-        onCancel={() => setNeedsTpl(null)}
+        onCancel={() => {
+          setNeedsTpl(null);
+          wizardResolverRef.current?.(false);
+          wizardResolverRef.current = null;
+        }}
       />
 
       {lastResult && (

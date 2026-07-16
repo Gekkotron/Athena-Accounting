@@ -315,6 +315,69 @@ describe('UploadForm', () => {
     expect(screen.queryByText(/2 fichiers sélectionnés/)).not.toBeInTheDocument();
   });
 
+  it('retry from the batch summary re-runs apiUpload for a failed CSV and removes the error row on success', async () => {
+    uploadMock.mockImplementationOnce(async () => ({ filename: 'a.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 }));
+    uploadMock.mockImplementationOnce(async () => { throw new Error('boom'); });
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, [
+      new File(['x'], 'a.csv', { type: 'text/csv' }),
+      new File(['x'], 'b.csv', { type: 'text/csv' }),
+    ]);
+    await user.click(screen.getByRole('button', { name: /Importer 2 fichiers/ }));
+
+    await waitFor(() => expect(screen.getByText(/1 en erreur/)).toBeInTheDocument());
+    await user.click(screen.getByText(/1 en erreur/));
+
+    uploadMock.mockResolvedValueOnce({ filename: 'b.csv', insertedCount: 3, dedupSkipped: 0, totalLines: 3 });
+    await user.click(screen.getByRole('button', { name: /Réessayer b\.csv/ }));
+
+    await waitFor(() => expect(screen.queryByText(/1 en erreur/)).not.toBeInTheDocument());
+  });
+
+  it('retry that fails again updates the error message in place', async () => {
+    uploadMock.mockImplementationOnce(async () => ({ filename: 'a.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 }));
+    uploadMock.mockImplementationOnce(async () => { throw new Error('first'); });
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, [
+      new File(['x'], 'a.csv', { type: 'text/csv' }),
+      new File(['x'], 'b.csv', { type: 'text/csv' }),
+    ]);
+    await user.click(screen.getByRole('button', { name: /Importer 2 fichiers/ }));
+    await waitFor(() => expect(screen.getByText(/1 en erreur/)).toBeInTheDocument());
+    await user.click(screen.getByText(/1 en erreur/));
+
+    uploadMock.mockRejectedValueOnce(new Error('second'));
+    await user.click(screen.getByRole('button', { name: /Réessayer b\.csv/ }));
+
+    await waitFor(() => expect(screen.getByText(/second/)).toBeInTheDocument());
+    expect(screen.getAllByText(/1 en erreur/)).toHaveLength(1);
+  });
+
+  it('"Réessayer tout" retries every failed file', async () => {
+    uploadMock.mockRejectedValueOnce(new Error('e1'));
+    uploadMock.mockRejectedValueOnce(new Error('e2'));
+    const user = userEvent.setup();
+    renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, [
+      new File(['x'], 'a.csv', { type: 'text/csv' }),
+      new File(['x'], 'b.csv', { type: 'text/csv' }),
+    ]);
+    await user.click(screen.getByRole('button', { name: /Importer 2 fichiers/ }));
+    await waitFor(() => expect(screen.getByText(/2 en erreur/)).toBeInTheDocument());
+    await user.click(screen.getByText(/2 en erreur/));
+
+    uploadMock.mockResolvedValueOnce({ filename: 'a.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 });
+    uploadMock.mockResolvedValueOnce({ filename: 'b.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 });
+    await user.click(screen.getByRole('button', { name: 'Réessayer tout' }));
+
+    await waitFor(() => expect(screen.queryByText(/en erreur/)).not.toBeInTheDocument());
+  });
+
   it('routes a JPEG upload to /api/imports/photo', async () => {
     const response = {
       kind: 'needs_template' as const,

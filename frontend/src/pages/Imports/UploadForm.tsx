@@ -7,6 +7,7 @@ import { ImportPreviewModal } from './ImportPreviewModal';
 import { runOne } from './run-import';
 import { collectDroppedFiles } from './drop-utils';
 import { BatchSummaryPanel, type BatchState } from './BatchSummaryPanel';
+import { useBatchRetry } from './useBatchRetry';
 
 export function UploadForm({
   accounts,
@@ -16,7 +17,10 @@ export function UploadForm({
   onFileSelected,
 }: {
   accounts: Account[];
-  onPdfNeedsTemplate: (payload: PdfImportNeedsTemplate) => void;
+  onPdfNeedsTemplate: (
+    payload: PdfImportNeedsTemplate,
+    ctx?: { resolve: (success: boolean) => void },
+  ) => void;
   onPdfImported: (payload: PdfImportImported) => void;
   onOfxCsvSuccess: (result: any) => void;
   onFileSelected: () => void;
@@ -146,7 +150,7 @@ export function UploadForm({
     let skipped = 0;
     let imported = 0;
     const needsTemplate: string[] = [];
-    const errors: { file: string; message: string }[] = [];
+    const errors: { file: File; message: string }[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i]!;
@@ -159,7 +163,7 @@ export function UploadForm({
       } else if ('needsTemplate' in r) {
         needsTemplate.push(f.name);
       } else {
-        errors.push({ file: f.name, message: r.message });
+        errors.push({ file: f, message: r.message });
       }
     }
 
@@ -169,6 +173,11 @@ export function UploadForm({
     if (fileRef.current) fileRef.current.value = '';
     if (folderRef.current) folderRef.current.value = '';
   };
+
+  const { retryOne, retryAll } = useBatchRetry({
+    batch, setBatch, accountId, invalidate: invalidateAll,
+    onNeedsTemplate: (r) => new Promise<boolean>((resolve) => onPdfNeedsTemplate(r, { resolve })),
+  });
 
   return (
     <>
@@ -260,7 +269,14 @@ export function UploadForm({
         </div>
       </form>
 
-      {batch && <BatchSummaryPanel batch={batch} onClose={() => setBatch(null)} />}
+      {batch && (
+        <BatchSummaryPanel
+          batch={batch}
+          onRetryOne={retryOne}
+          onRetryAll={retryAll}
+          onClose={() => setBatch(null)}
+        />
+      )}
 
       {previewCtl.preview && (
         <ImportPreviewModal
