@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
 import { TipsProvider } from './contexts/TipsContext';
+import { WelcomeTour } from './components/WelcomeTour';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
 import { Login } from './pages/Login';
@@ -91,6 +92,7 @@ export default function App() {
 
   return (
     <TipsProvider>
+      <WelcomeTour />
       <Routes>
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route element={<Layout user={user} />}>
