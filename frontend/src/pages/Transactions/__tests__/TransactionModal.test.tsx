@@ -1,9 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TransactionModal } from '../TransactionModal';
 import type { Account, Category, Transaction } from '../../../api/types';
+import i18n from '../../../i18n';
+
+// TransactionModal renders French strings by default (the app's current UI
+// language). Preload the 'transactions'/'common' namespaces for both locales
+// so `useTranslation` never suspends mid-render, then pin the active
+// language to French so the existing French-literal assertions below keep
+// matching real rendered text (per the i18n migration recipe's
+// locale-preserving-helper fallback).
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['transactions', 'common']);
+});
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -47,7 +59,8 @@ function renderModal(overrides: Partial<{
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('fr');
   apiMock.mockReset();
 });
 

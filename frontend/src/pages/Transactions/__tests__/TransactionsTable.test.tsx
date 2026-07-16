@@ -1,9 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TransactionsTable } from '../TransactionsTable';
 import type { Transaction, Category, Account } from '../../../api/types';
 import type { Filters } from '../filters';
+import i18n from '../../../i18n';
+
+// TransactionsTable renders French strings by default (the app's current UI
+// language). Preload the 'transactions'/'common' namespaces for both locales
+// so `useTranslation` never suspends mid-render, then pin the active
+// language to French so the existing French-literal assertions below keep
+// matching real rendered text (per the i18n migration recipe's
+// locale-preserving-helper fallback).
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['transactions', 'common']);
+});
 
 const acc: Account = {
   id: 1,

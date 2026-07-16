@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
@@ -38,6 +39,7 @@ export function TransactionRow({
   checkpointPending: boolean;
   onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
 }) {
+  const { t } = useTranslation(['transactions', 'common']);
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   return (
     <>
@@ -48,7 +50,7 @@ export function TransactionRow({
             className="align-middle accent-sage-300"
             checked={selected}
             onChange={(e) => onToggleSelect(tx.id, e.target.checked)}
-            aria-label={`Sélectionner la transaction ${tx.rawLabel}`}
+            aria-label={t('row.selectAriaLabel', { label: tx.rawLabel })}
           />
         </td>
         <td className="px-4 py-2.5 text-ink-300 whitespace-nowrap font-mono text-xs">{formatDate(tx.date)}</td>
@@ -59,7 +61,7 @@ export function TransactionRow({
           </div>
           {tx.transferGroupId && (
             <div className="text-[11px] text-amber-300/80 mt-0.5 flex items-center gap-1">
-              <span aria-hidden>↹</span> virement interne
+              <span aria-hidden>↹</span> {t('row.internalTransferBadge')}
             </div>
           )}
           <div className="sm:hidden text-[11px] text-ink-500 mt-0.5">{account?.name}</div>
@@ -72,7 +74,7 @@ export function TransactionRow({
               onClick={() => onToggleExpanded(tx.id)}
               aria-expanded={expanded}
             >
-              {expanded ? '▾' : '▸'} Ventilée ({tx.splits.length})
+              {expanded ? '▾' : '▸'} {t('row.splitBadge', { count: tx.splits.length })}
             </button>
           ) : (
             <>
@@ -99,7 +101,7 @@ export function TransactionRow({
                     </option>
                   ))}
               </select>
-              {tx.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">manuel</div>}
+              {tx.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">{t('row.manualTag')}</div>}
             </>
           )}
         </td>
@@ -135,8 +137,8 @@ export function TransactionRow({
                   checked={checkpoint != null}
                   disabled={checkpointPending}
                   onChange={(e) => onToggleCheckpoint(tx, e.target.checked)}
-                  aria-label={`Valider le solde du ${formatDate(tx.date)} comme point de contrôle`}
-                  title="Valider ce solde comme point de contrôle"
+                  aria-label={t('row.checkpointAriaLabel', { date: formatDate(tx.date) })}
+                  title={t('row.checkpointTitle')}
                 />
               )}
               <span>{tx.runningBalance != null ? formatAmount(tx.runningBalance, account?.currency ?? 'EUR') : '—'}</span>
@@ -148,8 +150,8 @@ export function TransactionRow({
             <button
               onClick={() => onEdit(tx)}
               className="p-1.5 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition"
-              title="Modifier"
-              aria-label="Modifier"
+              title={t('edit', { ns: 'common' })}
+              aria-label={t('edit', { ns: 'common' })}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
                 <path d="M2 10l6-6 2 2-6 6L2 12V10z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
@@ -158,8 +160,8 @@ export function TransactionRow({
             <button
               onClick={() => onDelete(tx)}
               className="p-1.5 rounded text-ink-600 hover:text-clay-300 hover:bg-ink-900 transition"
-              title="Supprimer"
-              aria-label="Supprimer"
+              title={t('delete', { ns: 'common' })}
+              aria-label={t('delete', { ns: 'common' })}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
                 <path d="M3 4h8M5.5 4V2.5h3V4M4 4l0.7 8h4.6L10 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import type { Filters } from './filters';
 import { Th } from './Th';
@@ -46,7 +47,8 @@ export function TransactionsTable({
   pendingCheckpointDate: string | null;
   onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
 }) {
-  const visibleSelected = transactions.filter((t) => selectedIds.has(t.id)).length;
+  const { t } = useTranslation(['transactions', 'common']);
+  const visibleSelected = transactions.filter((tx) => selectedIds.has(tx.id)).length;
   const allSelected = transactions.length > 0 && visibleSelected === transactions.length;
   const partiallySelected = visibleSelected > 0 && !allSelected;
   const showBalance = filters.accountId != null && filters.sort === 'date';
@@ -70,17 +72,17 @@ export function TransactionsTable({
                   className="align-middle accent-sage-300"
                   checked={allSelected}
                   onChange={(e) => onToggleSelectAll(e.target.checked)}
-                  aria-label="Tout sélectionner sur cette page"
+                  aria-label={t('table.selectAllAriaLabel')}
                   disabled={transactions.length === 0}
                 />
               </th>
-              <Th sort="date" filters={filters} setFilters={setFilters} setOffset={setOffset}>Date</Th>
-              <th className="px-4 py-3 label font-normal hidden sm:table-cell">Compte</th>
-              <Th sort="label" filters={filters} setFilters={setFilters} setOffset={setOffset}>Libellé</Th>
-              <th className="px-4 py-3 label font-normal">Catégorie</th>
-              <th className="px-4 py-3 label font-normal hidden md:table-cell">Notes</th>
-              <Th sort="amount" filters={filters} setFilters={setFilters} setOffset={setOffset} align="right">Montant</Th>
-              {showBalance && <th className="px-4 py-3 label font-normal text-right">Solde</th>}
+              <Th sort="date" filters={filters} setFilters={setFilters} setOffset={setOffset}>{t('table.columns.date')}</Th>
+              <th className="px-4 py-3 label font-normal hidden sm:table-cell">{t('table.columns.account')}</th>
+              <Th sort="label" filters={filters} setFilters={setFilters} setOffset={setOffset}>{t('table.columns.label')}</Th>
+              <th className="px-4 py-3 label font-normal">{t('table.columns.category')}</th>
+              <th className="px-4 py-3 label font-normal hidden md:table-cell">{t('table.columns.notes')}</th>
+              <Th sort="amount" filters={filters} setFilters={setFilters} setOffset={setOffset} align="right">{t('table.columns.amount')}</Th>
+              {showBalance && <th className="px-4 py-3 label font-normal text-right">{t('table.columns.balance')}</th>}
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -88,22 +90,22 @@ export function TransactionsTable({
             {transactions.length === 0 ? (
               <tr>
                 <td colSpan={showBalance ? 9 : 8} className="px-4 py-10 text-center text-ink-500 display-italic">
-                  {isLoading ? 'Chargement…' : 'Aucune transaction.'}
+                  {isLoading ? t('loading', { ns: 'common' }) : t('table.empty')}
                 </td>
               </tr>
             ) : (
-              transactions.map((t) => (
+              transactions.map((tx) => (
                 <TransactionRow
-                  key={t.id}
-                  tx={t}
-                  account={accountById.get(t.accountId)}
+                  key={tx.id}
+                  tx={tx}
+                  account={accountById.get(tx.accountId)}
                   categories={categories}
-                  selected={selectedIds.has(t.id)}
-                  expanded={expandedIds.has(t.id)}
+                  selected={selectedIds.has(tx.id)}
+                  expanded={expandedIds.has(tx.id)}
                   showBalance={showBalance}
-                  isEndOfDay={endOfDayIds.has(t.id)}
-                  checkpoint={checkpointByDate.get(t.date)}
-                  checkpointPending={pendingCheckpointDate === t.date}
+                  isEndOfDay={endOfDayIds.has(tx.id)}
+                  checkpoint={checkpointByDate.get(tx.date)}
+                  checkpointPending={pendingCheckpointDate === tx.date}
                   onToggleCheckpoint={onToggleCheckpoint}
                   onToggleExpanded={onToggleExpanded}
                   onToggleSelect={onToggleSelect}

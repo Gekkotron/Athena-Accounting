@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
@@ -27,6 +28,7 @@ function readIntParam(sp: URLSearchParams, key: string): number | undefined {
 }
 
 export function Transactions() {
+  const { t } = useTranslation(['transactions', 'common']);
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   // Pick up an optional ?accountId=… / ?sourceFileId=… from the URL so
@@ -241,20 +243,22 @@ export function Transactions() {
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="page-title">Transactions</h1>
+            <h1 className="page-title">{t('title')}</h1>
             <SectionTipHelpIcon id="section:transactions" />
           </div>
-          <p className="page-subtitle">{total.toLocaleString('fr-FR')} ligne{total > 1 ? 's' : ''} au total</p>
+          <p className="page-subtitle">
+            {t('subtitle', { count: total, formatted: total.toLocaleString('fr-FR') })}
+          </p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary md:hidden" onClick={() => setShowFilters((s) => !s)}>
-            {showFilters ? 'Masquer' : 'Filtres'}
+            {showFilters ? t('filtersToggle.hide') : t('filtersToggle.show')}
           </button>
           <button className="btn-primary" onClick={() => setModalTx(null)}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            Nouvelle transaction
+            {t('actions.newTransaction')}
           </button>
         </div>
       </div>
@@ -276,10 +280,10 @@ export function Transactions() {
       {filters.sourceFileId != null && (
         <div className="rounded-lg border border-sage-800/40 bg-sage-900/10 px-3 py-2 flex items-center justify-between gap-3 text-xs">
           <span className="text-ink-200">
-            Filtré par import{' '}
+            {t('sourceFileFilter.prefix')}{' '}
             <span className="font-mono text-sage-300">#{filters.sourceFileId}</span>{' '}
             <span className="text-ink-500">
-              — seules les transactions issues de ce fichier sont affichées.
+              {t('sourceFileFilter.suffix')}
             </span>
           </span>
           <button
@@ -289,7 +293,7 @@ export function Transactions() {
               setFilters((f) => ({ ...f, sourceFileId: undefined }));
             }}
           >
-            Retirer ce filtre
+            {t('sourceFileFilter.remove')}
           </button>
         </div>
       )}
@@ -297,20 +301,21 @@ export function Transactions() {
       {selectedIds.size > 0 && (
         <div className="rounded-lg border border-sage-800/40 bg-sage-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
           <span className="text-ink-100">
-            <span className="font-mono">{selectedIds.size}</span> sélectionnée{selectedIds.size > 1 ? 's' : ''}
+            <span className="font-mono">{selectedIds.size}</span>{' '}
+            {t('selection.suffix', { count: selectedIds.size })}
           </span>
           <div className="flex items-center gap-2">
             <button
               className="text-[11px] text-ink-500 hover:text-ink-100 transition"
               onClick={() => setSelectedIds(new Set())}
             >
-              Effacer la sélection
+              {t('selection.clear')}
             </button>
             <select
               className="input-sm"
               value={bulkSelectValue}
               disabled={bulkCategorize.isPending}
-              aria-label="Changer la catégorie des transactions sélectionnées"
+              aria-label={t('selection.changeCategoryAriaLabel')}
               onChange={(e) => {
                 const v = e.target.value;
                 if (!v) return;
@@ -321,8 +326,8 @@ export function Transactions() {
                 });
               }}
             >
-              <option value="" disabled>Catégorie…</option>
-              <option value="none">— Aucune</option>
+              <option value="" disabled>{t('selection.categoryPlaceholder')}</option>
+              <option value="none">{t('selection.categoryNone')}</option>
               {sortedCategories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {formatCategoryPath(c, catById)}
@@ -333,7 +338,7 @@ export function Transactions() {
               className="btn-secondary !py-1.5 !px-3 text-clay-300 hover:text-clay-200 border-clay-800/60 hover:border-clay-700"
               onClick={() => { setBulkDeleteError(null); setConfirmBulkDelete(true); }}
             >
-              Supprimer
+              {t('delete', { ns: 'common' })}
             </button>
           </div>
         </div>
@@ -342,25 +347,27 @@ export function Transactions() {
       {bulkCategorizeNotice && (
         <div className="rounded-lg border border-sage-800/40 bg-sage-900/10 px-4 py-2 flex items-center justify-between gap-3 text-sm">
           <span className="text-ink-200">
-            {bulkCategorizeNotice.skipped} ligne{bulkCategorizeNotice.skipped > 1 ? 's' : ''} ignorée{bulkCategorizeNotice.skipped > 1 ? 's' : ''} (virements internes ou ventilations)
+            {t('bulkCategorize.skippedNotice', { count: bulkCategorizeNotice.skipped })}
           </span>
           <button
             className="text-[11px] text-ink-500 hover:text-ink-100 transition"
             onClick={() => setBulkCategorizeNotice(null)}
           >
-            Fermer
+            {t('close', { ns: 'common' })}
           </button>
         </div>
       )}
 
       {bulkCategorizeError && (
         <div className="rounded-lg border border-clay-800/60 bg-clay-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
-          <span className="text-clay-200">Changement de catégorie : {bulkCategorizeError}</span>
+          <span className="text-clay-200">
+            {t('bulkCategorize.errorPrefix', { message: bulkCategorizeError })}
+          </span>
           <button
             className="text-[11px] text-ink-500 hover:text-ink-100 transition"
             onClick={() => setBulkCategorizeError(null)}
           >
-            Fermer
+            {t('close', { ns: 'common' })}
           </button>
         </div>
       )}
@@ -368,13 +375,13 @@ export function Transactions() {
       {checkpointError && (
         <div className="rounded-lg border border-clay-800/60 bg-clay-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
           <span className="text-clay-200">
-            Point de contrôle : {checkpointError}
+            {t('checkpoint.errorPrefix', { message: checkpointError })}
           </span>
           <button
             className="text-[11px] text-ink-500 hover:text-ink-100 transition"
             onClick={() => setCheckpointError(null)}
           >
-            Fermer
+            {t('close', { ns: 'common' })}
           </button>
         </div>
       )}
@@ -427,7 +434,11 @@ export function Transactions() {
 
       <div className="flex items-center justify-between text-sm text-ink-400">
         <div className="font-mono text-xs">
-          {total === 0 ? '0–0' : `${offset + 1}–${Math.min(offset + PAGE, total)}`} sur {total}
+          {t('pagination.range', {
+            from: total === 0 ? 0 : offset + 1,
+            to: total === 0 ? 0 : Math.min(offset + PAGE, total),
+            total,
+          })}
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>
@@ -452,17 +463,17 @@ export function Transactions() {
         open={!!deletingTx}
         title={
           deletingTx
-            ? `Supprimer la transaction « ${truncate(deletingTx.rawLabel, 40)} » ?`
+            ? t('deleteDialog.title', { label: truncate(deletingTx.rawLabel, 40) })
             : ''
         }
         description={
-          <>
+          <Trans i18nKey="transactions:deleteDialog.description">
             Cette action est <span className="display-italic">irréversible</span>. Si la
             transaction fait partie d'un virement interne, la jambe miroir est délinkée
             (transfer_group_id mis à null) pour ne pas devenir invisible dans les agrégats.
-          </>
+          </Trans>
         }
-        confirmLabel="Supprimer la transaction"
+        confirmLabel={t('deleteDialog.confirmLabel')}
         destructive
         busy={deleteTransaction.isPending}
         error={deleteError}
@@ -475,14 +486,14 @@ export function Transactions() {
 
       <ConfirmDialog
         open={confirmBulkDelete}
-        title={`Supprimer ${selectedIds.size} transaction${selectedIds.size > 1 ? 's' : ''} ?`}
+        title={t('bulkDeleteDialog.title', { count: selectedIds.size })}
         description={
-          <>
+          <Trans i18nKey="transactions:bulkDeleteDialog.description">
             Cette action est <span className="display-italic">irréversible</span>. Toute
             jambe miroir de virement interne est délinkée avant la suppression.
-          </>
+          </Trans>
         }
-        confirmLabel="Supprimer"
+        confirmLabel={t('delete', { ns: 'common' })}
         destructive
         busy={bulkDelete.isPending}
         error={bulkDeleteError}

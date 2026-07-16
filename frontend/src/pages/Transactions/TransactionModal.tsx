@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
@@ -20,6 +21,7 @@ export function TransactionModal({
   accounts: Account[];
   categories: Category[];
 }) {
+  const { t } = useTranslation(['transactions', 'common']);
   const qc = useQueryClient();
   // We hold the date in the FRENCH textual form (JJ/MM/AAAA) and parse to
   // ISO only at submit time. This lets the user paste "14/07/2025"
@@ -200,21 +202,21 @@ export function TransactionModal({
     e.preventDefault();
     setError(null);
     if (!accountId) {
-      setError('Choisissez un compte.');
+      setError(t('modal.errors.accountRequired'));
       return;
     }
     const isoDate = parseUserDate(date);
     if (!isoDate) {
-      setError('Date invalide. Format attendu : JJ/MM/AAAA (ex. 14/07/2025).');
+      setError(t('modal.errors.invalidDate'));
       return;
     }
     const cleanedAmount = parseDecimal(amount);
     if (cleanedAmount === null) {
-      setError('Montant invalide. Format attendu : 338.50, -25,30, 1234, …');
+      setError(t('modal.errors.invalidAmount'));
       return;
     }
     if (!rawLabel.trim()) {
-      setError('Le libellé est obligatoire.');
+      setError(t('modal.errors.labelRequired'));
       return;
     }
     const lockRaw = lockYearsInput.trim();
@@ -222,7 +224,7 @@ export function TransactionModal({
     if (lockRaw !== '') {
       const n = Number(lockRaw);
       if (!Number.isInteger(n) || n < 0 || n > 99) {
-        setError('Blocage : entier entre 0 et 99, ou laisser vide.');
+        setError(t('modal.errors.invalidLockYears'));
         return;
       }
       lockYears = n;
@@ -308,17 +310,15 @@ export function TransactionModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="display text-xl text-ink-50 mb-1">
-          {isEdit ? 'Modifier la transaction' : 'Nouvelle transaction'}
+          {isEdit ? t('modal.header.edit') : t('modal.header.create')}
         </div>
         <div className="text-sm text-ink-400 mb-5">
-          {isEdit
-            ? 'Le dedup_key reste figé : un re-import du fichier source ne créera pas de doublon.'
-            : 'Saisie manuelle. Le moteur de règles s\'appliquera automatiquement si vous laissez la catégorie vide.'}
+          {isEdit ? t('modal.header.editHint') : t('modal.header.createHint')}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <label className="label mb-1.5 block">Compte</label>
+            <label className="label mb-1.5 block">{t('modal.labels.account')}</label>
             <select
               className="input"
               value={accountId}
@@ -334,52 +334,52 @@ export function TransactionModal({
             </select>
           </div>
           <div>
-            <label className="label mb-1.5 block">Date</label>
+            <label className="label mb-1.5 block">{t('modal.labels.date')}</label>
             <input
               type="text"
               inputMode="numeric"
               className="input font-mono"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              placeholder="JJ/MM/AAAA"
+              placeholder={t('modal.placeholders.date')}
               required
               autoComplete="off"
             />
             <div className="text-[11px] text-ink-500 mt-1">
-              Format JJ/MM/AAAA — collage direct depuis un relevé bancaire accepté.
+              {t('modal.hints.dateFormat')}
             </div>
           </div>
           <div>
-            <label className="label mb-1.5 block">Montant</label>
+            <label className="label mb-1.5 block">{t('modal.labels.amount')}</label>
             <input
               className="input font-mono"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="-25,30"
+              placeholder={t('modal.placeholders.amount')}
               required
             />
             <div className="text-[11px] text-ink-500 mt-1">
-              Signé : négatif = dépense, positif = revenu.
+              {t('modal.hints.amountSign')}
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="label mb-1.5 block">Libellé</label>
+            <label className="label mb-1.5 block">{t('modal.labels.label')}</label>
             <input
               className="input"
               value={rawLabel}
               onChange={(e) => setRawLabel(e.target.value)}
-              placeholder="Carrefour Évry"
+              placeholder={t('modal.placeholders.label')}
               required
             />
           </div>
           <div>
-            <label className="label mb-1.5 block">Catégorie (optionnelle)</label>
+            <label className="label mb-1.5 block">{t('modal.labels.categoryOptional')}</label>
             <select
               className="input"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
             >
-              <option value="">— (auto via règles)</option>
+              <option value="">{t('modal.options.categoryAuto')}</option>
               {[...categories]
                 .sort((a, b) => {
                   const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
@@ -394,7 +394,7 @@ export function TransactionModal({
             </select>
           </div>
           <div>
-            <label className="label mb-1.5 block">Notes</label>
+            <label className="label mb-1.5 block">{t('modal.labels.notes')}</label>
             <input
               className="input"
               value={notes}
@@ -405,9 +405,9 @@ export function TransactionModal({
           <div className="sm:col-span-2">
             <label
               className="label mb-1.5 block"
-              title="Bloque UNIQUEMENT cette transaction pendant N ans à partir de sa date (dépôts à terme / Natixis). Laisser vide pour un PEA : la transaction hérite alors du verrou global du compte (date d'ouverture + N ans, une seule échéance pour tout le compte)."
+              title={t('modal.hints.lockYearsTooltip')}
             >
-              Blocage individuel (ans) <span className="text-ink-500 font-normal">— optionnel</span>
+              {t('modal.labels.lockYears')} <span className="text-ink-500 font-normal">{t('modal.labels.optional')}</span>
             </label>
             <input
               inputMode="numeric"
@@ -418,8 +418,8 @@ export function TransactionModal({
             />
             <div className="text-[11px] text-ink-500 mt-1">
               {selectedAccount?.lockYears == null
-                ? 'Le compte n\'a pas de blocage. Remplissez seulement si cette transaction doit être bloquée N ans depuis sa date.'
-                : `PEA : laissez vide, la transaction hérite du verrou global (${selectedAccount.lockYears} ans depuis l'ouverture du compte). Dépôt à terme (Natixis) : remplissez avec ${selectedAccount.lockYears} pour que cette échéance soit calculée depuis la date de la transaction.`}
+                ? t('modal.hints.lockYearsNoAccountLock')
+                : t('modal.hints.lockYearsWithAccountLock', { years: selectedAccount.lockYears })}
             </div>
           </div>
         </div>
@@ -442,12 +442,12 @@ export function TransactionModal({
 
         <div className="flex justify-end gap-2 mt-6">
           <button type="button" className="btn-ghost" onClick={onClose} disabled={pending}>
-            Annuler
+            {t('cancel', { ns: 'common' })}
           </button>
           <button type="submit" className="btn-primary" disabled={pending || splitsInvalid}>
             {pending
-              ? isEdit ? 'Enregistrement…' : 'Création…'
-              : isEdit ? 'Enregistrer' : 'Créer la transaction'}
+              ? isEdit ? t('modal.actions.saving') : t('modal.actions.creating')
+              : isEdit ? t('save', { ns: 'common' }) : t('modal.actions.create')}
           </button>
         </div>
       </form>

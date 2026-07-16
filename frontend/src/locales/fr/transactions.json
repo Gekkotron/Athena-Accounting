@@ -1,0 +1,154 @@
+{
+  "title": "Transactions",
+  "subtitle_one": "{{formatted}} ligne au total",
+  "subtitle_other": "{{formatted}} lignes au total",
+  "filtersToggle": {
+    "show": "Filtres",
+    "hide": "Masquer"
+  },
+  "actions": {
+    "newTransaction": "Nouvelle transaction"
+  },
+  "sourceFileFilter": {
+    "prefix": "Filtré par import",
+    "suffix": "— seules les transactions issues de ce fichier sont affichées.",
+    "remove": "Retirer ce filtre"
+  },
+  "selection": {
+    "suffix_one": "sélectionnée",
+    "suffix_other": "sélectionnées",
+    "clear": "Effacer la sélection",
+    "changeCategoryAriaLabel": "Changer la catégorie des transactions sélectionnées",
+    "categoryPlaceholder": "Catégorie…",
+    "categoryNone": "— Aucune"
+  },
+  "bulkCategorize": {
+    "skippedNotice_one": "{{count}} ligne ignorée (virements internes ou ventilations)",
+    "skippedNotice_other": "{{count}} lignes ignorées (virements internes ou ventilations)",
+    "errorPrefix": "Changement de catégorie : {{message}}"
+  },
+  "checkpoint": {
+    "errorPrefix": "Point de contrôle : {{message}}"
+  },
+  "pagination": {
+    "range": "{{from}}–{{to}} sur {{total}}"
+  },
+  "deleteDialog": {
+    "title": "Supprimer la transaction « {{label}} » ?",
+    "description": "Cette action est <1>irréversible</1>. Si la transaction fait partie d'un virement interne, la jambe miroir est délinkée (transfer_group_id mis à null) pour ne pas devenir invisible dans les agrégats.",
+    "confirmLabel": "Supprimer la transaction"
+  },
+  "bulkDeleteDialog": {
+    "title_one": "Supprimer {{count}} transaction ?",
+    "title_other": "Supprimer {{count}} transactions ?",
+    "description": "Cette action est <1>irréversible</1>. Toute jambe miroir de virement interne est délinkée avant la suppression."
+  },
+  "table": {
+    "selectAllAriaLabel": "Tout sélectionner sur cette page",
+    "columns": {
+      "date": "Date",
+      "account": "Compte",
+      "label": "Libellé",
+      "category": "Catégorie",
+      "notes": "Notes",
+      "amount": "Montant",
+      "balance": "Solde"
+    },
+    "empty": "Aucune transaction."
+  },
+  "row": {
+    "selectAriaLabel": "Sélectionner la transaction {{label}}",
+    "internalTransferBadge": "virement interne",
+    "splitBadge": "Ventilée ({{count}})",
+    "manualTag": "manuel",
+    "checkpointAriaLabel": "Valider le solde du {{date}} comme point de contrôle",
+    "checkpointTitle": "Valider ce solde comme point de contrôle"
+  },
+  "filters": {
+    "labels": {
+      "search": "Recherche",
+      "account": "Compte",
+      "category": "Catégorie",
+      "fromDate": "Du",
+      "toDate": "Au"
+    },
+    "placeholders": {
+      "search": "libellé ou montant (ex. 338)"
+    },
+    "amountBadge": "MONTANT",
+    "amountHint": {
+      "exact": "Filtré par montant exact (signe ignoré)",
+      "range": "Filtré par montant {{amount}},00–{{amount}},99 (signe ignoré)"
+    },
+    "options": {
+      "allAccounts": "Tous",
+      "allCategories": "Toutes"
+    },
+    "actions": {
+      "clear": "Effacer"
+    }
+  },
+  "modal": {
+    "header": {
+      "create": "Nouvelle transaction",
+      "edit": "Modifier la transaction",
+      "createHint": "Saisie manuelle. Le moteur de règles s'appliquera automatiquement si vous laissez la catégorie vide.",
+      "editHint": "Le dedup_key reste figé : un re-import du fichier source ne créera pas de doublon."
+    },
+    "labels": {
+      "account": "Compte",
+      "date": "Date",
+      "amount": "Montant",
+      "label": "Libellé",
+      "categoryOptional": "Catégorie (optionnelle)",
+      "notes": "Notes",
+      "lockYears": "Blocage individuel (ans)",
+      "optional": "— optionnel"
+    },
+    "placeholders": {
+      "date": "JJ/MM/AAAA",
+      "amount": "-25,30",
+      "label": "Carrefour Évry"
+    },
+    "hints": {
+      "dateFormat": "Format JJ/MM/AAAA — collage direct depuis un relevé bancaire accepté.",
+      "amountSign": "Signé : négatif = dépense, positif = revenu.",
+      "lockYearsTooltip": "Bloque UNIQUEMENT cette transaction pendant N ans à partir de sa date (dépôts à terme / Natixis). Laisser vide pour un PEA : la transaction hérite alors du verrou global du compte (date d'ouverture + N ans, une seule échéance pour tout le compte).",
+      "lockYearsNoAccountLock": "Le compte n'a pas de blocage. Remplissez seulement si cette transaction doit être bloquée N ans depuis sa date.",
+      "lockYearsWithAccountLock": "PEA : laissez vide, la transaction hérite du verrou global ({{years}} ans depuis l'ouverture du compte). Dépôt à terme (Natixis) : remplissez avec {{years}} pour que cette échéance soit calculée depuis la date de la transaction."
+    },
+    "options": {
+      "categoryAuto": "— (auto via règles)"
+    },
+    "errors": {
+      "accountRequired": "Choisissez un compte.",
+      "invalidDate": "Date invalide. Format attendu : JJ/MM/AAAA (ex. 14/07/2025).",
+      "invalidAmount": "Montant invalide. Format attendu : 338.50, -25,30, 1234, …",
+      "labelRequired": "Le libellé est obligatoire.",
+      "invalidLockYears": "Blocage : entier entre 0 et 99, ou laisser vide."
+    },
+    "actions": {
+      "create": "Créer la transaction",
+      "creating": "Création…",
+      "saving": "Enregistrement…"
+    }
+  },
+  "splitEditor": {
+    "disabledHint": "La ventilation n'est pas disponible pour un virement interne.",
+    "title": "Ventilation par catégorie",
+    "placeholders": {
+      "amount": "0,00",
+      "memo": "mémo (optionnel)"
+    },
+    "options": {
+      "category": "— catégorie"
+    },
+    "remainderLabel": "Reste à ventiler :",
+    "actions": {
+      "start": "+ Ventiler cette transaction",
+      "addLine": "+ Ajouter une ligne",
+      "removeSplit": "Supprimer la ventilation",
+      "removeLine": "Retirer cette ligne"
+    }
+  }
+}

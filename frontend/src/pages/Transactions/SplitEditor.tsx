@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Category, TransactionSplit } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
 
@@ -58,6 +59,7 @@ export function SplitEditor({
   categories: Category[];
   onChange: (splits: DraftSplit[]) => void;
 }) {
+  const { t } = useTranslation('transactions');
   const [rows, setRows] = useState<DraftSplit[]>(() => fromInitial(initial));
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
@@ -153,7 +155,7 @@ export function SplitEditor({
   if (disabled) {
     return (
       <div className="mt-4 text-xs text-ink-500">
-        La ventilation n'est pas disponible pour un virement interne.
+        {t('splitEditor.disabledHint')}
       </div>
     );
   }
@@ -162,7 +164,7 @@ export function SplitEditor({
     return (
       <div className="mt-4">
         <button type="button" className="btn-ghost text-sm" onClick={seedTwo} disabled={parentCents === 0}>
-          + Ventiler cette transaction
+          {t('splitEditor.actions.start')}
         </button>
       </div>
     );
@@ -176,7 +178,7 @@ export function SplitEditor({
 
   return (
     <div className="mt-4">
-      <div className="label mb-2">Ventilation par catégorie</div>
+      <div className="label mb-2">{t('splitEditor.title')}</div>
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={r.key} className="flex items-center gap-2">
@@ -186,14 +188,14 @@ export function SplitEditor({
               value={r.amountMagnitude}
               onChange={(e) => editRow(i, { amountMagnitude: e.target.value })}
               onKeyDown={(e) => { if (e.key === '-') e.preventDefault(); }}
-              placeholder="0,00"
+              placeholder={t('splitEditor.placeholders.amount')}
             />
             <select
               className="input flex-1"
               value={r.categoryId}
               onChange={(e) => editRow(i, { categoryId: e.target.value ? Number(e.target.value) : '' })}
             >
-              <option value="">— catégorie</option>
+              <option value="">{t('splitEditor.options.category')}</option>
               {[...categories]
                 .sort((a, b) => {
                   const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
@@ -206,15 +208,15 @@ export function SplitEditor({
             </select>
             <input
               className="input flex-1"
-              placeholder="mémo (optionnel)"
+              placeholder={t('splitEditor.placeholders.memo')}
               value={r.memo}
               onChange={(e) => editRow(i, { memo: e.target.value })}
             />
             <button
               type="button"
               className="btn-ghost !py-1 !px-2 text-ink-500 hover:text-clay-300"
-              aria-label="Retirer cette ligne"
-              title="Retirer cette ligne"
+              aria-label={t('splitEditor.actions.removeLine')}
+              title={t('splitEditor.actions.removeLine')}
               onClick={() => removeRow(i)}
             >
               ✕
@@ -227,7 +229,7 @@ export function SplitEditor({
         className={`mt-2 rounded-lg border px-3 py-2 text-xs flex items-center justify-between gap-3 ${remainderTone}`}
       >
         <span>
-          Reste à ventiler :{' '}
+          {t('splitEditor.remainderLabel')}{' '}
           <span className="font-mono">
             {remainderCents !== 0 ? signPrefix : ''}
             {centsToMag(Math.abs(remainderCents))} €
@@ -235,10 +237,10 @@ export function SplitEditor({
         </span>
         <div className="flex gap-2">
           <button type="button" className="btn-ghost !py-1 !px-2 text-sm" onClick={addRow}>
-            + Ajouter une ligne
+            {t('splitEditor.actions.addLine')}
           </button>
           <button type="button" className="btn-ghost !py-1 !px-2 text-sm" onClick={() => update([])}>
-            Supprimer la ventilation
+            {t('splitEditor.actions.removeSplit')}
           </button>
         </div>
       </div>

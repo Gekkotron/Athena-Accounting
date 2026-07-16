@@ -1,0 +1,154 @@
+{
+  "title": "Transactions",
+  "subtitle_one": "{{formatted}} row in total",
+  "subtitle_other": "{{formatted}} rows in total",
+  "filtersToggle": {
+    "show": "Filters",
+    "hide": "Hide"
+  },
+  "actions": {
+    "newTransaction": "New transaction"
+  },
+  "sourceFileFilter": {
+    "prefix": "Filtered by import",
+    "suffix": "— only transactions from this file are shown.",
+    "remove": "Remove this filter"
+  },
+  "selection": {
+    "suffix_one": "selected",
+    "suffix_other": "selected",
+    "clear": "Clear selection",
+    "changeCategoryAriaLabel": "Change the category of selected transactions",
+    "categoryPlaceholder": "Category…",
+    "categoryNone": "— None"
+  },
+  "bulkCategorize": {
+    "skippedNotice_one": "{{count}} row skipped (internal transfers or splits)",
+    "skippedNotice_other": "{{count}} rows skipped (internal transfers or splits)",
+    "errorPrefix": "Category change: {{message}}"
+  },
+  "checkpoint": {
+    "errorPrefix": "Checkpoint: {{message}}"
+  },
+  "pagination": {
+    "range": "{{from}}–{{to}} of {{total}}"
+  },
+  "deleteDialog": {
+    "title": "Delete the transaction “{{label}}”?",
+    "description": "This action is <1>irreversible</1>. If the transaction is part of an internal transfer, the mirror leg is unlinked (transfer_group_id set to null) so it doesn't become invisible in aggregates.",
+    "confirmLabel": "Delete the transaction"
+  },
+  "bulkDeleteDialog": {
+    "title_one": "Delete {{count}} transaction?",
+    "title_other": "Delete {{count}} transactions?",
+    "description": "This action is <1>irreversible</1>. Any internal-transfer mirror leg is unlinked before deletion."
+  },
+  "table": {
+    "selectAllAriaLabel": "Select all on this page",
+    "columns": {
+      "date": "Date",
+      "account": "Account",
+      "label": "Label",
+      "category": "Category",
+      "notes": "Notes",
+      "amount": "Amount",
+      "balance": "Balance"
+    },
+    "empty": "No transactions."
+  },
+  "row": {
+    "selectAriaLabel": "Select the transaction {{label}}",
+    "internalTransferBadge": "internal transfer",
+    "splitBadge": "Split ({{count}})",
+    "manualTag": "manual",
+    "checkpointAriaLabel": "Validate the {{date}} balance as a checkpoint",
+    "checkpointTitle": "Validate this balance as a checkpoint"
+  },
+  "filters": {
+    "labels": {
+      "search": "Search",
+      "account": "Account",
+      "category": "Category",
+      "fromDate": "From",
+      "toDate": "To"
+    },
+    "placeholders": {
+      "search": "label or amount (e.g. 338)"
+    },
+    "amountBadge": "AMOUNT",
+    "amountHint": {
+      "exact": "Filtered by exact amount (sign ignored)",
+      "range": "Filtered by amount {{amount}}.00–{{amount}}.99 (sign ignored)"
+    },
+    "options": {
+      "allAccounts": "All",
+      "allCategories": "All"
+    },
+    "actions": {
+      "clear": "Clear"
+    }
+  },
+  "modal": {
+    "header": {
+      "create": "New transaction",
+      "edit": "Edit transaction",
+      "createHint": "Manual entry. The rule engine will apply automatically if you leave the category empty.",
+      "editHint": "The dedup_key stays fixed: re-importing the source file won't create a duplicate."
+    },
+    "labels": {
+      "account": "Account",
+      "date": "Date",
+      "amount": "Amount",
+      "label": "Label",
+      "categoryOptional": "Category (optional)",
+      "notes": "Notes",
+      "lockYears": "Individual lock (years)",
+      "optional": "— optional"
+    },
+    "placeholders": {
+      "date": "DD/MM/YYYY",
+      "amount": "-25.30",
+      "label": "Whole Foods Market"
+    },
+    "hints": {
+      "dateFormat": "Format DD/MM/YYYY — pasting directly from a bank statement is supported.",
+      "amountSign": "Signed: negative = expense, positive = income.",
+      "lockYearsTooltip": "Locks ONLY this transaction for N years from its date (term deposits / Natixis-style). Leave empty for a PEA: the transaction then inherits the account's global lock (opening date + N years, a single deadline for the whole account).",
+      "lockYearsNoAccountLock": "The account has no lock. Fill this in only if this transaction must be locked for N years from its date.",
+      "lockYearsWithAccountLock": "PEA: leave empty, the transaction inherits the global lock ({{years}} years from the account's opening). Term deposit (Natixis): fill in {{years}} so this deadline is computed from the transaction's date."
+    },
+    "options": {
+      "categoryAuto": "— (auto via rules)"
+    },
+    "errors": {
+      "accountRequired": "Choose an account.",
+      "invalidDate": "Invalid date. Expected format: DD/MM/YYYY (e.g. 14/07/2025).",
+      "invalidAmount": "Invalid amount. Expected format: 338.50, -25.30, 1234, …",
+      "labelRequired": "The label is required.",
+      "invalidLockYears": "Lock: an integer between 0 and 99, or leave empty."
+    },
+    "actions": {
+      "create": "Create the transaction",
+      "creating": "Creating…",
+      "saving": "Saving…"
+    }
+  },
+  "splitEditor": {
+    "disabledHint": "Splitting isn't available for an internal transfer.",
+    "title": "Split by category",
+    "placeholders": {
+      "amount": "0.00",
+      "memo": "memo (optional)"
+    },
+    "options": {
+      "category": "— category"
+    },
+    "remainderLabel": "Remaining to split:",
+    "actions": {
+      "start": "+ Split this transaction",
+      "addLine": "+ Add a line",
+      "removeSplit": "Remove the split",
+      "removeLine": "Remove this line"
+    }
+  }
+}
