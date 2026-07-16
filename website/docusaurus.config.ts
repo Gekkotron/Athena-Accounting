@@ -30,7 +30,8 @@ const config: Config = {
           path: '../docs',
           routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/Gekkotron/Athena-Accounting/edit/main/docs/',
+          editUrl: ({ docPath }) =>
+            `https://github.com/Gekkotron/Athena-Accounting/edit/main/docs/${docPath}`,
           exclude: [
             '**/_*.{js,jsx,ts,tsx,md,mdx}',
             '**/_*/**',
