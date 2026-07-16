@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { api, ApiError } from '../../api/client';
 import type { Account, BudgetPeriod, Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
@@ -25,13 +27,12 @@ function currentYear(): string {
   return String(new Date().getFullYear());
 }
 
-const MUTATION_ERROR_FALLBACK = "Impossible d'enregistrer le budget.";
-
-function mutationErrorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : MUTATION_ERROR_FALLBACK;
+function mutationErrorMessage(err: unknown, t: TFunction): string {
+  return err instanceof ApiError ? err.message : t('mutationError.fallback');
 }
 
 export function Plafonds(): JSX.Element {
+  const { t } = useTranslation('budgets');
   const [params, setParams] = useSearchParams();
   const period = (params.get('period') ?? 'monthly') as BudgetPeriod;
   const monthOrYear = params.get(period === 'monthly' ? 'month' : 'year')
@@ -117,11 +118,11 @@ export function Plafonds(): JSX.Element {
 
   const handleSave = (id: number, limit: string) => update.mutate({ id, monthlyLimit: limit }, {
     onSuccess: () => setMutationError(null),
-    onError: (err) => setMutationError(mutationErrorMessage(err)),
+    onError: (err) => setMutationError(mutationErrorMessage(err, t)),
   });
   const handleDelete = (id: number) => remove.mutate(id, {
     onSuccess: () => setMutationError(null),
-    onError: (err) => setMutationError(mutationErrorMessage(err)),
+    onError: (err) => setMutationError(mutationErrorMessage(err, t)),
   });
 
   return (
@@ -130,11 +131,11 @@ export function Plafonds(): JSX.Element {
       <div className="grid grid-cols-3 items-center gap-3">
         <div className="justify-self-start">
           <div className="flex items-center gap-2">
-            <h1 className="display text-2xl text-ink-50">Budgets</h1>
+            <h1 className="display text-2xl text-ink-50">{t('header.title')}</h1>
             <SectionTipHelpIcon id="section:budgets" />
           </div>
           <p className="text-sm text-ink-400 mt-1">
-            Plafond par catégorie de dépense.
+            {t('header.subtitle')}
           </p>
         </div>
         <div className="justify-self-center">
@@ -169,8 +170,8 @@ export function Plafonds(): JSX.Element {
 
       {rows.length === 0 ? (
         <div className="surface p-8 text-center text-ink-400">
-          <p className="mb-1">Aucun budget défini.</p>
-          <p className="text-sm text-ink-500">Ajoutez un plafond à une catégorie de dépense ci-dessous.</p>
+          <p className="mb-1">{t('emptyState.title')}</p>
+          <p className="text-sm text-ink-500">{t('emptyState.hint')}</p>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -290,7 +291,7 @@ export function Plafonds(): JSX.Element {
         prefill={prefill}
         onSubmit={(body) => create.mutate(body, {
           onSuccess: () => { setPrefill(null); setMutationError(null); },
-          onError: (err) => setMutationError(mutationErrorMessage(err)),
+          onError: (err) => setMutationError(mutationErrorMessage(err, t)),
         })}
         isPending={create.isPending}
       />

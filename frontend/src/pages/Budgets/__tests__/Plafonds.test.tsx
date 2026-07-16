@@ -1,10 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Plafonds } from '../Plafonds';
 import { api } from '../../../api/client';
 import { withTips } from '../../../test/renderWithProviders';
+import i18n from '../../../i18n';
+
+// Plafonds renders French strings by default (the app's current UI
+// language). Preload 'budgets' and 'common' for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['budgets', 'common']);
+});
 
 function withProviders(children: React.ReactNode, opts?: { initialEntries?: string[] }): JSX.Element {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

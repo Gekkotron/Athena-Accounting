@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { BudgetReportRow } from '../../api/types';
 import { formatAmount, parseDecimal } from '../../lib/format';
 
@@ -21,41 +23,49 @@ function paceState(row: BudgetReportRow): 'over' | 'onTrack' | 'unknown' {
 
 type PrimaryStatus = { text: JSX.Element; className: string };
 
-function primaryStatus(r: BudgetReportRow): PrimaryStatus {
+function primaryStatus(r: BudgetReportRow, t: TFunction): PrimaryStatus {
   if (Number(r.limit) === 0) {
     return {
-      text: <><span className="private tabular-nums">{formatAmount(r.spent, r.currency)}</span> dépensés</>,
+      text: (
+        <Trans t={t} i18nKey="row.spentOnly">
+          <span className="private tabular-nums">{{ amount: formatAmount(r.spent, r.currency) } as unknown as string}</span> spent
+        </Trans>
+      ),
       className: 'text-ink-300',
     };
   }
   if (r.over) {
     const overBy = formatAmount((-Number(r.remaining)).toFixed(2), r.currency);
     return {
-      text: <>Dépassé de <span className="private tabular-nums">{overBy}</span></>,
+      text: (
+        <Trans t={t} i18nKey="row.overBy">
+          Exceeded by <span className="private tabular-nums">{{ amount: overBy } as unknown as string}</span>
+        </Trans>
+      ),
       className: 'text-clay-300',
     };
   }
   if (paceState(r) === 'over') {
     return {
-      text: <>
-        <span className="private tabular-nums">{formatAmount(r.remaining, r.currency)}</span>
-        {' '}restants · à surveiller
-      </>,
+      text: (
+        <Trans t={t} i18nKey="row.remainingWatch">
+          <span className="private tabular-nums">{{ amount: formatAmount(r.remaining, r.currency) } as unknown as string}</span> left · watch out
+        </Trans>
+      ),
       className: 'text-amber-300',
     };
   }
   return {
-    text: <>
-      Reste{' '}
-      <span className="private tabular-nums">{formatAmount(r.remaining, r.currency)}</span>
-      {' '}sur{' '}
-      <span className="private tabular-nums">{formatAmount(r.limit, r.currency)}</span>
-    </>,
+    text: (
+      <Trans t={t} i18nKey="row.remainingOf">
+        Left <span className="private tabular-nums">{{ remaining: formatAmount(r.remaining, r.currency) } as unknown as string}</span> of <span className="private tabular-nums">{{ limit: formatAmount(r.limit, r.currency) } as unknown as string}</span>
+      </Trans>
+    ),
     className: 'text-sage-300',
   };
 }
 
-function trendClause(r: BudgetReportRow): JSX.Element | null {
+function trendClause(r: BudgetReportRow, t: TFunction): JSX.Element | null {
   const hasProjected = r.projected != null;
   const hasAverage = r.history != null;
   if (!hasProjected && !hasAverage && !r.anomaly) return null;
@@ -63,20 +73,22 @@ function trendClause(r: BudgetReportRow): JSX.Element | null {
   if (hasProjected) {
     parts.push(
       <span key="pace">
-        À ce rythme{' '}
-        <span className="private tabular-nums">{formatAmount(r.projected!, r.currency)}</span>
+        <Trans t={t} i18nKey="row.pace">
+          At this pace <span className="private tabular-nums">{{ amount: formatAmount(r.projected!, r.currency) } as unknown as string}</span>
+        </Trans>
       </span>,
     );
   }
   if (hasAverage) {
     parts.push(
       <span key="avg">
-        Habituellement{' '}
-        <span className="private tabular-nums">{formatAmount(r.history!.average, r.currency)}</span>
+        <Trans t={t} i18nKey="row.usual">
+          Usually <span className="private tabular-nums">{{ amount: formatAmount(r.history!.average, r.currency) } as unknown as string}</span>
+        </Trans>
       </span>,
     );
   }
-  if (r.anomaly) parts.push(<span key="anom">inhabituel</span>);
+  if (r.anomaly) parts.push(<span key="anom">{t('row.anomaly')}</span>);
   return (
     <span>
       {parts.map((p, i) => (
@@ -93,12 +105,13 @@ export function BudgetRow(props: {
   onSave: (id: number, limit: string) => void;
   onDelete: (id: number) => void;
 }): JSX.Element {
+  const { t } = useTranslation(['budgets', 'common']);
   const { row: r, depth, budgetId, onSave, onDelete } = props;
   const pct = Math.min(Math.max(r.pct, 0), 100);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(r.limit);
-  const status = primaryStatus(r);
-  const trend = trendClause(r);
+  const status = primaryStatus(r, t);
+  const trend = trendClause(r, t);
 
   return (
     <li
@@ -128,13 +141,13 @@ export function BudgetRow(props: {
             <input
               className="input w-24 !py-1"
               inputMode="decimal"
-              aria-label="Modifier le plafond"
+              aria-label={t('row.editAriaLabel')}
               value={value}
               onChange={(e) => setValue(e.target.value)}
             />
             {r.suggestedLimit && (
               <span className="text-[10px] text-ink-500">
-                Suggéré : {formatAmount(r.suggestedLimit, r.currency)}
+                {t('row.suggested', { amount: formatAmount(r.suggestedLimit, r.currency) })}
               </span>
             )}
             <button
@@ -147,12 +160,12 @@ export function BudgetRow(props: {
             <button
               className="btn-ghost !py-1 !px-2 text-xs"
               onClick={() => { setValue(r.limit); setEditing(false); }}
-            >Annuler</button>
+            >{t('cancel', { ns: 'common' })}</button>
           </span>
         ) : (
           <span className="flex items-center gap-2">
-            <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => setEditing(true)}>Modifier</button>
-            <button className="btn-ghost !py-1 !px-2 text-xs text-clay-300" onClick={() => onDelete(budgetId)}>Supprimer</button>
+            <button className="btn-ghost !py-1 !px-2 text-xs" onClick={() => setEditing(true)}>{t('edit', { ns: 'common' })}</button>
+            <button className="btn-ghost !py-1 !px-2 text-xs text-clay-300" onClick={() => onDelete(budgetId)}>{t('delete', { ns: 'common' })}</button>
           </span>
         ))}
       </div>

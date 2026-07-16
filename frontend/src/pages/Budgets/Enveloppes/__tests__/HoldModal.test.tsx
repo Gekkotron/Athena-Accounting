@@ -1,6 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { HoldModal } from '../HoldModal';
+import i18n from '../../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['budgets', 'common']);
+});
 
 describe('HoldModal', () => {
   it('preset "Tout" fills the current pool available', () => {

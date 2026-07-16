@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { BudgetPeriod } from '../../api/types';
 
 function shiftMonth(m: string, delta: number): string {
@@ -15,6 +16,7 @@ export function PeriodSelector(props: {
   monthOrYear: string;
   onChange: (v: { period: BudgetPeriod; monthOrYear: string }) => void;
 }): JSX.Element {
+  const { t } = useTranslation('budgets');
   const { period, monthOrYear, onChange } = props;
   const shift = (delta: number) => onChange({
     period,
@@ -37,20 +39,20 @@ export function PeriodSelector(props: {
             below — otherwise a plain /Mois/i role query matches both. */}
         <button
           type="button"
-          aria-label="Vue mensuelle"
+          aria-label={t('period.monthAriaLabel')}
           className={`px-3 py-1 text-xs rounded ${period === 'monthly' ? 'bg-ink-700 text-ink-50' : 'text-ink-400'}`}
           onClick={() => toggle('monthly')}
-        >Mois</button>
+        >{t('period.monthTab')}</button>
         <button
           type="button"
-          aria-label="Vue annuelle"
+          aria-label={t('period.yearAriaLabel')}
           className={`px-3 py-1 text-xs rounded ${period === 'yearly' ? 'bg-ink-700 text-ink-50' : 'text-ink-400'}`}
           onClick={() => toggle('yearly')}
-        >Année</button>
+        >{t('period.yearTab')}</button>
       </div>
       <button
         className="btn-ghost !py-1 !px-2"
-        aria-label={period === 'monthly' ? 'Mois précédent' : 'Année précédente'}
+        aria-label={period === 'monthly' ? t('period.prevMonth') : t('period.prevYear')}
         onClick={() => shift(-1)}
       >‹</button>
       <span className="text-sm tabular-nums w-20 text-center">{monthOrYear}</span>
@@ -61,7 +63,7 @@ export function PeriodSelector(props: {
           /Mois/i or /Année/i role query's uniqueness assumption. */}
       <button
         className="btn-ghost !py-1 !px-2"
-        aria-label="Suivant"
+        aria-label={t('period.next')}
         onClick={() => shift(1)}
       >›</button>
     </div>

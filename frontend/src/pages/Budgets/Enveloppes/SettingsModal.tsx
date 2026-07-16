@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { EnvelopeReportRow, TargetKind, OverspendPolicy } from '../../../api/types';
 import { parseDecimal } from '../../../lib/format';
 
@@ -16,6 +17,7 @@ export function SettingsModal(props: {
     };
   }) => void;
 }): JSX.Element | null {
+  const { t } = useTranslation(['budgets', 'common']);
   const row = props.row;
   const [kind, setKind] = useState<TargetKind | ''>('');
   const [amount, setAmount] = useState('');
@@ -39,29 +41,29 @@ export function SettingsModal(props: {
   return (
     <div className="fixed inset-0 z-50 bg-ink-950/70 flex items-center justify-center p-4">
       <div className="surface p-6 w-full max-w-md flex flex-col gap-4">
-        <h2 className="display text-lg">Réglages · {row.categoryName}</h2>
+        <h2 className="display text-lg">{t('envelopes.settingsModal.title', { name: row.categoryName })}</h2>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Objectif</span>
+          <span>{t('envelopes.settingsModal.targetLabel')}</span>
           <select className="input" value={kind} onChange={(e) => setKind(e.target.value as TargetKind | '')}>
-            <option value="">Aucun</option>
-            <option value="save_by_date">Économiser d'ici une date</option>
-            <option value="monthly_recurring">Mensuel récurrent</option>
-            <option value="save_up_to">Économiser jusqu'à</option>
+            <option value="">{t('envelopes.settingsModal.targetNone')}</option>
+            <option value="save_by_date">{t('envelopes.settingsModal.targetSaveByDate')}</option>
+            <option value="monthly_recurring">{t('envelopes.settingsModal.targetMonthlyRecurring')}</option>
+            <option value="save_up_to">{t('envelopes.settingsModal.targetSaveUpTo')}</option>
           </select>
         </label>
 
         {kind !== '' && (
           <>
             <label className="flex flex-col gap-1 text-sm">
-              <span>Montant</span>
+              <span>{t('envelopes.amountLabel')}</span>
               <input className="input" type="text" inputMode="decimal"
                      value={amount} onChange={(e) => setAmount(e.target.value)}
                      placeholder="0,00" />
             </label>
             {kind === 'save_by_date' && (
               <label className="flex flex-col gap-1 text-sm">
-                <span>Échéance</span>
+                <span>{t('envelopes.settingsModal.dateLabel')}</span>
                 <input className="input" type="date"
                        value={date} onChange={(e) => setDate(e.target.value)} />
               </label>
@@ -70,18 +72,18 @@ export function SettingsModal(props: {
         )}
 
         <fieldset className="flex flex-col gap-1 text-sm">
-          <legend className="label">Dépassement</legend>
+          <legend className="label">{t('envelopes.settingsModal.overspendLegend')}</legend>
           <label className="flex items-center gap-2">
             <input type="radio" name="policy" value="rollover_negative"
                    checked={policy === 'rollover_negative'}
                    onChange={() => setPolicy('rollover_negative')} />
-            Report du solde négatif
+            {t('envelopes.settingsModal.policyRollover')}
           </label>
           <label className="flex items-center gap-2">
             <input type="radio" name="policy" value="reallocate_manual"
                    checked={policy === 'reallocate_manual'}
                    onChange={() => setPolicy('reallocate_manual')} />
-            Réaffectation manuelle (absorbé par le pool)
+            {t('envelopes.settingsModal.policyReallocate')}
           </label>
         </fieldset>
 
@@ -97,11 +99,11 @@ export function SettingsModal(props: {
                         overspendPolicy: policy,
                       },
                     })}>
-              Supprimer l'objectif
+              {t('envelopes.settingsModal.deleteTarget')}
             </button>
           )}
           <div className="ml-auto flex gap-2">
-            <button className="btn-ghost" onClick={props.onClose}>Annuler</button>
+            <button className="btn-ghost" onClick={props.onClose}>{t('cancel', { ns: 'common' })}</button>
             <button
               className="btn-primary"
               disabled={!canSave}
@@ -114,7 +116,7 @@ export function SettingsModal(props: {
                   overspendPolicy: policy,
                 },
               })}
-            >Enregistrer</button>
+            >{t('save', { ns: 'common' })}</button>
           </div>
         </div>
       </div>

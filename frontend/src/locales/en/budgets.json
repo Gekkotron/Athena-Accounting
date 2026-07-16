@@ -1,0 +1,133 @@
+{
+  "header": {
+    "title": "Budgets",
+    "subtitle": "Cap by expense category."
+  },
+  "mutationError": {
+    "fallback": "Could not save the budget."
+  },
+  "emptyState": {
+    "title": "No budget defined yet.",
+    "hint": "Add a cap to an expense category below."
+  },
+  "period": {
+    "monthTab": "Month",
+    "yearTab": "Year",
+    "monthAriaLabel": "Monthly view",
+    "yearAriaLabel": "Yearly view",
+    "prevMonth": "Previous month",
+    "prevYear": "Previous year",
+    "next": "Next",
+    "perMonth": "/mo",
+    "perYear": "/yr"
+  },
+  "accountFilter": {
+    "label": "Account:",
+    "all": "All"
+  },
+  "addForm": {
+    "title": "Add a budget",
+    "allBudgeted": "All your expense categories already have a cap for this context.",
+    "periodMonthly": "Monthly",
+    "periodYearly": "Yearly",
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "Choose…",
+    "accountLabel": "Account",
+    "accountAriaLabel": "Account:",
+    "allAccounts": "All accounts",
+    "limitPlaceholderDefault": "Cap €",
+    "limitPlaceholderSuggested": "≈ {{amount}} €{{suffix}}",
+    "limitAriaLabelMonthly": "Monthly cap",
+    "limitAriaLabelYearly": "Yearly cap",
+    "submit": "Add"
+  },
+  "row": {
+    "spentOnly": "<0>{{amount}}</0> spent",
+    "overBy": "Exceeded by <1>{{amount}}</1>",
+    "remainingWatch": "<0>{{amount}}</0> left · watch out",
+    "remainingOf": "Left <1>{{remaining}}</1> of <3>{{limit}}</3>",
+    "pace": "At this pace <1>{{amount}}</1>",
+    "usual": "Usually <1>{{amount}}</1>",
+    "anomaly": "unusual",
+    "editAriaLabel": "Edit the cap",
+    "suggested": "Suggested: {{amount}}"
+  },
+  "summary": {
+    "whenMonth": "this month",
+    "whenYear": "this year",
+    "hero": "You spent <1>{{spent}}</1> of <3>{{limit}}</3> {{when}}.",
+    "over": "You exceeded by <1>{{amount}}</1>.",
+    "slipping": "At this rate, you'll exceed by <1>{{amount}}</1>.",
+    "remaining": "There's <1>{{amount}}</1> left {{endOfPeriod}}.",
+    "endOfMonth": "by the end of the month",
+    "endOfYear": "by the end of the year"
+  },
+  "suggestion": {
+    "chronicUnder": "{{name}} has been under budget for 3 months. Switch to {{amount}}?",
+    "chronicOver": "{{name}} has been over budget for 3 months. Switch to {{amount}}?",
+    "dismiss": "Dismiss",
+    "apply": "Adjust to {{amount}}"
+  },
+  "unbudgeted": {
+    "count": "Categories without a budget ({{count}})",
+    "defineButton": "Set a budget"
+  },
+  "envelopes": {
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "sectionLabel": "Envelopes",
+    "emptyState": {
+      "title": "No envelope for this month",
+      "hint": "Create your first envelope to get started."
+    },
+    "amountLabel": "Amount",
+    "pool": {
+      "negativeBanner": "You've over-budgeted by {{amount}}. Reduce assignments or add income.",
+      "title": "To be budgeted (pool)",
+      "incomeCumulative": "Income (cumulative)",
+      "assignedCumulative": "Assigned (cumulative)",
+      "heldFromPriorMonths": "Received from last month",
+      "heldForNextMonth": "Held for next month",
+      "holdButton": "Hold…"
+    },
+    "row": {
+      "reallocateAriaLabel": "Reallocate",
+      "settingsAriaLabel": "Settings",
+      "absorbed": "absorbed"
+    },
+    "targetProgress": {
+      "monthly": "Target: {{amount}}/mo",
+      "saveByDate": "Target: {{amount}} by {{date}}",
+      "saveUpTo": "Target: {{amount}}"
+    },
+    "holdModal": {
+      "title": "Hold for next month",
+      "presetAll": "All",
+      "confirm": "Hold"
+    },
+    "reallocateModal": {
+      "title": "Reallocate",
+      "from": "From <1>{{name}}</1>",
+      "toLabel": "To",
+      "selectPlaceholder": "Choose an envelope…"
+    },
+    "settingsModal": {
+      "title": "Settings · {{name}}",
+      "targetLabel": "Target",
+      "targetNone": "None",
+      "targetSaveByDate": "Save by a date",
+      "targetMonthlyRecurring": "Monthly recurring",
+      "targetSaveUpTo": "Save up to",
+      "dateLabel": "Deadline",
+      "overspendLegend": "Overspend",
+      "policyRollover": "Roll over the negative balance",
+      "policyReallocate": "Manual reallocation (absorbed by the pool)",
+      "deleteTarget": "Delete the target"
+    },
+    "unbudgeted": {
+      "header": "Not budgeted this month ({{count}})",
+      "spent": "(spent {{amount}})",
+      "createButton": "Create an envelope"
+    }
+  }
+}

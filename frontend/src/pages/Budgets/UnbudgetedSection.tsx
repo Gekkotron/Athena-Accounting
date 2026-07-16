@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BudgetReport, BudgetPeriod } from '../../api/types';
 import { formatAmount } from '../../lib/format';
 
@@ -7,10 +8,11 @@ export function UnbudgetedSection(props: {
   period: BudgetPeriod;
   onDefineBudget: (categoryId: number, suggestedLimit: string) => void;
 }): JSX.Element | null {
+  const { t } = useTranslation('budgets');
   const { candidates, period, onDefineBudget } = props;
   const [open, setOpen] = useState(false);
   if (candidates.length === 0) return null;
-  const suffix = period === 'monthly' ? '/mois' : '/an';
+  const suffix = period === 'monthly' ? t('period.perMonth') : t('period.perYear');
   return (
     <div className="surface p-4 flex flex-col gap-3">
       <button
@@ -18,7 +20,7 @@ export function UnbudgetedSection(props: {
         className="flex items-center justify-between text-sm text-ink-300"
         onClick={() => setOpen(!open)}
       >
-        <span>Catégories sans budget ({candidates.length})</span>
+        <span>{t('unbudgeted.count', { count: candidates.length })}</span>
         <span aria-hidden>{open ? '▾' : '▸'}</span>
       </button>
       {open && (
@@ -35,7 +37,7 @@ export function UnbudgetedSection(props: {
                 type="button"
                 className="btn-ghost !py-1 !px-2 text-xs"
                 onClick={() => onDefineBudget(c.categoryId, c.average)}
-              >Définir un plafond</button>
+              >{t('unbudgeted.defineButton')}</button>
             </li>
           ))}
         </ul>

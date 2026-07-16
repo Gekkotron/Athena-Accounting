@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   Account, Budget, BudgetPeriod, BudgetReport, Category,
 } from '../../api/types';
@@ -25,6 +26,7 @@ export function AddBudgetForm(props: {
   }) => void;
   isPending: boolean;
 }): JSX.Element {
+  const { t } = useTranslation('budgets');
   const { categories, accounts, budgets, candidates, prefill, onSubmit, isPending } = props;
 
   const [catId, setCatId] = useState('');
@@ -53,11 +55,11 @@ export function AddBudgetForm(props: {
     candidates.find((c) => c.categoryId === id)?.average;
 
   const placeholder = (() => {
-    if (!catId) return 'Plafond €';
+    if (!catId) return t('addForm.limitPlaceholderDefault');
     const s = suggestedFor(Number(catId));
-    if (!s) return 'Plafond €';
-    const suffix = period === 'monthly' ? '/mois' : '/an';
-    return `≈ ${formatAmount(s)} €${suffix}`;
+    if (!s) return t('addForm.limitPlaceholderDefault');
+    const suffix = period === 'monthly' ? t('period.perMonth') : t('period.perYear');
+    return t('addForm.limitPlaceholderSuggested', { amount: formatAmount(s), suffix });
   })();
 
   const submit = () => {
@@ -75,10 +77,10 @@ export function AddBudgetForm(props: {
 
   return (
     <div id="budgets-add-form" className="surface p-4 flex flex-col gap-3">
-      <div className="label">Ajouter un budget</div>
+      <div className="label">{t('addForm.title')}</div>
       {addable.length === 0 ? (
         <p className="text-sm text-ink-500">
-          Toutes vos catégories de dépense ont déjà un plafond pour ce contexte.
+          {t('addForm.allBudgeted')}
         </p>
       ) : (
         <>
@@ -89,7 +91,7 @@ export function AddBudgetForm(props: {
                 checked={period === 'monthly'}
                 onChange={() => setPeriod('monthly')}
               />
-              Mensuel
+              {t('addForm.periodMonthly')}
             </label>
             <label className="flex items-center gap-1">
               <input
@@ -97,20 +99,20 @@ export function AddBudgetForm(props: {
                 checked={period === 'yearly'}
                 onChange={() => setPeriod('yearly')}
               />
-              Annuel
+              {t('addForm.periodYearly')}
             </label>
           </div>
 
           <div className="flex items-end gap-2 flex-wrap">
             <label className="flex flex-col text-xs text-ink-400">
-              Catégorie
+              {t('addForm.categoryLabel')}
               <select
                 className="input"
-                aria-label="Catégorie"
+                aria-label={t('addForm.categoryLabel')}
                 value={catId}
                 onChange={(e) => setCatId(e.target.value)}
               >
-                <option value="">Choisir…</option>
+                <option value="">{t('addForm.categoryPlaceholder')}</option>
                 {[...addable]
                   .sort((a, b) => {
                     const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
@@ -124,14 +126,14 @@ export function AddBudgetForm(props: {
             </label>
 
             <label className="flex flex-col text-xs text-ink-400">
-              Compte
+              {t('addForm.accountLabel')}
               <select
                 className="input"
-                aria-label="Compte :"
+                aria-label={t('addForm.accountAriaLabel')}
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
               >
-                <option value="">Tous les comptes</option>
+                <option value="">{t('addForm.allAccounts')}</option>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
@@ -139,12 +141,12 @@ export function AddBudgetForm(props: {
             <input
               className="input w-32"
               inputMode="decimal"
-              aria-label={period === 'monthly' ? 'Plafond mensuel' : 'Plafond annuel'}
+              aria-label={period === 'monthly' ? t('addForm.limitAriaLabelMonthly') : t('addForm.limitAriaLabelYearly')}
               placeholder={placeholder}
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
             />
-            <button className="btn-primary" onClick={submit} disabled={isPending}>Ajouter</button>
+            <button className="btn-primary" onClick={submit} disabled={isPending}>{t('addForm.submit')}</button>
           </div>
         </>
       )}

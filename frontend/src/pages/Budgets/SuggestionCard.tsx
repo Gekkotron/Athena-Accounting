@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BudgetReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
 
@@ -19,6 +20,7 @@ export function SuggestionCard(props: {
   periodKey: string;
   onApply: (id: number, newLimit: string) => void;
 }): JSX.Element | null {
+  const { t } = useTranslation('budgets');
   const { row, budgetId, periodKey, onApply } = props;
   // Tracks only "I was just dismissed, for this exact period + category" —
   // not a plain boolean — because the mount site in index.tsx keeps this
@@ -34,8 +36,8 @@ export function SuggestionCard(props: {
 
   const chronicUnder = Number(row.suggestedLimit) < Number(row.limit);
   const copy = chronicUnder
-    ? `${row.name} est sous le plafond depuis 3 mois. Passer à ${formatAmount(row.suggestedLimit, row.currency)} ?`
-    : `${row.name} dépasse depuis 3 mois. Passer à ${formatAmount(row.suggestedLimit, row.currency)} ?`;
+    ? t('suggestion.chronicUnder', { name: row.name, amount: formatAmount(row.suggestedLimit, row.currency) })
+    : t('suggestion.chronicOver', { name: row.name, amount: formatAmount(row.suggestedLimit, row.currency) });
 
   const dismiss = () => {
     setJustDismissed({ periodKey, categoryId: row.categoryId });
@@ -46,12 +48,12 @@ export function SuggestionCard(props: {
     <li className="surface p-3 flex items-center justify-between text-sm border border-ink-800 bg-ink-900/50">
       <span className="text-ink-300">{copy}</span>
       <span className="flex items-center gap-2">
-        <button type="button" className="btn-ghost !py-1 !px-2 text-xs" onClick={dismiss}>Ignorer</button>
+        <button type="button" className="btn-ghost !py-1 !px-2 text-xs" onClick={dismiss}>{t('suggestion.dismiss')}</button>
         <button
           type="button"
           className="btn-primary !py-1 !px-3 text-xs"
           onClick={() => { onApply(budgetId, row.suggestedLimit!); dismiss(); }}
-        >Ajuster à {formatAmount(row.suggestedLimit, row.currency)}</button>
+        >{t('suggestion.apply', { amount: formatAmount(row.suggestedLimit, row.currency) })}</button>
       </span>
     </li>
   );

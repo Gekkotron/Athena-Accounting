@@ -1,0 +1,133 @@
+{
+  "header": {
+    "title": "Budgets",
+    "subtitle": "Plafond par catégorie de dépense."
+  },
+  "mutationError": {
+    "fallback": "Impossible d'enregistrer le budget."
+  },
+  "emptyState": {
+    "title": "Aucun budget défini.",
+    "hint": "Ajoutez un plafond à une catégorie de dépense ci-dessous."
+  },
+  "period": {
+    "monthTab": "Mois",
+    "yearTab": "Année",
+    "monthAriaLabel": "Vue mensuelle",
+    "yearAriaLabel": "Vue annuelle",
+    "prevMonth": "Mois précédent",
+    "prevYear": "Année précédente",
+    "next": "Suivant",
+    "perMonth": "/mois",
+    "perYear": "/an"
+  },
+  "accountFilter": {
+    "label": "Compte :",
+    "all": "Tous"
+  },
+  "addForm": {
+    "title": "Ajouter un budget",
+    "allBudgeted": "Toutes vos catégories de dépense ont déjà un plafond pour ce contexte.",
+    "periodMonthly": "Mensuel",
+    "periodYearly": "Annuel",
+    "categoryLabel": "Catégorie",
+    "categoryPlaceholder": "Choisir…",
+    "accountLabel": "Compte",
+    "accountAriaLabel": "Compte :",
+    "allAccounts": "Tous les comptes",
+    "limitPlaceholderDefault": "Plafond €",
+    "limitPlaceholderSuggested": "≈ {{amount}} €{{suffix}}",
+    "limitAriaLabelMonthly": "Plafond mensuel",
+    "limitAriaLabelYearly": "Plafond annuel",
+    "submit": "Ajouter"
+  },
+  "row": {
+    "spentOnly": "<0>{{amount}}</0> dépensés",
+    "overBy": "Dépassé de <1>{{amount}}</1>",
+    "remainingWatch": "<0>{{amount}}</0> restants · à surveiller",
+    "remainingOf": "Reste <1>{{remaining}}</1> sur <3>{{limit}}</3>",
+    "pace": "À ce rythme <1>{{amount}}</1>",
+    "usual": "Habituellement <1>{{amount}}</1>",
+    "anomaly": "inhabituel",
+    "editAriaLabel": "Modifier le plafond",
+    "suggested": "Suggéré : {{amount}}"
+  },
+  "summary": {
+    "whenMonth": "ce mois-ci",
+    "whenYear": "cette année",
+    "hero": "Vous avez dépensé <1>{{spent}}</1> sur <3>{{limit}}</3> {{when}}.",
+    "over": "Vous avez dépassé de <1>{{amount}}</1>.",
+    "slipping": "À ce rythme, vous dépasserez de <1>{{amount}}</1>.",
+    "remaining": "Il reste <1>{{amount}}</1> {{endOfPeriod}}.",
+    "endOfMonth": "d'ici la fin du mois",
+    "endOfYear": "d'ici la fin de l'année"
+  },
+  "suggestion": {
+    "chronicUnder": "{{name}} est sous le plafond depuis 3 mois. Passer à {{amount}} ?",
+    "chronicOver": "{{name}} dépasse depuis 3 mois. Passer à {{amount}} ?",
+    "dismiss": "Ignorer",
+    "apply": "Ajuster à {{amount}}"
+  },
+  "unbudgeted": {
+    "count": "Catégories sans budget ({{count}})",
+    "defineButton": "Définir un plafond"
+  },
+  "envelopes": {
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "sectionLabel": "Enveloppes",
+    "emptyState": {
+      "title": "Aucune enveloppe pour ce mois",
+      "hint": "Créez votre première enveloppe pour commencer."
+    },
+    "amountLabel": "Montant",
+    "pool": {
+      "negativeBanner": "Vous avez sur-budgété de {{amount}}. Réduisez des assignations ou ajoutez des revenus.",
+      "title": "À budgétiser (pool)",
+      "incomeCumulative": "Revenus (cumulé)",
+      "assignedCumulative": "Assigné (cumulé)",
+      "heldFromPriorMonths": "Reçu du mois dernier",
+      "heldForNextMonth": "Retenu pour le mois prochain",
+      "holdButton": "Retenir…"
+    },
+    "row": {
+      "reallocateAriaLabel": "Réaffecter",
+      "settingsAriaLabel": "Réglages",
+      "absorbed": "absorbé"
+    },
+    "targetProgress": {
+      "monthly": "Objectif: {{amount}}/mois",
+      "saveByDate": "Objectif: {{amount}} d'ici {{date}}",
+      "saveUpTo": "Objectif: {{amount}}"
+    },
+    "holdModal": {
+      "title": "Retenir pour le mois prochain",
+      "presetAll": "Tout",
+      "confirm": "Retenir"
+    },
+    "reallocateModal": {
+      "title": "Réaffecter",
+      "from": "Depuis <1>{{name}}</1>",
+      "toLabel": "Vers",
+      "selectPlaceholder": "Choisir une enveloppe…"
+    },
+    "settingsModal": {
+      "title": "Réglages · {{name}}",
+      "targetLabel": "Objectif",
+      "targetNone": "Aucun",
+      "targetSaveByDate": "Économiser d'ici une date",
+      "targetMonthlyRecurring": "Mensuel récurrent",
+      "targetSaveUpTo": "Économiser jusqu'à",
+      "dateLabel": "Échéance",
+      "overspendLegend": "Dépassement",
+      "policyRollover": "Report du solde négatif",
+      "policyReallocate": "Réaffectation manuelle (absorbé par le pool)",
+      "deleteTarget": "Supprimer l'objectif"
+    },
+    "unbudgeted": {
+      "header": "Non budgétées ce mois ({{count}})",
+      "spent": "(dépensé {{amount}})",
+      "createButton": "Créer une enveloppe"
+    }
+  }
+}

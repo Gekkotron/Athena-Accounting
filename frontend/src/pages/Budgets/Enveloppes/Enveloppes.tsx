@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold, useUpsertSettings } from '../../../lib/useEnvelopes';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { PoolCard } from './PoolCard';
@@ -22,6 +23,7 @@ function stepMonth(ym: string, delta: number): string {
 }
 
 export function Enveloppes(): JSX.Element {
+  const { t, i18n } = useTranslation('budgets');
   const [params, setParams] = useSearchParams();
   const month = params.get('month') ?? currentMonthYm();
   const setMonth = (next: string) => {
@@ -47,26 +49,26 @@ export function Enveloppes(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex items-center gap-4">
-        <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, -1))} aria-label="Mois précédent">‹</button>
-        <h1 className="display text-2xl">{formatMonthFrench(month)}</h1>
-        <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, +1))} aria-label="Mois suivant">›</button>
+        <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, -1))} aria-label={t('envelopes.prevMonth')}>‹</button>
+        <h1 className="display text-2xl">{formatMonthLabel(month, i18n.language)}</h1>
+        <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, +1))} aria-label={t('envelopes.nextMonth')}>›</button>
       </header>
 
       {poolNegative && (
         <div className="surface p-4 border border-clay-500/60 text-clay-200">
-          Vous avez sur-budgété de {formatSignedAbs(pool!.available)}. Réduisez des assignations ou ajoutez des revenus.
+          {t('envelopes.pool.negativeBanner', { amount: formatSignedAbs(pool!.available) })}
         </div>
       )}
 
       {pool && <PoolCard pool={pool} onHoldClick={() => setHoldOpen(true)} />}
 
       <section className="flex flex-col gap-2">
-        <div className="label px-2">Enveloppes</div>
+        <div className="label px-2">{t('envelopes.sectionLabel')}</div>
         {rows.length === 0 && reportQ.isSuccess && (
           <div className="surface p-6 text-center flex flex-col gap-3">
-            <div className="display text-lg">Aucune enveloppe pour ce mois</div>
+            <div className="display text-lg">{t('envelopes.emptyState.title')}</div>
             <div className="text-sm text-ink-400">
-              Créez votre première enveloppe pour commencer.
+              {t('envelopes.emptyState.hint')}
             </div>
           </div>
         )}
@@ -128,9 +130,13 @@ export function Enveloppes(): JSX.Element {
   );
 }
 
-function formatMonthFrench(ym: string): string {
+// Calendar month + year, localized via Intl (not a translation-file lookup —
+// there's no vocabulary to maintain, just the standard CLDR month names).
+// Mirrors Dashboard/insights.ts's monthLabel.
+function formatMonthLabel(ym: string, lang: string): string {
   const [y, m] = ym.split('-').map(Number);
-  return new Date(y!, m! - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const locale = lang.startsWith('en') ? 'en-US' : 'fr-FR';
+  return new Date(y!, m! - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 }
 function formatSignedAbs(m: string): string {
   const n = Math.abs(Number(m));

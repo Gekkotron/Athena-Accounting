@@ -1,6 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { BudgetRow } from '../BudgetRow';
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['budgets', 'common']);
+});
 
 const row = {
   id: 1, categoryId: 42, name: 'Restaurants', color: null, parentId: null, accountId: null,

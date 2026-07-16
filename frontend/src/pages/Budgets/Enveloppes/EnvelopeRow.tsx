@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { formatAmount } from '../../../lib/format';
 import { formatSignedMoney, computeTargetProgress } from '../envelope-math';
@@ -8,8 +9,9 @@ export function EnvelopeRow(props: {
   onReallocateClick: (row: EnvelopeReportRow) => void;
   onSettingsClick: (row: EnvelopeReportRow) => void;
 }): JSX.Element {
+  const { t } = useTranslation('budgets');
   const { row } = props;
-  const progress = computeTargetProgress(row);
+  const progress = computeTargetProgress(row, t);
   const balanceNegative = Number(row.balance) < 0;
   const absorbed = row.overspendPolicy === 'reallocate_manual' && Number(row.absorbedByPool) > 0;
   return (
@@ -21,17 +23,17 @@ export function EnvelopeRow(props: {
         <div className="text-ink-400 text-right">{formatAmount(row.spend)}</div>
         <div className={`text-right ${balanceNegative ? 'text-clay-300' : 'text-sage-300'}`}>
           {absorbed
-            ? <span className="text-clay-300">⚠ absorbé</span>
+            ? <span className="text-clay-300">⚠ {t('envelopes.row.absorbed')}</span>
             : formatSignedMoney(row.balance)}
         </div>
         <div className="flex justify-end gap-1">
           <button
-            aria-label="Réaffecter"
+            aria-label={t('envelopes.row.reallocateAriaLabel')}
             className="btn-ghost !py-1 !px-1.5 text-xs"
             onClick={() => props.onReallocateClick(row)}
           >→</button>
           <button
-            aria-label="Réglages"
+            aria-label={t('envelopes.row.settingsAriaLabel')}
             className="btn-ghost !py-1 !px-1.5 text-xs"
             onClick={() => props.onSettingsClick(row)}
           >⋯</button>

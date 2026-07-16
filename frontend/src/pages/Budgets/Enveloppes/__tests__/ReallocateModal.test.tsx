@@ -1,6 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ReallocateModal } from '../ReallocateModal';
+import i18n from '../../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['budgets', 'common']);
+});
 
 const rows = [
   { categoryId: 1, categoryName: 'A', assignment: '100.00', balance: '100.00' },
