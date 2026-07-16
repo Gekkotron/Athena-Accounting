@@ -1,10 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { CategoryRow } from '../CategoryRow';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../../api/types';
 import type { GroupedEntry } from '../types';
+import i18n from '../../../i18n';
+
+// CategoryRow renders French strings by default and nests Chip (which uses
+// the shared 'common' namespace for its Modifier/Supprimer buttons).
+// Preload both namespaces for both locales, pinned to French, so the
+// existing French-literal assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['rules', 'common']);
+});
 
 function makeMutation<TData, TVars>(): UseMutationResult<TData, Error, TVars> {
   return {

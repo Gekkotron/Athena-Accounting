@@ -1,0 +1,169 @@
+{
+  "title": "Rules",
+  "subtitle": "Matching <1>is accent/case-insensitive</1>. \"Whole word\" prevents \"paye\" from matching \"payweb\".",
+  "view": {
+    "grouped": "By category",
+    "flat": "Detailed"
+  },
+  "recategorize": {
+    "button": "Recategorize history",
+    "pending": "Recategorizing…",
+    "dialog": {
+      "title": "Recategorize the entire history?",
+      "description": "All enabled rules are re-applied to every transaction (excluding internal transfers). Your <1>manual choices</1> are preserved — only transactions with source \"auto\" or \"default\" are re-evaluated.",
+      "confirmLabel": "Recategorize"
+    },
+    "summary": {
+      "total": "Total",
+      "recategorized": "recategorized",
+      "unknown": "unknown",
+      "preserved": "manual preserved"
+    }
+  },
+  "deleteRuleDialog": {
+    "title": "Delete the rule \"{{keyword}}\"?",
+    "description": "The rule will no longer be applied to future imports. Transactions it already categorized stay as they are — re-run \"Recategorize history\" if you want to re-evaluate them.",
+    "confirmLabel": "Delete the rule"
+  },
+  "signOptions": {
+    "any": "All",
+    "negative": "Negative",
+    "positive": "Positive"
+  },
+  "matchModeOptions": {
+    "word": "Whole word",
+    "substring": "Substring",
+    "regex": "Regex"
+  },
+  "advancedEditor": {
+    "ruleLabel": "Rule",
+    "keywordLabel": "Keyword",
+    "categoryLabel": "Category",
+    "signLabel": "Sign",
+    "modeLabel": "Mode",
+    "priorityLabel": "Priority",
+    "enabledLabel": "Enabled"
+  },
+  "flatTable": {
+    "columns": {
+      "keyword": "Keyword",
+      "category": "Category",
+      "sign": "Sign",
+      "mode": "Mode",
+      "priority": "Prio.",
+      "active": "Active"
+    },
+    "empty": "No rules.",
+    "deleteRow": "delete"
+  },
+  "categoryRow": {
+    "noKeywords": "no keywords",
+    "keywordCount_one": "keyword",
+    "keywordCount_other": "keywords",
+    "disableAll": "disable all",
+    "enableAll": "enable all",
+    "addChip": "+ add",
+    "addChipPlaceholder": "dentist, pharmacy…"
+  },
+  "chip": {
+    "tooltip": "Priority {{priority}} · {{sign}} · {{mode}}",
+    "disabledSuffix": "disabled",
+    "editTooltip": "Edit (priority, sign, mode)"
+  },
+  "groupedView": {
+    "emptyState": "No categories. Create one in the \"Categories\" tab."
+  },
+  "normalizationHint": {
+    "emptyWarning": "⚠️ At least one keyword becomes empty after normalization (pure prefix or date) — it will match nothing.",
+    "willMatchAsPrefix": "Will be matched as:"
+  },
+  "ruleCreateForm": {
+    "keywordLabel": "Keyword(s)",
+    "keywordHelp": "Separate with commas to create multiple rules at once.",
+    "categoryLabel": "Category",
+    "signLabel": "Sign",
+    "modeLabel": "Mode",
+    "priorityLabel": "Priority",
+    "submitPending": "Adding…",
+    "submit": "Add rule",
+    "successCount_one": "{{count}} rule added",
+    "successCount_other": "{{count}} rules added"
+  },
+  "colorPicker": {
+    "dialogAriaLabel": "Choose a color for \"{{name}}\"",
+    "title": "Color",
+    "swatchAriaLabel": "Color {{color}}",
+    "customColorLabel": "Custom color",
+    "customColorPickerAriaLabel": "Custom color picker",
+    "apply": "Apply",
+    "noColor": "No color"
+  },
+  "categories": {
+    "title": "Categories",
+    "subtitle": "The <1>“kind”</1> feeds the sign guard rail: a category set to “Revenu” never applies to a negative amount. Sub-categories inherit their parent's type.",
+    "breakdownTitle": "Breakdown by category",
+    "createForm": {
+      "nameLabel": "Name",
+      "typeLabel": "Type",
+      "colorLabel": "Color",
+      "submit": "Add"
+    },
+    "table": {
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "internal": "Internal",
+        "internalTitle": "Excludes the category from monthly averages (expenses/income). Useful for marking an internal movement — savings, transfer between accounts — without going through automatic detection.",
+        "color": "Color",
+        "total": "Total (loaded period)"
+      },
+      "defaultBadge": "default",
+      "deleteRow": "delete",
+      "dragHandleAriaLabel": "Move the category \"{{name}}\"",
+      "dragDisabledTitle": "This category has sub-categories — it cannot be nested.",
+      "kindInheritedTitle": "Type inherited from \"{{parent}}\"",
+      "confirmKindChange": "Also change the type of the {{count}} sub-categories?",
+      "markInternalAriaLabel": "Mark \"{{name}}\" as an internal movement",
+      "editColorAriaLabel": "Edit the color of \"{{name}}\" ({{color}})",
+      "chooseColorAriaLabel": "Choose a color for \"{{name}}\"",
+      "autoColorTitle": "Automatic color — click to choose"
+    },
+    "deleteDialog": {
+      "title": "Delete \"{{name}}\"?",
+      "description": "Rules pointing to this category will also be deleted (cascade). Transactions that were assigned to it will move to <1>no category</1> — you'll be able to find them again via the \"Tri\" tab.",
+      "childrenWillBecomeRoots": "Its {{count}} sub-categories will become root categories.",
+      "confirmLabel": "Delete the category"
+    }
+  },
+  "tri": {
+    "title": "Tri",
+    "subtitle": {
+      "groups_one": "group",
+      "groups_other": "groups",
+      "processed_one": "processed",
+      "processed_other": "processed",
+      "sortedByFrequency": "sorted by frequency"
+    },
+    "bulk": {
+      "categoryLabel": "Category for the selection"
+    },
+    "actions": {
+      "createRule": "Create a rule",
+      "applyToSelection": "Apply to",
+      "groupSuffix_one": "group",
+      "groupSuffix_other": "groups",
+      "selectAll": "All",
+      "clearSelection": "Clear",
+      "applyRow": "Apply"
+    },
+    "columns": {
+      "normalizedLabel": "Normalized label",
+      "example": "Example",
+      "count": "Count",
+      "total": "Total",
+      "period": "Period",
+      "category": "Category"
+    },
+    "emptyState": "All transactions are categorized."
+  }
+}

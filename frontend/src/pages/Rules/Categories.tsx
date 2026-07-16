@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +25,7 @@ import { resolveDrop } from './dragNest';
 import { CategoryColorPicker } from './CategoryColorPicker';
 
 export function Categories() {
+  const { t } = useTranslation('rules');
   const qc = useQueryClient();
   const catQ = useQuery({
     queryKey: ['categories'],
@@ -180,22 +182,22 @@ export function Categories() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="page-title">Catégories</h1>
+        <h1 className="page-title">{t('categories.title')}</h1>
         <p className="page-subtitle max-w-2xl">
-          Le <span className="display-italic">« kind »</span> alimente le garde-fou de signe :
-          une catégorie « Revenu » ne s'applique jamais à un montant négatif. Les sous-catégories
-          héritent du type de leur parent.
+          <Trans i18nKey="rules:categories.subtitle">
+            The <span className="display-italic">“kind”</span> feeds the sign guard rail: a category set to “Revenu” never applies to a negative amount. Sub-categories inherit their parent's type.
+          </Trans>
         </p>
       </div>
 
       <section className="surface p-5 md:p-6">
-        <div className="section-rule mb-4">Répartition par catégorie</div>
+        <div className="section-rule mb-4">{t('categories.breakdownTitle')}</div>
         <CategoryBreakdown defaultRange="3m" />
       </section>
 
       <form onSubmit={submit} className="surface p-4 md:p-5 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
-          <label className="label mb-1.5 block" htmlFor="cat-create-name">Nom</label>
+          <label className="label mb-1.5 block" htmlFor="cat-create-name">{t('categories.createForm.nameLabel')}</label>
           <input
             id="cat-create-name"
             className="input"
@@ -205,20 +207,24 @@ export function Categories() {
           />
         </div>
         <div className="w-full sm:w-40">
-          <label className="label mb-1.5 block" htmlFor="cat-create-kind">Type</label>
+          <label className="label mb-1.5 block" htmlFor="cat-create-kind">{t('categories.createForm.typeLabel')}</label>
           <select
             id="cat-create-kind"
             className="input"
             value={kind}
             onChange={(e) => setKind(e.target.value as CategoryKind)}
           >
+            {/* Intentionally left untranslated: mirrors the shared KIND_LABEL
+                map in lib/categories.ts (out of this task's file scope), so
+                the create-form select stays consistent with the kind badges
+                rendered elsewhere on this page. */}
             <option value="expense">Dépense</option>
             <option value="income">Revenu</option>
             <option value="neutral">Neutre</option>
           </select>
         </div>
         <div className="w-full sm:w-32">
-          <label className="label mb-1.5 block" htmlFor="cat-create-color">Couleur</label>
+          <label className="label mb-1.5 block" htmlFor="cat-create-color">{t('categories.createForm.colorLabel')}</label>
           <input
             id="cat-create-color"
             className="input font-mono"
@@ -227,7 +233,7 @@ export function Categories() {
             onChange={(e) => setColor(e.target.value)}
           />
         </div>
-        <button className="btn-primary" disabled={create.isPending}>Ajouter</button>
+        <button className="btn-primary" disabled={create.isPending}>{t('categories.createForm.submit')}</button>
         {error && <div className="text-sm text-clay-300 w-full">{error}</div>}
       </form>
 
@@ -244,16 +250,16 @@ export function Categories() {
               <thead className="text-left">
                 <tr className="border-b border-ink-800/70">
                   <th className="px-2 py-3 w-8" aria-hidden />
-                  <th className="px-4 py-3 label font-normal">Nom</th>
-                  <th className="px-4 py-3 label font-normal">Type</th>
+                  <th className="px-4 py-3 label font-normal">{t('categories.table.columns.name')}</th>
+                  <th className="px-4 py-3 label font-normal">{t('categories.table.columns.type')}</th>
                   <th
                     className="px-4 py-3 label font-normal hidden md:table-cell text-center"
-                    title="Exclut la catégorie des moyennes mensuelles (dépenses/revenus). Utile pour marquer un mouvement interne — épargne, transfert entre comptes — sans passer par la détection automatique."
+                    title={t('categories.table.columns.internalTitle')}
                   >
-                    Interne
+                    {t('categories.table.columns.internal')}
                   </th>
-                  <th className="px-4 py-3 label font-normal hidden sm:table-cell">Couleur</th>
-                  <th className="px-4 py-3 label font-normal text-right">Total (période chargée)</th>
+                  <th className="px-4 py-3 label font-normal hidden sm:table-cell">{t('categories.table.columns.color')}</th>
+                  <th className="px-4 py-3 label font-normal text-right">{t('categories.table.columns.total')}</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -322,22 +328,22 @@ export function Categories() {
 
       <ConfirmDialog
         open={!!confirmDelete}
-        title={confirmDelete ? `Supprimer « ${confirmDelete.name} » ?` : ''}
+        title={confirmDelete ? t('categories.deleteDialog.title', { name: confirmDelete.name }) : ''}
         description={
           <>
-            Les règles pointant vers cette catégorie seront aussi supprimées (cascade).
-            Les transactions qui y étaient assignées passeront en{' '}
-            <span className="display-italic">sans catégorie</span> — vous pourrez les
-            retrouver via l'onglet « Tri ».
+            <Trans i18nKey="rules:categories.deleteDialog.description">
+              Rules pointing to this category will also be deleted (cascade). Transactions that were assigned to it will move to <span className="display-italic">no category</span> — you'll be able to find them again via the "Tri" tab.
+            </Trans>
             {confirmDelete && (childrenByParent.get(confirmDelete.id) ?? []).length > 0 && (
               <div className="mt-2 text-ink-300">
-                Ses {childrenByParent.get(confirmDelete.id)!.length} sous-catégories
-                deviendront des catégories racine.
+                {t('categories.deleteDialog.childrenWillBecomeRoots', {
+                  count: childrenByParent.get(confirmDelete.id)!.length,
+                })}
               </div>
             )}
           </>
         }
-        confirmLabel="Supprimer la catégorie"
+        confirmLabel={t('categories.deleteDialog.confirmLabel')}
         destructive
         busy={del.isPending}
         error={deleteError}
@@ -366,6 +372,7 @@ function CategoryTableRow(props: {
   onDelete: () => void;
   onOpenColorPicker: () => void;
 }): JSX.Element {
+  const { t } = useTranslation('rules');
   const { c, depth, total, hasChildren, parent, childrenByParent, updateCategory, onDelete, onOpenColorPicker } = props;
 
   const kindDisabled = depth === 1;
@@ -407,10 +414,10 @@ function CategoryTableRow(props: {
           ref={draggable.setActivatorNodeRef}
           type="button"
           disabled={dragDisabled}
-          aria-label={`Déplacer la catégorie « ${c.name} »`}
+          aria-label={t('categories.table.dragHandleAriaLabel', { name: c.name })}
           title={
             dragDisabled
-              ? 'Cette catégorie a des sous-catégories — elle ne peut pas être imbriquée.'
+              ? t('categories.table.dragDisabledTitle')
               : undefined
           }
           className={
@@ -449,7 +456,7 @@ function CategoryTableRow(props: {
               if (e.key === 'Escape') (e.target as HTMLInputElement).value = c.name;
             }}
           />
-          {c.isDefault && <span className="badge ml-1 shrink-0">défaut</span>}
+          {c.isDefault && <span className="badge ml-1 shrink-0">{t('categories.table.defaultBadge')}</span>}
         </div>
       </td>
       <td className="px-4 py-2.5">
@@ -459,10 +466,10 @@ function CategoryTableRow(props: {
             className="input-sm"
             value={c.kind}
             disabled={kindDisabled}
-            aria-label="Type"
+            aria-label={t('categories.table.columns.type')}
             title={
               kindDisabled && parent
-                ? `Type hérité de « ${parent.name} »`
+                ? t('categories.table.kindInheritedTitle', { parent: parent.name })
                 : undefined
             }
             onChange={(e) => {
@@ -470,7 +477,7 @@ function CategoryTableRow(props: {
               const children = childrenByParent.get(c.id) ?? [];
               if (children.length > 0) {
                 const confirmed = window.confirm(
-                  `Changer aussi le type des ${children.length} sous-catégories ?`,
+                  t('categories.table.confirmKindChange', { count: children.length }),
                 );
                 if (!confirmed) {
                   e.target.value = c.kind;
@@ -480,6 +487,8 @@ function CategoryTableRow(props: {
               updateCategory.mutate({ id: c.id, patch: { kind: nextKind } });
             }}
           >
+            {/* Intentionally left untranslated — see the create-form select
+                above; mirrors the shared, out-of-scope KIND_LABEL map. */}
             <option value="expense">Dépense</option>
             <option value="income">Revenu</option>
             <option value="neutral">Neutre</option>
@@ -491,7 +500,7 @@ function CategoryTableRow(props: {
           type="checkbox"
           className="accent-sage-300 align-middle"
           checked={c.isInternalTransfer}
-          aria-label={`Marquer « ${c.name} » comme mouvement interne`}
+          aria-label={t('categories.table.markInternalAriaLabel', { name: c.name })}
           onChange={(e) =>
             updateCategory.mutate({
               id: c.id,
@@ -506,13 +515,13 @@ function CategoryTableRow(props: {
           onClick={onOpenColorPicker}
           aria-label={
             c.color
-              ? `Modifier la couleur de « ${c.name} » (${c.color})`
-              : `Choisir une couleur pour « ${c.name} »`
+              ? t('categories.table.editColorAriaLabel', { name: c.name, color: c.color })
+              : t('categories.table.chooseColorAriaLabel', { name: c.name })
           }
           title={
             c.color
               ? undefined
-              : 'Couleur automatique — cliquer pour choisir'
+              : t('categories.table.autoColorTitle')
           }
           className={
             `h-6 w-6 rounded-full border transition ` +
@@ -536,7 +545,7 @@ function CategoryTableRow(props: {
             className="text-[11px] text-ink-500 hover:text-clay-300 transition"
             onClick={onDelete}
           >
-            supprimer
+            {t('categories.table.deleteRow')}
           </button>
         )}
       </td>

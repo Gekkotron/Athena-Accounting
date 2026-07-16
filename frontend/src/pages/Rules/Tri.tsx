@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { Category, TriGroup } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
@@ -9,6 +10,7 @@ import { SectionTip } from '../../components/SectionTip';
 import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 
 export function Tri() {
+  const { t } = useTranslation(['rules', 'common']);
   const qc = useQueryClient();
   const groupsQ = useQuery({
     queryKey: ['tri-groups'],
@@ -104,11 +106,13 @@ export function Tri() {
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="page-title">Tri</h1>
+            <h1 className="page-title">{t('tri.title')}</h1>
             <SectionTipHelpIcon id="section:rules" />
           </div>
           <p className="page-subtitle">
-            <span className="font-mono">{processed} / {total}</span> groupe{total > 1 ? 's' : ''} traité{processed > 1 ? 's' : ''} · triés par fréquence
+            <span className="font-mono">{processed} / {total}</span>{' '}
+            {t('tri.subtitle.groups', { count: total })}{' '}
+            {t('tri.subtitle.processed', { count: processed })} · {t('tri.subtitle.sortedByFrequency')}
           </p>
         </div>
         <button
@@ -116,22 +120,20 @@ export function Tri() {
           onClick={() => setConfirmRecat(true)}
           disabled={recategorize.isPending}
         >
-          {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser l\'historique'}
+          {recategorize.isPending ? t('recategorize.pending') : t('recategorize.button')}
         </button>
       </div>
 
       <ConfirmDialog
         open={confirmRecat}
-        title="Recatégoriser tout l'historique ?"
+        title={t('recategorize.dialog.title')}
         description={
-          <>
-            Toutes les règles activées sont ré-appliquées à l'ensemble des transactions
-            (hors virements internes). Vos{' '}
-            <span className="display-italic">choix manuels</span> sont préservés — seules
-            les transactions en source « auto » ou « default » sont réévaluées.
-          </>
+          <Trans i18nKey="rules:recategorize.dialog.description">
+            All enabled rules are re-applied to every transaction (excluding internal transfers). Your <span className="display-italic">manual choices</span> are preserved — only
+            transactions with source "auto" or "default" are re-evaluated.
+          </Trans>
         }
-        confirmLabel="Recatégoriser"
+        confirmLabel={t('recategorize.dialog.confirmLabel')}
         busy={recategorize.isPending}
         onConfirm={() =>
           recategorize.mutate(undefined, { onSuccess: () => setConfirmRecat(false) })
@@ -141,16 +143,17 @@ export function Tri() {
 
       {recategorize.data && (
         <div className="surface p-4 text-sm text-sage-200">
-          Total <span className="font-mono">{recategorize.data.total}</span> · recatégorisées{' '}
-          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> · inconnues{' '}
-          <span className="font-mono">{recategorize.data.unknown}</span> · manuelles préservées{' '}
-          <span className="font-mono">{recategorize.data.preserved}</span>
+          {t('recategorize.summary.total')} <span className="font-mono">{recategorize.data.total}</span> ·{' '}
+          {t('recategorize.summary.recategorized')}{' '}
+          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> ·{' '}
+          {t('recategorize.summary.unknown')} <span className="font-mono">{recategorize.data.unknown}</span> ·{' '}
+          {t('recategorize.summary.preserved')} <span className="font-mono">{recategorize.data.preserved}</span>
         </div>
       )}
 
       <div className="surface p-4 md:p-5 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
-          <label className="label mb-1.5 block">Catégorie pour la sélection</label>
+          <label className="label mb-1.5 block">{t('tri.bulk.categoryLabel')}</label>
           <select
             className="input"
             value={bulkCategoryId}
@@ -175,21 +178,22 @@ export function Tri() {
             onChange={(e) => setCreateRules(e.target.checked)}
             className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
           />
-          Créer une règle
+          {t('tri.actions.createRule')}
         </label>
         <button
           className="btn-primary"
           onClick={assignBulk}
           disabled={!bulkCategoryId || selected.size === 0 || assign.isPending}
         >
-          Appliquer à <span className="font-mono">{selected.size}</span> groupe{selected.size > 1 ? 's' : ''}
+          {t('tri.actions.applyToSelection')} <span className="font-mono">{selected.size}</span>{' '}
+          {t('tri.actions.groupSuffix', { count: selected.size })}
         </button>
         <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
           <button className="btn-ghost" onClick={selectAll} disabled={groups.length === 0}>
-            Tout
+            {t('tri.actions.selectAll')}
           </button>
           <button className="btn-ghost" onClick={clearSel} disabled={selected.size === 0}>
-            Effacer
+            {t('tri.actions.clearSelection')}
           </button>
         </div>
       </div>
@@ -200,12 +204,12 @@ export function Tri() {
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
                 <th className="px-4 py-3 w-8"></th>
-                <th className="px-4 py-3 label font-normal">Libellé normalisé</th>
-                <th className="px-4 py-3 label font-normal hidden lg:table-cell">Exemple</th>
-                <th className="px-4 py-3 label font-normal text-right">Nb</th>
-                <th className="px-4 py-3 label font-normal text-right">Total</th>
-                <th className="px-4 py-3 label font-normal hidden md:table-cell">Période</th>
-                <th className="px-4 py-3 label font-normal">Catégorie</th>
+                <th className="px-4 py-3 label font-normal">{t('tri.columns.normalizedLabel')}</th>
+                <th className="px-4 py-3 label font-normal hidden lg:table-cell">{t('tri.columns.example')}</th>
+                <th className="px-4 py-3 label font-normal text-right">{t('tri.columns.count')}</th>
+                <th className="px-4 py-3 label font-normal text-right">{t('tri.columns.total')}</th>
+                <th className="px-4 py-3 label font-normal hidden md:table-cell">{t('tri.columns.period')}</th>
+                <th className="px-4 py-3 label font-normal">{t('tri.columns.category')}</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -214,7 +218,7 @@ export function Tri() {
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-ink-500">
                     <span className="display-italic">
-                      {groupsQ.isLoading ? 'Chargement…' : 'Toutes les transactions sont catégorisées.'}
+                      {groupsQ.isLoading ? t('loading', { ns: 'common' }) : t('tri.emptyState')}
                     </span>
                   </td>
                 </tr>
@@ -280,7 +284,7 @@ export function Tri() {
                           disabled={!localCat || assign.isPending}
                           onClick={() => assignSingle(g.normalized_label)}
                         >
-                          Appliquer
+                          {t('tri.actions.applyRow')}
                         </button>
                       </td>
                     </tr>

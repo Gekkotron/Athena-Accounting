@@ -1,16 +1,5 @@
-import type { Rule, SignConstraint, MatchMode } from '../../api/types';
-
-const SIGN_LABEL: Record<SignConstraint, string> = {
-  positive: 'Positif',
-  negative: 'Négatif',
-  any: 'Tous',
-};
-
-const MATCH_LABEL: Record<MatchMode, string> = {
-  word: 'Mot entier',
-  substring: 'Sous-chaîne',
-  regex: 'Regex',
-};
+import { useTranslation } from 'react-i18next';
+import type { Rule } from '../../api/types';
 
 export function Chip({
   rule,
@@ -23,7 +12,13 @@ export function Chip({
   onAdvanced: () => void;
   onDelete: () => void;
 }) {
-  const tooltip = `Priorité ${rule.priority} · ${SIGN_LABEL[rule.signConstraint]} · ${MATCH_LABEL[rule.matchMode]}${rule.enabled ? '' : ' · désactivée'}`;
+  const { t } = useTranslation(['rules', 'common']);
+  const tooltip =
+    t('chip.tooltip', {
+      priority: rule.priority,
+      sign: t(`signOptions.${rule.signConstraint}`),
+      mode: t(`matchModeOptions.${rule.matchMode}`),
+    }) + (rule.enabled ? '' : ` · ${t('chip.disabledSuffix')}`);
   return (
     <span
       className={`group inline-flex items-center gap-1 rounded-full border pl-2.5 pr-1 py-0.5 text-xs font-mono transition ${
@@ -39,8 +34,8 @@ export function Chip({
       <button
         onClick={onAdvanced}
         className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-ink-400 hover:text-ink-100 transition px-0.5"
-        aria-label="Modifier"
-        title="Modifier (priorité, signe, mode)"
+        aria-label={t('edit', { ns: 'common' })}
+        title={t('chip.editTooltip')}
       >
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
           <path d="M2 7.5l5-5 1.5 1.5-5 5L2 9.5V7.5z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round" />
@@ -49,8 +44,8 @@ export function Chip({
       <button
         onClick={onDelete}
         className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-ink-400 hover:text-clay-300 transition px-0.5 mr-0.5"
-        aria-label="Supprimer"
-        title="Supprimer"
+        aria-label={t('delete', { ns: 'common' })}
+        title={t('delete', { ns: 'common' })}
       >
         <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
           <path d="M2 2l7 7M9 2L2 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

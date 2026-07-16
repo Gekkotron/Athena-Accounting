@@ -1,0 +1,169 @@
+{
+  "title": "Règles",
+  "subtitle": "Matching <1>insensible aux accents/casse</1>. « Mot entier » empêche « paye » de matcher « payweb ».",
+  "view": {
+    "grouped": "Par catégorie",
+    "flat": "Détaillé"
+  },
+  "recategorize": {
+    "button": "Recatégoriser l'historique",
+    "pending": "Recatégorisation…",
+    "dialog": {
+      "title": "Recatégoriser tout l'historique ?",
+      "description": "Toutes les règles activées sont ré-appliquées à l'ensemble des transactions (hors virements internes). Vos <1>choix manuels</1> sont préservés — seules les transactions en source « auto » ou « default » sont réévaluées.",
+      "confirmLabel": "Recatégoriser"
+    },
+    "summary": {
+      "total": "Total",
+      "recategorized": "recatégorisées",
+      "unknown": "inconnues",
+      "preserved": "manuelles préservées"
+    }
+  },
+  "deleteRuleDialog": {
+    "title": "Supprimer la règle « {{keyword}} » ?",
+    "description": "La règle ne sera plus appliquée aux imports futurs. Les transactions déjà catégorisées par elle restent en place — relancez « Recatégoriser l'historique » si vous voulez réévaluer.",
+    "confirmLabel": "Supprimer la règle"
+  },
+  "signOptions": {
+    "any": "Tous",
+    "negative": "Négatif",
+    "positive": "Positif"
+  },
+  "matchModeOptions": {
+    "word": "Mot entier",
+    "substring": "Sous-chaîne",
+    "regex": "Regex"
+  },
+  "advancedEditor": {
+    "ruleLabel": "Règle",
+    "keywordLabel": "Mot-clé",
+    "categoryLabel": "Catégorie",
+    "signLabel": "Signe",
+    "modeLabel": "Mode",
+    "priorityLabel": "Priorité",
+    "enabledLabel": "Activée"
+  },
+  "flatTable": {
+    "columns": {
+      "keyword": "Mot-clé",
+      "category": "Catégorie",
+      "sign": "Signe",
+      "mode": "Mode",
+      "priority": "Pr.",
+      "active": "Actif"
+    },
+    "empty": "Aucune règle.",
+    "deleteRow": "supprimer"
+  },
+  "categoryRow": {
+    "noKeywords": "aucun mot-clé",
+    "keywordCount_one": "mot-clé",
+    "keywordCount_other": "mots-clés",
+    "disableAll": "désactiver tout",
+    "enableAll": "tout activer",
+    "addChip": "+ ajouter",
+    "addChipPlaceholder": "dentiste, pharma…"
+  },
+  "chip": {
+    "tooltip": "Priorité {{priority}} · {{sign}} · {{mode}}",
+    "disabledSuffix": "désactivée",
+    "editTooltip": "Modifier (priorité, signe, mode)"
+  },
+  "groupedView": {
+    "emptyState": "Aucune catégorie. Créez-en une dans l'onglet « Catégories »."
+  },
+  "normalizationHint": {
+    "emptyWarning": "⚠️ Au moins un mot-clé devient vide après normalisation (préfixe ou date pur) — il ne matchera rien.",
+    "willMatchAsPrefix": "Sera matché comme :"
+  },
+  "ruleCreateForm": {
+    "keywordLabel": "Mot-clé(s)",
+    "keywordHelp": "Séparez par des virgules pour créer plusieurs règles d'un coup.",
+    "categoryLabel": "Catégorie",
+    "signLabel": "Signe",
+    "modeLabel": "Mode",
+    "priorityLabel": "Priorité",
+    "submitPending": "Ajout…",
+    "submit": "Ajouter la règle",
+    "successCount_one": "{{count}} règle ajoutée",
+    "successCount_other": "{{count}} règles ajoutées"
+  },
+  "colorPicker": {
+    "dialogAriaLabel": "Choisir une couleur pour « {{name}} »",
+    "title": "Couleur",
+    "swatchAriaLabel": "Couleur {{color}}",
+    "customColorLabel": "Couleur personnalisée",
+    "customColorPickerAriaLabel": "Sélecteur de couleur personnalisée",
+    "apply": "Appliquer",
+    "noColor": "Aucune couleur"
+  },
+  "categories": {
+    "title": "Catégories",
+    "subtitle": "Le <1>« kind »</1> alimente le garde-fou de signe : une catégorie « Revenu » ne s'applique jamais à un montant négatif. Les sous-catégories héritent du type de leur parent.",
+    "breakdownTitle": "Répartition par catégorie",
+    "createForm": {
+      "nameLabel": "Nom",
+      "typeLabel": "Type",
+      "colorLabel": "Couleur",
+      "submit": "Ajouter"
+    },
+    "table": {
+      "columns": {
+        "name": "Nom",
+        "type": "Type",
+        "internal": "Interne",
+        "internalTitle": "Exclut la catégorie des moyennes mensuelles (dépenses/revenus). Utile pour marquer un mouvement interne — épargne, transfert entre comptes — sans passer par la détection automatique.",
+        "color": "Couleur",
+        "total": "Total (période chargée)"
+      },
+      "defaultBadge": "défaut",
+      "deleteRow": "supprimer",
+      "dragHandleAriaLabel": "Déplacer la catégorie « {{name}} »",
+      "dragDisabledTitle": "Cette catégorie a des sous-catégories — elle ne peut pas être imbriquée.",
+      "kindInheritedTitle": "Type hérité de « {{parent}} »",
+      "confirmKindChange": "Changer aussi le type des {{count}} sous-catégories ?",
+      "markInternalAriaLabel": "Marquer « {{name}} » comme mouvement interne",
+      "editColorAriaLabel": "Modifier la couleur de « {{name}} » ({{color}})",
+      "chooseColorAriaLabel": "Choisir une couleur pour « {{name}} »",
+      "autoColorTitle": "Couleur automatique — cliquer pour choisir"
+    },
+    "deleteDialog": {
+      "title": "Supprimer « {{name}} » ?",
+      "description": "Les règles pointant vers cette catégorie seront aussi supprimées (cascade). Les transactions qui y étaient assignées passeront en <1>sans catégorie</1> — vous pourrez les retrouver via l'onglet « Tri ».",
+      "childrenWillBecomeRoots": "Ses {{count}} sous-catégories deviendront des catégories racine.",
+      "confirmLabel": "Supprimer la catégorie"
+    }
+  },
+  "tri": {
+    "title": "Tri",
+    "subtitle": {
+      "groups_one": "groupe",
+      "groups_other": "groupes",
+      "processed_one": "traité",
+      "processed_other": "traités",
+      "sortedByFrequency": "triés par fréquence"
+    },
+    "bulk": {
+      "categoryLabel": "Catégorie pour la sélection"
+    },
+    "actions": {
+      "createRule": "Créer une règle",
+      "applyToSelection": "Appliquer à",
+      "groupSuffix_one": "groupe",
+      "groupSuffix_other": "groupes",
+      "selectAll": "Tout",
+      "clearSelection": "Effacer",
+      "applyRow": "Appliquer"
+    },
+    "columns": {
+      "normalizedLabel": "Libellé normalisé",
+      "example": "Exemple",
+      "count": "Nb",
+      "total": "Total",
+      "period": "Période",
+      "category": "Catégorie"
+    },
+    "emptyState": "Toutes les transactions sont catégorisées."
+  }
+}

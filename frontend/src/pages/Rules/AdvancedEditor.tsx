@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
 
@@ -15,6 +16,7 @@ export function AdvancedEditor({
   onSave: (patch: Partial<Rule>) => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation(['rules', 'common']);
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
     [categories],
@@ -61,13 +63,13 @@ export function AdvancedEditor({
         className="surface w-full max-w-md p-6"
       >
         <div className="mb-4">
-          <div className="label mb-1">Règle</div>
+          <div className="label mb-1">{t('advancedEditor.ruleLabel')}</div>
           <div className="font-mono text-sm text-ink-100 truncate">{rule.keyword}</div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <label className="label mb-1.5 block">Mot-clé</label>
+            <label className="label mb-1.5 block">{t('advancedEditor.keywordLabel')}</label>
             <input
               className="input font-mono"
               value={keyword}
@@ -76,7 +78,7 @@ export function AdvancedEditor({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="label mb-1.5 block">Catégorie</label>
+            <label className="label mb-1.5 block">{t('advancedEditor.categoryLabel')}</label>
             <select
               className="input"
               value={categoryId}
@@ -94,31 +96,31 @@ export function AdvancedEditor({
             </select>
           </div>
           <div>
-            <label className="label mb-1.5 block">Signe</label>
+            <label className="label mb-1.5 block">{t('advancedEditor.signLabel')}</label>
             <select
               className="input"
               value={signConstraint}
               onChange={(e) => setSignConstraint(e.target.value as SignConstraint)}
             >
-              <option value="any">Tous</option>
-              <option value="negative">Négatif</option>
-              <option value="positive">Positif</option>
+              <option value="any">{t('signOptions.any')}</option>
+              <option value="negative">{t('signOptions.negative')}</option>
+              <option value="positive">{t('signOptions.positive')}</option>
             </select>
           </div>
           <div>
-            <label className="label mb-1.5 block">Mode</label>
+            <label className="label mb-1.5 block">{t('advancedEditor.modeLabel')}</label>
             <select
               className="input"
               value={matchMode}
               onChange={(e) => setMatchMode(e.target.value as MatchMode)}
             >
-              <option value="word">Mot entier</option>
-              <option value="substring">Sous-chaîne</option>
-              <option value="regex">Regex</option>
+              <option value="word">{t('matchModeOptions.word')}</option>
+              <option value="substring">{t('matchModeOptions.substring')}</option>
+              <option value="regex">{t('matchModeOptions.regex')}</option>
             </select>
           </div>
           <div>
-            <label className="label mb-1.5 block">Priorité</label>
+            <label className="label mb-1.5 block">{t('advancedEditor.priorityLabel')}</label>
             <input
               inputMode="numeric"
               className="input font-mono"
@@ -134,7 +136,7 @@ export function AdvancedEditor({
                 onChange={(e) => setEnabled(e.target.checked)}
                 className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
               />
-              Activée
+              {t('advancedEditor.enabledLabel')}
             </label>
           </div>
         </div>
@@ -145,14 +147,14 @@ export function AdvancedEditor({
             onClick={onDelete}
             className="text-xs text-clay-300 hover:text-clay-200 transition"
           >
-            Supprimer
+            {t('delete', { ns: 'common' })}
           </button>
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={onClose}>
-              Annuler
+              {t('cancel', { ns: 'common' })}
             </button>
             <button type="submit" className="btn-primary">
-              Enregistrer
+              {t('save', { ns: 'common' })}
             </button>
           </div>
         </div>

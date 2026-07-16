@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { normalizeLabel } from '../../lib/normalize';
 import type { MatchMode } from '../../api/types';
 
@@ -8,6 +9,7 @@ export function NormalizationHint({
   input: string;
   matchMode: MatchMode;
 }) {
+  const { t } = useTranslation('rules');
   // Regex mode is a deliberate pattern — we don't pre-normalize it.
   if (matchMode === 'regex' || !input.trim()) return null;
 
@@ -28,12 +30,12 @@ export function NormalizationHint({
     <div className="text-[11px] mt-1.5 leading-relaxed">
       {anyEmpty && (
         <div className="text-clay-300">
-          ⚠️ Au moins un mot-clé devient vide après normalisation (préfixe ou date pur) — il ne matchera rien.
+          {t('normalizationHint.emptyWarning')}
         </div>
       )}
       {anyChange && (
         <div className="text-ink-500">
-          Sera matché comme :{' '}
+          {t('normalizationHint.willMatchAsPrefix')}{' '}
           {transformed.map((t, i) => (
             <span key={i}>
               <span className={`font-mono ${t.norm ? 'text-sage-300' : 'text-clay-300 line-through'}`}>

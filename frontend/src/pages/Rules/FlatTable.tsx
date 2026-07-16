@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
@@ -14,6 +15,7 @@ export function FlatTable({
   updateRule: UseMutationResult<unknown, Error, { id: number; patch: Partial<Rule> }>;
   onRequestDelete: (rule: Rule) => void;
 }) {
+  const { t } = useTranslation('rules');
   const byId = useMemo(
     () => new Map(cats.map((c) => [c.id, c] as const)),
     [cats],
@@ -24,12 +26,12 @@ export function FlatTable({
         <table className="w-full text-sm">
           <thead className="text-left">
             <tr className="border-b border-ink-800/70">
-              <th className="px-4 py-3 label font-normal">Mot-clé</th>
-              <th className="px-4 py-3 label font-normal">Catégorie</th>
-              <th className="px-4 py-3 label font-normal hidden md:table-cell">Signe</th>
-              <th className="px-4 py-3 label font-normal hidden md:table-cell">Mode</th>
-              <th className="px-4 py-3 label font-normal text-right">Pr.</th>
-              <th className="px-4 py-3 label font-normal">Actif</th>
+              <th className="px-4 py-3 label font-normal">{t('flatTable.columns.keyword')}</th>
+              <th className="px-4 py-3 label font-normal">{t('flatTable.columns.category')}</th>
+              <th className="px-4 py-3 label font-normal hidden md:table-cell">{t('flatTable.columns.sign')}</th>
+              <th className="px-4 py-3 label font-normal hidden md:table-cell">{t('flatTable.columns.mode')}</th>
+              <th className="px-4 py-3 label font-normal text-right">{t('flatTable.columns.priority')}</th>
+              <th className="px-4 py-3 label font-normal">{t('flatTable.columns.active')}</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -37,7 +39,7 @@ export function FlatTable({
             {rules.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-ink-500 display-italic">
-                  Aucune règle.
+                  {t('flatTable.empty')}
                 </td>
               </tr>
             ) : (
@@ -90,9 +92,9 @@ export function FlatTable({
                         })
                       }
                     >
-                      <option value="any">Tous</option>
-                      <option value="negative">Négatif</option>
-                      <option value="positive">Positif</option>
+                      <option value="any">{t('signOptions.any')}</option>
+                      <option value="negative">{t('signOptions.negative')}</option>
+                      <option value="positive">{t('signOptions.positive')}</option>
                     </select>
                   </td>
                   <td className="px-4 py-2.5 hidden md:table-cell">
@@ -106,9 +108,9 @@ export function FlatTable({
                         })
                       }
                     >
-                      <option value="word">Mot entier</option>
-                      <option value="substring">Sous-chaîne</option>
-                      <option value="regex">Regex</option>
+                      <option value="word">{t('matchModeOptions.word')}</option>
+                      <option value="substring">{t('matchModeOptions.substring')}</option>
+                      <option value="regex">{t('matchModeOptions.regex')}</option>
                     </select>
                   </td>
                   <td className="px-4 py-2.5 text-right">
@@ -143,7 +145,7 @@ export function FlatTable({
                       className="text-[11px] text-ink-500 hover:text-clay-300 transition"
                       onClick={() => onRequestDelete(r)}
                     >
-                      supprimer
+                      {t('flatTable.deleteRow')}
                     </button>
                   </td>
                 </tr>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Curated palette — same 10 colors used by Sankey.tsx and CategoryDonut, so
 // category colors stay consistent across the app. Extract to a shared module
@@ -27,6 +28,7 @@ export function CategoryColorPicker({
   onApply,
   onCancel,
 }: Props) {
+  const { t } = useTranslation(['rules', 'common']);
   const [customColor, setCustomColor] = useState(current ?? defaultColor);
 
   useEffect(() => {
@@ -54,11 +56,11 @@ export function CategoryColorPicker({
       className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-ink-950/70 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label={`Choisir une couleur pour « ${categoryName} »`}
+      aria-label={t('colorPicker.dialogAriaLabel', { name: categoryName })}
       onClick={onCancel}
     >
       <div className="surface w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="display text-xl text-ink-50 mb-1 leading-snug">Couleur</div>
+        <div className="display text-xl text-ink-50 mb-1 leading-snug">{t('colorPicker.title')}</div>
         <div className="text-sm text-ink-400 mb-4">
           « <span className="text-ink-200">{categoryName}</span> »
         </div>
@@ -75,14 +77,14 @@ export function CategoryColorPicker({
                   : 'border-ink-700 hover:border-ink-400')
               }
               style={{ backgroundColor: c }}
-              aria-label={`Couleur ${c}`}
+              aria-label={t('colorPicker.swatchAriaLabel', { color: c })}
               onClick={() => onApply(c)}
             />
           ))}
         </div>
 
         <label className="label mb-1.5 block" htmlFor="color-custom-picker">
-          Couleur personnalisée
+          {t('colorPicker.customColorLabel')}
         </label>
         <div className="flex items-center gap-3 mb-5">
           <input
@@ -90,7 +92,7 @@ export function CategoryColorPicker({
             type="color"
             className="h-10 w-14 rounded-md border border-ink-700 bg-transparent cursor-pointer p-0"
             value={customColor}
-            aria-label="Sélecteur de couleur personnalisée"
+            aria-label={t('colorPicker.customColorPickerAriaLabel')}
             onChange={(e) => setCustomColor(e.target.value)}
           />
           <code className="font-mono text-sm text-ink-300">{customColor.toLowerCase()}</code>
@@ -100,7 +102,7 @@ export function CategoryColorPicker({
             disabled={!customChanged}
             onClick={() => onApply(customColor.toLowerCase())}
           >
-            Appliquer
+            {t('colorPicker.apply')}
           </button>
         </div>
 
@@ -111,10 +113,10 @@ export function CategoryColorPicker({
             onClick={() => onApply(null)}
             disabled={current == null}
           >
-            Aucune couleur
+            {t('colorPicker.noColor')}
           </button>
           <button type="button" className="btn-ghost" onClick={onCancel}>
-            Fermer
+            {t('close', { ns: 'common' })}
           </button>
         </div>
       </div>

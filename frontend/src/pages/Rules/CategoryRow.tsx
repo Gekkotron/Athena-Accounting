@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { KIND_LABEL, kindBadgeClass, formatCategoryPath } from '../../lib/categories';
@@ -30,6 +31,7 @@ export function CategoryRow({
   onRequestDelete: (rule: Rule) => void;
   onEdit: (rule: Rule) => void;
 }) {
+  const { t } = useTranslation('rules');
   const { category, rules } = group;
   const hasEnabled = rules.some((r) => r.enabled);
   const hasDisabled = rules.some((r) => !r.enabled);
@@ -59,7 +61,7 @@ export function CategoryRow({
         <div className="mt-1 flex items-center gap-2">
           <span className={kindBadgeClass(category.kind)}>{KIND_LABEL[category.kind]}</span>
           <span className="text-[11px] text-ink-500 font-mono">
-            {rules.length} mot{rules.length > 1 ? 's' : ''}-clé{rules.length > 1 ? 's' : ''}
+            {rules.length} {t('categoryRow.keywordCount', { count: rules.length })}
           </span>
         </div>
       </div>
@@ -67,7 +69,7 @@ export function CategoryRow({
       {/* Chips */}
       <div className="flex-1 flex flex-wrap items-center gap-1.5 min-w-0">
         {rules.length === 0 ? (
-          <span className="text-[11px] text-ink-600 display-italic">aucun mot-clé</span>
+          <span className="text-[11px] text-ink-600 display-italic">{t('categoryRow.noKeywords')}</span>
         ) : (
           rules.map((r) => (
             <Chip
@@ -99,7 +101,7 @@ export function CategoryRow({
             className="text-ink-500 hover:text-ink-100 transition whitespace-nowrap"
             onClick={() => setEnabledAll(false)}
           >
-            désactiver tout
+            {t('categoryRow.disableAll')}
           </button>
         )}
         {hasDisabled && (
@@ -107,7 +109,7 @@ export function CategoryRow({
             className="text-ink-500 hover:text-ink-100 transition whitespace-nowrap"
             onClick={() => setEnabledAll(true)}
           >
-            tout activer
+            {t('categoryRow.enableAll')}
           </button>
         )}
       </div>
@@ -116,6 +118,7 @@ export function CategoryRow({
 }
 
 function AddChipInput({ onAdd }: { onAdd: (keywords: string[]) => void }) {
+  const { t } = useTranslation('rules');
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
 
@@ -125,7 +128,7 @@ function AddChipInput({ onAdd }: { onAdd: (keywords: string[]) => void }) {
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1 rounded-full border border-dashed border-ink-700 text-ink-500 hover:text-ink-100 hover:border-ink-600 px-2.5 py-0.5 text-xs transition"
       >
-        + ajouter
+        {t('categoryRow.addChip')}
       </button>
     );
   }
@@ -161,7 +164,7 @@ function AddChipInput({ onAdd }: { onAdd: (keywords: string[]) => void }) {
             setOpen(false);
           }
         }}
-        placeholder="dentiste, pharma…"
+        placeholder={t('categoryRow.addChipPlaceholder')}
         className="rounded-full border border-ink-700 bg-ink-900 px-2.5 py-0.5 text-xs font-mono text-ink-100 placeholder:text-ink-600 focus:border-sage-300/50 w-44"
       />
     </form>

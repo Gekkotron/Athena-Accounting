@@ -1,4 +1,5 @@
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { CategoryRow } from './CategoryRow';
 import type { GroupedEntry } from './types';
@@ -28,10 +29,11 @@ export function GroupedView({
   onRequestDelete: (rule: Rule) => void;
   onEdit: (rule: Rule) => void;
 }) {
+  const { t } = useTranslation('rules');
   if (grouped.length === 0) {
     return (
       <div className="surface p-8 text-center text-ink-500 display-italic">
-        Aucune catégorie. Créez-en une dans l'onglet « Catégories ».
+        {t('groupedView.emptyState')}
       </div>
     );
   }

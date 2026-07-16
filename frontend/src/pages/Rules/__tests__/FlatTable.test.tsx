@@ -1,9 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { FlatTable } from '../FlatTable';
 import type { Category, Rule } from '../../../api/types';
+import i18n from '../../../i18n';
+
+// FlatTable renders French strings by default. Preload the 'rules'
+// namespace for both locales so `useTranslation` never suspends mid-render,
+// then pin the active language to French so the existing French-literal
+// assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['rules']);
+});
 
 function makeMutation<TVars>(): UseMutationResult<unknown, Error, TVars> {
   return {

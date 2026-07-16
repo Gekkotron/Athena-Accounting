@@ -1,8 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Chip } from '../Chip';
 import type { Rule } from '../../../api/types';
+import i18n from '../../../i18n';
+
+// Chip uses both the 'rules' namespace (tooltip) and 'common' (Modifier/
+// Supprimer button labels). Preload both for both locales, pinned to
+// French, so `useTranslation` never suspends and the existing
+// French-literal assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['rules', 'common']);
+});
 
 const rule: Rule = {
   id: 1,

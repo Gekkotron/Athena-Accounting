@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -12,6 +13,7 @@ import type { GroupedEntry } from './types';
 type View = 'grouped' | 'flat';
 
 export function Rules() {
+  const { t } = useTranslation('rules');
   const qc = useQueryClient();
   const rulesQ = useQuery({
     queryKey: ['rules'],
@@ -132,10 +134,11 @@ export function Rules() {
     <div className="flex flex-col gap-8">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Règles</h1>
+          <h1 className="page-title">{t('title')}</h1>
           <p className="page-subtitle max-w-2xl">
-            Matching <span className="display-italic">insensible aux accents/casse</span>.
-            « Mot entier » empêche « paye » de matcher « payweb ».
+            <Trans i18nKey="rules:subtitle">
+              Matching <span className="display-italic">is accent/case-insensitive</span>. "Whole word" prevents "paye" from matching "payweb".
+            </Trans>
           </p>
         </div>
         <button
@@ -143,16 +146,17 @@ export function Rules() {
           onClick={() => setConfirmRecat(true)}
           disabled={recategorize.isPending}
         >
-          {recategorize.isPending ? 'Recatégorisation…' : 'Recatégoriser l\'historique'}
+          {recategorize.isPending ? t('recategorize.pending') : t('recategorize.button')}
         </button>
       </div>
 
       {recategorize.data && (
         <div className="surface p-4 text-sm text-sage-200">
-          Total <span className="font-mono">{recategorize.data.total}</span> · recatégorisées{' '}
-          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> · inconnues{' '}
-          <span className="font-mono">{recategorize.data.unknown}</span> · manuelles préservées{' '}
-          <span className="font-mono">{recategorize.data.preserved}</span>
+          {t('recategorize.summary.total')} <span className="font-mono">{recategorize.data.total}</span> ·{' '}
+          {t('recategorize.summary.recategorized')}{' '}
+          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> ·{' '}
+          {t('recategorize.summary.unknown')} <span className="font-mono">{recategorize.data.unknown}</span> ·{' '}
+          {t('recategorize.summary.preserved')} <span className="font-mono">{recategorize.data.preserved}</span>
         </div>
       )}
 
@@ -172,7 +176,7 @@ export function Rules() {
               view === 'grouped' ? 'bg-ink-850 text-ink-100' : 'text-ink-400 hover:text-ink-100'
             }`}
           >
-            Par catégorie
+            {t('view.grouped')}
           </button>
           <button
             onClick={() => setView('flat')}
@@ -180,7 +184,7 @@ export function Rules() {
               view === 'flat' ? 'bg-ink-850 text-ink-100' : 'text-ink-400 hover:text-ink-100'
             }`}
           >
-            Détaillé
+            {t('view.flat')}
           </button>
         </div>
       </div>
@@ -230,9 +234,9 @@ export function Rules() {
 
       <ConfirmDialog
         open={!!confirmDeleteRule}
-        title={confirmDeleteRule ? `Supprimer la règle « ${confirmDeleteRule.keyword} » ?` : ''}
-        description="La règle ne sera plus appliquée aux imports futurs. Les transactions déjà catégorisées par elle restent en place — relancez « Recatégoriser l'historique » si vous voulez réévaluer."
-        confirmLabel="Supprimer la règle"
+        title={confirmDeleteRule ? t('deleteRuleDialog.title', { keyword: confirmDeleteRule.keyword }) : ''}
+        description={t('deleteRuleDialog.description')}
+        confirmLabel={t('deleteRuleDialog.confirmLabel')}
         destructive
         busy={del.isPending}
         error={deleteError}
@@ -245,16 +249,14 @@ export function Rules() {
 
       <ConfirmDialog
         open={confirmRecat}
-        title="Recatégoriser tout l'historique ?"
+        title={t('recategorize.dialog.title')}
         description={
-          <>
-            Toutes les règles activées sont ré-appliquées à l'ensemble des transactions
-            (hors virements internes). Vos{' '}
-            <span className="display-italic">choix manuels</span> sont préservés — seules
-            les transactions en source « auto » ou « default » sont réévaluées.
-          </>
+          <Trans i18nKey="rules:recategorize.dialog.description">
+            All enabled rules are re-applied to every transaction (excluding internal transfers). Your <span className="display-italic">manual choices</span> are preserved — only
+            transactions with source "auto" or "default" are re-evaluated.
+          </Trans>
         }
-        confirmLabel="Recatégoriser"
+        confirmLabel={t('recategorize.dialog.confirmLabel')}
         busy={recategorize.isPending}
         onConfirm={() =>
           recategorize.mutate(undefined, { onSuccess: () => setConfirmRecat(false) })

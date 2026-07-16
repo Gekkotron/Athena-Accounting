@@ -1,6 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NormalizationHint } from '../NormalizationHint';
+import i18n from '../../../i18n';
+
+// NormalizationHint renders French strings by default. Preload the 'rules'
+// namespace for both locales so `useTranslation` never suspends mid-render,
+// then pin the active language to French so the existing French-literal
+// assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['rules']);
+});
 
 describe('NormalizationHint', () => {
   it('renders nothing when matchMode is regex', () => {

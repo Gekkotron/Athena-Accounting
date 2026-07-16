@@ -1,8 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdvancedEditor } from '../AdvancedEditor';
 import type { Rule, Category } from '../../../api/types';
+import i18n from '../../../i18n';
+
+// AdvancedEditor renders French strings by default (the app's current UI
+// language). Preload the 'rules' and 'common' namespaces for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text (per the i18n migration recipe's locale-preserving-
+// helper fallback).
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['rules', 'common']);
+});
 
 const originalRule: Rule = {
   id: 1,

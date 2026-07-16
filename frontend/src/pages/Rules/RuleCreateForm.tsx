@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Category, MatchMode, SignConstraint } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
 import { NormalizationHint } from './NormalizationHint';
@@ -20,6 +21,7 @@ export function RuleCreateForm({
   submitting?: boolean;
   successCount?: number;
 }) {
+  const { t } = useTranslation('rules');
   // Quick-add form on top — defaults that work for the common case (any sign,
   // word mode, priority 0). The "+ ajouter à la catégorie" buttons in the
   // grouped view reuse these defaults.
@@ -56,7 +58,7 @@ export function RuleCreateForm({
   return (
     <form onSubmit={submit} className="surface p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
       <div className="lg:col-span-2">
-        <label className="label mb-1.5 block">Mot-clé(s)</label>
+        <label className="label mb-1.5 block">{t('ruleCreateForm.keywordLabel')}</label>
         <input
           className="input"
           value={keyword}
@@ -66,11 +68,11 @@ export function RuleCreateForm({
         />
         <NormalizationHint input={keyword} matchMode={matchMode} />
         <div className="text-[11px] text-ink-500 mt-1.5">
-          Séparez par des virgules pour créer plusieurs règles d'un coup.
+          {t('ruleCreateForm.keywordHelp')}
         </div>
       </div>
       <div>
-        <label className="label mb-1.5 block">Catégorie</label>
+        <label className="label mb-1.5 block">{t('ruleCreateForm.categoryLabel')}</label>
         <select
           className="input"
           value={categoryId}
@@ -90,23 +92,23 @@ export function RuleCreateForm({
         </select>
       </div>
       <div>
-        <label className="label mb-1.5 block">Signe</label>
+        <label className="label mb-1.5 block">{t('ruleCreateForm.signLabel')}</label>
         <select className="input" value={signConstraint} onChange={(e) => setSignConstraint(e.target.value as SignConstraint)}>
-          <option value="any">Tous</option>
-          <option value="negative">Négatif</option>
-          <option value="positive">Positif</option>
+          <option value="any">{t('signOptions.any')}</option>
+          <option value="negative">{t('signOptions.negative')}</option>
+          <option value="positive">{t('signOptions.positive')}</option>
         </select>
       </div>
       <div>
-        <label className="label mb-1.5 block">Mode</label>
+        <label className="label mb-1.5 block">{t('ruleCreateForm.modeLabel')}</label>
         <select className="input" value={matchMode} onChange={(e) => setMatchMode(e.target.value as MatchMode)}>
-          <option value="word">Mot entier</option>
-          <option value="substring">Sous-chaîne</option>
-          <option value="regex">Regex</option>
+          <option value="word">{t('matchModeOptions.word')}</option>
+          <option value="substring">{t('matchModeOptions.substring')}</option>
+          <option value="regex">{t('matchModeOptions.regex')}</option>
         </select>
       </div>
       <div>
-        <label className="label mb-1.5 block">Priorité</label>
+        <label className="label mb-1.5 block">{t('ruleCreateForm.priorityLabel')}</label>
         <input
           inputMode="numeric"
           className="input font-mono"
@@ -116,11 +118,11 @@ export function RuleCreateForm({
       </div>
       <div className="sm:col-span-2 lg:col-span-6 flex items-center gap-3">
         <button className="btn-primary" disabled={submitting}>
-          {submitting ? 'Ajout…' : 'Ajouter la règle'}
+          {submitting ? t('ruleCreateForm.submitPending') : t('ruleCreateForm.submit')}
         </button>
         {successCount != null && successCount > 0 && (
           <span className="text-xs text-sage-300">
-            {successCount} règle{successCount > 1 ? 's' : ''} ajoutée{successCount > 1 ? 's' : ''}
+            {t('ruleCreateForm.successCount', { count: successCount })}
           </span>
         )}
       </div>
