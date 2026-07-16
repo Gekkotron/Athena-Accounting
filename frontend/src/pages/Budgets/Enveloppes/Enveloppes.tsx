@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useEnvelopeReport, useUpsertAssignment, useReallocate } from '../../../lib/useEnvelopes';
+import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold } from '../../../lib/useEnvelopes';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { PoolCard } from './PoolCard';
 import { EnvelopeRow } from './EnvelopeRow';
 import { AssignmentInput } from './AssignmentInput';
 import { ReallocateModal } from './ReallocateModal';
+import { HoldModal } from './HoldModal';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -30,7 +31,9 @@ export function Enveloppes(): JSX.Element {
   const reportQ = useEnvelopeReport(month);
   const upsertAsg = useUpsertAssignment();
   const reallocate = useReallocate();
+  const upsertHold = useUpsertHold();
   const [reallocSource, setReallocSource] = useState<EnvelopeReportRow | null>(null);
+  const [holdOpen, setHoldOpen] = useState(false);
 
   const rows = reportQ.data?.rows ?? [];
   const pool = reportQ.data?.pool;
@@ -51,7 +54,7 @@ export function Enveloppes(): JSX.Element {
         </div>
       )}
 
-      {pool && <PoolCard pool={pool} onHoldClick={() => { /* wired in Task 13 */ }} />}
+      {pool && <PoolCard pool={pool} onHoldClick={() => setHoldOpen(true)} />}
 
       <section className="flex flex-col gap-2">
         <div className="label px-2">Enveloppes</div>
@@ -85,6 +88,14 @@ export function Enveloppes(): JSX.Element {
         month={month}
         onClose={() => setReallocSource(null)}
         onConfirm={(payload) => { reallocate.mutate(payload); setReallocSource(null); }}
+      />
+
+      <HoldModal
+        open={holdOpen}
+        month={month}
+        poolAvailable={pool?.available ?? '0.00'}
+        onClose={() => setHoldOpen(false)}
+        onConfirm={(payload) => { upsertHold.mutate(payload); setHoldOpen(false); }}
       />
     </div>
   );
