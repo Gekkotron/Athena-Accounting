@@ -202,3 +202,53 @@ export type BudgetReport = {
     parentId: number | null; average: string;
   }[];
 };
+
+export type TargetKind = 'save_by_date' | 'monthly_recurring' | 'save_up_to';
+export type OverspendPolicy = 'rollover_negative' | 'reallocate_manual';
+
+export interface EnvelopeAssignment {
+  id: number;
+  categoryId: number;
+  month: string;
+  amount: string;
+  currency: string;
+}
+
+export interface EnvelopeCategorySettings {
+  categoryId: number;
+  targetAmount: string | null;
+  targetDate: string | null;
+  targetKind: TargetKind | null;
+  overspendPolicy: OverspendPolicy;
+}
+
+export interface EnvelopeHold {
+  month: string;
+  amount: string;
+}
+
+export interface EnvelopeReportRow {
+  categoryId: number;
+  categoryName: string;
+  balancePriorMonth: string;
+  assignment: string;
+  spend: string;
+  balance: string;
+  target: { amount: string; date: string | null; kind: TargetKind } | null;
+  overspendPolicy: OverspendPolicy;
+  overspent: boolean;
+  absorbedByPool: string;
+  monthsToTarget: number | null;
+}
+
+export interface EnvelopeReport {
+  month: string;
+  pool: {
+    incomeCumulative: string;
+    assignedCumulative: string;
+    heldFromPriorMonths: string;
+    heldForNextMonth: string;
+    available: string;
+  };
+  rows: EnvelopeReportRow[];
+}
