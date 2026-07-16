@@ -24,8 +24,9 @@ describe.skipIf(!RUN)('previewImport', () => {
 
   afterEach(async () => {
     const { db } = await import('../../../db/client.js');
-    const { transactions } = await import('../../../db/schema.js');
+    const { transactions, fileImports } = await import('../../../db/schema.js');
     await db.delete(transactions);
+    await db.delete(fileImports);
   });
 
   it('splits parsed rows into newRows and duplicateRows against an empty ledger', async () => {
