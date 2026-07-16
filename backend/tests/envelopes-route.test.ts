@@ -229,3 +229,52 @@ describe.skipIf(!RUN)('/api/envelopes/categories', () => {
     expect(list.json().settings).toHaveLength(0);
   });
 });
+
+describe.skipIf(!RUN)('/api/envelopes/holds', () => {
+  beforeAll(async () => {
+    const { buildApp } = await import('./helpers/build-app.js');
+    app = await buildApp();
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'holds-user', password: 'holds-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'holds-user', password: 'holds-1234' },
+    });
+    cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
+  });
+
+  it('creates a hold', async () => {
+    const r = await app.inject({
+      method: 'PUT', url: '/api/envelopes/holds', headers: { cookie },
+      payload: { month: '2026-07', amount: '500.00' },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().hold.amount).toBe('500.00');
+    expect(r.json().hold.month).toBe('2026-07');
+  });
+
+  it('lists holds in a range', async () => {
+    const r = await app.inject({
+      method: 'GET', url: '/api/envelopes/holds?from=2026-01&to=2026-12',
+      headers: { cookie },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().holds).toHaveLength(1);
+  });
+
+  it('deletes hold when amount = 0', async () => {
+    const r = await app.inject({
+      method: 'PUT', url: '/api/envelopes/holds', headers: { cookie },
+      payload: { month: '2026-07', amount: '0.00' },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().deleted).toBe(true);
+    const list = await app.inject({
+      method: 'GET', url: '/api/envelopes/holds?from=2026-01&to=2026-12',
+      headers: { cookie },
+    });
+    expect(list.json().holds).toHaveLength(0);
+  });
+});

@@ -8,6 +8,7 @@ import {
   categories,
   envelopeAssignments,
   envelopeCategorySettings,
+  envelopeMonthHolds,
 } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
 
@@ -55,6 +56,13 @@ function serializeSettings(row: typeof envelopeCategorySettings.$inferSelect) {
     targetDate: row.targetDate,
     targetKind: row.targetKind,
     overspendPolicy: row.overspendPolicy,
+  };
+}
+
+function serializeHold(row: typeof envelopeMonthHolds.$inferSelect) {
+  return {
+    month: row.month.slice(0, 7),          // wire form "YYYY-MM" (DB stores first-of-month DATE)
+    amount: row.amount,
   };
 }
 
@@ -266,5 +274,55 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
       .returning({ categoryId: envelopeCategorySettings.categoryId });
     if (!deleted) return reply.code(404).send({ error: 'not found' });
     return reply.code(204).send();
+  });
+
+  // ---------- Holds ----------
+
+  const HoldsQuery = z.object({
+    from: z.string().regex(/^\d{4}-\d{2}$/).transform((s) => `${s}-01`),
+    to:   z.string().regex(/^\d{4}-\d{2}$/).transform((s) => `${s}-01`),
+  });
+  app.get('/api/envelopes/holds', async (req, reply) => {
+    const uid = userId(req);
+    const parsed = HoldsQuery.safeParse(req.query);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid range' });
+    const rows = await db
+      .select()
+      .from(envelopeMonthHolds)
+      .where(and(
+        eq(envelopeMonthHolds.userId, uid),
+        gte(envelopeMonthHolds.month, parsed.data.from),
+        lte(envelopeMonthHolds.month, parsed.data.to),
+      ))
+      .orderBy(asc(envelopeMonthHolds.month));
+    return { holds: rows.map(serializeHold) };
+  });
+
+  const HoldPutBody = z.object({
+    month: monthStr,
+    amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'must be a non-negative decimal'),
+  });
+  app.put('/api/envelopes/holds', async (req, reply) => {
+    const uid = userId(req);
+    const parsed = HoldPutBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
+    }
+    const { month, amount } = parsed.data;
+    if (Number(amount) === 0) {
+      await db
+        .delete(envelopeMonthHolds)
+        .where(and(eq(envelopeMonthHolds.userId, uid), eq(envelopeMonthHolds.month, month)));
+      return { deleted: true };
+    }
+    const [row] = await db
+      .insert(envelopeMonthHolds)
+      .values({ userId: uid, month, amount })
+      .onConflictDoUpdate({
+        target: [envelopeMonthHolds.userId, envelopeMonthHolds.month],
+        set: { amount, updatedAt: new Date() },
+      })
+      .returning();
+    return { hold: serializeHold(row!) };
   });
 }
