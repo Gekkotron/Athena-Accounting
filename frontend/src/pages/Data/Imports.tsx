@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SectionTip } from '../../components/SectionTip';
 import type { PdfImportNeedsTemplate, PdfImportImported } from '../../api/pdf-templates';
 import { PdfTemplateWizard } from '../Imports/PdfTemplateWizard';
 import { FileImportsList } from '../Imports/FileImportsList';
@@ -60,6 +61,7 @@ export function Imports() {
 
   return (
     <div className="flex flex-col gap-8">
+      <SectionTip id="section:imports" />
       <p className="page-subtitle">
         OFX (Latin-1/UTF-8), CSV FR (séparateur « ; », décimale virgule, dates JJ/MM/AAAA) ou PDF relevé bancaire.
       </p>

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Tri } from '../Tri';
+import { withTips } from '../../../test/renderWithProviders';
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -25,7 +26,7 @@ const group = (label: string, count: number, category_id: number | null = null) 
 
 function renderTri() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><Tri /></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}>{withTips(<Tri />)}</QueryClientProvider>);
 }
 
 beforeEach(() => { apiMock.mockReset(); });

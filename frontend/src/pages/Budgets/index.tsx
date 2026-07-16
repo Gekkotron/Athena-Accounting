@@ -5,6 +5,8 @@ import { api, ApiError } from '../../api/client';
 import type { Account, BudgetPeriod, Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
 import { groupCategories } from '../../lib/categories';
+import { SectionTip } from '../../components/SectionTip';
+import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
@@ -124,9 +126,13 @@ export function Budgets(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
+      <SectionTip id="section:budgets" />
       <div className="grid grid-cols-3 items-center gap-3">
         <div className="justify-self-start">
-          <h1 className="display text-2xl text-ink-50">Budgets</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="display text-2xl text-ink-50">Budgets</h1>
+            <SectionTipHelpIcon id="section:budgets" />
+          </div>
           <p className="text-sm text-ink-400 mt-1">
             Plafond par catégorie de dépense.
           </p>

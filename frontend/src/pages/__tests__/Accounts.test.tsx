@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Accounts } from '../Accounts';
 import { ApiError } from '../../api/client';
+import { withTips } from '../../test/renderWithProviders';
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
@@ -21,7 +22,7 @@ function renderAccounts() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <Accounts />
+        {withTips(<Accounts />)}
       </MemoryRouter>
     </QueryClientProvider>,
   );

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Transactions } from '../index';
 import type { Account, Category, Transaction } from '../../../api/types';
+import { withTips } from '../../../test/renderWithProviders';
 
 // api() is the sole HTTP boundary; mock it as a dispatcher on (path, opts).
 vi.mock('../../../api/client', async () => {
@@ -57,7 +58,7 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <Transactions />
+        {withTips(<Transactions />)}
       </MemoryRouter>
     </QueryClientProvider>,
   );

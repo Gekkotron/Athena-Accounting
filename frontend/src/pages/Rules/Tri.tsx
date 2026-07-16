@@ -5,6 +5,8 @@ import type { Category, TriGroup } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SectionTip } from '../../components/SectionTip';
+import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 
 export function Tri() {
   const qc = useQueryClient();
@@ -98,9 +100,13 @@ export function Tri() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SectionTip id="section:rules" />
       <div className="page-header">
         <div>
-          <h1 className="page-title">Tri</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Tri</h1>
+            <SectionTipHelpIcon id="section:rules" />
+          </div>
           <p className="page-subtitle">
             <span className="font-mono">{processed} / {total}</span> groupe{total > 1 ? 's' : ''} traité{processed > 1 ? 's' : ''} · triés par fréquence
           </p>

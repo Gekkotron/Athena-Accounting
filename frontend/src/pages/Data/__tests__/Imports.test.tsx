@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Imports } from '../Imports';
+import { withTips } from '../../../test/renderWithProviders';
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -22,7 +23,7 @@ function renderImports() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <Imports />
+        {withTips(<Imports />)}
       </MemoryRouter>
     </QueryClientProvider>,
   );

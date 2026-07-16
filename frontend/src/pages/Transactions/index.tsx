@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
+import { SectionTip } from '../../components/SectionTip';
+import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { TransactionsTable } from './TransactionsTable';
@@ -235,9 +237,13 @@ export function Transactions() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SectionTip id="section:transactions" />
       <div className="page-header">
         <div>
-          <h1 className="page-title">Transactions</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Transactions</h1>
+            <SectionTipHelpIcon id="section:transactions" />
+          </div>
           <p className="page-subtitle">{total.toLocaleString('fr-FR')} ligne{total > 1 ? 's' : ''} au total</p>
         </div>
         <div className="flex gap-2">

@@ -18,6 +18,8 @@ import {
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SectionTip } from '../../components/SectionTip';
+import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
 import { MergeModal } from './MergeModal';
@@ -179,9 +181,13 @@ export function Accounts() {
 
   return (
     <div className="flex flex-col gap-8">
+      <SectionTip id="section:accounts" />
       <div className="page-header">
         <div>
-          <h1 className="page-title">Comptes</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">Comptes</h1>
+            <SectionTipHelpIcon id="section:accounts" />
+          </div>
           <p className="page-subtitle">
             <span className="display-italic">Solde courant</span> = solde d'ouverture + somme des transactions depuis cette date.
           </p>

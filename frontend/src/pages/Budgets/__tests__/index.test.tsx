@@ -4,12 +4,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Budgets } from '../index';
 import { api } from '../../../api/client';
+import { withTips } from '../../../test/renderWithProviders';
 
 function withProviders(children: React.ReactNode, opts?: { initialEntries?: string[] }): JSX.Element {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={opts?.initialEntries ?? ['/']}>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={opts?.initialEntries ?? ['/']}>
+        {withTips(children as React.ReactElement)}
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }

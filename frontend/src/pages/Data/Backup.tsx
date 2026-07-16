@@ -1,5 +1,11 @@
 import { BackupPanel } from '../Imports/BackupPanel';
+import { SectionTip } from '../../components/SectionTip';
 
 export function Backup() {
-  return <BackupPanel />;
+  return (
+    <>
+      <SectionTip id="section:data" />
+      <BackupPanel />
+    </>
+  );
 }

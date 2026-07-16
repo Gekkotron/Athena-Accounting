@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
+import { SectionTip } from '../../components/SectionTip';
 import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { formatAmount, amountSignClass } from '../../lib/format';
@@ -89,6 +90,7 @@ export function Dashboard(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-10">
+      <SectionTip id="section:dashboard" />
       <DashboardHero primary={primary} />
 
       {/* Other currencies */}
