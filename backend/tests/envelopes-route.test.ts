@@ -100,3 +100,68 @@ describe.skipIf(!RUN)('/api/envelopes/assignments', () => {
     expect(r.statusCode).toBe(404);
   });
 });
+
+describe.skipIf(!RUN)('/api/envelopes/reallocate', () => {
+  let catA: number;
+  let catB: number;
+  beforeAll(async () => {
+    const { buildApp } = await import('./helpers/build-app.js');
+    app = await buildApp();
+    await app.inject({
+      method: 'POST', url: '/api/onboarding/create',
+      payload: { username: 'realloc-user', password: 'realloc-1234' },
+    });
+    const login = await app.inject({
+      method: 'POST', url: '/api/auth/login',
+      payload: { username: 'realloc-user', password: 'realloc-1234' },
+    });
+    cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
+    const a = await app.inject({
+      method: 'POST', url: '/api/categories',
+      headers: { cookie }, payload: { name: 'A', kind: 'expense' },
+    });
+    catA = a.json().category.id;
+    const b = await app.inject({
+      method: 'POST', url: '/api/categories',
+      headers: { cookie }, payload: { name: 'B', kind: 'expense' },
+    });
+    catB = b.json().category.id;
+    await app.inject({
+      method: 'PUT', url: '/api/envelopes/assignments', headers: { cookie },
+      payload: { categoryId: catA, month: '2026-07', amount: '100.00' },
+    });
+    await app.inject({
+      method: 'PUT', url: '/api/envelopes/assignments', headers: { cookie },
+      payload: { categoryId: catB, month: '2026-07', amount: '50.00' },
+    });
+  });
+
+  it('subtracts from source and adds to dest atomically', async () => {
+    const r = await app.inject({
+      method: 'POST', url: '/api/envelopes/reallocate', headers: { cookie },
+      payload: { fromCategoryId: catA, toCategoryId: catB, month: '2026-07', amount: '30.00' },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().from.amount).toBe('70.00');
+    expect(r.json().to.amount).toBe('80.00');
+  });
+
+  it('creates a zero-based source row if none exists this month', async () => {
+    const r = await app.inject({
+      method: 'POST', url: '/api/envelopes/reallocate', headers: { cookie },
+      payload: { fromCategoryId: catA, toCategoryId: catB, month: '2026-09', amount: '10.00' },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().from.amount).toBe('-10.00');
+    expect(r.json().to.amount).toBe('10.00');
+  });
+
+  it('rejects same category', async () => {
+    const r = await app.inject({
+      method: 'POST', url: '/api/envelopes/reallocate', headers: { cookie },
+      payload: { fromCategoryId: catA, toCategoryId: catA, month: '2026-07', amount: '5.00' },
+    });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error).toBe('same_category');
+  });
+});
