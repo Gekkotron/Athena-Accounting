@@ -41,7 +41,7 @@ function serializeAssignment(row: typeof envelopeAssignments.$inferSelect) {
   return {
     id: row.id,
     categoryId: row.categoryId,
-    month: row.month,          // "YYYY-MM-01"
+    month: row.month.slice(0, 7),          // wire form "YYYY-MM" (DB stores first-of-month DATE)
     amount: row.amount,
     currency: row.currency,
   };

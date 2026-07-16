@@ -660,7 +660,7 @@ describe.skipIf(!RUN)('/api/envelopes/assignments', () => {
     });
     expect(create.statusCode).toBe(201);
     expect(create.json().assignment.amount).toBe('450.00');
-    expect(create.json().assignment.month).toBe('2026-07-01');
+    expect(create.json().assignment.month).toBe('2026-07');
 
     const update = await app.inject({
       method: 'PUT', url: '/api/envelopes/assignments',
@@ -1274,7 +1274,7 @@ describe.skipIf(!RUN)('/api/envelopes/holds', () => {
     });
     expect(r.statusCode).toBe(200);
     expect(r.json().hold.amount).toBe('500.00');
-    expect(r.json().hold.month).toBe('2026-07-01');
+    expect(r.json().hold.month).toBe('2026-07');
   });
 
   it('lists holds in a range', async () => {
