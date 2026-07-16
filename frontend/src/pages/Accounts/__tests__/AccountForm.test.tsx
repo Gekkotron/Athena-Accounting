@@ -1,7 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AccountForm } from '../AccountForm';
+import i18n from '../../../i18n';
+
+// AccountForm uses both the 'accounts' namespace (labels, type options) and
+// 'common' (Save/Cancel). Preload both for both locales, pinned to French,
+// so `useTranslation` never suspends and the existing French-literal
+// assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['accounts', 'common']);
+});
 
 // The form fields render a plain `<label>` sibling next to the `<input>`/
 // `<select>` without a `for`/`id` association, so `getByLabelText` cannot

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Account, AccountFilenamePattern } from '../../api/types';
@@ -10,6 +11,7 @@ export function PatternsSection({
   patterns: AccountFilenamePattern[];
   accounts: Account[];
 }) {
+  const { t } = useTranslation('accounts');
   const qc = useQueryClient();
   const [pattern, setPattern] = useState('');
   const [accountId, setAccountId] = useState<number | ''>('');
@@ -32,14 +34,14 @@ export function PatternsSection({
 
   return (
     <section>
-      <div className="section-rule mb-2">Fichier → compte</div>
+      <div className="section-rule mb-2">{t('patterns.sectionTitle')}</div>
       <div className="surface p-4 mb-3 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px]">
-          <label className="label mb-1.5 block">Motif</label>
+          <label className="label mb-1.5 block">{t('patterns.patternLabel')}</label>
           <input className="input" value={pattern} onChange={(e) => setPattern(e.target.value)} />
         </div>
         <div className="w-full sm:w-44">
-          <label className="label mb-1.5 block">Compte</label>
+          <label className="label mb-1.5 block">{t('patterns.accountLabel')}</label>
           <select
             className="input"
             value={accountId}
@@ -52,7 +54,7 @@ export function PatternsSection({
           </select>
         </div>
         <div className="w-24">
-          <label className="label mb-1.5 block">Priorité</label>
+          <label className="label mb-1.5 block">{t('patterns.priorityLabel')}</label>
           <input
             inputMode="numeric"
             className="input font-mono"
@@ -65,7 +67,7 @@ export function PatternsSection({
           onClick={() => pattern && accountId && create.mutate({ pattern, accountId, priority })}
           disabled={!pattern || !accountId}
         >
-          Ajouter
+          {t('patterns.addButton')}
         </button>
       </div>
       <div className="surface overflow-hidden">
@@ -73,9 +75,9 @@ export function PatternsSection({
           <table className="w-full text-sm">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
-                <th className="px-4 py-3 label font-normal">Motif</th>
-                <th className="px-4 py-3 label font-normal">Compte</th>
-                <th className="px-4 py-3 label font-normal">Priorité</th>
+                <th className="px-4 py-3 label font-normal">{t('patterns.patternLabel')}</th>
+                <th className="px-4 py-3 label font-normal">{t('patterns.accountLabel')}</th>
+                <th className="px-4 py-3 label font-normal">{t('patterns.priorityLabel')}</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -83,7 +85,7 @@ export function PatternsSection({
               {patterns.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-ink-500 display-italic">
-                    Aucun motif configuré.
+                    {t('patterns.emptyState')}
                   </td>
                 </tr>
               ) : (
@@ -94,7 +96,7 @@ export function PatternsSection({
                     <td className="px-4 py-2.5 text-ink-400 font-mono">{p.priority}</td>
                     <td className="px-4 py-2.5 text-right">
                       <button className="text-[11px] text-ink-500 hover:text-clay-300" onClick={() => del.mutate(p.id)}>
-                        supprimer
+                        {t('patterns.deleteButton')}
                       </button>
                     </td>
                   </tr>

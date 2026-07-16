@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
@@ -18,6 +19,7 @@ export function AccountCard({
   onExpand: (id: number) => void;
   expanded: boolean;
 }) {
+  const { t } = useTranslation(['accounts', 'common']);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: a.id });
   const current = Number(a.currentBalance ?? '0');
   const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
@@ -45,17 +47,19 @@ export function AccountCard({
       </div>
       {hasBlocked && (
         <div className="text-[11px] text-amber-300/90 mt-1 font-mono">
-          dont <span className="private">{formatAmount(blocked, a.currency)}</span> bloqués
+          <Trans i18nKey="accounts:card.blocked">
+            dont <span className="private">{{ amount: formatAmount(blocked, a.currency) } as unknown as string}</span> bloqués
+          </Trans>
           {a.lockYears != null && (
-            <span className="text-ink-500"> · {a.lockYears} an{a.lockYears > 1 ? 's' : ''}</span>
+            <span className="text-ink-500"> · {t('card.lockYears', { count: a.lockYears })}</span>
           )}
         </div>
       )}
       {a.type === 'investment' && !hasBlocked && (
-        <div className="text-[11px] text-sky-300/90 mt-1 font-mono">placé</div>
+        <div className="text-[11px] text-sky-300/90 mt-1 font-mono">{t('card.invested')}</div>
       )}
       <div className="text-[11px] text-ink-500 mt-3 font-mono leading-relaxed">
-        ouvert {formatDate(a.openingDate)} ·{' '}
+        {t('card.opened', { date: formatDate(a.openingDate) })}{' '}
         <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>
       </div>
       {/* Top-right cluster: drag handle + modify */}
@@ -63,8 +67,8 @@ export function AccountCard({
         <button
           type="button"
           className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition cursor-grab active:cursor-grabbing touch-none"
-          title="Réorganiser (glisser-déposer)"
-          aria-label="Réorganiser ce compte"
+          title={t('card.reorderTitle')}
+          aria-label={t('card.reorderAriaLabel')}
           {...attributes}
           {...listeners}
         >
@@ -80,19 +84,19 @@ export function AccountCard({
         <button
           className="ml-1 inline-flex items-center gap-1 text-[11px] text-ink-500 hover:text-ink-100 transition"
           onClick={() => onEdit(a)}
-          title="Modifier"
+          title={t('edit', { ns: 'common' })}
         >
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
             <path d="M2 7.5l5-5 1.5 1.5-5 5L2 9.5V7.5z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round" />
           </svg>
-          modifier
+          {t('card.editButton')}
         </button>
         {onMerge && (
           <details className="relative ml-1">
             <summary
               className="p-1 rounded text-ink-600 hover:text-ink-100 hover:bg-ink-900 transition cursor-pointer list-none"
-              title="Actions"
-              aria-label={`Actions pour ${a.name}`}
+              title={t('card.actionsTitle')}
+              aria-label={t('card.actionsAriaLabel', { name: a.name })}
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
                 <circle cx="6" cy="2" r="1" />
@@ -110,7 +114,7 @@ export function AccountCard({
                   onMerge(a);
                 }}
               >
-                Fusionner avec…
+                {t('card.mergeWith')}
               </button>
             </div>
           </details>
@@ -124,13 +128,13 @@ export function AccountCard({
           aria-expanded={expanded}
         >
           <span className={`inline-block transition-transform ${expanded ? 'rotate-90' : ''}`}>▸</span>
-          Points de contrôle
+          {t('card.checkpointsToggle')}
         </button>
         <Link
           to={`/transactions?accountId=${a.id}`}
           className="text-[11px] text-ink-500 hover:text-ink-100 transition"
         >
-          Transactions →
+          {t('card.transactionsLink')}
         </Link>
       </div>
       {expanded && (

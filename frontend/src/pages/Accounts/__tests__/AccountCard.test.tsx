@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DndContext } from '@dnd-kit/core';
@@ -6,6 +6,16 @@ import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { MemoryRouter } from 'react-router-dom';
 import { AccountCard } from '../AccountCard';
 import type { Account } from '../../../api/types';
+import i18n from '../../../i18n';
+
+// AccountCard uses both the 'accounts' namespace (card copy) and 'common'
+// (Edit tooltip). Preload both for both locales, pinned to French, so
+// `useTranslation` never suspends and the existing French-literal
+// assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['accounts', 'common']);
+});
 
 const acc: Account = {
   id: 1, name: 'Test', type: 'checking', currency: 'EUR',

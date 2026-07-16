@@ -1,7 +1,17 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { MergeModal } from '../MergeModal';
 import type { Account } from '../../../api/types';
+import i18n from '../../../i18n';
+
+// MergeModal uses both the 'accounts' namespace (title, warnings) and
+// 'common' (Cancel). Preload both for both locales, pinned to French, so
+// `useTranslation` never suspends and the existing French-literal
+// assertions below keep matching real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['accounts', 'common']);
+});
 
 const A = (id: number, name: string, currency: string, openingBalance = '0'): Account => ({
   id, name, type: 'checking', currency, openingBalance,

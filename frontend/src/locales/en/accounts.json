@@ -1,0 +1,102 @@
+{
+  "title": "Accounts",
+  "subtitle": "<0>Current balance</0> = opening balance + sum of transactions since that date.",
+  "newAccount": "New account",
+  "myAccounts": "My accounts",
+  "emptyState": "No accounts yet.",
+  "editHeading": "Edit account",
+  "deleteAccountDialog": {
+    "title": "Delete \"{{name}}\"?",
+    "titleFallback": "Delete?",
+    "description": "This action is <1>irreversible</1>. If the account already has transactions, the server will refuse the deletion — move or delete the transactions concerned first.",
+    "confirmLabel": "Delete the account"
+  },
+  "card": {
+    "reorderTitle": "Reorder (drag and drop)",
+    "reorderAriaLabel": "Reorder this account",
+    "editButton": "edit",
+    "actionsTitle": "Actions",
+    "actionsAriaLabel": "Actions for {{name}}",
+    "mergeWith": "Merge with…",
+    "checkpointsToggle": "Balance checkpoints",
+    "transactionsLink": "Transactions →",
+    "blocked": "of which <1>{{amount}}</1> locked",
+    "lockYears_one": "{{count}} year",
+    "lockYears_other": "{{count}} years",
+    "invested": "invested",
+    "opened": "opened {{date}} ·"
+  },
+  "form": {
+    "labels": {
+      "name": "Name",
+      "type": "Type",
+      "currency": "Currency",
+      "openingBalance": "Opening balance",
+      "openingDate": "Opening date",
+      "lockYears": "Lock (years)"
+    },
+    "typeOptions": {
+      "checking": "Checking",
+      "savings": "Savings",
+      "investment": "Invested",
+      "credit": "Credit",
+      "other": "Other"
+    },
+    "openingBalanceEditHint": "Changing this amount will automatically adjust the current balance.",
+    "lockYearsTitle": "Number of years this account is locked starting from its opening date (PEA, term deposit, etc.). Leave empty if there is no lock.",
+    "creating": "Creating…",
+    "createSubmit": "Create account",
+    "deleteButton": "delete",
+    "saving": "Saving…"
+  },
+  "checkpoints": {
+    "errors": {
+      "duplicateDate": "A checkpoint already exists on this date for this account.",
+      "invalidDate": "Invalid date (expected format: YYYY-MM-DD).",
+      "invalidAmount": "Invalid amount (number with up to 2 decimal places, e.g. 1234.56).",
+      "noteTooLong": "Note too long (200 characters max).",
+      "invalidFields": "Invalid fields — check the date, amount, and note.",
+      "notFound": "{{action}} failed: the checkpoint could not be found (already deleted?).",
+      "sessionExpired": "Session expired — please sign in again.",
+      "networkError": "network error",
+      "generic": "{{action}} failed: {{message}}."
+    },
+    "actions": {
+      "add": "add",
+      "update": "update",
+      "delete": "delete"
+    },
+    "emptyState": "No checkpoints yet. Add one to check your balances against a statement.",
+    "dateInputLabel": "Checkpoint date",
+    "amountInputLabel": "Expected amount",
+    "notePlaceholder": "note (optional)",
+    "noteInputLabel": "Note",
+    "addButton": "+ add",
+    "row": {
+      "addNote": "add…"
+    }
+  },
+  "merge": {
+    "title": "Merge <1>{{name}}</1> into another account",
+    "subtitle": "Choose the destination account (same currency only).",
+    "destinationLabel": "Destination",
+    "selectPlaceholder": "— select —",
+    "confirmButton": "Merge",
+    "warnings": {
+      "moveTransactions": "All transactions from the source will be moved to <1>{{name}}</1>.",
+      "addOpeningBalance": "The opening balance ({{amount}}) will be added to that of <3>{{name}}</3>.",
+      "repoint": "Patterns, checkpoints, budgets, and import history attached to the source will be repointed (any duplicates will be dropped, keeping the target's).",
+      "breakTransfers": "Transfers between the two accounts will be broken (they become ordinary transactions again).",
+      "sourceDeleted": "<0>{{name}}</0> will be deleted. This action is <2>irreversible</2>."
+    }
+  },
+  "patterns": {
+    "sectionTitle": "File → account",
+    "patternLabel": "Pattern",
+    "accountLabel": "Account",
+    "priorityLabel": "Priority",
+    "addButton": "Add",
+    "emptyState": "No pattern configured.",
+    "deleteButton": "delete"
+  }
+}

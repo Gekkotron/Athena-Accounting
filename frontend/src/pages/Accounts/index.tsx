@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -26,6 +27,7 @@ import { MergeModal } from './MergeModal';
 import type { MergeResult } from '../../api/accounts';
 
 export function Accounts() {
+  const { t } = useTranslation(['accounts', 'common']);
   const qc = useQueryClient();
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -185,15 +187,17 @@ export function Accounts() {
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="page-title">Comptes</h1>
+            <h1 className="page-title">{t('title')}</h1>
             <SectionTipHelpIcon id="section:accounts" />
           </div>
           <p className="page-subtitle">
-            <span className="display-italic">Solde courant</span> = solde d'ouverture + somme des transactions depuis cette date.
+            <Trans i18nKey="accounts:subtitle">
+              <span className="display-italic">Solde courant</span> = solde d'ouverture + somme des transactions depuis cette date.
+            </Trans>
           </p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
-          {showForm ? 'Annuler' : 'Nouveau compte'}
+          {showForm ? t('cancel', { ns: 'common' }) : t('newAccount')}
         </button>
       </div>
 
@@ -210,10 +214,10 @@ export function Accounts() {
       )}
 
       <section>
-        <div className="section-rule mb-4">Mes comptes</div>
+        <div className="section-rule mb-4">{t('myAccounts')}</div>
         {(accountsQ.data?.accounts ?? []).length === 0 ? (
           <div className="surface p-6 text-sm text-ink-400 display-italic">
-            Aucun compte pour l'instant.
+            {t('emptyState')}
           </div>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -223,7 +227,7 @@ export function Accounts() {
                   if (editingId === a.id && editDraft) {
                     return (
                       <div key={a.id} className="surface p-5 relative">
-                        <div className="label mb-3">Éditer le compte</div>
+                        <div className="label mb-3">{t('editHeading')}</div>
                         <AccountForm
                           mode="edit"
                           initial={editDraft}
@@ -262,15 +266,19 @@ export function Accounts() {
 
       <ConfirmDialog
         open={!!confirmDelete}
-        title={confirmDelete ? `Supprimer « ${confirmDelete.name} » ?` : 'Supprimer ?'}
+        title={
+          confirmDelete
+            ? t('deleteAccountDialog.title', { name: confirmDelete.name })
+            : t('deleteAccountDialog.titleFallback')
+        }
         description={
-          <>
+          <Trans i18nKey="accounts:deleteAccountDialog.description">
             Cette action est <span className="display-italic">irréversible</span>. Si le compte
             a déjà des transactions, le serveur refusera la suppression — déplacez ou supprimez
             d'abord les transactions concernées.
-          </>
+          </Trans>
         }
-        confirmLabel="Supprimer le compte"
+        confirmLabel={t('deleteAccountDialog.confirmLabel')}
         destructive
         busy={del.isPending}
         error={deleteError}

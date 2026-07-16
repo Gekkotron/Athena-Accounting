@@ -1,9 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BalanceCheckpointsDrawer } from '../BalanceCheckpointsDrawer';
 import { ApiError } from '../../../api/client';
+import i18n from '../../../i18n';
+
+// BalanceCheckpointsDrawer uses the 'accounts' namespace. Preload it for
+// both locales, pinned to French, so `useTranslation` never suspends and
+// the existing French-literal assertions below keep matching real
+// rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['accounts']);
+});
 
 vi.mock('../../../api/checkpoints');
 import * as checkpointsApi from '../../../api/checkpoints';

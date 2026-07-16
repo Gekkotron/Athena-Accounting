@@ -1,41 +1,46 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../api/client';
 import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 import type { BalanceCheckpoint } from '../../api/types';
 import { CheckpointRow } from './CheckpointRow';
 
-// Translate a checkpoint-endpoint error into an actionable French sentence.
-// The backend returns 409 for date collisions and 400 with a Zod `issues`
-// array for validation failures (e.g. non-decimal amount, note over 200
-// chars). Without this helper, users see "invalid input" — technically
-// accurate, useless in practice.
+// Translate a checkpoint-endpoint error into an actionable, localized
+// sentence. The backend returns 409 for date collisions and 400 with a Zod
+// `issues` array for validation failures (e.g. non-decimal amount, note over
+// 200 chars). Without this helper, users see "invalid input" — technically
+// accurate, useless in practice. `t` is passed in from the calling
+// component's `useTranslation('accounts')` since this function lives outside
+// component/hook scope.
 type ZodIssue = { path: (string | number)[]; message?: string };
+type CheckpointAction = 'add' | 'update' | 'delete';
+type Translate = (key: string, opts?: Record<string, unknown>) => string;
 
-function friendlyCheckpointError(err: unknown, action: 'ajout' | 'mise à jour' | 'suppression'): string {
+function friendlyCheckpointError(err: unknown, action: CheckpointAction, t: Translate): string {
   if (err instanceof ApiError) {
     if (err.status === 409) {
       // Only conflict we produce is the (account, date) unique index.
-      return 'Un point de contrôle existe déjà à cette date sur ce compte.';
+      return t('checkpoints.errors.duplicateDate');
     }
     if (err.status === 400) {
       const issues = (err.data as { issues?: ZodIssue[] } | null | undefined)?.issues;
       const first = issues?.[0];
       const field = typeof first?.path?.[0] === 'string' ? (first!.path[0] as string) : undefined;
-      if (field === 'checkpointDate') return 'Date invalide (format attendu : AAAA-MM-JJ).';
-      if (field === 'expectedAmount') return 'Montant invalide (nombre à 2 décimales max, ex. 1234.56).';
-      if (field === 'note') return 'Note trop longue (200 caractères max).';
-      return 'Champs invalides — vérifiez la date, le montant et la note.';
+      if (field === 'checkpointDate') return t('checkpoints.errors.invalidDate');
+      if (field === 'expectedAmount') return t('checkpoints.errors.invalidAmount');
+      if (field === 'note') return t('checkpoints.errors.noteTooLong');
+      return t('checkpoints.errors.invalidFields');
     }
     if (err.status === 404) {
-      return `${capitalise(action)} impossible : le point de contrôle est introuvable (déjà supprimé ?).`;
+      return t('checkpoints.errors.notFound', { action: capitalise(t(`checkpoints.actions.${action}`)) });
     }
     if (err.status === 401) {
-      return 'Session expirée — reconnectez-vous.';
+      return t('checkpoints.errors.sessionExpired');
     }
   }
-  const message = err instanceof Error ? err.message : 'erreur réseau';
-  return `${capitalise(action)} impossible : ${message}.`;
+  const message = err instanceof Error ? err.message : t('checkpoints.errors.networkError');
+  return t('checkpoints.errors.generic', { action: capitalise(t(`checkpoints.actions.${action}`)), message });
 }
 
 function capitalise(s: string): string {
@@ -63,6 +68,7 @@ function groupByYear(rows: BalanceCheckpoint[]): Array<{ year: string; items: Ba
 }
 
 export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: number; currency: string }) {
+  const { t } = useTranslation('accounts');
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['balance-checkpoints', accountId],
@@ -87,7 +93,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
       setNewNote('');
       setMutationError(null);
     },
-    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'ajout')),
+    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'add', t)),
   });
 
   const del = useMutation({
@@ -96,7 +102,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
       setMutationError(null);
     },
-    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'suppression')),
+    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'delete', t)),
   });
 
   const patch = useMutation({
@@ -106,7 +112,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
       setMutationError(null);
     },
-    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'mise à jour')),
+    onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'update', t)),
   });
 
   const rows = q.data?.checkpoints ?? [];
@@ -117,7 +123,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
     <div className="mt-2">
       {rows.length === 0 && !q.isLoading && (
         <div className="text-[11px] text-ink-500 italic mb-2">
-          Aucun point de contrôle. Ajoutez-en un pour vérifier vos soldes contre un relevé.
+          {t('checkpoints.emptyState')}
         </div>
       )}
 
@@ -165,7 +171,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
           className="input-sm w-36"
           value={newDate}
           onChange={(e) => setNewDate(e.target.value)}
-          aria-label="Date du point de contrôle"
+          aria-label={t('checkpoints.dateInputLabel')}
         />
         <input
           type="text"
@@ -174,16 +180,16 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
           placeholder="0.00"
           value={newAmount}
           onChange={(e) => setNewAmount(e.target.value)}
-          aria-label="Montant attendu"
+          aria-label={t('checkpoints.amountInputLabel')}
         />
         <input
           type="text"
           className="input-sm flex-1 min-w-[8rem]"
-          placeholder="note (optionnelle)"
+          placeholder={t('checkpoints.notePlaceholder')}
           maxLength={200}
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
-          aria-label="Note"
+          aria-label={t('checkpoints.noteInputLabel')}
         />
         <button
           type="button"
@@ -191,7 +197,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
           disabled={!newAmount || create.isPending}
           onClick={() => create.mutate()}
         >
-          + ajouter
+          {t('checkpoints.addButton')}
         </button>
       </div>
       {mutationError && (

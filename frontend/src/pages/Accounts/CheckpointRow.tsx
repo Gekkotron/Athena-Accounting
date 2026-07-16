@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatAmount } from '../../lib/format';
 import type { BalanceCheckpoint } from '../../api/types';
 
@@ -17,6 +18,7 @@ export function CheckpointRow({
   saving: boolean;
   deleting: boolean;
 }) {
+  const { t } = useTranslation(['accounts', 'common']);
   const [editingAmount, setEditingAmount] = useState(false);
   const [amountDraft, setAmountDraft] = useState(cp.expectedAmount);
   const [editingNote, setEditingNote] = useState(false);
@@ -66,7 +68,7 @@ export function CheckpointRow({
           />
         ) : (
           <button className="text-left hover:text-ink-200 w-full" onClick={() => setEditingNote(true)}>
-            {cp.note ?? <span className="italic text-ink-700">ajouter…</span>}
+            {cp.note ?? <span className="italic text-ink-700">{t('checkpoints.row.addNote')}</span>}
           </button>
         )}
       </td>
@@ -75,8 +77,8 @@ export function CheckpointRow({
           className="text-ink-600 hover:text-clay-300 transition"
           onClick={onDelete}
           disabled={deleting || saving}
-          aria-label="Supprimer"
-          title="Supprimer"
+          aria-label={t('delete', { ns: 'common' })}
+          title={t('delete', { ns: 'common' })}
         >
           ✕
         </button>

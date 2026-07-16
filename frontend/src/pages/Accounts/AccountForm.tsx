@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface AccountFormValues {
   name: string;
@@ -40,24 +41,25 @@ function FormFields({
   setLockYearsInput: (v: string) => void;
   mode: 'create' | 'edit';
 }) {
+  const { t } = useTranslation('accounts');
   return (
     <>
       <div className={mode === 'create' ? 'lg:col-span-2' : ''}>
-        <label className="label mb-1.5 block">Nom</label>
+        <label className="label mb-1.5 block">{t('form.labels.name')}</label>
         <input className="input" value={name} onChange={(e) => setName(e.target.value)} required={mode === 'create'} />
       </div>
       <div className={mode === 'create' ? '' : ''}>
-        <label className="label mb-1.5 block">Type</label>
+        <label className="label mb-1.5 block">{t('form.labels.type')}</label>
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="checking">Courant</option>
-          <option value="savings">Épargne</option>
-          <option value="investment">Placé</option>
-          <option value="credit">Crédit</option>
-          <option value="other">Autre</option>
+          <option value="checking">{t('form.typeOptions.checking')}</option>
+          <option value="savings">{t('form.typeOptions.savings')}</option>
+          <option value="investment">{t('form.typeOptions.investment')}</option>
+          <option value="credit">{t('form.typeOptions.credit')}</option>
+          <option value="other">{t('form.typeOptions.other')}</option>
         </select>
       </div>
       <div>
-        <label className="label mb-1.5 block">Devise</label>
+        <label className="label mb-1.5 block">{t('form.labels.currency')}</label>
         <input
           className="input"
           value={currency}
@@ -67,7 +69,7 @@ function FormFields({
         />
       </div>
       <div>
-        <label className="label mb-1.5 block">Solde d'ouverture</label>
+        <label className="label mb-1.5 block">{t('form.labels.openingBalance')}</label>
         <input
           className="input font-mono"
           value={openingBalance}
@@ -76,12 +78,12 @@ function FormFields({
         />
         {mode === 'edit' && (
           <div className="text-[11px] text-ink-500 mt-1">
-            Modifier ce montant ajustera automatiquement le solde courant.
+            {t('form.openingBalanceEditHint')}
           </div>
         )}
       </div>
       <div>
-        <label className="label mb-1.5 block">Date d'ouverture</label>
+        <label className="label mb-1.5 block">{t('form.labels.openingDate')}</label>
         <input
           type="date"
           className="input"
@@ -91,8 +93,8 @@ function FormFields({
         />
       </div>
       <div>
-        <label className="label mb-1.5 block" title="Nombre d'années pendant lesquelles ce compte est bloqué à partir de sa date d'ouverture (PEA, dépôt à terme, etc.). Laissez vide si aucun blocage.">
-          Blocage (ans)
+        <label className="label mb-1.5 block" title={t('form.lockYearsTitle')}>
+          {t('form.labels.lockYears')}
         </label>
         <input
           inputMode="numeric"
@@ -123,6 +125,7 @@ export function AccountForm({
   submitting?: boolean;
   error?: string | null;
 }) {
+  const { t } = useTranslation(['accounts', 'common']);
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState(initial?.type ?? 'checking');
   const [currency, setCurrency] = useState(initial?.currency ?? 'EUR');
@@ -176,7 +179,7 @@ export function AccountForm({
         )}
         <div className="sm:col-span-2 lg:col-span-6">
           <button className="btn-primary" disabled={submitting}>
-            {submitting ? 'Création…' : 'Créer le compte'}
+            {submitting ? t('form.creating') : t('form.createSubmit')}
           </button>
         </div>
       </form>
@@ -210,17 +213,17 @@ export function AccountForm({
       <div className="flex items-center justify-between gap-2 pt-1">
         {onDelete ? (
           <button className="text-[11px] text-clay-300 hover:text-clay-200 transition" onClick={onDelete}>
-            supprimer
+            {t('form.deleteButton')}
           </button>
         ) : (
           <span />
         )}
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={onCancel}>
-            Annuler
+            {t('cancel', { ns: 'common' })}
           </button>
           <button className="btn-primary" onClick={() => onSubmit(values)} disabled={submitting}>
-            {submitting ? 'Enregistrement…' : 'Enregistrer'}
+            {submitting ? t('form.saving') : t('save', { ns: 'common' })}
           </button>
         </div>
       </div>

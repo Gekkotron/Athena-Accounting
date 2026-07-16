@@ -1,0 +1,102 @@
+{
+  "title": "Comptes",
+  "subtitle": "<0>Solde courant</0> = solde d'ouverture + somme des transactions depuis cette date.",
+  "newAccount": "Nouveau compte",
+  "myAccounts": "Mes comptes",
+  "emptyState": "Aucun compte pour l'instant.",
+  "editHeading": "Éditer le compte",
+  "deleteAccountDialog": {
+    "title": "Supprimer « {{name}} » ?",
+    "titleFallback": "Supprimer ?",
+    "description": "Cette action est <1>irréversible</1>. Si le compte a déjà des transactions, le serveur refusera la suppression — déplacez ou supprimez d'abord les transactions concernées.",
+    "confirmLabel": "Supprimer le compte"
+  },
+  "card": {
+    "reorderTitle": "Réorganiser (glisser-déposer)",
+    "reorderAriaLabel": "Réorganiser ce compte",
+    "editButton": "modifier",
+    "actionsTitle": "Actions",
+    "actionsAriaLabel": "Actions pour {{name}}",
+    "mergeWith": "Fusionner avec…",
+    "checkpointsToggle": "Points de contrôle",
+    "transactionsLink": "Transactions →",
+    "blocked": "dont <1>{{amount}}</1> bloqués",
+    "lockYears_one": "{{count}} an",
+    "lockYears_other": "{{count}} ans",
+    "invested": "placé",
+    "opened": "ouvert {{date}} ·"
+  },
+  "form": {
+    "labels": {
+      "name": "Nom",
+      "type": "Type",
+      "currency": "Devise",
+      "openingBalance": "Solde d'ouverture",
+      "openingDate": "Date d'ouverture",
+      "lockYears": "Blocage (ans)"
+    },
+    "typeOptions": {
+      "checking": "Courant",
+      "savings": "Épargne",
+      "investment": "Placé",
+      "credit": "Crédit",
+      "other": "Autre"
+    },
+    "openingBalanceEditHint": "Modifier ce montant ajustera automatiquement le solde courant.",
+    "lockYearsTitle": "Nombre d'années pendant lesquelles ce compte est bloqué à partir de sa date d'ouverture (PEA, dépôt à terme, etc.). Laissez vide si aucun blocage.",
+    "creating": "Création…",
+    "createSubmit": "Créer le compte",
+    "deleteButton": "supprimer",
+    "saving": "Enregistrement…"
+  },
+  "checkpoints": {
+    "errors": {
+      "duplicateDate": "Un point de contrôle existe déjà à cette date sur ce compte.",
+      "invalidDate": "Date invalide (format attendu : AAAA-MM-JJ).",
+      "invalidAmount": "Montant invalide (nombre à 2 décimales max, ex. 1234.56).",
+      "noteTooLong": "Note trop longue (200 caractères max).",
+      "invalidFields": "Champs invalides — vérifiez la date, le montant et la note.",
+      "notFound": "{{action}} impossible : le point de contrôle est introuvable (déjà supprimé ?).",
+      "sessionExpired": "Session expirée — reconnectez-vous.",
+      "networkError": "erreur réseau",
+      "generic": "{{action}} impossible : {{message}}."
+    },
+    "actions": {
+      "add": "ajout",
+      "update": "mise à jour",
+      "delete": "suppression"
+    },
+    "emptyState": "Aucun point de contrôle. Ajoutez-en un pour vérifier vos soldes contre un relevé.",
+    "dateInputLabel": "Date du point de contrôle",
+    "amountInputLabel": "Montant attendu",
+    "notePlaceholder": "note (optionnelle)",
+    "noteInputLabel": "Note",
+    "addButton": "+ ajouter",
+    "row": {
+      "addNote": "ajouter…"
+    }
+  },
+  "merge": {
+    "title": "Fusionner <1>{{name}}</1> dans un autre compte",
+    "subtitle": "Choisis le compte de destination (même devise uniquement).",
+    "destinationLabel": "Destination",
+    "selectPlaceholder": "— sélectionner —",
+    "confirmButton": "Fusionner",
+    "warnings": {
+      "moveTransactions": "Toutes les transactions du source seront déplacées vers <1>{{name}}</1>.",
+      "addOpeningBalance": "Le solde d'ouverture ({{amount}}) sera ajouté à celui de <3>{{name}}</3>.",
+      "repoint": "Les patterns, points de contrôle, budgets et historique d'imports rattachés au source seront repointés (les doublons éventuels seront écartés en gardant ceux du target).",
+      "breakTransfers": "Les transferts entre les deux comptes seront cassés (redeviennent des transactions ordinaires).",
+      "sourceDeleted": "<0>{{name}}</0> sera supprimé. Cette action est <2>irréversible</2>."
+    }
+  },
+  "patterns": {
+    "sectionTitle": "Fichier → compte",
+    "patternLabel": "Motif",
+    "accountLabel": "Compte",
+    "priorityLabel": "Priorité",
+    "addButton": "Ajouter",
+    "emptyState": "Aucun motif configuré.",
+    "deleteButton": "supprimer"
+  }
+}
