@@ -25,7 +25,7 @@ docker compose up --build
 ```
 
 The first build is slow (Node install + Postgres extensions). Later
-starts are fast. Open <http://127.0.0.1:8000>.
+starts are fast. Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## Running the app in dev mode
 

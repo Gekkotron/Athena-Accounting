@@ -40,7 +40,7 @@ docker compose up --build
 The first build is slow (Node install, Postgres extensions). Later
 starts are fast.
 
-Open <http://127.0.0.1:8000>.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## First-run onboarding
 
