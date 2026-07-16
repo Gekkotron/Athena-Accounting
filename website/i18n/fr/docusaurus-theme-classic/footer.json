@@ -1,0 +1,46 @@
+{
+  "link.title.Docs": {
+    "message": "Documentation",
+    "description": "The title of the footer links column with title=Docs in the footer"
+  },
+  "link.title.Community": {
+    "message": "Communauté",
+    "description": "The title of the footer links column with title=Community in the footer"
+  },
+  "link.title.More": {
+    "message": "Plus",
+    "description": "The title of the footer links column with title=More in the footer"
+  },
+  "link.item.label.Getting started": {
+    "message": "Démarrage",
+    "description": "The label of footer link with label=Getting started linking to /docs/users/getting-started"
+  },
+  "link.item.label.Importing": {
+    "message": "Import",
+    "description": "The label of footer link with label=Importing linking to /docs/users/importing"
+  },
+  "link.item.label.API reference": {
+    "message": "Référence API",
+    "description": "The label of footer link with label=API reference linking to /docs/reference/api-endpoints"
+  },
+  "link.item.label.Issues": {
+    "message": "Signalements",
+    "description": "The label of footer link with label=Issues linking to https://github.com/Gekkotron/Athena-Accounting/issues"
+  },
+  "link.item.label.Sponsor": {
+    "message": "Soutenir",
+    "description": "The label of footer link with label=Sponsor linking to https://github.com/sponsors/Gekkotron"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/Gekkotron/Athena-Accounting"
+  },
+  "link.item.label.Blog": {
+    "message": "Blog",
+    "description": "The label of footer link with label=Blog linking to /blog"
+  },
+  "copyright": {
+    "message": "Athena Accounting. Développé par Gekkotron. Sous licence MIT.",
+    "description": "The footer copyright"
+  }
+}
