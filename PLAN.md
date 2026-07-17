@@ -2,6 +2,9 @@
 
 ## Backlog
 
+### First desktop beta release
+
+
 ### Docker + Tauri dual-track — foundational refactor
 
 Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker stack, from the same codebase. Docker path stays the family-server story; Tauri path is the "no install, no Docker" solo-user story. **Packaging pivoted from single-binary to directory-based sidecar** (2026-07-17) — the native-deps tree (sharp+libvips, @napi-rs/canvas, argon2, PGlite WASM, pdfjs worker, tesseract) is hostile to single-binary bundlers, and Tauri's sidecar mechanism accepts a folder just as happily.
@@ -23,6 +26,14 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Cut `v1.0.0-desktop-beta1` and validate the packaging artifacts     <!-- blocked: cross-OS artifact verification (macOS+Linux+Windows launch checks) can't be performed from a single non-interactive macOS session; needs a human-driven release run -->
+      Bump the release-visible version to `1.0.0-desktop-beta1` in the places the workflow expects (root `package.json` `version`, `desktop/src-tauri/Cargo.toml` `[package] version`, `desktop/src-tauri/tauri.conf.json` `productName`/`version` if present). Keep any `0.x` internal version pinning in place — only the display + tag matters here.
+      Create an annotated tag: `git tag -a v1.0.0-desktop-beta1 -m "First desktop beta"`. Push it: `git push origin v1.0.0-desktop-beta1`. This trigger matches `.github/workflows/desktop-release.yml`'s `v*-desktop` pattern.
+      Watch the workflow: three matrix jobs (macos-latest, ubuntu-latest, windows-latest) each build the sidecar, frontend, and Tauri app, then upload their artifact to a draft GitHub Release. Wait for the workflow to complete (or fail — capture the log link if it does).
+      Verify all three artifacts on their target OSes: download each from the draft release, run `desktop/scripts/verify-artifact.<platform>` if it exists (else run the installer by hand), launch the app, confirm the main window loads the Athena UI, and confirm `curl -s http://127.0.0.1:$(cat ${DATA_DIR:-~/Library/Application\ Support/Athena}/.mcp-port)/health` (or the app's shipped port-probing script) returns `{"ok":true}`. macOS Gatekeeper will show "unidentified developer" — that's expected until code-signing lands; document the workaround in the release notes.
+      Draft release notes: pull commit subjects since the last non-desktop tag with `git log <last-release>..HEAD --oneline`, group by category (features / fixes / infra), highlight the Docker → Tauri pivot as the headline, call out the Gatekeeper workaround, and publish the draft as a real release.
+      If a matrix job fails or an artifact doesn't launch, treat it as blocked: add a `<!-- blocked: <one-sentence platform + symptom> -->` comment and stop. Do NOT retag or force-push.
+      Success criteria: (a) `v1.0.0-desktop-beta1` tag exists on `origin`, (b) draft GH Release contains `.dmg`, `.AppImage`, `.exe`, (c) each artifact installs and launches on its target OS, (d) release notes published.
 ## Done
 
 - [x] Restyle the public docs site to match the app's visual identity
