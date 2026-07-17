@@ -6,11 +6,6 @@
 
 Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker stack, from the same codebase. Docker path stays the family-server story; Tauri path is the "no install, no Docker" solo-user story. Order below is topological — earlier tasks unblock later ones. Task 1 is already dispatched (see `## In progress`).
 
-- [ ] Verify Drizzle migrations run on PGlite
-      Point `runMigrations()` at the PGlite adapter when `DB_DRIVER=pglite`.
-      Sweep raw SQL clauses (`date_trunc`, `interval`, `NUMERIC(14,2)`, `sql\`...\`` blocks) for PGlite compatibility. All are supposed to work — verify empirically, patch what doesn't.
-      Add a smoke test: boot with `DB_DRIVER=pglite` on an empty DB, run migrations, do one insert + one select round-trip on `users` and `transactions`.
-      Success criteria: all existing DB migrations apply cleanly on PGlite; smoke test green.
 
 - [ ] Extract `buildServer()` from `backend/src/server.ts`
       Current `server.ts` mixes app construction with process-level boot (SIGINT/SIGTERM, `runMigrations()`, `listen()`).
@@ -80,6 +75,12 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Verify Drizzle migrations run on PGlite
+      Point `runMigrations()` at the PGlite adapter when `DB_DRIVER=pglite`.
+      Sweep raw SQL clauses (`date_trunc`, `interval`, `NUMERIC(14,2)`, `sql\`...\`` blocks) for PGlite compatibility. All are supposed to work — verify empirically, patch what doesn't.
+      Add a smoke test: boot with `DB_DRIVER=pglite` on an empty DB, run migrations, do one insert + one select round-trip on `users` and `transactions`.
+      Success criteria: all existing DB migrations apply cleanly on PGlite; smoke test green.
 
 - [x] Abstract the DB driver behind a factory
       Introduce `DB_DRIVER=postgres|pglite` env var (default `postgres`). Refactor `backend/src/db/client.ts`: build the Drizzle instance from the driver, not directly from `pg.Pool`. Postgres path stays default and behaves identically. Add `@electric-sql/pglite` + `drizzle-orm/pglite` dep. Add a `beforeAll`/`beforeEach` matrix in the DB-gated tests so the suite runs under both drivers.
