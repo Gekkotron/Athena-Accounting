@@ -50,7 +50,7 @@ export function Enveloppes(): JSX.Element {
     <div className="flex flex-col gap-6">
       <header className="flex items-center gap-4">
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, -1))} aria-label={t('envelopes.prevMonth')}>‹</button>
-        <h1 className="display text-2xl">{formatMonthLabel(month, i18n.language)}</h1>
+        <h1 className="display text-2xl w-64 text-center">{formatMonthLabel(month, i18n.language)}</h1>
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, +1))} aria-label={t('envelopes.nextMonth')}>›</button>
       </header>
 
