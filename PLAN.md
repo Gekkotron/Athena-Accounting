@@ -12,11 +12,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Tauri shell in `desktop/`
-      New `desktop/` folder — Tauri 2 project (Rust). `src-tauri/tauri.conf.json` declares the sidecar binary from the packaging task.
-      Rust code (~40 lines): spawn sidecar, read `ATHENA_PORT=…` from stdout, open the main window pointed at `http://127.0.0.1:{port}`, kill sidecar on window close.
-      App icon: convert `website/static/img/logo.svg` to `.icns` (Mac), `.ico` (Windows), and `.png` (Linux 512×512).
-      Success criteria: `cargo tauri dev` opens a window showing the frontend, hitting the sidecar's Fastify. Closing the window shuts down the sidecar cleanly (no zombie process).
 
 - [ ] Serve the frontend from Fastify
       Add `@fastify/static` and register it in `buildServer()` under `NODE_ENV=production` (or a new `SERVE_STATIC` flag): serves `frontend/dist/` from `/`.
@@ -50,6 +45,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Tauri shell in `desktop/`     <!-- blocked: depends on the sidecar-binary task (line 53, itself blocked pending CI matrix / re-scope) for the `tauri.conf.json` sidecar declaration, and on the still-backlog "Serve the frontend from Fastify" task for the success criterion "window showing the frontend hitting the sidecar's Fastify" — unblock after re-scoping the sidecar packaging (directory-based node+JS bundle) AND landing the Fastify-static task, then dispatch. -->
+      New `desktop/` folder — Tauri 2 project (Rust). `src-tauri/tauri.conf.json` declares the sidecar binary from the packaging task.
+      Rust code (~40 lines): spawn sidecar, read `ATHENA_PORT=…` from stdout, open the main window pointed at `http://127.0.0.1:{port}`, kill sidecar on window close.
+      App icon: convert `website/static/img/logo.svg` to `.icns` (Mac), `.ico` (Windows), and `.png` (Linux 512×512).
+      Success criteria: `cargo tauri dev` opens a window showing the frontend, hitting the sidecar's Fastify. Closing the window shuts down the sidecar cleanly (no zombie process).
 - [ ] Bundle backend as a sidecar binary     <!-- blocked: single-binary packaging is hostile to this dep tree (sharp+libvips, @napi-rs/canvas, @node-rs/argon2, tesseract.js WASM/workers, pdfjs worker, PGlite WASM — all need per-platform external assets); verifying macOS/Linux/Windows outputs requires CI matrix runners not available in this session — recommend merging into the "Packaging workflow + CI" task, or re-scoping to a directory-based sidecar (node runtime + JS + prebuilds) instead of one file. -->
       Use `@yao-pkg/pkg` (fork of `pkg`, actively maintained) or `bun build --compile` — decide during the task, land on the one that produces smaller/more reliable binaries.
       Cross-compile targets: `node22-macos-arm64`, `node22-macos-x64`, `node22-linux-x64`, `node22-win-x64`.
