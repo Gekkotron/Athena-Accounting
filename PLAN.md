@@ -11,12 +11,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Bundle backend as a sidecar binary
-      Use `@yao-pkg/pkg` (fork of `pkg`, actively maintained) or `bun build --compile` — decide during the task, land on the one that produces smaller/more reliable binaries.
-      Cross-compile targets: `node22-macos-arm64`, `node22-macos-x64`, `node22-linux-x64`, `node22-win-x64`.
-      Include PGlite native binaries + `pdfjs-dist` worker + `@napi-rs/canvas` per-platform prebuilds. These are the tricky bits — verify each works in a packaged binary before moving on.
-      Output: `desktop/binaries/athena-backend-<platform>` files that boot standalone.
-      Success criteria: on each of the three OSes, run the packaged binary, see `ATHENA_PORT=…`, `curl /health` OK.
 
 - [ ] Tauri shell in `desktop/`
       New `desktop/` folder — Tauri 2 project (Rust). `src-tauri/tauri.conf.json` declares the sidecar binary from the packaging task.
@@ -56,6 +50,12 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Bundle backend as a sidecar binary     <!-- blocked: single-binary packaging is hostile to this dep tree (sharp+libvips, @napi-rs/canvas, @node-rs/argon2, tesseract.js WASM/workers, pdfjs worker, PGlite WASM — all need per-platform external assets); verifying macOS/Linux/Windows outputs requires CI matrix runners not available in this session — recommend merging into the "Packaging workflow + CI" task, or re-scoping to a directory-based sidecar (node runtime + JS + prebuilds) instead of one file. -->
+      Use `@yao-pkg/pkg` (fork of `pkg`, actively maintained) or `bun build --compile` — decide during the task, land on the one that produces smaller/more reliable binaries.
+      Cross-compile targets: `node22-macos-arm64`, `node22-macos-x64`, `node22-linux-x64`, `node22-win-x64`.
+      Include PGlite native binaries + `pdfjs-dist` worker + `@napi-rs/canvas` per-platform prebuilds. These are the tricky bits — verify each works in a packaged binary before moving on.
+      Output: `desktop/binaries/athena-backend-<platform>` files that boot standalone.
+      Success criteria: on each of the three OSes, run the packaged binary, see `ATHENA_PORT=…`, `curl /health` OK.
 ## Done
 
 - [x] Data-directory helper
