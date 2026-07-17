@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Dashboard screenshot placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#0f2321"/>
+      <stop offset="1" stop-color="#16413b"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" rx="12" fill="url(#bg)"/>
+  <text x="40" y="60" font-family="system-ui, sans-serif" font-size="14" fill="#7dd3c0" letter-spacing="2">DASHBOARD</text>
+  <text x="40" y="98" font-family="Georgia, serif" font-size="34" font-weight="600" fill="#eef9f4">Solde global</text>
+  <text x="40" y="132" font-family="system-ui, sans-serif" font-size="28" fill="#7dd3c0">12 486,50 €</text>
+  <path d="M40 300 Q 140 260, 240 250 T 440 220 T 640 200 T 760 175" stroke="#7dd3c0" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M40 300 Q 140 260, 240 250 T 440 220 T 640 200 T 760 175 L 760 380 L 40 380 Z" fill="#7dd3c0" opacity="0.12"/>
+  <g transform="translate(40 410)" fill="#eef9f4" opacity="0.6" font-family="system-ui, sans-serif" font-size="12">
+    <text x="0">Jan</text><text x="120">Fév</text><text x="240">Mar</text><text x="360">Avr</text><text x="480">Mai</text><text x="600">Juin</text><text x="720">Juil</text>
+  </g>
+  <text x="400" y="475" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#7dd3c0" opacity="0.5">screenshot placeholder — replace static/img/screenshots/dashboard.png</text>
+</svg>
