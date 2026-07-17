@@ -1,0 +1,102 @@
+{
+  "settings": {
+    "page": {
+      "title": "Réglages",
+      "subtitle": "Valeurs par défaut appliquées à chaque chargement du tableau de bord et aux outils d'imports."
+    },
+    "errors": {
+      "saveFailed": "Impossible d'enregistrer les réglages. Réessayez."
+    },
+    "savedChip": "Enregistré",
+    "dashboardSection": {
+      "label": "Tableau de bord",
+      "defaultRangeLabel": "Période par défaut",
+      "defaultChartScopeLabel": "Compte du graphique par défaut",
+      "allAccountsOption": "Tous les comptes",
+      "gapThreshold": {
+        "label": "Seuil de ligne pointillée (jours)",
+        "help": "Un écart supérieur à X jours entre deux points est tracé en pointillés."
+      }
+    },
+    "importsSection": {
+      "label": "Imports",
+      "duplicateThreshold": {
+        "label": "Seuil de similarité par défaut (Possibles doublons)",
+        "help": "Filtre les groupes de doublons dont la similarité de libellés est inférieure au seuil."
+      }
+    },
+    "mcp": {
+      "sectionLabel": "Accès MCP",
+      "description": "Permet à un assistant local (Ollama via un client MCP) de gérer vos transactions. Le contenu est chiffré avec le jeton — rien ne circule en clair.",
+      "enableLabel": "Activer l'accès MCP",
+      "generateButton": "Générer un jeton",
+      "regenerateButton": "Régénérer le jeton",
+      "revokeButton": "Révoquer",
+      "tokenWarning": "Ce jeton ne sera plus affiché — copiez-le maintenant.",
+      "tokenConfigHint": "Configurez le client MCP avec <1>ATHENA_MCP_USER</1> (votre identifiant) et<3> ATHENA_MCP_TOKEN</3>."
+    },
+    "reset": {
+      "button": "Réinitialiser aux valeurs par défaut",
+      "dialogTitle": "Réinitialiser les réglages ?",
+      "dialogDescription": "Tous vos réglages retrouveront leurs valeurs par défaut. Cette action ne peut pas être annulée."
+    },
+    "help": {
+      "sectionLabel": "Aide",
+      "description": "Réaffiche la visite guidée et tous les conseils de section masqués.",
+      "replayButton": "Rejouer la visite guidée",
+      "replayConfirm": "Réafficher tous les conseils de première visite ?"
+    }
+  },
+  "login": {
+    "tagline": "Comptabilité auto-hébergée",
+    "onboarding": {
+      "title": "Première utilisation",
+      "subtitle": "Créez votre identifiant et votre mot de passe pour commencer."
+    },
+    "form": {
+      "titleRegister": "Nouveau compte",
+      "titleLogin": "Bon retour",
+      "subtitleRegister": "Choisissez un identifiant et un mot de passe. Vos données seront totalement séparées des autres utilisateurs.",
+      "subtitleLogin": "Connectez-vous pour accéder à vos comptes.",
+      "usernameLabel": "Identifiant",
+      "passwordLabel": "Mot de passe",
+      "confirmLabel": "Confirmer",
+      "passwordTooShort": "Le mot de passe doit faire au moins 8 caractères.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "submitting": "Patientez…",
+      "createAccountButton": "Créer le compte",
+      "loginButton": "Se connecter",
+      "hasAccountPrompt": "Vous avez déjà un compte ?",
+      "switchToLoginButton": "Se connecter",
+      "noAccountPrompt": "Pas encore de compte ?",
+      "switchToRegisterButton": "Créer un compte",
+      "localFirstBadge": "Local-first.",
+      "localFirstText": "Vos données ne quittent jamais votre réseau."
+    }
+  },
+  "profile": {
+    "page": {
+      "title": "Profil",
+      "subtitle": "Modifiez votre identifiant ou votre mot de passe. Le mot de passe actuel est demandé à chaque fois pour confirmer que c'est bien vous."
+    },
+    "form": {
+      "usernameLabel": "Identifiant",
+      "currentUsernameHint": "Actuel : <1>{{name}}</1>",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "optionalTag": "(optionnel)",
+      "newPasswordPlaceholder": "Laisser vide pour ne pas changer",
+      "confirmNewPasswordLabel": "Confirmer le nouveau mot de passe",
+      "currentPasswordLabel": "Mot de passe actuel",
+      "requiredTag": "(requis)",
+      "saveButton": "Enregistrer les modifications",
+      "savingButton": "Enregistrement…",
+      "successMessage": "Profil mis à jour.",
+      "errors": {
+        "nothingToChange": "Rien à modifier.",
+        "currentPasswordRequired": "Le mot de passe actuel est requis pour confirmer.",
+        "newPasswordTooShort": "Le nouveau mot de passe doit faire au moins 8 caractères.",
+        "newPasswordMismatch": "Les nouveaux mots de passe ne correspondent pas."
+      }
+    }
+  }
+}

@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation, Trans } from 'react-i18next';
 import { api, ApiError } from '../api/client';
 import type { User } from '../api/types';
 
 export function Profile() {
+  const { t } = useTranslation('settings');
   const qc = useQueryClient();
   const me = qc.getQueryData<{ user: User }>(['me']);
   const currentName = me?.user?.username ?? '';
@@ -20,7 +22,7 @@ export function Profile() {
       api<{ user: User }>('/api/auth/me', { method: 'PATCH', json: input }),
     onSuccess: (data) => {
       qc.setQueryData(['me'], { user: data.user });
-      setOk('Profil mis à jour.');
+      setOk(t('profile.form.successMessage'));
       setNewPassword('');
       setConfirm('');
       setCurrentPassword('');
@@ -37,20 +39,20 @@ export function Profile() {
     const wantsPassword = newPassword.length > 0;
 
     if (!wantsRename && !wantsPassword) {
-      setError('Rien à modifier.');
+      setError(t('profile.form.errors.nothingToChange'));
       return;
     }
     if (!currentPassword) {
-      setError('Le mot de passe actuel est requis pour confirmer.');
+      setError(t('profile.form.errors.currentPasswordRequired'));
       return;
     }
     if (wantsPassword) {
       if (newPassword.length < 8) {
-        setError('Le nouveau mot de passe doit faire au moins 8 caractères.');
+        setError(t('profile.form.errors.newPasswordTooShort'));
         return;
       }
       if (newPassword !== confirm) {
-        setError('Les nouveaux mots de passe ne correspondent pas.');
+        setError(t('profile.form.errors.newPasswordMismatch'));
         return;
       }
     }
@@ -65,16 +67,15 @@ export function Profile() {
   return (
     <div className="max-w-xl flex flex-col gap-6">
       <div>
-        <h1 className="display text-2xl text-ink-50">Profil</h1>
+        <h1 className="display text-2xl text-ink-50">{t('profile.page.title')}</h1>
         <p className="text-sm text-ink-400 mt-1">
-          Modifiez votre identifiant ou votre mot de passe. Le mot de passe actuel est demandé à chaque
-          fois pour confirmer que c'est bien vous.
+          {t('profile.page.subtitle')}
         </p>
       </div>
 
       <form onSubmit={submit} className="surface p-6 flex flex-col gap-4">
         <div>
-          <label className="label mb-1.5 block">Identifiant</label>
+          <label className="label mb-1.5 block">{t('profile.form.usernameLabel')}</label>
           <input
             className="input"
             value={username}
@@ -84,13 +85,15 @@ export function Profile() {
           />
           {currentName && username.trim() !== currentName && (
             <p className="text-xs text-ink-400 mt-1">
-              Actuel : <span className="font-mono text-ink-300">{currentName}</span>
+              <Trans i18nKey="settings:profile.form.currentUsernameHint" values={{ name: currentName }}>
+                Actuel : <span className="font-mono text-ink-300">{{ name: currentName } as unknown as string}</span>
+              </Trans>
             </p>
           )}
         </div>
 
         <div className="pt-2 border-t border-ink-800/60">
-          <div className="label mb-1.5">Nouveau mot de passe <span className="text-ink-500 font-normal">(optionnel)</span></div>
+          <div className="label mb-1.5">{t('profile.form.newPasswordLabel')} <span className="text-ink-500 font-normal">{t('profile.form.optionalTag')}</span></div>
           <input
             type="password"
             className="input"
@@ -98,13 +101,13 @@ export function Profile() {
             onChange={(e) => setNewPassword(e.target.value)}
             autoComplete="new-password"
             minLength={newPassword.length > 0 ? 8 : undefined}
-            placeholder="Laisser vide pour ne pas changer"
+            placeholder={t('profile.form.newPasswordPlaceholder')}
           />
         </div>
 
         {newPassword.length > 0 && (
           <div>
-            <label className="label mb-1.5 block">Confirmer le nouveau mot de passe</label>
+            <label className="label mb-1.5 block">{t('profile.form.confirmNewPasswordLabel')}</label>
             <input
               type="password"
               className="input"
@@ -118,7 +121,7 @@ export function Profile() {
         )}
 
         <div className="pt-2 border-t border-ink-800/60">
-          <label className="label mb-1.5 block">Mot de passe actuel <span className="text-clay-300 font-normal">(requis)</span></label>
+          <label className="label mb-1.5 block">{t('profile.form.currentPasswordLabel')} <span className="text-clay-300 font-normal">{t('profile.form.requiredTag')}</span></label>
           <input
             type="password"
             className="input"
@@ -141,7 +144,7 @@ export function Profile() {
         )}
 
         <button className="btn-primary" disabled={mut.isPending}>
-          {mut.isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
+          {mut.isPending ? t('profile.form.savingButton') : t('profile.form.saveButton')}
         </button>
       </form>
     </div>

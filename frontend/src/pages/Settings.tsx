@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../api/client';
 import type { Account } from '../api/types';
 import { useSettings } from '../lib/useSettings';
@@ -10,6 +11,7 @@ import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from 
 import { useTips } from '../contexts/TipsContext';
 
 export function Settings(): JSX.Element {
+  const { t } = useTranslation('settings');
   const { settings, isReady, patch, mutation } = useSettings();
   const { reset: resetTips } = useTips();
   const [confirmReset, setConfirmReset] = useState(false);
@@ -17,8 +19,8 @@ export function Settings(): JSX.Element {
   const [flashKey, setFlashKey] = useState<keyof SettingsShape | null>(null);
   useEffect(() => {
     if (mutation.isSuccess) {
-      const t = setTimeout(() => setFlashKey(null), 1500);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setFlashKey(null), 1500);
+      return () => clearTimeout(timer);
     }
     if (mutation.isError) {
       setFlashKey(null);
@@ -68,37 +70,37 @@ export function Settings(): JSX.Element {
   return (
     <div className="max-w-xl flex flex-col gap-6">
       <div>
-        <h1 className="display text-2xl text-ink-50">Réglages</h1>
+        <h1 className="display text-2xl text-ink-50">{t('settings.page.title')}</h1>
         <p className="text-sm text-ink-400 mt-1">
-          Valeurs par défaut appliquées à chaque chargement du tableau de bord et aux outils d'imports.
+          {t('settings.page.subtitle')}
         </p>
       </div>
 
       {mutation.isError && (
         <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
-          Impossible d'enregistrer les réglages. Réessayez.
+          {t('settings.errors.saveFailed')}
         </div>
       )}
 
       <div className="surface p-6 flex flex-col gap-6">
         <section className="flex flex-col gap-4">
-          <div className="label">Tableau de bord</div>
+          <div className="label">{t('settings.dashboardSection.label')}</div>
 
           <div>
             <div className="text-sm mb-2 flex items-center gap-2">
-              Période par défaut
+              {t('settings.dashboardSection.defaultRangeLabel')}
               {flashKey === 'dashboardRange' && <SavedChip />}
             </div>
             <RangePicker
               value={settings.dashboardRange as RangeKey}
               onChange={(r) => send('dashboardRange', r)}
-              ariaLabel="Période par défaut"
+              ariaLabel={t('settings.dashboardSection.defaultRangeLabel')}
             />
           </div>
 
           <div>
             <label className="text-sm mb-2 block">
-              Compte du graphique par défaut
+              {t('settings.dashboardSection.defaultChartScopeLabel')}
               {flashKey === 'dashboardChartScope' && <SavedChip />}
             </label>
             <select
@@ -108,7 +110,7 @@ export function Settings(): JSX.Element {
                 send('dashboardChartScope', e.target.value === 'all' ? 'all' : Number(e.target.value))
               }
             >
-              <option value="all">Tous les comptes</option>
+              <option value="all">{t('settings.dashboardSection.allAccountsOption')}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name} ({a.currency})
@@ -118,8 +120,8 @@ export function Settings(): JSX.Element {
           </div>
 
           <NumberField
-            label="Seuil de ligne pointillée (jours)"
-            help="Un écart supérieur à X jours entre deux points est tracé en pointillés."
+            label={t('settings.dashboardSection.gapThreshold.label')}
+            help={t('settings.dashboardSection.gapThreshold.help')}
             min={1}
             max={60}
             value={settings.chartGapThresholdDays}
@@ -129,10 +131,10 @@ export function Settings(): JSX.Element {
         </section>
 
         <section className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
-          <div className="label">Imports</div>
+          <div className="label">{t('settings.importsSection.label')}</div>
           <NumberField
-            label="Seuil de similarité par défaut (Possibles doublons)"
-            help="Filtre les groupes de doublons dont la similarité de libellés est inférieure au seuil."
+            label={t('settings.importsSection.duplicateThreshold.label')}
+            help={t('settings.importsSection.duplicateThreshold.help')}
             min={0}
             max={100}
             suffix="%"
@@ -144,10 +146,9 @@ export function Settings(): JSX.Element {
 
         <section data-testid="mcp-section" className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
           <div>
-            <div className="label">Accès MCP</div>
+            <div className="label">{t('settings.mcp.sectionLabel')}</div>
             <p className="text-sm text-ink-400 mt-1">
-              Permet à un assistant local (Ollama via un client MCP) de gérer vos transactions.
-              Le contenu est chiffré avec le jeton — rien ne circule en clair.
+              {t('settings.mcp.description')}
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm text-ink-200">
@@ -157,7 +158,7 @@ export function Settings(): JSX.Element {
               checked={mcp.enabled}
               onChange={(e) => void toggleMcp(e.target.checked)}
             />
-            Activer l'accès MCP
+            {t('settings.mcp.enableLabel')}
           </label>
           <div className="flex items-center gap-3">
             <button
@@ -166,21 +167,23 @@ export function Settings(): JSX.Element {
               className="btn-primary"
               onClick={() => void genToken()}
             >
-              {mcp.hasToken ? 'Régénérer le jeton' : 'Générer un jeton'}
+              {mcp.hasToken ? t('settings.mcp.regenerateButton') : t('settings.mcp.generateButton')}
             </button>
             {mcp.hasToken && (
               <button type="button" className="btn-ghost" onClick={() => void revokeToken()}>
-                Révoquer
+                {t('settings.mcp.revokeButton')}
               </button>
             )}
           </div>
           {freshToken && (
             <div className="rounded-md bg-ink-900 p-3 text-sm">
-              <p className="text-amber-400 mb-1">Ce jeton ne sera plus affiché — copiez-le maintenant.</p>
+              <p className="text-amber-400 mb-1">{t('settings.mcp.tokenWarning')}</p>
               <code data-testid="mcp-token" className="break-all text-ink-100">{freshToken}</code>
               <p className="text-ink-400 mt-2">
-                Configurez le client MCP avec <code>ATHENA_MCP_USER</code> (votre identifiant) et
-                <code> ATHENA_MCP_TOKEN</code>.
+                <Trans i18nKey="settings:settings.mcp.tokenConfigHint">
+                  Configurez le client MCP avec <code>ATHENA_MCP_USER</code> (votre identifiant) et
+                  <code> ATHENA_MCP_TOKEN</code>.
+                </Trans>
               </p>
             </div>
           )}
@@ -188,33 +191,33 @@ export function Settings(): JSX.Element {
 
         <section className="pt-4 border-t border-ink-800/60">
           <button className="btn-ghost" onClick={() => setConfirmReset(true)}>
-            Réinitialiser aux valeurs par défaut
+            {t('settings.reset.button')}
           </button>
         </section>
 
         <section className="pt-4 border-t border-ink-800/60">
-          <div className="label">Aide</div>
+          <div className="label">{t('settings.help.sectionLabel')}</div>
           <p className="text-sm text-ink-400 mt-1 mb-3">
-            Réaffiche la visite guidée et tous les conseils de section masqués.
+            {t('settings.help.description')}
           </p>
           <button
             type="button"
             className="btn-ghost"
             onClick={() => {
-              if (window.confirm('Réafficher tous les conseils de première visite ?')) {
+              if (window.confirm(t('settings.help.replayConfirm'))) {
                 resetTips().catch(() => {});
               }
             }}
           >
-            Rejouer la visite guidée
+            {t('settings.help.replayButton')}
           </button>
         </section>
       </div>
 
       <ConfirmDialog
         open={confirmReset}
-        title="Réinitialiser les réglages ?"
-        description="Tous vos réglages retrouveront leurs valeurs par défaut. Cette action ne peut pas être annulée."
+        title={t('settings.reset.dialogTitle')}
+        description={t('settings.reset.dialogDescription')}
         onConfirm={() => {
           patch(DEFAULTS);
           setConfirmReset(false);
@@ -226,8 +229,9 @@ export function Settings(): JSX.Element {
 }
 
 function SavedChip() {
+  const { t } = useTranslation('settings');
   return (
-    <span className="text-[10px] uppercase tracking-wide text-sage-300 ml-2">Enregistré</span>
+    <span className="text-[10px] uppercase tracking-wide text-sage-300 ml-2">{t('settings.savedChip')}</span>
   );
 }
 

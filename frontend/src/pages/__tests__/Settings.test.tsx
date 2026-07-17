@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,6 +6,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { Settings } from '../Settings';
 import { DEFAULTS } from '../../lib/settings';
 import { withTips } from '../../test/renderWithProviders';
+import i18n from '../../i18n';
+
+// Settings renders French strings by default (the app's current UI
+// language). Preload 'settings' and 'common' for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['settings', 'common']);
+});
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');

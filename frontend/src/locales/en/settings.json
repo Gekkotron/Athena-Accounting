@@ -1,0 +1,102 @@
+{
+  "settings": {
+    "page": {
+      "title": "Settings",
+      "subtitle": "Defaults applied every time the dashboard loads and to the import tools."
+    },
+    "errors": {
+      "saveFailed": "Could not save the settings. Please try again."
+    },
+    "savedChip": "Saved",
+    "dashboardSection": {
+      "label": "Dashboard",
+      "defaultRangeLabel": "Default period",
+      "defaultChartScopeLabel": "Default chart account",
+      "allAccountsOption": "All accounts",
+      "gapThreshold": {
+        "label": "Dashed-line threshold (days)",
+        "help": "A gap of more than X days between two points is drawn as a dashed line."
+      }
+    },
+    "importsSection": {
+      "label": "Imports",
+      "duplicateThreshold": {
+        "label": "Default similarity threshold (possible duplicates)",
+        "help": "Filters out duplicate groups whose label similarity is below the threshold."
+      }
+    },
+    "mcp": {
+      "sectionLabel": "MCP access",
+      "description": "Lets a local assistant (Ollama via an MCP client) manage your transactions. Content is encrypted with the token — nothing travels in the clear.",
+      "enableLabel": "Enable MCP access",
+      "generateButton": "Generate a token",
+      "regenerateButton": "Regenerate token",
+      "revokeButton": "Revoke",
+      "tokenWarning": "This token will not be shown again — copy it now.",
+      "tokenConfigHint": "Configure the MCP client with <1>ATHENA_MCP_USER</1> (your username) and<3> ATHENA_MCP_TOKEN</3>."
+    },
+    "reset": {
+      "button": "Reset to defaults",
+      "dialogTitle": "Reset settings?",
+      "dialogDescription": "All your settings will return to their default values. This action cannot be undone."
+    },
+    "help": {
+      "sectionLabel": "Help",
+      "description": "Shows the guided tour and every hidden section tip again.",
+      "replayButton": "Replay the guided tour",
+      "replayConfirm": "Show all first-visit tips again?"
+    }
+  },
+  "login": {
+    "tagline": "Self-hosted accounting",
+    "onboarding": {
+      "title": "First use",
+      "subtitle": "Create your username and password to get started."
+    },
+    "form": {
+      "titleRegister": "New account",
+      "titleLogin": "Welcome back",
+      "subtitleRegister": "Choose a username and a password. Your data will be kept fully separate from other users.",
+      "subtitleLogin": "Sign in to access your accounts.",
+      "usernameLabel": "Username",
+      "passwordLabel": "Password",
+      "confirmLabel": "Confirm",
+      "passwordTooShort": "The password must be at least 8 characters long.",
+      "passwordMismatch": "The passwords do not match.",
+      "submitting": "Please wait…",
+      "createAccountButton": "Create account",
+      "loginButton": "Sign in",
+      "hasAccountPrompt": "Already have an account?",
+      "switchToLoginButton": "Sign in",
+      "noAccountPrompt": "No account yet?",
+      "switchToRegisterButton": "Create an account",
+      "localFirstBadge": "Local-first.",
+      "localFirstText": "Your data never leaves your network."
+    }
+  },
+  "profile": {
+    "page": {
+      "title": "Profile",
+      "subtitle": "Change your username or password. Your current password is asked every time to confirm it's really you."
+    },
+    "form": {
+      "usernameLabel": "Username",
+      "currentUsernameHint": "Current: <1>{{name}}</1>",
+      "newPasswordLabel": "New password",
+      "optionalTag": "(optional)",
+      "newPasswordPlaceholder": "Leave blank to keep the current password",
+      "confirmNewPasswordLabel": "Confirm new password",
+      "currentPasswordLabel": "Current password",
+      "requiredTag": "(required)",
+      "saveButton": "Save changes",
+      "savingButton": "Saving…",
+      "successMessage": "Profile updated.",
+      "errors": {
+        "nothingToChange": "Nothing to change.",
+        "currentPasswordRequired": "The current password is required to confirm.",
+        "newPasswordTooShort": "The new password must be at least 8 characters long.",
+        "newPasswordMismatch": "The new passwords do not match."
+      }
+    }
+  }
+}

@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../api/client';
 import type { User } from '../api/types';
 import { Logo } from '../components/Logo';
 
 export function Login() {
+  const { t } = useTranslation('settings');
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -51,11 +53,11 @@ export function Login() {
     setError(null);
     if (isRegister) {
       if (password.length < 8) {
-        setError('Le mot de passe doit faire au moins 8 caractères.');
+        setError(t('login.form.passwordTooShort'));
         return;
       }
       if (password !== confirm) {
-        setError('Les mots de passe ne correspondent pas.');
+        setError(t('login.form.passwordMismatch'));
         return;
       }
       create.mutate({ username, password });
@@ -74,27 +76,27 @@ export function Login() {
           <div className="display text-5xl text-ink-50 tracking-tight mt-5">Athena</div>
           <div className="display-italic text-base text-ink-400 mt-1">Accounting</div>
           <div className="mt-4 text-xs uppercase tracking-[0.2em] text-ink-500">
-            Comptabilité auto-hébergée
+            {t('login.tagline')}
           </div>
         </div>
 
         <div className="surface p-7 md:p-8">
           <div className="mb-6">
             <h1 className="text-lg font-semibold text-ink-50 mb-1">
-              {isOnboarding ? 'Première utilisation' : isRegister ? 'Nouveau compte' : 'Bon retour'}
+              {isOnboarding ? t('login.onboarding.title') : isRegister ? t('login.form.titleRegister') : t('login.form.titleLogin')}
             </h1>
             <p className="text-sm text-ink-400">
               {isOnboarding
-                ? 'Créez votre identifiant et votre mot de passe pour commencer.'
+                ? t('login.onboarding.subtitle')
                 : isRegister
-                ? 'Choisissez un identifiant et un mot de passe. Vos données seront totalement séparées des autres utilisateurs.'
-                : 'Connectez-vous pour accéder à vos comptes.'}
+                ? t('login.form.subtitleRegister')
+                : t('login.form.subtitleLogin')}
             </p>
           </div>
 
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div>
-              <label className="label mb-1.5 block">Identifiant</label>
+              <label className="label mb-1.5 block">{t('login.form.usernameLabel')}</label>
               <input
                 className="input"
                 value={username}
@@ -105,7 +107,7 @@ export function Login() {
               />
             </div>
             <div>
-              <label className="label mb-1.5 block">Mot de passe</label>
+              <label className="label mb-1.5 block">{t('login.form.passwordLabel')}</label>
               <input
                 type="password"
                 className="input"
@@ -118,7 +120,7 @@ export function Login() {
             </div>
             {isRegister && (
               <div>
-                <label className="label mb-1.5 block">Confirmer</label>
+                <label className="label mb-1.5 block">{t('login.form.confirmLabel')}</label>
                 <input
                   type="password"
                   className="input"
@@ -138,7 +140,7 @@ export function Login() {
             )}
 
             <button className="btn-primary w-full" disabled={submitting}>
-              {submitting ? 'Patientez…' : isRegister ? 'Créer le compte' : 'Se connecter'}
+              {submitting ? t('login.form.submitting') : isRegister ? t('login.form.createAccountButton') : t('login.form.loginButton')}
             </button>
           </form>
 
@@ -146,21 +148,21 @@ export function Login() {
             <div className="mt-5 text-center text-sm text-ink-400">
               {registerMode ? (
                 <>
-                  Vous avez déjà un compte ?{' '}
+                  {t('login.form.hasAccountPrompt')}{' '}
                   <button
                     type="button"
                     className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
                     onClick={() => { setRegisterMode(false); setError(null); }}
-                  >Se connecter</button>
+                  >{t('login.form.switchToLoginButton')}</button>
                 </>
               ) : (
                 <>
-                  Pas encore de compte ?{' '}
+                  {t('login.form.noAccountPrompt')}{' '}
                   <button
                     type="button"
                     className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
                     onClick={() => { setRegisterMode(true); setError(null); }}
-                  >Créer un compte</button>
+                  >{t('login.form.switchToRegisterButton')}</button>
                 </>
               )}
             </div>
@@ -168,7 +170,7 @@ export function Login() {
         </div>
 
         <div className="mt-6 text-center text-[11px] text-ink-500">
-          <span className="display-italic">Local-first.</span> Vos données ne quittent jamais votre réseau.
+          <span className="display-italic">{t('login.form.localFirstBadge')}</span> {t('login.form.localFirstText')}
         </div>
       </div>
     </div>
