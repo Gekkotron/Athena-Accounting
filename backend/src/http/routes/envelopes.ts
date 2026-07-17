@@ -356,12 +356,18 @@ export async function envelopesRoutes(app: FastifyInstance): Promise<void> {
         lte(envelopeAssignments.month, monthDate),
       ));
 
-    // 2) Spend by (category, month) up to this month for the user's expense categories
+    // 2) Spend by (category, month) up to this month for the user's expense
+    //    categories. Signed convention: expenses are stored negative, so
+    //    spend = -SUM(amount) (matches reports.ts). This lets an occasional
+    //    refund (positive amount posted against an expense category) net
+    //    against payments in the same category rather than double-counting
+    //    as additional spend — needed for one-category tracking of things
+    //    like Impôts where a refund arrives once in a while.
     const spendRows = await db
       .select({
         categoryId: transactions.categoryId,
         month: sql<string>`to_char(date_trunc('month', ${transactions.date}), 'YYYY-MM-01')`,
-        amount: sql<string>`sum(abs(${transactions.amount}))::text`,
+        amount: sql<string>`(-sum(${transactions.amount}))::text`,
       })
       .from(transactions)
       .innerJoin(categories, eq(transactions.categoryId, categories.id))

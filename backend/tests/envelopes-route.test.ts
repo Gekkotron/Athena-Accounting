@@ -360,4 +360,27 @@ describe.skipIf(!RUN)('GET /api/envelopes/report', () => {
     expect(body.rows[0].balance).toBe('100.00');
     expect(body.rows[0].overspent).toBe(false);
   });
+
+  // A refund posted against an expense category (positive amount) must net
+  // against payments in the same category rather than double-counting as
+  // spend. This is what enables single-category tracking of things like
+  // Impôts where a refund occasionally arrives — spend reflects the true
+  // net outflow, matching the -SUM(amount) convention used in reports.ts.
+  it('nets an occasional refund against payments in the same expense category', async () => {
+    await app.inject({
+      method: 'POST', url: '/api/transactions', headers: { cookie },
+      payload: {
+        accountId: acct, date: '2026-06-20', amount: '50.00',
+        rawLabel: 'Remboursement courses', normalizedLabel: 'remboursement courses',
+        categoryId: expA, dedupKey: 'refund-1',
+      },
+    });
+    const r = await app.inject({
+      method: 'GET', url: '/api/envelopes/report?month=2026-06',
+      headers: { cookie },
+    });
+    const body = r.json();
+    expect(body.rows[0].spend).toBe('150.00');
+    expect(body.rows[0].balance).toBe('150.00');
+  });
 });
