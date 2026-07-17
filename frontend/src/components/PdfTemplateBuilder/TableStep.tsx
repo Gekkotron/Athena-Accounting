@@ -1,8 +1,9 @@
+import { Trans, useTranslation } from 'react-i18next';
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
 import { InfoTip } from './InfoTip';
 import { ExtractedTextPanel } from './ExtractedTextPanel';
 import { AnchorPickerPanel } from './AnchorPickerPanel';
-import { PAINT_COLOR, STEP_TOOLTIP } from './constants';
+import { PAINT_COLOR } from './constants';
 import type { PdfImportNeedsTemplate } from '../../api/pdf-templates.js';
 
 interface Props {
@@ -34,15 +35,18 @@ export function TableStep({
   onPageAnchorChange,
   onOtherAnchorsChange,
 }: Props): JSX.Element {
+  const { t } = useTranslation('pdf-template');
   const firstPage = needsTemplate.pages[0]!;
   return (
     <>
       <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
         <span>
-          Étape 2/{totalSteps} — Sélectionnez le tableau des transactions{' '}
-          <span className="text-ink-400 font-normal">(toutes les lignes, en-tête de colonne incluse)</span>.
+          <Trans i18nKey="pdf-template:tableStep.prompt" values={{ total: totalSteps }}>
+            Étape 2/{{ total: totalSteps }} — Sélectionnez le tableau des transactions{' '}
+            <span className="text-ink-400 font-normal">(toutes les lignes, en-tête de colonne incluse)</span>.
+          </Trans>
         </span>
-        <InfoTip text={STEP_TOOLTIP.table} />
+        <InfoTip text={t('steps.table.tooltip')} />
       </p>
       <ZoneCanvas
         pngBase64={firstPage.pngBase64}
@@ -59,17 +63,16 @@ export function TableStep({
           onChange={(e) => onTableRepeatsChange(e.target.checked)}
           className="accent-sage-300"
         />
-        Le tableau se répète sur chaque page
+        {t('tableStep.repeatsLabel')}
       </label>
 
       {needsTemplate.pages.length > 1 && (
         <div className="mt-5 pt-4 border-t border-ink-800/60">
           <div className="text-sm text-ink-100 font-medium mb-1">
-            Pages à importer pour ce compte
+            {t('tableStep.pagesHeading')}
           </div>
           <p className="text-xs text-ink-400 mb-3">
-            Si le relevé contient plusieurs comptes, ne cochez que les pages qui appartiennent au
-            compte choisi à l'upload. Les autres pages seront ignorées pour cet import.
+            {t('tableStep.pagesHint')}
           </p>
           <div className="flex flex-wrap gap-2">
             {needsTemplate.pages.map((p) => {
@@ -96,14 +99,14 @@ export function TableStep({
                       );
                     }}
                   />
-                  Page {p.pageIndex + 1}
+                  {t('tableStep.pageLabel', { number: p.pageIndex + 1 })}
                 </label>
               );
             })}
           </div>
           {selectedPages.length === 0 && (
             <p className="mt-2 text-xs text-clay-300">
-              Sélectionnez au moins une page.
+              {t('tableStep.noPagesSelected')}
             </p>
           )}
         </div>

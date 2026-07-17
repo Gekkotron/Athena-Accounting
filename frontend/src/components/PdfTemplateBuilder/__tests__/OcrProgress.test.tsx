@@ -1,13 +1,24 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OcrProgress } from '../OcrProgress';
 import * as api from '../../../api/pdf-templates';
+import i18n from '../../../i18n';
 
 function withProviders(children: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, refetchInterval: 100 } } });
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
+
+// OcrProgress renders French strings by default (the app's current UI
+// language). Preload the 'pdf-template' namespace for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['pdf-template', 'common']);
+});
 
 beforeEach(() => vi.restoreAllMocks());
 

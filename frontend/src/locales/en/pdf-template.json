@@ -1,0 +1,113 @@
+{
+  "modal": {
+    "title": "Define the PDF template",
+    "close": "Close"
+  },
+  "columns": {
+    "table": "Table",
+    "date": "Date",
+    "description": "Description",
+    "amount": "Amount",
+    "debit": "Debit",
+    "credit": "Credit",
+    "confidence": "Confidence"
+  },
+  "steps": {
+    "header": {
+      "title": "Select the header",
+      "tooltip": "Draw around the bank's logo / name at the top of the page. This zone acts as a fingerprint: next time you import a statement from the same bank, Athena will recognize the template automatically."
+    },
+    "table": {
+      "title": "Select the transactions table",
+      "tooltip": "Draw around the entire transactions table, including the column header. Don't include totals or the page footer — just the movement rows."
+    },
+    "date": {
+      "title": "Select the Date column",
+      "tooltip": "Draw a thin vertical band that covers only the date column, inside the table you just outlined. The height doesn't matter — Athena only uses the left/right bounds."
+    },
+    "description": {
+      "title": "Select the Description column",
+      "tooltip": "Draw the description column (merchant name / memo). It can be wide — neighboring columns are ignored thanks to each column's own bounds."
+    },
+    "amount": {
+      "title": "Select the Amount column",
+      "tooltip": "First choose whether your bank shows a single signed amount (+ / −) or two Debit + Credit columns. Then draw the matching columns. Finally, name the template so you can find it again later."
+    }
+  },
+  "headerStep": {
+    "prompt": "Step 1/{{total}} — Select the header <1>(used to recognize this bank next time)</1>."
+  },
+  "tableStep": {
+    "prompt": "Step 2/{{total}} — Select the transactions table <1>(every row, including the column header)</1>.",
+    "repeatsLabel": "The table repeats on every page",
+    "pagesHeading": "Pages to import for this account",
+    "pagesHint": "If the statement contains several accounts, only tick the pages that belong to the account chosen at upload. Other pages are ignored for this import.",
+    "pageLabel": "Page {{number}}",
+    "noPagesSelected": "Select at least one page."
+  },
+  "dateStep": {
+    "prompt": "Step 3/{{total}} — Draw the <1>Date</1> column <2>inside the table — the next step starts automatically</2>."
+  },
+  "descriptionStep": {
+    "prompt": "Step 4/{{total}} — Draw the <1>Description</1> column <2>(the transaction's description — the next step starts automatically)</2>."
+  },
+  "amountStep": {
+    "prompt": "Step 5/{{total}} — Draw the <1>Amount</1> column.",
+    "modeSigned": "One column <1>(positive and negative amounts)</1>",
+    "modePair": "Two columns <1>(Debit + Credit)</1>",
+    "signedColumnHeading": "Amount column",
+    "debitHeading": "Canvas 1/2 — Draw the <1>Debit</1> column",
+    "creditHeading": "Canvas 2/2 — Draw the <1>Credit</1> column",
+    "templateNameLabel": "Template name",
+    "templateNamePlaceholder": "e.g. BNP — Checking account"
+  },
+  "anchorPicker": {
+    "heading": "Identify your account",
+    "optional": "(optional)",
+    "emptyHint": "No header candidate was detected on this PDF. Automatic detection will still run — you'll be able to check it in the <1>PDF Templates</1> panel after the import.",
+    "hint": "Tick \"Mine\" on your account's header. Every other detected header will automatically be treated as a different account (uncheck one if that's not the case). With no selection, the server tries to guess from the pages ticked above.",
+    "pagePrefix": "p.{{number}}",
+    "mine": "Mine",
+    "other": "Other account",
+    "reset": "Reset (let the server guess)"
+  },
+  "extractedTextPanel": {
+    "summary": "View extracted text (diagnostic)",
+    "hint": "What pdfjs extracted from the PDF, page by page. Highlighted lines look like an account header (server-side heuristic) and become candidates for the account / other-accounts marker.",
+    "pageHeading": "— Page {{number}} — {{count}} line(s)"
+  },
+  "ocrProgress": {
+    "title": "Recognizing characters",
+    "pagesProgress": "{{progress}} / {{total}} pages",
+    "unknownError": "Unknown OCR failure",
+    "loadError": "Couldn't load the recognized text — try again.",
+    "retryHint": "Close this window and try again with a sharper or better-framed file."
+  },
+  "preview": {
+    "heading": "Preview",
+    "rowCount_one": "({{count}} row)",
+    "rowCount_other": "({{count}} rows)",
+    "button": "Preview",
+    "buttonLoading": "Preview…",
+    "emptyHint": "Click <1>Preview</1> to check before importing.",
+    "noRows": "No rows extracted. Check that the columns cover the table correctly.",
+    "skippedSummary": "{{count}} row(s) skipped",
+    "importButton": "Import",
+    "importButtonLoading": "Import…"
+  },
+  "previewTable": {
+    "summary": "Preview ({{count}} rows)",
+    "deleteRow": "Delete row",
+    "importButton": "Import",
+    "importButtonLoading": "Importing…"
+  },
+  "staleBanner": {
+    "title": "The previous template no longer matches this PDF",
+    "fallbackDiagnostic": "The template was applied but produced no rows. Reconfigure the zones below.",
+    "replaceNote": "The existing template will be replaced by this new version when you click \"{{importLabel}}\"."
+  },
+  "errors": {
+    "previewFailed": "Preview failed",
+    "submitFailed": "Import failed"
+  }
+}

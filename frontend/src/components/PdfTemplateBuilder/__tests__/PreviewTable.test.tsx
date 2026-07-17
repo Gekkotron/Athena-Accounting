@@ -1,6 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PreviewTable, type PreviewRow } from '../PreviewTable';
+import i18n from '../../../i18n';
+
+// PreviewTable renders French strings by default (the app's current UI
+// language). Preload the 'pdf-template' namespace for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['pdf-template', 'common']);
+});
 
 function rows(): PreviewRow[] {
   return [

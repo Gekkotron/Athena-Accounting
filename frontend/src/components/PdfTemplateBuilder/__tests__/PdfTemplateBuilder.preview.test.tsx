@@ -1,7 +1,18 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { PdfTemplateBuilder } from '../index';
 import type { PdfImportNeedsTemplate } from '../../../api/pdf-templates';
+import i18n from '../../../i18n';
+
+// PdfTemplateBuilder renders French strings by default (the app's current UI
+// language). Preload the 'pdf-template' namespace for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['pdf-template', 'common']);
+});
 
 // Mocking ZoneCanvas at the module boundary (rather than the brief's
 // vi.doMock + dynamic re-import) — the test file already imports

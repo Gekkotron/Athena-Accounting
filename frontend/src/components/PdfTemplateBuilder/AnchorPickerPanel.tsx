@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import type { PdfImportNeedsTemplate, PdfTextItem } from '../../api/pdf-templates';
 
 // Matches the backend's LINE_Y_TOLERANCE_PT.
@@ -68,15 +69,19 @@ export function AnchorPickerPanel({
   onPageAnchorChange,
   onOtherAnchorsChange,
 }: Props): JSX.Element {
+  const { t } = useTranslation('pdf-template');
   const candidates = useMemo(() => collectCandidates(needsTemplate), [needsTemplate]);
 
   if (candidates.length === 0) {
     return (
       <div className="mt-5 pt-4 border-t border-ink-800/60">
-        <div className="text-sm text-ink-100 font-medium mb-1">Identifier votre compte</div>
+        <div className="text-sm text-ink-100 font-medium mb-1">{t('anchorPicker.heading')}</div>
         <p className="text-xs text-ink-400">
-          Aucun candidat d'en-tête n'a été détecté sur ce PDF. La détection automatique s'exécutera
-          quand même — vous pourrez la vérifier dans la panneau <em>Templates PDF</em> après l'import.
+          <Trans i18nKey="pdf-template:anchorPicker.emptyHint">
+            Aucun candidat d'en-tête n'a été détecté sur ce PDF. La détection automatique
+            s'exécutera quand même — vous pourrez la vérifier dans la panneau{' '}
+            <em>Templates PDF</em> après l'import.
+          </Trans>
         </p>
       </div>
     );
@@ -87,12 +92,10 @@ export function AnchorPickerPanel({
   return (
     <div className="mt-5 pt-4 border-t border-ink-800/60">
       <div className="text-sm text-ink-100 font-medium mb-1">
-        Identifier votre compte <span className="text-ink-500 font-normal">(optionnel)</span>
+        {t('anchorPicker.heading')} <span className="text-ink-500 font-normal">{t('anchorPicker.optional')}</span>
       </div>
       <p className="text-xs text-ink-400 mb-3">
-        Cochez « Le mien » sur l'en-tête de votre compte. Tous les autres en-têtes détectés seront
-        automatiquement traités comme des comptes différents (décochez-en un si ce n'est pas le
-        cas). Sans sélection, le serveur essaie de deviner à partir des pages cochées ci-dessus.
+        {t('anchorPicker.hint')}
       </p>
       <div className="space-y-1.5">
         {candidates.map((c) => {
@@ -103,7 +106,9 @@ export function AnchorPickerPanel({
               key={`${c.pageIndex}-${c.text}`}
               className="flex flex-wrap items-center gap-3 text-xs"
             >
-              <span className="text-ink-600 font-mono w-14 shrink-0">p.{c.pageIndex + 1}</span>
+              <span className="text-ink-600 font-mono w-14 shrink-0">
+                {t('anchorPicker.pagePrefix', { number: c.pageIndex + 1 })}
+              </span>
               <span className="font-mono text-ink-200 flex-1 min-w-0 truncate" title={c.display}>
                 {c.display}
               </span>
@@ -126,7 +131,7 @@ export function AnchorPickerPanel({
                     );
                   }}
                 />
-                <span>Le mien</span>
+                <span>{t('anchorPicker.mine')}</span>
               </label>
               <label className="flex items-center gap-1 cursor-pointer text-ink-400 hover:text-ink-100">
                 <input
@@ -142,7 +147,7 @@ export function AnchorPickerPanel({
                     );
                   }}
                 />
-                <span>Autre compte</span>
+                <span>{t('anchorPicker.other')}</span>
               </label>
             </div>
           );
@@ -157,7 +162,7 @@ export function AnchorPickerPanel({
             onOtherAnchorsChange(() => []);
           }}
         >
-          Réinitialiser (laisser le serveur deviner)
+          {t('anchorPicker.reset')}
         </button>
       )}
     </div>

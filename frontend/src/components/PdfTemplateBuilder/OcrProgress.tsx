@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getOcrStatus, type OcrStatusResponse } from '../../api/pdf-templates';
 
 export function OcrProgress({
@@ -9,6 +10,7 @@ export function OcrProgress({
   onReady: (r: OcrStatusResponse) => void;
   onError: (msg: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation('pdf-template');
   const q = useQuery({
     queryKey: ['ocr-status', draftId],
     queryFn: () => getOcrStatus(draftId),
@@ -18,7 +20,7 @@ export function OcrProgress({
   });
   useEffect(() => {
     if (q.data?.status === 'ready') onReady(q.data);
-    if (q.data?.status === 'error') onError(q.data.error ?? 'OCR échec inconnu');
+    if (q.data?.status === 'error') onError(q.data.error ?? t('ocrProgress.unknownError'));
   }, [q.data?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = q.data?.progress ?? 0;
@@ -27,8 +29,8 @@ export function OcrProgress({
 
   return (
     <div className="flex flex-col items-center gap-4 py-12">
-      <div className="text-lg font-medium text-ink-50">Reconnaissance des caractères</div>
-      <div className="text-sm text-ink-400">{progress} / {total} pages</div>
+      <div className="text-lg font-medium text-ink-50">{t('ocrProgress.title')}</div>
+      <div className="text-sm text-ink-400">{t('ocrProgress.pagesProgress', { progress, total })}</div>
       <div className="w-72 h-2 rounded-full bg-ink-800 overflow-hidden">
         <div className="h-full bg-sage-500 transition-[width]" style={{ width: `${pct}%` }} />
       </div>

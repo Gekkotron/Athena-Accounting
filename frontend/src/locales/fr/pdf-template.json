@@ -1,0 +1,113 @@
+{
+  "modal": {
+    "title": "Définir le template PDF",
+    "close": "Fermer"
+  },
+  "columns": {
+    "table": "Tableau",
+    "date": "Date",
+    "description": "Libellé",
+    "amount": "Montant",
+    "debit": "Débit",
+    "credit": "Crédit",
+    "confidence": "Confiance"
+  },
+  "steps": {
+    "header": {
+      "title": "Sélectionnez l'en-tête",
+      "tooltip": "Tracez autour du logo / titre de la banque en haut de la page. Cette zone sert d'empreinte : la prochaine fois que vous importerez un relevé de la même banque, Athena reconnaîtra le template automatiquement."
+    },
+    "table": {
+      "title": "Sélectionnez le tableau des transactions",
+      "tooltip": "Tracez autour de tout le tableau des transactions, en-tête de colonnes inclus. N'incluez pas les totaux ou le pied de page — juste les lignes de mouvement."
+    },
+    "date": {
+      "title": "Sélectionnez la colonne Date",
+      "tooltip": "Tracez une bande verticale fine qui couvre uniquement la colonne des dates, à l'intérieur du tableau que vous venez de délimiter. La hauteur n'a pas d'importance : Athena utilise seulement les bornes gauche/droite."
+    },
+    "description": {
+      "title": "Sélectionnez la colonne Libellé",
+      "tooltip": "Tracez la colonne du libellé (nom du commerçant / motif). Peut être large : les colonnes voisines seront ignorées grâce aux bornes de chaque colonne."
+    },
+    "amount": {
+      "title": "Sélectionnez la colonne Montant",
+      "tooltip": "Choisissez d'abord si votre banque affiche un seul montant signé (+ / −) ou deux colonnes Débit + Crédit. Puis tracez les colonnes correspondantes. Donnez enfin un nom au template pour le retrouver plus tard."
+    }
+  },
+  "headerStep": {
+    "prompt": "Étape 1/{{total}} — Sélectionnez l'en-tête <1>(utilisé pour reconnaître cette banque la prochaine fois)</1>."
+  },
+  "tableStep": {
+    "prompt": "Étape 2/{{total}} — Sélectionnez le tableau des transactions <1>(toutes les lignes, en-tête de colonne incluse)</1>.",
+    "repeatsLabel": "Le tableau se répète sur chaque page",
+    "pagesHeading": "Pages à importer pour ce compte",
+    "pagesHint": "Si le relevé contient plusieurs comptes, ne cochez que les pages qui appartiennent au compte choisi à l'upload. Les autres pages seront ignorées pour cet import.",
+    "pageLabel": "Page {{number}}",
+    "noPagesSelected": "Sélectionnez au moins une page."
+  },
+  "dateStep": {
+    "prompt": "Étape 3/{{total}} — Tracez la colonne <1>Date</1> <2>à l'intérieur du tableau — l'étape suivante démarre automatiquement</2>."
+  },
+  "descriptionStep": {
+    "prompt": "Étape 4/{{total}} — Tracez la colonne <1>Libellé</1> <2>(description de la transaction — l'étape suivante démarre automatiquement)</2>."
+  },
+  "amountStep": {
+    "prompt": "Étape 5/{{total}} — Tracez la colonne <1>Montant</1>.",
+    "modeSigned": "Une colonne <1>(montants positifs et négatifs)</1>",
+    "modePair": "Deux colonnes <1>(Débit + Crédit)</1>",
+    "signedColumnHeading": "Colonne Montant",
+    "debitHeading": "Canvas 1/2 — Tracez la colonne <1>Débit</1>",
+    "creditHeading": "Canvas 2/2 — Tracez la colonne <1>Crédit</1>",
+    "templateNameLabel": "Nom du template",
+    "templateNamePlaceholder": "ex: BNP — Compte Chèques"
+  },
+  "anchorPicker": {
+    "heading": "Identifier votre compte",
+    "optional": "(optionnel)",
+    "emptyHint": "Aucun candidat d'en-tête n'a été détecté sur ce PDF. La détection automatique s'exécutera quand même — vous pourrez la vérifier dans la panneau <1>Templates PDF</1> après l'import.",
+    "hint": "Cochez « Le mien » sur l'en-tête de votre compte. Tous les autres en-têtes détectés seront automatiquement traités comme des comptes différents (décochez-en un si ce n'est pas le cas). Sans sélection, le serveur essaie de deviner à partir des pages cochées ci-dessus.",
+    "pagePrefix": "p.{{number}}",
+    "mine": "Le mien",
+    "other": "Autre compte",
+    "reset": "Réinitialiser (laisser le serveur deviner)"
+  },
+  "extractedTextPanel": {
+    "summary": "Voir le texte extrait (diagnostic)",
+    "hint": "Ce que pdfjs a extrait du PDF, page par page. Les lignes surlignées ressemblent à un en-tête de compte (heuristique côté serveur) et deviennent candidates pour le marqueur du compte / autres comptes.",
+    "pageHeading": "— Page {{number}} — {{count}} ligne(s)"
+  },
+  "ocrProgress": {
+    "title": "Reconnaissance des caractères",
+    "pagesProgress": "{{progress}} / {{total}} pages",
+    "unknownError": "OCR échec inconnu",
+    "loadError": "Impossible de charger le texte reconnu — réessayez.",
+    "retryHint": "Fermez cette fenêtre et réessayez avec un fichier plus net ou mieux cadré."
+  },
+  "preview": {
+    "heading": "Aperçu",
+    "rowCount_one": "({{count}} ligne)",
+    "rowCount_other": "({{count}} lignes)",
+    "button": "Aperçu",
+    "buttonLoading": "Aperçu…",
+    "emptyHint": "Cliquez sur <1>Aperçu</1> pour vérifier avant l'import.",
+    "noRows": "Aucune ligne extraite. Vérifiez que les colonnes couvrent bien le tableau.",
+    "skippedSummary": "{{count}} ligne(s) ignorée(s)",
+    "importButton": "Importer",
+    "importButtonLoading": "Import…"
+  },
+  "previewTable": {
+    "summary": "Aperçu ({{count}} lignes)",
+    "deleteRow": "Supprimer la ligne",
+    "importButton": "Importer",
+    "importButtonLoading": "Importation…"
+  },
+  "staleBanner": {
+    "title": "Le template précédent ne correspond plus à ce PDF",
+    "fallbackDiagnostic": "Le template a été appliqué mais n'a produit aucune ligne. Reconfigurez les zones ci-dessous.",
+    "replaceNote": "Le template existant sera remplacé par cette nouvelle version quand vous cliquerez sur « {{importLabel}} »."
+  },
+  "errors": {
+    "previewFailed": "Échec de l'aperçu",
+    "submitFailed": "Échec de l'import"
+  }
+}

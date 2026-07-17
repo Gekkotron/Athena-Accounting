@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PdfTextItem, PdfImportNeedsTemplate } from '../../api/pdf-templates';
 
 // Two items whose yTop differs by <= this many points are grouped into
@@ -46,6 +47,7 @@ export function ExtractedTextPanel({
 }: {
   needsTemplate: PdfImportNeedsTemplate;
 }): JSX.Element {
+  const { t } = useTranslation('pdf-template');
   const linesPerPage = useMemo(() => {
     const byPage = new Map<number, PdfTextItem[]>();
     for (const it of needsTemplate.textItems) {
@@ -62,17 +64,17 @@ export function ExtractedTextPanel({
   return (
     <details className="mt-4 rounded-lg border border-ink-800/60 bg-ink-950/40 text-xs">
       <summary className="cursor-pointer px-3 py-2 text-ink-300 hover:text-ink-100">
-        Voir le texte extrait (diagnostic)
+        {t('extractedTextPanel.summary')}
       </summary>
       <div className="px-3 pb-3 pt-1 max-h-96 overflow-auto font-mono">
         <p className="mb-2 text-[11px] text-ink-500 leading-relaxed">
-          Ce que pdfjs a extrait du PDF, page par page. Les lignes surlignées ressemblent à un
-          en-tête de compte (heuristique côté serveur) et deviennent candidates pour le
-          marqueur du compte / autres comptes.
+          {t('extractedTextPanel.hint')}
         </p>
         {linesPerPage.map(({ pageIndex, lines }) => (
           <div key={pageIndex} className="mb-3 last:mb-0">
-            <div className="text-ink-500 mb-1">— Page {pageIndex + 1} — {lines.length} ligne(s)</div>
+            <div className="text-ink-500 mb-1">
+              {t('extractedTextPanel.pageHeading', { number: pageIndex + 1, count: lines.length })}
+            </div>
             <ul className="space-y-0.5">
               {lines.map((l, i) => (
                 <li

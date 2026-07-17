@@ -1,8 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExtractedTextPanel } from '../ExtractedTextPanel';
 import type { PdfImportNeedsTemplate, PdfTextItem } from '../../../api/pdf-templates';
+import i18n from '../../../i18n';
+
+// ExtractedTextPanel renders French strings by default (the app's current UI
+// language). Preload the 'pdf-template' namespace for both locales so
+// `useTranslation` never suspends mid-render, then pin the active language
+// to French so the existing French-literal assertions below keep matching
+// real rendered text.
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['pdf-template', 'common']);
+});
 
 function item(pageIndex: number, str: string, xLeft: number, yTop: number): PdfTextItem {
   return { pageIndex, str, xLeft, yTop, width: str.length * 5, height: 10 };

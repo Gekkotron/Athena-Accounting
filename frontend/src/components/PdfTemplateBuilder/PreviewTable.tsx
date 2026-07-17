@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface PreviewRow {
   date: string;
@@ -34,6 +35,7 @@ export function PreviewTable({
   onImport: () => void;
   importing: boolean;
 }): JSX.Element {
+  const { t } = useTranslation('pdf-template');
   const hasConfidence = useMemo(() => rows.some((r) => r.confidence != null), [rows]);
   const invalid = useMemo(() => rows.some((r) =>
     editable && (!DATE_RE.test(r.date) || !AMOUNT_RE.test(r.amount))
@@ -41,15 +43,15 @@ export function PreviewTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-sm text-ink-400">Aperçu ({rows.length} lignes)</div>
+      <div className="text-sm text-ink-400">{t('previewTable.summary', { count: rows.length })}</div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-ink-500">
             <tr>
-              <th className="pb-2 pr-3">Date</th>
-              <th className="pb-2 pr-3">Libellé</th>
-              <th className="pb-2 pr-3 text-right">Montant</th>
-              {hasConfidence && <th className="pb-2 pr-3">Confiance</th>}
+              <th className="pb-2 pr-3">{t('columns.date')}</th>
+              <th className="pb-2 pr-3">{t('columns.description')}</th>
+              <th className="pb-2 pr-3 text-right">{t('columns.amount')}</th>
+              {hasConfidence && <th className="pb-2 pr-3">{t('columns.confidence')}</th>}
               {editable && <th className="pb-2"></th>}
             </tr>
           </thead>
@@ -62,7 +64,7 @@ export function PreviewTable({
                   <td className="py-1.5 pr-3">
                     {editable ? (
                       <input
-                        aria-label="Date"
+                        aria-label={t('columns.date')}
                         className={`input-sm ${!dateOk ? 'border-clay-500' : ''}`}
                         data-invalid={!dateOk}
                         value={r.date}
@@ -73,7 +75,7 @@ export function PreviewTable({
                   <td className="py-1.5 pr-3">
                     {editable ? (
                       <input
-                        aria-label="Libellé"
+                        aria-label={t('columns.description')}
                         className="input-sm w-full"
                         value={r.label}
                         onChange={(e) => onChange?.(i, { label: e.target.value })}
@@ -83,7 +85,7 @@ export function PreviewTable({
                   <td className="py-1.5 pr-3 text-right font-mono">
                     {editable ? (
                       <input
-                        aria-label="Montant"
+                        aria-label={t('columns.amount')}
                         className={`input-sm text-right ${!amountOk ? 'border-clay-500' : ''}`}
                         data-invalid={!amountOk}
                         value={r.amount}
@@ -107,7 +109,7 @@ export function PreviewTable({
                     <td className="py-1.5">
                       <button
                         type="button"
-                        aria-label="Supprimer la ligne"
+                        aria-label={t('previewTable.deleteRow')}
                         className="text-ink-500 hover:text-clay-300"
                         onClick={() => onDelete?.(i)}
                       >×</button>
@@ -126,7 +128,7 @@ export function PreviewTable({
           disabled={invalid || importing || rows.length === 0}
           onClick={onImport}
         >
-          {importing ? 'Importation…' : 'Importer'}
+          {importing ? t('previewTable.importButtonLoading') : t('previewTable.importButton')}
         </button>
       </div>
     </div>

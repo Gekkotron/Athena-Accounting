@@ -1,10 +1,12 @@
-import { STEP_ORDER, STEP_TITLE, type Step } from './constants';
+import { useTranslation } from 'react-i18next';
+import { STEP_ORDER, type Step } from './constants';
 
 interface Props {
   currentStep: Step;
 }
 
 export function StepIndicator({ currentStep }: Props): JSX.Element {
+  const { t } = useTranslation('pdf-template');
   const stepIdx = STEP_ORDER.indexOf(currentStep);
   return (
     <ol className="flex gap-2 mb-4 text-xs">
@@ -23,7 +25,7 @@ export function StepIndicator({ currentStep }: Props): JSX.Element {
                 : 'border-ink-700 text-ink-400')
             }
           >
-            {i + 1}. {STEP_TITLE[s]}
+            {i + 1}. {t(`steps.${s}.title`)}
           </li>
         );
       })}

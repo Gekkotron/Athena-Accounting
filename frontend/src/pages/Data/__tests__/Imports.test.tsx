@@ -8,13 +8,14 @@ import { withTips } from '../../../test/renderWithProviders';
 import i18n from '../../../i18n';
 
 // This route composes UploadForm, FileImportsList, PdfTemplateWizard, etc.,
-// all of which use useTranslation('imports'). Preload the namespace for
-// both locales so none of them suspend mid-render, then pin the active
-// language to French so the existing French-literal assertions below keep
-// matching real rendered text.
+// all of which use useTranslation('imports'); PdfTemplateWizard also renders
+// the PdfTemplateBuilder wizard (namespace 'pdf-template') when a template
+// upload needs one. Preload the namespaces for both locales so none of them
+// suspend mid-render, then pin the active language to French so the
+// existing French-literal assertions below keep matching real rendered text.
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports', 'common']);
+  await i18n.loadNamespaces(['imports', 'pdf-template', 'common']);
 });
 
 vi.mock('../../../api/client', async () => {

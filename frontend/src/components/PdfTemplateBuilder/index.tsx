@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
 import {
   submitZones,
@@ -19,7 +20,6 @@ import { PreviewTable, type PreviewRow } from './PreviewTable';
 import {
   PAINT_COLOR,
   STEP_ORDER,
-  STEP_TOOLTIP,
   type AmountMode,
   type Step,
 } from './constants';
@@ -32,6 +32,7 @@ interface Props {
 }
 
 export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props): JSX.Element {
+  const { t } = useTranslation(['pdf-template', 'common']);
   const firstPage = needsTemplate.pages[0]!;
   const [step, setStep] = useState<Step>('header');
 
@@ -102,7 +103,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       const draft = await getDraft(needsTemplate.draftId);
       setFreshTextItems(draft.textItems);
     } catch {
-      setOcrError('Impossible de charger le texte reconnu — réessayez.');
+      setOcrError(t('ocrProgress.loadError'));
     }
   }
 
@@ -218,7 +219,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       setPreviewSkipped(r.skippedRows);
     } catch (e: any) {
       if (myReqId !== previewReqIdRef.current) return; // stale response, ignore
-      setPreviewError(e?.message ?? 'preview failed');
+      setPreviewError(e?.message ?? t('errors.previewFailed'));
       setPreviewRows(null);
       setPreviewSkipped([]);
     } finally {
@@ -235,7 +236,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       const result = await submitZones(needsTemplate.draftId, label.trim(), zones, overrideRows);
       onImported(result);
     } catch (e: any) {
-      setErr(e?.message ?? 'submit failed');
+      setErr(e?.message ?? t('errors.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -255,14 +256,14 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
   type Canvas = 'date' | 'description' | 'signed' | 'debit' | 'credit';
   const refsFor = (current: Canvas) => {
     const refs: Array<{ rect: PageRect; label?: string; color?: string }> = [];
-    if (tableRect) refs.push({ rect: tableRect, label: 'Tableau', color: '#5b6478' });
-    if (current !== 'date' && dateCol) refs.push({ rect: dateCol, label: 'Date', color: '#7dd3c0' });
-    if (current !== 'description' && descCol) refs.push({ rect: descCol, label: 'Libellé', color: '#7dd3c0' });
+    if (tableRect) refs.push({ rect: tableRect, label: t('columns.table'), color: '#5b6478' });
+    if (current !== 'date' && dateCol) refs.push({ rect: dateCol, label: t('columns.date'), color: '#7dd3c0' });
+    if (current !== 'description' && descCol) refs.push({ rect: descCol, label: t('columns.description'), color: '#7dd3c0' });
     if (amountMode === 'signed') {
-      if (current !== 'signed' && signedCol) refs.push({ rect: signedCol, label: 'Montant', color: '#e69782' });
+      if (current !== 'signed' && signedCol) refs.push({ rect: signedCol, label: t('columns.amount'), color: '#e69782' });
     } else {
-      if (current !== 'debit' && debitCol) refs.push({ rect: debitCol, label: 'Débit', color: '#e69782' });
-      if (current !== 'credit' && creditCol) refs.push({ rect: creditCol, label: 'Crédit', color: '#7dd3c0' });
+      if (current !== 'debit' && debitCol) refs.push({ rect: debitCol, label: t('columns.debit'), color: '#e69782' });
+      if (current !== 'credit' && creditCol) refs.push({ rect: creditCol, label: t('columns.credit'), color: '#7dd3c0' });
     }
     return refs;
   };
@@ -275,12 +276,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       >
         <div className="flex justify-between items-start mb-1">
           <h2 className="display text-xl text-ink-50" style={{ color: '#f4f5f8' }}>
-            Définir le template PDF
+            {t('modal.title')}
           </h2>
           <button
             onClick={onClose}
             className="text-ink-300 hover:text-ink-50 transition text-lg leading-none px-2"
-            aria-label="Fermer"
+            aria-label={t('modal.close')}
           >✕</button>
         </div>
 
@@ -293,7 +294,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             />
             {ocrError && (
               <p className="text-center text-xs text-ink-500 -mt-6">
-                Fermez cette fenêtre et réessayez avec un fichier plus net ou mieux cadré.
+                {t('ocrProgress.retryHint')}
               </p>
             )}
           </>
@@ -303,13 +304,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
 
         {needsTemplate.reason === 'template_stale' && (
           <div className="bg-clay-900/30 border border-clay-800/60 text-clay-200 p-3 rounded-lg mb-4 text-sm">
-            <div className="font-medium mb-1">Le template précédent ne correspond plus à ce PDF</div>
+            <div className="font-medium mb-1">{t('staleBanner.title')}</div>
             <div className="text-clay-300/90 text-xs leading-relaxed">
-              {needsTemplate.staleDiagnostic
-                ?? 'Le template a été appliqué mais n\'a produit aucune ligne. Reconfigurez les zones ci-dessous.'}
+              {needsTemplate.staleDiagnostic ?? t('staleBanner.fallbackDiagnostic')}
             </div>
             <div className="text-clay-300/70 text-xs mt-2">
-              Le template existant sera remplacé par cette nouvelle version quand vous cliquerez sur « Importer ».
+              {t('staleBanner.replaceNote', { importLabel: t('preview.importButton') })}
             </div>
           </div>
         )}
@@ -318,12 +318,14 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <>
             <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
               <span>
-                Étape 1/{totalSteps} — Sélectionnez l'en-tête{' '}
-                <span className="text-ink-400 font-normal">
-                  (utilisé pour reconnaître cette banque la prochaine fois)
-                </span>.
+                <Trans i18nKey="pdf-template:headerStep.prompt" values={{ total: totalSteps }}>
+                  Étape 1/{{ total: totalSteps }} — Sélectionnez l'en-tête{' '}
+                  <span className="text-ink-400 font-normal">
+                    (utilisé pour reconnaître cette banque la prochaine fois)
+                  </span>.
+                </Trans>
               </span>
-              <InfoTip text={STEP_TOOLTIP.header} />
+              <InfoTip text={t('steps.header.tooltip')} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -357,10 +359,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <>
             <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
               <span>
-                Étape 3/{totalSteps} — Tracez la colonne <span className="text-sage-300">Date</span>{' '}
-                <span className="text-ink-400 font-normal">à l'intérieur du tableau — l'étape suivante démarre automatiquement</span>.
+                <Trans i18nKey="pdf-template:dateStep.prompt" values={{ total: totalSteps }}>
+                  Étape 3/{{ total: totalSteps }} — Tracez la colonne <span className="text-sage-300">Date</span>{' '}
+                  <span className="text-ink-400 font-normal">à l'intérieur du tableau — l'étape suivante démarre automatiquement</span>.
+                </Trans>
               </span>
-              <InfoTip text={STEP_TOOLTIP.date} />
+              <InfoTip text={t('steps.date.tooltip')} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -369,7 +373,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               initialRect={dateCol}
               referenceRects={refsFor('date')}
               paintColor={PAINT_COLOR.date}
-              paintLabel="Date"
+              paintLabel={t('columns.date')}
               onChange={onDateChange}
             />
           </>
@@ -379,10 +383,12 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <>
             <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
               <span>
-                Étape 4/{totalSteps} — Tracez la colonne <span className="text-sage-300">Libellé</span>{' '}
-                <span className="text-ink-400 font-normal">(description de la transaction — l'étape suivante démarre automatiquement)</span>.
+                <Trans i18nKey="pdf-template:descriptionStep.prompt" values={{ total: totalSteps }}>
+                  Étape 4/{{ total: totalSteps }} — Tracez la colonne <span className="text-sage-300">Libellé</span>{' '}
+                  <span className="text-ink-400 font-normal">(description de la transaction — l'étape suivante démarre automatiquement)</span>.
+                </Trans>
               </span>
-              <InfoTip text={STEP_TOOLTIP.description} />
+              <InfoTip text={t('steps.description.tooltip')} />
             </p>
             <ZoneCanvas
               pngBase64={firstPage.pngBase64}
@@ -391,7 +397,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
               initialRect={descCol}
               referenceRects={refsFor('description')}
               paintColor={PAINT_COLOR.description}
-              paintLabel="Libellé"
+              paintLabel={t('columns.description')}
               onChange={onDescChange}
             />
           </>
@@ -420,10 +426,10 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <div className="mt-6 border-t border-ink-800/60 pt-5">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-medium text-ink-100">
-                Aperçu
+                {t('preview.heading')}
                 {previewRows && (
                   <span className="text-ink-500 font-normal font-mono ml-2">
-                    ({previewRows.length} ligne{previewRows.length !== 1 ? 's' : ''})
+                    {t('preview.rowCount', { count: previewRows.length })}
                   </span>
                 )}
               </div>
@@ -433,7 +439,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
                 disabled={!canSubmit || previewLoading}
                 type="button"
               >
-                {previewLoading ? 'Aperçu…' : 'Aperçu'}
+                {previewLoading ? t('preview.buttonLoading') : t('preview.button')}
               </button>
             </div>
             {previewError && (
@@ -443,12 +449,14 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             )}
             {previewRows === null && !previewLoading && !previewError && (
               <div className="text-xs text-ink-500 display-italic">
-                Cliquez sur <span className="font-medium not-italic text-ink-400">Aperçu</span> pour vérifier avant l'import.
+                <Trans i18nKey="pdf-template:preview.emptyHint">
+                  Cliquez sur <span className="font-medium not-italic text-ink-400">Aperçu</span> pour vérifier avant l'import.
+                </Trans>
               </div>
             )}
             {previewRows && previewRows.length === 0 && (
               <div className="text-xs text-clay-300 display-italic">
-                Aucune ligne extraite. Vérifiez que les colonnes couvrent bien le tableau.
+                {t('preview.noRows')}
               </div>
             )}
             {previewRows && previewRows.length > 0 && isOcrSource && (
@@ -468,9 +476,9 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
                 <table className="w-full text-xs">
                   <thead className="text-left text-ink-500">
                     <tr>
-                      <th className="py-1.5 pr-3 font-normal">Date</th>
-                      <th className="py-1.5 pr-3 font-normal">Libellé</th>
-                      <th className="py-1.5 pl-3 font-normal text-right">Montant</th>
+                      <th className="py-1.5 pr-3 font-normal">{t('columns.date')}</th>
+                      <th className="py-1.5 pr-3 font-normal">{t('columns.description')}</th>
+                      <th className="py-1.5 pl-3 font-normal text-right">{t('columns.amount')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -491,7 +499,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             )}
             {previewSkipped.length > 0 && (
               <details className="mt-3 text-xs text-ink-500">
-                <summary className="cursor-pointer">{previewSkipped.length} ligne(s) ignorée(s)</summary>
+                <summary className="cursor-pointer">{t('preview.skippedSummary', { count: previewSkipped.length })}</summary>
                 <ul className="mt-2 space-y-1 font-mono">
                   {previewSkipped.map((s, i) => (
                     <li key={i}><code>{s.rowText}</code> — {s.reason}</li>
@@ -507,7 +515,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             className="px-4 py-2 rounded-lg border border-ink-700 text-ink-200 hover:bg-ink-850 transition disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={prev}
             disabled={stepIdx === 0}
-          >← Précédent</button>
+          >← {t('previous', { ns: 'common' })}</button>
 
           {!isLast ? (
             <button
@@ -518,13 +526,13 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
                 (step === 'date' && !dateCol) ||
                 (step === 'description' && !descCol)
               }
-            >Suivant →</button>
+            >{t('next', { ns: 'common' })} →</button>
           ) : !isOcrSource ? (
             <button
               className="px-4 py-2 rounded-lg bg-sage-300 text-ink-950 font-medium hover:bg-sage-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={() => handleSubmit()}
               disabled={!canSubmit || submitting}
-            >{submitting ? 'Import…' : 'Importer'}</button>
+            >{submitting ? t('preview.importButtonLoading') : t('preview.importButton')}</button>
           ) : null}
         </div>
         </>

@@ -5,13 +5,14 @@ import { PdfTemplateWizard } from '../PdfTemplateWizard';
 import i18n from '../../../i18n';
 
 // PdfTemplateWizard's ImportSummary sub-component renders French strings by
-// default (the app's current UI language). Preload the namespaces it
-// consumes for both locales so `useTranslation` never suspends mid-render,
-// then pin the active language to French so the existing French-literal
-// assertions below keep matching real rendered text.
+// default (the app's current UI language), and it renders the
+// PdfTemplateBuilder wizard (namespace 'pdf-template') when needsTpl is set.
+// Preload the namespaces they consume for both locales so `useTranslation`
+// never suspends mid-render, then pin the active language to French so the
+// existing French-literal assertions below keep matching real rendered text.
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports', 'common']);
+  await i18n.loadNamespaces(['imports', 'pdf-template', 'common']);
 });
 
 // The lastImported banner now fetches transactions by sourceFileId to
