@@ -83,5 +83,19 @@
   "accountSelect": {
     "allAccounts": "Tous les comptes",
     "ariaLabel": "Compte affiché"
+  },
+  "envelopeTile": {
+    "header": "Enveloppes",
+    "actions": {
+      "viewAll": "Voir tout →"
+    },
+    "stats": {
+      "available": "Disponible",
+      "assigned": "Assigné",
+      "overBudget": "Sur-budget",
+      "overBudgetCount_one": "{{count}} catégorie",
+      "overBudgetCount_other": "{{count}} catégories",
+      "held": "Retenu"
+    }
   }
 }
