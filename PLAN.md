@@ -27,15 +27,15 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
-## Done
-
-- [x] Cut `v1.0.0-desktop-beta1` — mechanical release path only
+- [ ] Cut `v1.0.0-desktop-beta1` — mechanical release path only     <!-- blocked: desktop-release.yml trigger `v*-desktop` glob doesn't match `v1.0.0-desktop-beta1` (needs trailing `-desktop`); tag pushed but workflow never fired, and both mitigations (delete/retag, workflow_dispatch) are blocked (classifier + missing admin scope) —  fix the pattern to `v*-desktop*`, retag, then re-run. -->
       Bump the release-visible version to `1.0.0-desktop-beta1` in the places the workflow expects (root `package.json` `version`, `desktop/src-tauri/Cargo.toml` `[package] version`, `desktop/src-tauri/tauri.conf.json` `productName`/`version` if present).
       Draft release notes into `docs/RELEASES/v1.0.0-desktop-beta1.md`: pull commit subjects since the last non-desktop tag with `git log <last-release>..HEAD --oneline` (if no prior desktop tag exists, use the first commit of this branch as the base), group by category (features / fixes / infra), headline the Docker → Tauri pivot, note the Gatekeeper "unidentified developer" workaround for macOS, and include an empty "Manual verification" section with three checkboxes (macOS / Linux / Windows) for the human to tick after installing.
       Commit the version bumps + release notes, then create an annotated tag: `git tag -a v1.0.0-desktop-beta1 -m "First desktop beta"`. Push both: `git push origin main v1.0.0-desktop-beta1`. This matches `.github/workflows/desktop-release.yml`'s `v*-desktop` pattern.
       Watch the workflow to completion with `gh run watch` on the triggered run. Wait for all three matrix jobs to be green. If any fail, capture the run URL and treat as blocked (per contract clause 3). If green, promote the draft release to published via `gh release edit v1.0.0-desktop-beta1 --draft=false`.
       **Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session** — cross-OS install verification is the human-owned checklist under `## Manual checklist` in this file (parser-invisible section) and is expected to complete outside the orchestrator.
       Success criteria: (a) version bumps + release notes committed, (b) `v1.0.0-desktop-beta1` tag on `origin`, (c) workflow green with three artifacts (`.dmg`, `.AppImage`, `.exe`) on the release, (d) release published (not draft).
+
+## Done
 
 - [x] Restyle the public docs site to match the app's visual identity
       Target: <https://gekkotron.github.io/Athena-Accounting/> — currently uses the default theme of whatever static-site generator sits behind it. Make it feel like a first-party companion to the app.
