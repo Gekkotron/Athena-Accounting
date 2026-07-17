@@ -14,11 +14,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Packaging workflow + CI
-      New GH Actions workflow `.github/workflows/desktop-release.yml`. Trigger: tag push matching `v*-desktop` (or reuse existing `release.yml` if the shape fits).
-      Matrix `macos-latest`, `ubuntu-latest`, `windows-latest`. Each job builds the backend sidecar, builds the frontend (`npm run build`), builds the Tauri app (`cargo tauri build`), then uploads `.dmg` / `.AppImage` / `.exe` as GH Release artifacts.
-      Skip macOS code-signing initially (users get the "unidentified developer" dialog once; documented workaround). Revisit once we have an Apple Developer account.
-      Success criteria: pushing `v1.0.0-desktop-rc1` produces a draft release with three artifacts, each installable on their target OS.
 
 - [ ] MCP compatibility check
       The MCP endpoint (`/api/mcp/rpc`) must still be reachable in Tauri mode.
@@ -41,6 +36,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Packaging workflow + CI     <!-- blocked: workflow can't be written yet — depends on the still-blocked "Bundle backend as a sidecar binary" task (no artifacts to embed) and "Tauri shell in `desktop/`" task (no `desktop/` folder, `src-tauri/tauri.conf.json`, or Rust project for `cargo tauri build` to target); land those two first, then dispatch this to author `.github/workflows/desktop-release.yml`. -->
+      New GH Actions workflow `.github/workflows/desktop-release.yml`. Trigger: tag push matching `v*-desktop` (or reuse existing `release.yml` if the shape fits).
+      Matrix `macos-latest`, `ubuntu-latest`, `windows-latest`. Each job builds the backend sidecar, builds the frontend (`npm run build`), builds the Tauri app (`cargo tauri build`), then uploads `.dmg` / `.AppImage` / `.exe` as GH Release artifacts.
+      Skip macOS code-signing initially (users get the "unidentified developer" dialog once; documented workaround). Revisit once we have an Apple Developer account.
+      Success criteria: pushing `v1.0.0-desktop-rc1` produces a draft release with three artifacts, each installable on their target OS.
 - [ ] Tauri shell in `desktop/`     <!-- blocked: depends on the sidecar-binary task (line 53, itself blocked pending CI matrix / re-scope) for the `tauri.conf.json` sidecar declaration, and on the still-backlog "Serve the frontend from Fastify" task for the success criterion "window showing the frontend hitting the sidecar's Fastify" — unblock after re-scoping the sidecar packaging (directory-based node+JS bundle) AND landing the Fastify-static task, then dispatch. -->
       New `desktop/` folder — Tauri 2 project (Rust). `src-tauri/tauri.conf.json` declares the sidecar binary from the packaging task.
       Rust code (~40 lines): spawn sidecar, read `ATHENA_PORT=…` from stdout, open the main window pointed at `http://127.0.0.1:{port}`, kill sidecar on window close.
