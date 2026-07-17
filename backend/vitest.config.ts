@@ -20,7 +20,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.d.ts',
-        'src/server.ts',
+        'src/entry/**',
         'src/env.ts',
         'src/db/migrate.ts',
         'src/db/schema.ts',

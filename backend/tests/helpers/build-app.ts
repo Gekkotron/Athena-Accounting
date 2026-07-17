@@ -1,4 +1,4 @@
-import { build } from '../../src/server.js';
+import { build } from '../../src/buildServer.js';
 
 export async function buildApp() {
   return await build({ logger: false });

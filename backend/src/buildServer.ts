@@ -3,7 +3,6 @@ import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { env } from './env.js';
 import { pool } from './db/client.js';
-import { runMigrations } from './db/migrate.js';
 import { authPlugin } from './http/plugins/auth.js';
 import { onboardingRoutes } from './http/routes/onboarding.js';
 import { authRoutes } from './http/routes/auth.js';
@@ -84,32 +83,4 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   startDraftSweeper(app);
 
   return app;
-}
-
-const shutdown = async (app: FastifyInstance, signal: string) => {
-  app.log.info({ signal }, 'shutting down');
-  try {
-    await app.close();
-    await pool.end();
-    process.exit(0);
-  } catch (err) {
-    app.log.error(err, 'error during shutdown');
-    process.exit(1);
-  }
-};
-
-if (env.NODE_ENV !== 'test') {
-  const app = await build();
-
-  process.on('SIGINT', () => void shutdown(app, 'SIGINT'));
-  process.on('SIGTERM', () => void shutdown(app, 'SIGTERM'));
-
-  try {
-    await runMigrations();
-    if (!process.env.OCR_LANG_PATH) app.log.warn('OCR_LANG_PATH not set — first OCR run will attempt CDN fetch (fine for dev, fails on LAN-only deploy).');
-    await app.listen({ host: '0.0.0.0', port: env.PORT });
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
 }

@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/entry/server.ts",
     "build": "tsc -p tsconfig.json && node scripts/copy-migrations.mjs",
-    "start": "node dist/server.js",
+    "start": "node dist/entry/server.js",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "test": "vitest",
