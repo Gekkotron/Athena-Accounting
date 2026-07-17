@@ -85,6 +85,39 @@ Replace the placeholders:
 
 All three are required; the server refuses to start if any is missing.
 
+### Desktop (Tauri) app: use a port file instead of `ATHENA_API_URL`
+
+The desktop distribution binds Fastify to `127.0.0.1` on an OS-assigned port,
+so the URL changes every launch. Instead of hard-coding a URL, point the MCP
+bridge at the port file the app writes on startup:
+
+```json
+{
+  "mcpServers": {
+    "athena": {
+      "command": "node",
+      "args": ["/absolute/path/to/Athena-Accounting/mcp/dist/index.js"],
+      "env": {
+        "ATHENA_PORT_FILE": "<DATA_DIR>/.mcp-port",
+        "ATHENA_MCP_USER": "<your-athena-username>",
+        "ATHENA_MCP_TOKEN": "<paste-token-here>"
+      }
+    }
+  }
+}
+```
+
+`<DATA_DIR>` is where the desktop app stores its data — the same folder that
+holds `athena.db`. Defaults per OS:
+
+- macOS: `~/Library/Application Support/com.athena.accounting.desktop/`
+- Linux: `~/.local/share/com.athena.accounting.desktop/`
+- Windows: `%APPDATA%\com.athena.accounting.desktop\`
+
+The bridge reads the port from that file each time it starts, so opening and
+closing the desktop app between MCP client sessions works transparently. If
+both `ATHENA_API_URL` and `ATHENA_PORT_FILE` are set, `ATHENA_API_URL` wins.
+
 ## 4. Use with Ollama
 
 If you want the MCP client to use a local Ollama model, that's configured

@@ -6,7 +6,7 @@
 // Env is pinned here (not read from the shell) because Tauri users don't set
 // env vars — the desktop distribution is a single embedded configuration:
 // PGlite driver, no auth, data under DATA_DIR (defaults to CWD).
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { dataDir } from '../dataDir.js';
 
@@ -36,12 +36,19 @@ await ensureLocalUser();
 
 const app = await build();
 
+// Advertise the bound port to local MCP clients. `${DATA_DIR}/.mcp-port` is
+// the well-known contract: the MCP bridge (mcp/dist/index.js) resolves its
+// backend URL from this file when the user sets ATHENA_PORT_FILE in their
+// Claude Desktop / Cursor / mcphost config. See docs/users/mcp.md.
+const portFile = path.join(dir, '.mcp-port');
+
 let shuttingDown = false;
 const shutdown = async (signal: string) => {
   if (shuttingDown) return;
   shuttingDown = true;
   app.log.info({ signal }, 'shutting down');
   try {
+    await unlink(portFile).catch(() => { /* file may not exist */ });
     await app.close();
     await pool.end();
     process.exit(0);
@@ -58,6 +65,7 @@ const address = await app.listen({ host: '127.0.0.1', port: 0 });
 // Fastify's listen() returns the bound URL; extract the port for the Rust
 // shell. `server.address()` also works but the URL parse is driver-agnostic.
 const port = new URL(address).port;
+await writeFile(portFile, `${port}\n`, { mode: 0o600 });
 // Single machine-readable line the Rust shell greps for. Must be exact —
 // no logger prefix, no trailing whitespace beyond the newline.
 process.stdout.write(`ATHENA_PORT=${port}\n`);

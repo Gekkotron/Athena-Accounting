@@ -9,11 +9,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] MCP compatibility check
-      The MCP endpoint (`/api/mcp/rpc`) must still be reachable in Tauri mode.
-      Tauri binds to `127.0.0.1` on a random port — Claude Desktop, Cursor, etc. need to know that port. Options: (a) ship a Tauri "menu bar" indicator that shows the current port + a "Copy MCP config" button, or (b) write the current port to a well-known file (`${DATA_DIR}/.mcp-port`) that Claude Desktop's config can reference.
-      Pick one, implement, verify against real Claude Desktop MCP config.
-      Success criteria: installing the Tauri app + configuring Claude Desktop's MCP settings from the app's provided config → Claude successfully calls an Athena MCP tool.
 
 - [ ] Docs
       `docs/users/desktop-install.md`: download links, first-run flow, where data lives per OS, how to back up.
@@ -31,6 +26,12 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] MCP compatibility check
+      The MCP endpoint (`/api/mcp/rpc`) must still be reachable in Tauri mode.
+      Tauri binds to `127.0.0.1` on a random port — Claude Desktop, Cursor, etc. need to know that port. Options: (a) ship a Tauri "menu bar" indicator that shows the current port + a "Copy MCP config" button, or (b) write the current port to a well-known file (`${DATA_DIR}/.mcp-port`) that Claude Desktop's config can reference.
+      Pick one, implement, verify against real Claude Desktop MCP config.
+      Success criteria: installing the Tauri app + configuring Claude Desktop's MCP settings from the app's provided config → Claude successfully calls an Athena MCP tool.
 
 - [x] Packaging workflow + CI
       GH Actions workflow `.github/workflows/desktop-release.yml`. Trigger: tag push matching `v*-desktop`.

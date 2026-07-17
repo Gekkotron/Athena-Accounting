@@ -35,9 +35,21 @@ fn spawn_sidecar(app: &tauri::AppHandle) -> (Child, u16) {
     };
     let entry = dir.join("entry.js");
 
+    // Point the backend at the platform-standard per-user app-data directory
+    // (macOS: ~/Library/Application Support/<bundle-id>/, Linux:
+    // ~/.local/share/<bundle-id>/, Windows: %APPDATA%\<bundle-id>\). The
+    // sidecar's own cwd is inside the .app resource bundle and is read-only
+    // on macOS, so DATA_DIR must be set explicitly.
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .expect("no app data dir available on this platform");
+    std::fs::create_dir_all(&data_dir).expect("failed to create app data dir");
+
     let mut child = Command::new(&node_bin)
         .arg(&entry)
         .current_dir(&dir)
+        .env("DATA_DIR", &data_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
