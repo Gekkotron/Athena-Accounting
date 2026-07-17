@@ -3,13 +3,15 @@ name: Deploy docs site
 on:
   push:
     branches: [main]
+    # `paths` and `paths-ignore` cannot both be set on the same event —
+    # GitHub Actions rejects the file at schema validation, which auto-fails
+    # every push. Use one `paths` list with `!`-prefixed exclusions instead.
     paths:
       - 'docs/**'
+      - '!docs/superpowers/**'
+      - '!docs/standalone-app-distribution.md'
       - 'website/**'
       - '.github/workflows/docs.yml'
-    paths-ignore:
-      - 'docs/superpowers/**'
-      - 'docs/standalone-app-distribution.md'
   workflow_dispatch:
 
 permissions:
