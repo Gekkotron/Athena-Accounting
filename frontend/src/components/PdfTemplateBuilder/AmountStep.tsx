@@ -110,7 +110,7 @@ export function AmountStep({
             <h3 className="flex items-center gap-2 text-sm font-semibold text-clay-300 mb-2">
               <span className="inline-block w-2.5 h-2.5 rounded-sm bg-clay-300" />
               <Trans i18nKey="pdf-template:amountStep.debitHeading">
-                Canvas 1/2 — Tracez la colonne <span className="uppercase tracking-wide">Débit</span>
+                Canvas 1/2 — Draw the <span className="uppercase tracking-wide">Debit</span> column
               </Trans>
             </h3>
             <ZoneCanvas
@@ -129,7 +129,7 @@ export function AmountStep({
             <h3 className="flex items-center gap-2 text-sm font-semibold text-sage-300 mb-2">
               <span className="inline-block w-2.5 h-2.5 rounded-sm bg-sage-300" />
               <Trans i18nKey="pdf-template:amountStep.creditHeading">
-                Canvas 2/2 — Tracez la colonne <span className="uppercase tracking-wide">Crédit</span>
+                Canvas 2/2 — Draw the <span className="uppercase tracking-wide">Credit</span> column
               </Trans>
             </h3>
             <ZoneCanvas

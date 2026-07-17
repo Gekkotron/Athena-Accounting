@@ -136,9 +136,10 @@ export interface LayoutOpts {
   nodeWidth?: number;
   gap?: number;
   minNodeHeight?: number;
-  /** Labels for the synthetic pool/savings nodes. Default to the French
-      copy for backward compatibility with existing callers/tests; the
-      Sankey component passes the 'charts' namespace's translated strings. */
+  /** Labels for the synthetic pool/savings nodes. Default to English
+      copy for backward compatibility with existing callers/tests that
+      don't pass a translated override; the Sankey component passes the
+      'charts' namespace's translated strings. */
   poolLabel?: string;
   savingsLabel?: string;
   savingsWithdrawnLabel?: string;
@@ -170,9 +171,9 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   // span 26 px; 28 px gives 1 px of slack top and bottom so the amount
   // never bleeds outside the coloured ribbon.
   const minNodeHeight = opts.minNodeHeight ?? 28;
-  const poolLabel = opts.poolLabel ?? 'Revenus';
-  const savingsLabel = opts.savingsLabel ?? 'Épargne';
-  const savingsWithdrawnLabel = opts.savingsWithdrawnLabel ?? 'Épargne puisée';
+  const poolLabel = opts.poolLabel ?? 'Income';
+  const savingsLabel = opts.savingsLabel ?? 'Savings';
+  const savingsWithdrawnLabel = opts.savingsWithdrawnLabel ?? 'Savings drawn down';
 
   // Left = income sources (+ deficit source); right = expenses (+ savings).
   const leftNodes: SankeyNode[] = [...model.incomeNodes];

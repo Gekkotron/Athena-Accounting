@@ -28,7 +28,8 @@ function readIntParam(sp: URLSearchParams, key: string): number | undefined {
 }
 
 export function Transactions() {
-  const { t } = useTranslation(['transactions', 'common']);
+  const { t, i18n } = useTranslation(['transactions', 'common']);
+  const locale = i18n.language.startsWith('en') ? 'en-US' : 'fr-FR';
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   // Pick up an optional ?accountId=… / ?sourceFileId=… from the URL so
@@ -247,7 +248,7 @@ export function Transactions() {
             <SectionTipHelpIcon id="section:transactions" />
           </div>
           <p className="page-subtitle">
-            {t('subtitle', { count: total, formatted: total.toLocaleString('fr-FR') })}
+            {t('subtitle', { count: total, formatted: total.toLocaleString(locale) })}
           </p>
         </div>
         <div className="flex gap-2">

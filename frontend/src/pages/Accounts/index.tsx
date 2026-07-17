@@ -192,7 +192,7 @@ export function Accounts() {
           </div>
           <p className="page-subtitle">
             <Trans i18nKey="accounts:subtitle">
-              <span className="display-italic">Solde courant</span> = solde d'ouverture + somme des transactions depuis cette date.
+              <span className="display-italic">Current balance</span> = opening balance + sum of transactions since that date.
             </Trans>
           </p>
         </div>

@@ -86,7 +86,7 @@ export function Profile() {
           {currentName && username.trim() !== currentName && (
             <p className="text-xs text-ink-400 mt-1">
               <Trans i18nKey="settings:profile.form.currentUsernameHint" values={{ name: currentName }}>
-                Actuel : <span className="font-mono text-ink-300">{{ name: currentName } as unknown as string}</span>
+                Current: <span className="font-mono text-ink-300">{{ name: currentName } as unknown as string}</span>
               </Trans>
             </p>
           )}

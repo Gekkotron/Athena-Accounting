@@ -6,10 +6,10 @@ const COLLAPSE_LIMIT = 100;
 
 type Tagged = ImportPreviewRow & { status: 'new' | 'duplicate' };
 
-function formatAmount(amount: string): string {
+function formatAmount(amount: string, locale: string): string {
   const n = Number(amount);
   if (!Number.isFinite(n)) return amount;
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function ImportPreviewModal({
@@ -23,7 +23,8 @@ export function ImportPreviewModal({
   onCancel: () => void;
   pending?: boolean;
 }): JSX.Element {
-  const { t } = useTranslation(['imports', 'common']);
+  const { t, i18n } = useTranslation(['imports', 'common']);
+  const locale = i18n.language.startsWith('en') ? 'en-US' : 'fr-FR';
   const [expanded, setExpanded] = useState(false);
 
   const rows: Tagged[] = useMemo(() => {
@@ -76,7 +77,7 @@ export function ImportPreviewModal({
                 >
                   <td className="px-3 py-1.5 font-mono">{r.date}</td>
                   <td className="px-3 py-1.5">{r.rawLabel}</td>
-                  <td className="px-3 py-1.5 text-right font-mono">{formatAmount(r.amount)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{formatAmount(r.amount, locale)}</td>
                   <td className="px-3 py-1.5">
                     <span className={r.status === 'new' ? 'text-sage-300' : 'text-ink-500'}>
                       {r.status === 'new'

@@ -457,7 +457,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
             {previewRows === null && !previewLoading && !previewError && (
               <div className="text-xs text-ink-500 display-italic">
                 <Trans i18nKey="pdf-template:preview.emptyHint">
-                  Cliquez sur <span className="font-medium not-italic text-ink-400">Aperçu</span> pour vérifier avant l'import.
+                  Click <span className="font-medium not-italic text-ink-400">Preview</span> to check before importing.
                 </Trans>
               </div>
             )}

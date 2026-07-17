@@ -48,7 +48,7 @@ export function AccountCard({
       {hasBlocked && (
         <div className="text-[11px] text-amber-300/90 mt-1 font-mono">
           <Trans i18nKey="accounts:card.blocked">
-            dont <span className="private">{{ amount: formatAmount(blocked, a.currency) } as unknown as string}</span> bloqués
+            of which <span className="private">{{ amount: formatAmount(blocked, a.currency) } as unknown as string}</span> locked
           </Trans>
           {a.lockYears != null && (
             <span className="text-ink-500"> · {t('card.lockYears', { count: a.lockYears })}</span>

@@ -68,7 +68,7 @@ export function MergeModal({
       <div className="surface w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="display text-xl text-ink-50 mb-2 leading-snug">
           <Trans i18nKey="accounts:merge.title">
-            Fusionner <span className="text-ink-200">{{ name: source.name } as unknown as string}</span> dans un autre compte
+            Merge <span className="text-ink-200">{{ name: source.name } as unknown as string}</span> into another account
           </Trans>
         </div>
         <div className="text-sm text-ink-400 mb-4 leading-relaxed">
@@ -92,20 +92,20 @@ export function MergeModal({
           <ul className="text-sm text-ink-400 space-y-1 mb-4 list-disc list-inside">
             <li>
               <Trans i18nKey="accounts:merge.warnings.moveTransactions">
-                Toutes les transactions du source seront déplacées vers <b>{{ name: target.name } as unknown as string}</b>.
+                All transactions from the source will be moved to <b>{{ name: target.name } as unknown as string}</b>.
               </Trans>
             </li>
             <li>
               <Trans i18nKey="accounts:merge.warnings.addOpeningBalance">
-                Le solde d'ouverture ({{ amount: formatAmount(source.openingBalance, source.currency) } as unknown as string}) sera
-                ajouté à celui de <b>{{ name: target.name } as unknown as string}</b>.
+                The opening balance ({{ amount: formatAmount(source.openingBalance, source.currency) } as unknown as string}) will be
+                added to that of <b>{{ name: target.name } as unknown as string}</b>.
               </Trans>
             </li>
             <li>{t('merge.warnings.repoint')}</li>
             <li>{t('merge.warnings.breakTransfers')}</li>
             <li>
               <Trans i18nKey="accounts:merge.warnings.sourceDeleted">
-                <b>{{ name: source.name } as unknown as string}</b> sera supprimé. Cette action est <b>irréversible</b>.
+                <b>{{ name: source.name } as unknown as string}</b> will be deleted. This action is <b>irreversible</b>.
               </Trans>
             </li>
           </ul>
