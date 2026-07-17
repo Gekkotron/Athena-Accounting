@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatWidget } from '../StatWidget';
+import { pinLocale } from '../../test/i18n';
+
+// StatWidget formats amounts via lib/format's formatAmount, which is now
+// locale-aware via the shared i18n singleton — pin it to 'fr' so the
+// digit-grouping assertion below matches regardless of the environment's
+// default detected language.
+pinLocale();
 
 describe('StatWidget', () => {
   it('renders label + formatted value + hint', () => {

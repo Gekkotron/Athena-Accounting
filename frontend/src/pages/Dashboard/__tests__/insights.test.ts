@@ -3,6 +3,13 @@ import i18next from 'i18next';
 import { buildInsights, monthLabel } from '../insights';
 import type { Category, CategoryReportRow, BudgetReportRow } from '../../../api/types';
 import frDashboard from '../../../locales/fr/dashboard.json';
+import { pinLocale } from '../../../test/i18n';
+
+// buildInsights formats amounts via lib/format's formatAmount, which is now
+// locale-aware via the shared i18n singleton — pin it to 'fr' so the
+// Intl.NumberFormat output here matches the FR assertions below regardless
+// of the environment's default detected language.
+pinLocale('dashboard');
 
 function row(p: Partial<CategoryReportRow>): CategoryReportRow {
   return {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Suspense } from 'react';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Outlet } from 'react-router-dom';
@@ -41,11 +42,18 @@ vi.mock('../../api/client', async () => {
 
 function renderAt(url: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // Mirrors main.tsx: App is wrapped in a Suspense boundary in production.
+  // lib/format now imports the shared i18n singleton (for locale-aware
+  // formatting), so importing App here pulls that singleton's async .init()
+  // into this test's module graph — the very first render can suspend on it
+  // the same way a real page load would, and needs a boundary to land on.
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[url]}>
         <PrivacyProvider>
-          <App />
+          <Suspense fallback={<div />}>
+            <App />
+          </Suspense>
         </PrivacyProvider>
       </MemoryRouter>
     </QueryClientProvider>,

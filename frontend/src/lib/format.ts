@@ -1,3 +1,9 @@
+import i18n from '../i18n';
+
+function currentLocale(): string {
+  return i18n.language?.startsWith('en') ? 'en-US' : 'fr-FR';
+}
+
 // Interpret a user-typed money value. Accepts French decimal comma, English
 // decimal period, integers, interior whitespace, and a trailing €. Returns
 // the canonical "X" / "X.Y" / "X.YY" form, or null when the input can't be
@@ -16,7 +22,7 @@ export function parseDecimal(raw: string): string | null {
 export function formatAmount(value: string | number, currency = 'EUR'): string {
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return String(value);
-  return new Intl.NumberFormat('fr-FR', {
+  return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
@@ -27,7 +33,7 @@ export function formatAmount(value: string | number, currency = 'EUR'): string {
 export function formatAmountCompact(value: string | number, currency = 'EUR'): string {
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return String(value);
-  return new Intl.NumberFormat('fr-FR', {
+  return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
     notation: 'compact',
@@ -59,20 +65,29 @@ export function parseUserDate(input: string): string | null {
 export function formatDate(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
   const [y, m, d] = iso.split('T')[0]!.split('-');
-  return `${d}/${m}/${y}`;
+  const date = new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);
+  return new Intl.DateTimeFormat(currentLocale(), {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
 }
 
 export function formatDateShort(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
-  const [, m, d] = iso.split('T')[0]!.split('-');
-  return `${d}/${m}`;
+  const [y, m, d] = iso.split('T')[0]!.split('-');
+  const date = new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);
+  return new Intl.DateTimeFormat(currentLocale(), {
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
 }
 
 export function formatDateTime(iso: string): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('fr-FR', {
+  return d.toLocaleString(currentLocale(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

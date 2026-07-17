@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest';
 import i18next from 'i18next';
 import { formatSignedMoney, computeTargetProgress } from '../envelope-math';
 import frBudgets from '../../../locales/fr/budgets.json';
+import { pinLocale } from '../../../test/i18n';
+
+// formatSignedMoney delegates to lib/format's formatAmount, which is now
+// locale-aware via the shared i18n singleton — pin it to 'fr' so the
+// Intl.NumberFormat output here matches the FR assertions below regardless
+// of the environment's default detected language.
+pinLocale('budgets');
 
 // computeTargetProgress takes a real i18next `t` — rather than hand-rolling
 // fake French strings here (which would drift from the actual translation
