@@ -8,13 +8,14 @@
 // PGlite driver, no auth, data under DATA_DIR (defaults to CWD).
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { dataDir } from '../dataDir.js';
 
-const dataDir = process.env.DATA_DIR ?? process.cwd();
-await mkdir(dataDir, { recursive: true });
+const dir = dataDir();
+await mkdir(dir, { recursive: true });
 
 process.env.DB_DRIVER = 'pglite';
 process.env.AUTH_MODE = 'none';
-process.env.PGLITE_PATH = path.join(dataDir, 'athena.db');
+process.env.PGLITE_PATH = path.join(dir, 'athena.db');
 // env.ts requires SESSION_SECRET >= 32 chars even when auth is off. The
 // Tauri app has no remote surface (127.0.0.1 only) so a fixed local secret
 // is fine — sessions are per-install, not shared.

@@ -10,10 +10,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Data-directory helper
-      Add `backend/src/dataDir.ts` — returns the working directory for user data (PGlite file, backups, uploads).
-      Reads `DATA_DIR` env; falls back to `/data` (Docker) or CWD (dev). Refactor backup routes, the PGlite path from the Tauri-entry task, and any hardcoded file paths through this helper.
-      Success criteria: grep for hardcoded `/data` shows only tests + docs; both driver paths respect `DATA_DIR`.
 
 - [ ] Bundle backend as a sidecar binary
       Use `@yao-pkg/pkg` (fork of `pkg`, actively maintained) or `bun build --compile` — decide during the task, land on the one that produces smaller/more reliable binaries.
@@ -61,6 +57,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Data-directory helper
+      Add `backend/src/dataDir.ts` — returns the working directory for user data (PGlite file, backups, uploads).
+      Reads `DATA_DIR` env; falls back to `/data` (Docker) or CWD (dev). Refactor backup routes, the PGlite path from the Tauri-entry task, and any hardcoded file paths through this helper.
+      Success criteria: grep for hardcoded `/data` shows only tests + docs; both driver paths respect `DATA_DIR`.
 
 - [x] Make auth optional via `AUTH_MODE=none|session`
       Session middleware, cookie parser, and `requireAuth` hooks become no-ops when `AUTH_MODE=none` — routes still register, but `req.userId` is populated from a single hard-coded local user seeded on first boot.
