@@ -113,6 +113,26 @@ The sidecar pins `DB_DRIVER=pglite`, `AUTH_MODE=none`,
 to the current working directory (see `backend/src/dataDir.ts`); Tauri will
 pass the OS-appropriate app-data path.
 
+## Running the Tauri shell (dev)
+
+The Rust shell lives in `desktop/src-tauri/`. Once the sidecar is built and
+[Tauri CLI](https://tauri.app/start/prerequisites/) is installed
+(`cargo install tauri-cli --version "^2.0"`), from `desktop/`:
+
+```bash
+cargo tauri dev
+```
+
+The shell spawns `./sidecar/node ./sidecar/entry.js`, watches its stdout
+for the `ATHENA_PORT=<n>` handshake line, then opens the main window at
+`http://127.0.0.1:<n>/`. Closing the window sends SIGKILL to the sidecar
+child (its own SIGTERM handler in `backend/src/entry/tauri.ts` handles
+graceful shutdown before that if the shell exits via `ExitRequested`).
+
+In dev the shell resolves the sidecar at `<repo>/desktop/sidecar/`; in a
+packaged build the whole `sidecar/` directory is bundled as a resource and
+resolved via Tauri's `resource_dir`.
+
 ## Notes for the packaging workflow
 
 - The whole `desktop/sidecar/` tree is Tauri's sidecar resource — bundle it
