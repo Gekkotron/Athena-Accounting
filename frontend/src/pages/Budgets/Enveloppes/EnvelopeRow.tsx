@@ -1,19 +1,28 @@
 import { useTranslation } from 'react-i18next';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { formatAmount } from '../../../lib/format';
-import { formatSignedMoney, computeTargetProgress } from '../envelope-math';
+import { formatSignedMoney, computeTargetProgress, suggestedAssignmentDelta } from '../envelope-math';
 
 export function EnvelopeRow(props: {
   row: EnvelopeReportRow;
+  currentMonth?: string;                          // "YYYY-MM" — required for the fill-goal CTA
   assignmentSlot: React.ReactNode;
   onReallocateClick: (row: EnvelopeReportRow) => void;
   onSettingsClick: (row: EnvelopeReportRow) => void;
+  onFillGoal?: (row: EnvelopeReportRow, newAssignment: string) => void;
 }): JSX.Element {
   const { t } = useTranslation('budgets');
   const { row } = props;
   const progress = computeTargetProgress(row, t);
   const balanceNegative = Number(row.balance) < 0;
   const absorbed = row.overspendPolicy === 'reallocate_manual' && Number(row.absorbedByPool) > 0;
+  const delta = props.currentMonth && props.onFillGoal
+    ? suggestedAssignmentDelta(row, props.currentMonth)
+    : 0;
+  const canFill = delta > 0.005;
+  const newAssignmentIfFilled = canFill
+    ? (Number(row.assignment) + delta).toFixed(2)
+    : null;
   return (
     <div className="surface p-4 flex flex-col gap-2">
       <div className="grid grid-cols-[1fr_80px_120px_100px_100px_40px] items-center gap-3 text-sm">
@@ -48,6 +57,16 @@ export function EnvelopeRow(props: {
             />
           </div>
           <span>{progress.label}</span>
+          {canFill && newAssignmentIfFilled && (
+            <button
+              type="button"
+              className="btn-ghost !py-0.5 !px-2 text-xs text-sage-300"
+              onClick={() => props.onFillGoal!(row, newAssignmentIfFilled)}
+              title={t('envelopes.row.fillGoalTitle', { amount: formatAmount(delta.toFixed(2)) })}
+            >
+              {t('envelopes.row.fillGoalButton', { amount: formatAmount(delta.toFixed(2)) })}
+            </button>
+          )}
         </div>
       )}
     </div>

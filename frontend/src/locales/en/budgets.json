@@ -88,12 +88,16 @@
       "assignedCumulative": "Assigned (cumulative)",
       "heldFromPriorMonths": "Received from last month",
       "heldForNextMonth": "Held for next month",
-      "holdButton": "Hold…"
+      "holdButton": "Hold…",
+      "autoAssignButton": "Distribute {{amount}} to goals",
+      "autoAssignTitle": "Assign {{amount}} total, spread across envelopes that have a target"
     },
     "row": {
       "reallocateAriaLabel": "Reallocate",
       "settingsAriaLabel": "Settings",
-      "absorbed": "absorbed"
+      "absorbed": "absorbed",
+      "fillGoalButton": "Assign {{amount}}",
+      "fillGoalTitle": "Assign {{amount}} more this month to stay on track for the goal"
     },
     "targetProgress": {
       "monthly": "Target: {{amount}}/mo",

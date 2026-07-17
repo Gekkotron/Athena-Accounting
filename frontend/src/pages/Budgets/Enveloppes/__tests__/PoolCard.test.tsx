@@ -30,4 +30,20 @@ describe('PoolCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Retenir/i }));
     expect(spy).toHaveBeenCalled();
   });
+
+  it('shows the auto-assign button only when the preview is > 0', () => {
+    const spy = vi.fn();
+    const { rerender } = render(
+      <PoolCard pool={pool} onHoldClick={vi.fn()}
+                autoAssignPreview="0.00" onAutoAssign={spy} />,
+    );
+    expect(screen.queryByRole('button', { name: /Répartir/i })).not.toBeInTheDocument();
+    rerender(
+      <PoolCard pool={pool} onHoldClick={vi.fn()}
+                autoAssignPreview="500.00" onAutoAssign={spy} />,
+    );
+    const btn = screen.getByRole('button', { name: /Répartir 500,00.*objectifs/i });
+    fireEvent.click(btn);
+    expect(spy).toHaveBeenCalled();
+  });
 });

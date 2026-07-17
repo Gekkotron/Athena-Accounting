@@ -6,9 +6,14 @@ import { formatSignedMoney } from '../envelope-math';
 export function PoolCard(props: {
   pool: EnvelopeReport['pool'];
   onHoldClick: () => void;
+  onAutoAssign?: () => void;                 // undefined when there's nothing to distribute
+  autoAssignPreview?: string | null;         // total euros the button would distribute
 }): JSX.Element {
   const { t } = useTranslation('budgets');
   const negative = Number(props.pool.available) < 0;
+  const canAutoAssign = !!props.onAutoAssign
+    && props.autoAssignPreview != null
+    && Number(props.autoAssignPreview) > 0.005;
   return (
     <div className="surface p-6 flex flex-col gap-3">
       <div className="label">{t('envelopes.pool.title')}</div>
@@ -30,6 +35,21 @@ export function PoolCard(props: {
           </button>
         </dd>
       </dl>
+      {canAutoAssign && (
+        <div className="flex justify-end">
+          <button
+            className="btn-primary !py-1 !px-3 text-xs"
+            onClick={props.onAutoAssign}
+            title={t('envelopes.pool.autoAssignTitle', {
+              amount: formatAmount(props.autoAssignPreview!),
+            })}
+          >
+            {t('envelopes.pool.autoAssignButton', {
+              amount: formatAmount(props.autoAssignPreview!),
+            })}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold, useUpsertSettings } from '../../../lib/useEnvelopes';
+import { useEnvelopeReport, useUpsertAssignment, useReallocate, useUpsertHold, useUpsertSettings, useBulkAssign } from '../../../lib/useEnvelopes';
 import type { EnvelopeReportRow } from '../../../api/types';
 import { PoolCard } from './PoolCard';
 import { EnvelopeRow } from './EnvelopeRow';
@@ -10,6 +10,7 @@ import { ReallocateModal } from './ReallocateModal';
 import { HoldModal } from './HoldModal';
 import { SettingsModal } from './SettingsModal';
 import { UnbudgetedInline } from './UnbudgetedInline';
+import { distributePoolAcrossEnvelopes } from '../envelope-math';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -34,6 +35,7 @@ export function Enveloppes(): JSX.Element {
 
   const reportQ = useEnvelopeReport(month);
   const upsertAsg = useUpsertAssignment();
+  const bulkAssign = useBulkAssign();
   const reallocate = useReallocate();
   const upsertHold = useUpsertHold();
   const upsertSettings = useUpsertSettings();
@@ -45,6 +47,19 @@ export function Enveloppes(): JSX.Element {
   const pool = reportQ.data?.pool;
 
   const poolNegative = pool && Number(pool.available) < 0;
+
+  // Auto-assign plan for the pool CTA — recomputed on every render so the
+  // preview label ("Répartir 700 €") stays in sync with the live pool + rows
+  // without an extra state slot.
+  const autoAssignPlan = pool
+    ? distributePoolAcrossEnvelopes(rows, pool.available, month)
+    : [];
+  const autoAssignPreview = autoAssignPlan
+    .reduce((sum, p) => {
+      const before = Number(rows.find((r) => r.categoryId === p.categoryId)?.assignment ?? 0);
+      return sum + (Number(p.amount) - before);
+    }, 0)
+    .toFixed(2);
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,7 +75,16 @@ export function Enveloppes(): JSX.Element {
         </div>
       )}
 
-      {pool && <PoolCard pool={pool} onHoldClick={() => setHoldOpen(true)} />}
+      {pool && (
+        <PoolCard
+          pool={pool}
+          onHoldClick={() => setHoldOpen(true)}
+          autoAssignPreview={autoAssignPreview}
+          onAutoAssign={autoAssignPlan.length > 0
+            ? () => bulkAssign.mutate({ month, items: autoAssignPlan })
+            : undefined}
+        />
+      )}
 
       <section className="flex flex-col gap-2">
         <div className="label px-2">{t('envelopes.sectionLabel')}</div>
@@ -76,6 +100,7 @@ export function Enveloppes(): JSX.Element {
           <EnvelopeRow
             key={row.categoryId}
             row={row}
+            currentMonth={month}
             assignmentSlot={
               <AssignmentInput
                 value={row.assignment}
@@ -86,6 +111,9 @@ export function Enveloppes(): JSX.Element {
             }
             onReallocateClick={(row) => setReallocSource(row)}
             onSettingsClick={(row) => setSettingsRow(row)}
+            onFillGoal={(row, newAmount) =>
+              upsertAsg.mutate({ categoryId: row.categoryId, month, amount: newAmount })
+            }
           />
         ))}
       </section>

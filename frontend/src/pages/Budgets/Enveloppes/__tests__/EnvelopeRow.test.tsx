@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { EnvelopeRow } from '../EnvelopeRow';
 import { pinLocale } from '../../../../test/i18n';
 
@@ -28,5 +28,38 @@ describe('EnvelopeRow', () => {
       onReallocateClick={vi.fn()} onSettingsClick={vi.fn()} assignmentSlot={<span />}
     />);
     expect(screen.getByText(/absorbé/i)).toBeInTheDocument();
+  });
+
+  it('shows a fill-goal button when a target has a shortfall and fires onFillGoal with the new absolute assignment', () => {
+    const spy = vi.fn();
+    render(<EnvelopeRow
+      row={{
+        ...row,
+        // Impôts-style: save 1300 € by 2026-09-01. Balance 100, current month 2026-07 →
+        // 3 months remaining → delta = 1200 / 3 = 400. New assignment = 450 + 400 = 850.
+        target: { amount: '1300.00', date: '2026-09-01', kind: 'save_by_date' },
+        assignment: '450.00', balance: '100.00',
+      }}
+      currentMonth="2026-07"
+      onReallocateClick={vi.fn()} onSettingsClick={vi.fn()} assignmentSlot={<span />}
+      onFillGoal={spy}
+    />);
+    const btn = screen.getByRole('button', { name: /Assigner 400,00/i });
+    fireEvent.click(btn);
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 1 }), '850.00');
+  });
+
+  it('does not show the fill-goal button when the target is already reached', () => {
+    render(<EnvelopeRow
+      row={{
+        ...row,
+        target: { amount: '500.00', date: null, kind: 'save_up_to' },
+        balance: '600.00', assignment: '0.00',
+      }}
+      currentMonth="2026-07"
+      onReallocateClick={vi.fn()} onSettingsClick={vi.fn()} assignmentSlot={<span />}
+      onFillGoal={vi.fn()}
+    />);
+    expect(screen.queryByRole('button', { name: /Assigner/i })).not.toBeInTheDocument();
   });
 });

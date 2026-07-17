@@ -38,6 +38,26 @@ export function useUpsertAssignment() {
   });
 }
 
+// Sequentially PUTs a list of assignments then invalidates once, so the pool
+// auto-assign flow doesn't fan out N cache refetches. Sequential (not
+// Promise.all) because the backend uses one row per (user, category, month)
+// upsert — same-key races are safe, but this also makes the effect on the pool
+// observable & rewind-able if any single call fails.
+export function useBulkAssign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { month: string; items: { categoryId: number; amount: string }[] }) => {
+      for (const item of args.items) {
+        await api<{ assignment: EnvelopeAssignment }>('/api/envelopes/assignments', {
+          method: 'PUT',
+          json: { categoryId: item.categoryId, month: args.month, amount: item.amount },
+        });
+      }
+    },
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useReallocate() {
   const qc = useQueryClient();
   return useMutation({
