@@ -4,16 +4,20 @@
 
 ### Docker + Tauri dual-track — foundational refactor
 
-Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker stack, from the same codebase. Docker path stays the family-server story; Tauri path is the "no install, no Docker" solo-user story. Order below is topological — earlier tasks unblock later ones. Task 1 is already dispatched (see `## In progress`).
+Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker stack, from the same codebase. Docker path stays the family-server story; Tauri path is the "no install, no Docker" solo-user story. **Packaging pivoted from single-binary to directory-based sidecar** (2026-07-17) — the native-deps tree (sharp+libvips, @napi-rs/canvas, argon2, PGlite WASM, pdfjs worker, tesseract) is hostile to single-binary bundlers, and Tauri's sidecar mechanism accepts a folder just as happily.
 
 
+- [ ] Tauri shell in `desktop/`
+      New `desktop/` folder (Tauri 2, Rust). `src-tauri/tauri.conf.json` declares the **sidecar directory** built above as a bundled resource, and configures Tauri's sidecar mechanism to spawn `./sidecar/node ./sidecar/entry.js` (path resolved via Tauri's resource dir).
+      Rust code (~40–60 lines): spawn sidecar, read `ATHENA_PORT=…` from stdout, open the main window pointed at `http://127.0.0.1:{port}`, kill sidecar on window close.
+      App icon: convert `website/static/img/logo.svg` to `.icns` (Mac), `.ico` (Windows), and `.png` (Linux 512×512).
+      Success criteria: with a locally-built `desktop/sidecar/` in place, `cargo tauri dev` opens a window showing the frontend, hitting the sidecar's Fastify. Closing the window shuts down the sidecar cleanly (no zombie process).
 
-
-
-
-
-
-
+- [ ] Packaging workflow + CI
+      GH Actions workflow `.github/workflows/desktop-release.yml`. Trigger: tag push matching `v*-desktop`.
+      Matrix `macos-latest`, `ubuntu-latest`, `windows-latest`. Each job runs `desktop/scripts/build-sidecar.sh` for its own platform (produces `desktop/sidecar/` populated with the right Node binary + prebuilds), builds the frontend (`npm run build`), builds the Tauri app (`cargo tauri build`), then uploads `.dmg` / `.AppImage` / `.exe` as GH Release artifacts.
+      Skip macOS code-signing initially (users get the "unidentified developer" dialog once; documented workaround). Revisit once we have an Apple Developer account.
+      Success criteria: pushing `v1.0.0-desktop-rc1` produces a draft release with three artifacts, each installable on their target OS and each launching the app successfully.
 
 - [ ] MCP compatibility check
       The MCP endpoint (`/api/mcp/rpc`) must still be reachable in Tauri mode.
@@ -31,28 +35,20 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 - **PGlite maturity** — 0.x. Extensions and some advanced JSON features unsupported. Athena's schema doesn't use those, but each task above should be verified rather than assumed.
 - **Tauri code-signing on macOS** — needs an Apple Developer account ($99/yr) to avoid Gatekeeper warnings. Not blocking; document the workaround for now.
-- **Bundle size** — expect ~30-40 MB per platform (PGlite adds ~10 MB, `sharp` and `@napi-rs/canvas` add more). Acceptable but note in release notes.
-- **PDF parsing on packaged binaries** — `pdfjs-dist` worker path needs adjustment inside `pkg`/`bun compile` bundles. This is the packaging task's biggest unknown.
+- **Bundle size** — directory-based sidecar is ~50–80 MB per platform (Node runtime ~30 MB + sharp/libvips ~15 MB + canvas/PGlite/pdfjs/tesseract adding more). Larger than a single stripped binary, but reliable. Note in release notes.
+- **Cross-arch Node binaries** — macOS-arm64 hosts building macOS-x64 (or vice versa) need `unofficial-builds.nodejs.org` or a matching runner in CI. The packaging workflow's matrix strategy handles this automatically.
 
 ## In progress
 
-- [ ] Packaging workflow + CI     <!-- blocked: workflow can't be written yet — depends on the still-blocked "Bundle backend as a sidecar binary" task (no artifacts to embed) and "Tauri shell in `desktop/`" task (no `desktop/` folder, `src-tauri/tauri.conf.json`, or Rust project for `cargo tauri build` to target); land those two first, then dispatch this to author `.github/workflows/desktop-release.yml`. -->
-      New GH Actions workflow `.github/workflows/desktop-release.yml`. Trigger: tag push matching `v*-desktop` (or reuse existing `release.yml` if the shape fits).
-      Matrix `macos-latest`, `ubuntu-latest`, `windows-latest`. Each job builds the backend sidecar, builds the frontend (`npm run build`), builds the Tauri app (`cargo tauri build`), then uploads `.dmg` / `.AppImage` / `.exe` as GH Release artifacts.
-      Skip macOS code-signing initially (users get the "unidentified developer" dialog once; documented workaround). Revisit once we have an Apple Developer account.
-      Success criteria: pushing `v1.0.0-desktop-rc1` produces a draft release with three artifacts, each installable on their target OS.
-- [ ] Tauri shell in `desktop/`     <!-- blocked: depends on the sidecar-binary task (line 53, itself blocked pending CI matrix / re-scope) for the `tauri.conf.json` sidecar declaration, and on the still-backlog "Serve the frontend from Fastify" task for the success criterion "window showing the frontend hitting the sidecar's Fastify" — unblock after re-scoping the sidecar packaging (directory-based node+JS bundle) AND landing the Fastify-static task, then dispatch. -->
-      New `desktop/` folder — Tauri 2 project (Rust). `src-tauri/tauri.conf.json` declares the sidecar binary from the packaging task.
-      Rust code (~40 lines): spawn sidecar, read `ATHENA_PORT=…` from stdout, open the main window pointed at `http://127.0.0.1:{port}`, kill sidecar on window close.
-      App icon: convert `website/static/img/logo.svg` to `.icns` (Mac), `.ico` (Windows), and `.png` (Linux 512×512).
-      Success criteria: `cargo tauri dev` opens a window showing the frontend, hitting the sidecar's Fastify. Closing the window shuts down the sidecar cleanly (no zombie process).
-- [ ] Bundle backend as a sidecar binary     <!-- blocked: single-binary packaging is hostile to this dep tree (sharp+libvips, @napi-rs/canvas, @node-rs/argon2, tesseract.js WASM/workers, pdfjs worker, PGlite WASM — all need per-platform external assets); verifying macOS/Linux/Windows outputs requires CI matrix runners not available in this session — recommend merging into the "Packaging workflow + CI" task, or re-scoping to a directory-based sidecar (node runtime + JS + prebuilds) instead of one file. -->
-      Use `@yao-pkg/pkg` (fork of `pkg`, actively maintained) or `bun build --compile` — decide during the task, land on the one that produces smaller/more reliable binaries.
-      Cross-compile targets: `node22-macos-arm64`, `node22-macos-x64`, `node22-linux-x64`, `node22-win-x64`.
-      Include PGlite native binaries + `pdfjs-dist` worker + `@napi-rs/canvas` per-platform prebuilds. These are the tricky bits — verify each works in a packaged binary before moving on.
-      Output: `desktop/binaries/athena-backend-<platform>` files that boot standalone.
-      Success criteria: on each of the three OSes, run the packaged binary, see `ATHENA_PORT=…`, `curl /health` OK.
 ## Done
+
+- [x] Package the backend as a directory-based sidecar
+      Build a self-contained `desktop/sidecar/` layout for the current dev host (macOS-arm64 first; cross-compile happens in the packaging task below).
+      Layout: `desktop/sidecar/node` (bundled Node 22 runtime) + `desktop/sidecar/entry.js` (a single esbuild bundle of `backend/src/entry/tauri.ts`, `--platform=node --bundle --external:` for anything with native binaries) + `desktop/sidecar/prebuilds/` (native modules copied out of `node_modules` post-install: `sharp`, `@napi-rs/canvas`, `@node-rs/argon2`, PGlite `.wasm`, `pdfjs-dist` worker, `tesseract.js` traineddata as needed).
+      Add a `desktop/scripts/build-sidecar.sh` (or `.mjs`) that: downloads the Node binary for the target platform (unofficial-builds.nodejs.org for cross-arch if needed, else nodejs.org/dist), esbuilds the entry, copies prebuilds. Runs cleanly on the dev host with no CI dependency.
+      Boot check: `./desktop/sidecar/node ./desktop/sidecar/entry.js` prints `ATHENA_PORT=<n>`, `curl 127.0.0.1:<n>/health` returns `{ok:true}`.
+      Do NOT try to cross-compile inside this task — that's the packaging workflow's job. Ship a working single-platform sidecar as proof.
+      Success criteria: `desktop/sidecar/` builds locally from a clean checkout; the sidecar boots standalone and answers `/health`; the layout is documented in `desktop/README.md` so the packaging task knows what to bundle per platform.
 
 - [x] Serve the frontend from Fastify
       Add `@fastify/static` and register it in `buildServer()` under `NODE_ENV=production` (or a new `SERVE_STATIC` flag): serves `frontend/dist/` from `/`.

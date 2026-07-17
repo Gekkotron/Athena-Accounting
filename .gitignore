@@ -19,3 +19,14 @@ coverage/
 
 # Claude Code personal settings (never committed)
 .claude/settings.local.json
+
+# Desktop sidecar build artifacts (produced by desktop/scripts/build-sidecar.mjs)
+desktop/sidecar/node
+desktop/sidecar/entry.js
+desktop/sidecar/entry.js.map
+desktop/sidecar/node_modules/
+desktop/sidecar/migrations/
+desktop/sidecar/prebuilds/
+desktop/sidecar/package.json
+desktop/sidecar/package-lock.json
+desktop/.node-cache/
