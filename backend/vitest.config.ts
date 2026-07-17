@@ -9,6 +9,7 @@ export default defineConfig({
     // beforeAll fixtures — FK violations, 400 "compte ou catégorie inconnu".
     // Serialize files; tests inside a file already order themselves.
     fileParallelism: false,
+    setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
