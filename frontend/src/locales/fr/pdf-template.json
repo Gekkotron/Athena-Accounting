@@ -107,7 +107,7 @@
     "replaceNote": "Le template existant sera remplacé par cette nouvelle version quand vous cliquerez sur « {{importLabel}} »."
   },
   "errors": {
-    "previewFailed": "Échec de l'aperçu",
-    "submitFailed": "Échec de l'import"
+    "previewFailed": "preview failed",
+    "submitFailed": "submit failed"
   }
 }

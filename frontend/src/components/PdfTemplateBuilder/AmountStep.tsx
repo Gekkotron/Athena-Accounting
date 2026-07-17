@@ -49,9 +49,11 @@ export function AmountStep({
     <>
       <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
         <span>
-          <Trans i18nKey="pdf-template:amountStep.prompt" values={{ total: totalSteps }}>
-            Étape 5/{{ total: totalSteps }} — Tracez la colonne <span className="text-clay-300">Montant</span>.
-          </Trans>
+          <Trans
+            i18nKey="pdf-template:amountStep.prompt"
+            values={{ total: totalSteps }}
+            components={{ 1: <span className="text-clay-300" /> }}
+          />
         </span>
         <InfoTip text={t('steps.amount.tooltip')} />
       </p>

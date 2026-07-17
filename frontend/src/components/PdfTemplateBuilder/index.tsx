@@ -318,12 +318,11 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <>
             <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
               <span>
-                <Trans i18nKey="pdf-template:headerStep.prompt" values={{ total: totalSteps }}>
-                  Étape 1/{{ total: totalSteps }} — Sélectionnez l'en-tête{' '}
-                  <span className="text-ink-400 font-normal">
-                    (utilisé pour reconnaître cette banque la prochaine fois)
-                  </span>.
-                </Trans>
+                <Trans
+                  i18nKey="pdf-template:headerStep.prompt"
+                  values={{ total: totalSteps }}
+                  components={{ 1: <span className="text-ink-400 font-normal" /> }}
+                />
               </span>
               <InfoTip text={t('steps.header.tooltip')} />
             </p>
@@ -359,10 +358,14 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <>
             <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
               <span>
-                <Trans i18nKey="pdf-template:dateStep.prompt" values={{ total: totalSteps }}>
-                  Étape 3/{{ total: totalSteps }} — Tracez la colonne <span className="text-sage-300">Date</span>{' '}
-                  <span className="text-ink-400 font-normal">à l'intérieur du tableau — l'étape suivante démarre automatiquement</span>.
-                </Trans>
+                <Trans
+                  i18nKey="pdf-template:dateStep.prompt"
+                  values={{ total: totalSteps }}
+                  components={{
+                    1: <span className="text-sage-300" />,
+                    2: <span className="text-ink-400 font-normal" />,
+                  }}
+                />
               </span>
               <InfoTip text={t('steps.date.tooltip')} />
             </p>
@@ -383,10 +386,14 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
           <>
             <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
               <span>
-                <Trans i18nKey="pdf-template:descriptionStep.prompt" values={{ total: totalSteps }}>
-                  Étape 4/{{ total: totalSteps }} — Tracez la colonne <span className="text-sage-300">Libellé</span>{' '}
-                  <span className="text-ink-400 font-normal">(description de la transaction — l'étape suivante démarre automatiquement)</span>.
-                </Trans>
+                <Trans
+                  i18nKey="pdf-template:descriptionStep.prompt"
+                  values={{ total: totalSteps }}
+                  components={{
+                    1: <span className="text-sage-300" />,
+                    2: <span className="text-ink-400 font-normal" />,
+                  }}
+                />
               </span>
               <InfoTip text={t('steps.description.tooltip')} />
             </p>

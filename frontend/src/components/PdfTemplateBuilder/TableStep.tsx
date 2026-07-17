@@ -41,10 +41,11 @@ export function TableStep({
     <>
       <p className="mb-3 text-sm font-medium text-ink-50 flex items-center gap-2">
         <span>
-          <Trans i18nKey="pdf-template:tableStep.prompt" values={{ total: totalSteps }}>
-            Étape 2/{{ total: totalSteps }} — Sélectionnez le tableau des transactions{' '}
-            <span className="text-ink-400 font-normal">(toutes les lignes, en-tête de colonne incluse)</span>.
-          </Trans>
+          <Trans
+            i18nKey="pdf-template:tableStep.prompt"
+            values={{ total: totalSteps }}
+            components={{ 1: <span className="text-ink-400 font-normal" /> }}
+          />
         </span>
         <InfoTip text={t('steps.table.tooltip')} />
       </p>

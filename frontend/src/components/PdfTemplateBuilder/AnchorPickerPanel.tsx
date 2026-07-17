@@ -77,11 +77,10 @@ export function AnchorPickerPanel({
       <div className="mt-5 pt-4 border-t border-ink-800/60">
         <div className="text-sm text-ink-100 font-medium mb-1">{t('anchorPicker.heading')}</div>
         <p className="text-xs text-ink-400">
-          <Trans i18nKey="pdf-template:anchorPicker.emptyHint">
-            Aucun candidat d'en-tête n'a été détecté sur ce PDF. La détection automatique
-            s'exécutera quand même — vous pourrez la vérifier dans la panneau{' '}
-            <em>Templates PDF</em> après l'import.
-          </Trans>
+          <Trans
+            i18nKey="pdf-template:anchorPicker.emptyHint"
+            components={{ 1: <em /> }}
+          />
         </p>
       </div>
     );
