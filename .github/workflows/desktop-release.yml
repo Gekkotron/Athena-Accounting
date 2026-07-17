@@ -35,15 +35,15 @@ jobs:
           - os: macos-latest
             label: macOS (arm64)
             tauri_target: aarch64-apple-darwin
-            artifact_glob: 'desktop/src-tauri/target/release/bundle/dmg/*.dmg'
+            artifact_glob: 'desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg'
           - os: ubuntu-latest
             label: Linux (x64)
             tauri_target: x86_64-unknown-linux-gnu
-            artifact_glob: 'desktop/src-tauri/target/release/bundle/appimage/*.AppImage'
+            artifact_glob: 'desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage'
           - os: windows-latest
             label: Windows (x64)
             tauri_target: x86_64-pc-windows-msvc
-            artifact_glob: 'desktop/src-tauri/target/release/bundle/nsis/*.exe'
+            artifact_glob: 'desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe'
 
     runs-on: ${{ matrix.os }}
 
@@ -117,12 +117,10 @@ jobs:
 
       - name: Build Tauri app
         working-directory: desktop/src-tauri
-        env:
-          # No code-signing keys wired up yet. Explicit empty vars keep the
-          # tauri-bundler from attempting to sign on macOS.
-          APPLE_SIGNING_IDENTITY: ''
-          APPLE_CERTIFICATE: ''
-          APPLE_CERTIFICATE_PASSWORD: ''
+        # No code-signing keys wired up yet. `bundle.macOS.signingIdentity`
+        # is set to `null` in tauri.conf.json so the bundler skips signing
+        # entirely; setting APPLE_* env vars (even to empty strings) triggers
+        # `security import`, so we leave them unset.
         run: tauri build --target ${{ matrix.tauri_target }}
 
       - name: Collect installer artifact

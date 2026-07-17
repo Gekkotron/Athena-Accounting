@@ -101,8 +101,12 @@ function extractNode(archivePath) {
   if (existsSync(workdir)) rmSync(workdir, { recursive: true, force: true });
   mkdirSync(workdir, { recursive: true });
   // GitHub Actions' windows-latest ships a bsdtar that transparently extracts
-  // .zip archives, so a single `tar -xf` covers all three platforms.
-  run('tar', ['-xf', archivePath, '-C', workdir]);
+  // .zip archives, so a single `tar -xf` covers all three platforms. On
+  // Windows the drive-letter path (`D:\…`) is otherwise parsed as an rsh-style
+  // host — `--force-local` keeps tar looking at the local filesystem.
+  const tarArgs = ['-xf', archivePath, '-C', workdir];
+  if (TARGET_OS === 'win32') tarArgs.push('--force-local');
+  run('tar', tarArgs);
   const [top] = readdirSync(workdir);
   const src =
     TARGET_OS === 'win32'
