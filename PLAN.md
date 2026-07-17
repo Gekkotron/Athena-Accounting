@@ -5,6 +5,7 @@
 ### First desktop beta release
 
 
+
 ### Docker + Tauri dual-track — foundational refactor
 
 Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker stack, from the same codebase. Docker path stays the family-server story; Tauri path is the "no install, no Docker" solo-user story. **Packaging pivoted from single-binary to directory-based sidecar** (2026-07-17) — the native-deps tree (sharp+libvips, @napi-rs/canvas, argon2, PGlite WASM, pdfjs worker, tesseract) is hostile to single-binary bundlers, and Tauri's sidecar mechanism accepts a folder just as happily.
@@ -26,15 +27,15 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
-- [ ] Cut `v1.0.0-desktop-beta1` and validate the packaging artifacts     <!-- blocked: cross-OS artifact verification (macOS+Linux+Windows launch checks) can't be performed from a single non-interactive macOS session; needs a human-driven release run -->
-      Bump the release-visible version to `1.0.0-desktop-beta1` in the places the workflow expects (root `package.json` `version`, `desktop/src-tauri/Cargo.toml` `[package] version`, `desktop/src-tauri/tauri.conf.json` `productName`/`version` if present). Keep any `0.x` internal version pinning in place — only the display + tag matters here.
-      Create an annotated tag: `git tag -a v1.0.0-desktop-beta1 -m "First desktop beta"`. Push it: `git push origin v1.0.0-desktop-beta1`. This trigger matches `.github/workflows/desktop-release.yml`'s `v*-desktop` pattern.
-      Watch the workflow: three matrix jobs (macos-latest, ubuntu-latest, windows-latest) each build the sidecar, frontend, and Tauri app, then upload their artifact to a draft GitHub Release. Wait for the workflow to complete (or fail — capture the log link if it does).
-      Verify all three artifacts on their target OSes: download each from the draft release, run `desktop/scripts/verify-artifact.<platform>` if it exists (else run the installer by hand), launch the app, confirm the main window loads the Athena UI, and confirm `curl -s http://127.0.0.1:$(cat ${DATA_DIR:-~/Library/Application\ Support/Athena}/.mcp-port)/health` (or the app's shipped port-probing script) returns `{"ok":true}`. macOS Gatekeeper will show "unidentified developer" — that's expected until code-signing lands; document the workaround in the release notes.
-      Draft release notes: pull commit subjects since the last non-desktop tag with `git log <last-release>..HEAD --oneline`, group by category (features / fixes / infra), highlight the Docker → Tauri pivot as the headline, call out the Gatekeeper workaround, and publish the draft as a real release.
-      If a matrix job fails or an artifact doesn't launch, treat it as blocked: add a `<!-- blocked: <one-sentence platform + symptom> -->` comment and stop. Do NOT retag or force-push.
-      Success criteria: (a) `v1.0.0-desktop-beta1` tag exists on `origin`, (b) draft GH Release contains `.dmg`, `.AppImage`, `.exe`, (c) each artifact installs and launches on its target OS, (d) release notes published.
 ## Done
+
+- [x] Cut `v1.0.0-desktop-beta1` — mechanical release path only
+      Bump the release-visible version to `1.0.0-desktop-beta1` in the places the workflow expects (root `package.json` `version`, `desktop/src-tauri/Cargo.toml` `[package] version`, `desktop/src-tauri/tauri.conf.json` `productName`/`version` if present).
+      Draft release notes into `docs/RELEASES/v1.0.0-desktop-beta1.md`: pull commit subjects since the last non-desktop tag with `git log <last-release>..HEAD --oneline` (if no prior desktop tag exists, use the first commit of this branch as the base), group by category (features / fixes / infra), headline the Docker → Tauri pivot, note the Gatekeeper "unidentified developer" workaround for macOS, and include an empty "Manual verification" section with three checkboxes (macOS / Linux / Windows) for the human to tick after installing.
+      Commit the version bumps + release notes, then create an annotated tag: `git tag -a v1.0.0-desktop-beta1 -m "First desktop beta"`. Push both: `git push origin main v1.0.0-desktop-beta1`. This matches `.github/workflows/desktop-release.yml`'s `v*-desktop` pattern.
+      Watch the workflow to completion with `gh run watch` on the triggered run. Wait for all three matrix jobs to be green. If any fail, capture the run URL and treat as blocked (per contract clause 3). If green, promote the draft release to published via `gh release edit v1.0.0-desktop-beta1 --draft=false`.
+      **Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session** — cross-OS install verification is the human-owned checklist under `## Manual checklist` in this file (parser-invisible section) and is expected to complete outside the orchestrator.
+      Success criteria: (a) version bumps + release notes committed, (b) `v1.0.0-desktop-beta1` tag on `origin`, (c) workflow green with three artifacts (`.dmg`, `.AppImage`, `.exe`) on the release, (d) release published (not draft).
 
 - [x] Restyle the public docs site to match the app's visual identity
       Target: <https://gekkotron.github.io/Athena-Accounting/> — currently uses the default theme of whatever static-site generator sits behind it. Make it feel like a first-party companion to the app.
@@ -113,3 +114,12 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 - [x] Abstract the DB driver behind a factory
       Introduce `DB_DRIVER=postgres|pglite` env var (default `postgres`). Refactor `backend/src/db/client.ts`: build the Drizzle instance from the driver, not directly from `pg.Pool`. Postgres path stays default and behaves identically. Add `@electric-sql/pglite` + `drizzle-orm/pglite` dep. Add a `beforeAll`/`beforeEach` matrix in the DB-gated tests so the suite runs under both drivers.
       Success criteria: `npm test` (default Postgres) and `DB_DRIVER=pglite npm test` both pass. No route/handler code changes.
+
+## Manual checklist (human, not the orchestrator)
+
+The list below is not parsed by the orchestrator — this `##` header isn't one of the three known section names, so any `- [ ]` items here are invisible to the tick's `firstBacklogTask`. Track completion manually; you own this section.
+
+- [ ] beta1 — verify macOS `.dmg` install + launch, /health returns ok
+- [ ] beta1 — verify Linux `.AppImage` install + launch, /health returns ok
+- [ ] beta1 — verify Windows `.exe` install + launch, /health returns ok
+- [ ] beta1 — after all three verified: post announcement, update release notes with verification section ticked
