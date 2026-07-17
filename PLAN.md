@@ -13,10 +13,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Serve the frontend from Fastify
-      Add `@fastify/static` and register it in `buildServer()` under `NODE_ENV=production` (or a new `SERVE_STATIC` flag): serves `frontend/dist/` from `/`.
-      Same Fastify serves both API and UI — matches how Docker Compose already routes.
-      Success criteria: with the sidecar running, opening `http://127.0.0.1:{port}/` shows the app; API requests to `/api/*` still work.
 
 - [ ] Packaging workflow + CI
       New GH Actions workflow `.github/workflows/desktop-release.yml`. Trigger: tag push matching `v*-desktop` (or reuse existing `release.yml` if the shape fits).
@@ -57,6 +53,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
       Output: `desktop/binaries/athena-backend-<platform>` files that boot standalone.
       Success criteria: on each of the three OSes, run the packaged binary, see `ATHENA_PORT=…`, `curl /health` OK.
 ## Done
+
+- [x] Serve the frontend from Fastify
+      Add `@fastify/static` and register it in `buildServer()` under `NODE_ENV=production` (or a new `SERVE_STATIC` flag): serves `frontend/dist/` from `/`.
+      Same Fastify serves both API and UI — matches how Docker Compose already routes.
+      Success criteria: with the sidecar running, opening `http://127.0.0.1:{port}/` shows the app; API requests to `/api/*` still work.
 
 - [x] Data-directory helper
       Add `backend/src/dataDir.ts` — returns the working directory for user data (PGlite file, backups, uploads).

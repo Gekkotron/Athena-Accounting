@@ -28,6 +28,12 @@ const Env = z
     // Default false because self-hosted LAN deployments typically run over plain
     // HTTP. Set to true when running behind an HTTPS-terminating reverse proxy.
     COOKIE_SECURE: boolish.default(false),
+    // When true (or NODE_ENV=production), Fastify also serves the built
+    // frontend from `STATIC_ROOT` (default `<cwd>/frontend/dist`) at `/`,
+    // so the same process answers both `/api/*` and the SPA. Used by the
+    // Tauri desktop sidecar; Docker Compose keeps nginx in front.
+    SERVE_STATIC: boolish.optional(),
+    STATIC_ROOT: z.string().optional(),
   })
   .refine((v) => v.DB_DRIVER !== 'postgres' || !!v.DATABASE_URL, {
     message: 'DATABASE_URL is required when DB_DRIVER=postgres',

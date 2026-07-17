@@ -16,6 +16,10 @@ await mkdir(dir, { recursive: true });
 process.env.DB_DRIVER = 'pglite';
 process.env.AUTH_MODE = 'none';
 process.env.PGLITE_PATH = path.join(dir, 'athena.db');
+// The Tauri distribution is self-contained: one process serves both the API
+// and the built frontend. STATIC_ROOT is left overridable so the Rust shell
+// can point at the bundled resource directory.
+process.env.SERVE_STATIC ??= 'true';
 // env.ts requires SESSION_SECRET >= 32 chars even when auth is off. The
 // Tauri app has no remote surface (127.0.0.1 only) so a fixed local secret
 // is fine — sessions are per-install, not shared.
