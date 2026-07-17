@@ -6,6 +6,7 @@ import cookie from '@fastify/cookie';
 import session from '@fastify/session';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '../../env.js';
+import { LOCAL_USER_ID, LOCAL_USERNAME } from '../../domain/auth/localUser.js';
 
 declare module 'fastify' {
   interface Session { userId?: number; username?: string; }
@@ -23,6 +24,10 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export const authPlugin = fp(async function authPlugin(app: FastifyInstance) {
+  // Cookie + session are registered in both modes so route code that reads or
+  // writes `req.session.userId` stays uniform. In `none` mode nothing ever
+  // reaches the wire — the pre-request hook below stamps the session with the
+  // local user before any handler runs.
   await app.register(cookie);
   await app.register(session, {
     secret: env.SESSION_SECRET,
@@ -43,6 +48,22 @@ export const authPlugin = fp(async function authPlugin(app: FastifyInstance) {
   const internalAuthSecret = randomBytes(32).toString('hex');
   app.decorate('internalAuthSecret', internalAuthSecret);
   app.decorateRequest('mcpUserId', null);
+
+  if (env.AUTH_MODE === 'none') {
+    // Every request is silently authenticated as the seeded local user. The
+    // hook runs after session is populated by @fastify/session so writes here
+    // land on the request-scoped session object.
+    app.addHook('preHandler', async (req) => {
+      req.session.userId = LOCAL_USER_ID;
+      req.session.username = LOCAL_USERNAME;
+    });
+
+    const requireAuth: preHandlerHookHandler = async () => {
+      // No-op in `none` mode — session is always stamped above.
+    };
+    app.decorate('requireAuth', requireAuth);
+    return;
+  }
 
   const requireAuth: preHandlerHookHandler = async (req: FastifyRequest, reply: FastifyReply) => {
     if (req.session.userId) return;

@@ -13,6 +13,13 @@ const Env = z
     // Postgres-in-WASM via @electric-sql/pglite + drizzle-orm/pglite — used
     // for the Tauri desktop distribution and for a docker-free test path.
     DB_DRIVER: z.enum(['postgres', 'pglite']).default('postgres'),
+    // Selects the auth model. `session` (default) is the LAN/Docker path:
+    // cookie + @fastify/session + argon2id passwords, users register through
+    // `/api/onboarding/create`. `none` is the Tauri desktop path: no cookies,
+    // no login round-trip — every request is authenticated as a single
+    // hard-coded local user seeded on first boot. Never enable `none` on a
+    // deployment that isn't strictly loopback-only.
+    AUTH_MODE: z.enum(['session', 'none']).default('session'),
     // Required only for `postgres`. For `pglite` we default to an in-memory
     // DB unless PGLITE_PATH is set (then a filesystem-backed PGlite is used).
     DATABASE_URL: z.string().url().optional(),

@@ -24,8 +24,10 @@ process.env.SESSION_SECRET ??= 'athena-tauri-local-session-secret-not-remote';
 const { build } = await import('../buildServer.js');
 const { runMigrations } = await import('../db/migrate.js');
 const { pool } = await import('../db/client.js');
+const { ensureLocalUser } = await import('../domain/auth/localUser.js');
 
 await runMigrations();
+await ensureLocalUser();
 
 const app = await build();
 

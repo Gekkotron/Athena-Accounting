@@ -9,10 +9,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Make auth optional via `AUTH_MODE=none|session`
-      Session middleware, cookie parser, and `requireAuth` hooks become no-ops when `AUTH_MODE=none` — routes still register, but `req.userId` is populated from a single hard-coded local user seeded on first boot.
-      Default: `session` (Docker path unchanged). Existing session-based tests continue to run under `AUTH_MODE=session`. Add a small parallel suite that boots under `AUTH_MODE=none` and confirms authenticated routes work without a login round-trip.
-      Success criteria: Docker behavior byte-identical; Tauri build reaches `/api/accounts` without logging in.
 
 - [ ] Data-directory helper
       Add `backend/src/dataDir.ts` — returns the working directory for user data (PGlite file, backups, uploads).
@@ -65,6 +61,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Make auth optional via `AUTH_MODE=none|session`
+      Session middleware, cookie parser, and `requireAuth` hooks become no-ops when `AUTH_MODE=none` — routes still register, but `req.userId` is populated from a single hard-coded local user seeded on first boot.
+      Default: `session` (Docker path unchanged). Existing session-based tests continue to run under `AUTH_MODE=session`. Add a small parallel suite that boots under `AUTH_MODE=none` and confirms authenticated routes work without a login round-trip.
+      Success criteria: Docker behavior byte-identical; Tauri build reaches `/api/accounts` without logging in.
 
 - [x] Add Tauri entry point (`backend/src/entry/tauri.ts`)
       Reads env with `DB_DRIVER=pglite`, `AUTH_MODE=none`, `DATA_DIR=<from env>`.
