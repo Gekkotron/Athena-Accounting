@@ -1,19 +1,16 @@
-import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Login } from '../Login';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
 // Login renders French strings by default (the app's current UI language).
 // Preload 'settings'/'common' for both locales and pin French so
 // `useTranslation` never suspends mid-render and existing French-literal
 // assertions keep matching real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['settings', 'common']);
-});
+pinLocale('settings');
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');

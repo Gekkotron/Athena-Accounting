@@ -1,13 +1,10 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BalanceChart } from '../BalanceChart';
 import type { BalancePoint } from '../../api/types';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['charts']);
-});
+pinLocale('charts');
 
 // jsdom returns a 0-size DOMRect for SVG by default, which breaks any
 // coordinate-based hit-testing. Stub getBoundingClientRect on the SVG so

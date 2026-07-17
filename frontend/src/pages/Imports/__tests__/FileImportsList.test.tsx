@@ -1,21 +1,18 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { FileImportsList } from '../FileImportsList';
 import type { Account, FileImport } from '../../../api/types';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // FileImportsList renders French strings by default (the app's current UI
 // language). Preload the 'imports' namespace for both locales so
 // `useTranslation` never suspends mid-render, then pin the active language
 // to French so the existing French-literal assertions below keep matching
 // real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports']);
-});
+pinLocale('imports');
 
 const acc: Account = {
   id: 1, name: 'Compte', type: 'checking', currency: 'EUR',

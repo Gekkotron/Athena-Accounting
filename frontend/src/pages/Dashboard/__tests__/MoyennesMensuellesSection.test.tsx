@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MoyennesMensuellesSection } from '../MoyennesMensuellesSection';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -27,13 +27,9 @@ function renderWithProviders(currency = 'EUR') {
 // language to French so the existing French-literal assertions below keep
 // matching real rendered text (per the i18n migration recipe's
 // locale-preserving-helper fallback).
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['dashboard']);
-});
+pinLocale('dashboard');
 
 beforeEach(async () => {
-  await i18n.changeLanguage('fr');
   apiMock.mockReset();
 });
 

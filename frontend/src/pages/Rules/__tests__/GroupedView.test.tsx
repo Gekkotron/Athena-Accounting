@@ -1,20 +1,17 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { GroupedView } from '../GroupedView';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../../api/types';
 import type { GroupedEntry } from '../types';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // GroupedView renders French strings by default and nests CategoryRow/Chip
 // (which reuses the shared 'common' namespace). Preload both namespaces for
 // both locales, pinned to French, so `useTranslation` never suspends and
 // the existing French-literal assertions below keep matching real rendered
 // text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['rules', 'common']);
-});
+pinLocale('rules');
 
 function makeMutation<TData, TVars>(): UseMutationResult<TData, Error, TVars> {
   return {

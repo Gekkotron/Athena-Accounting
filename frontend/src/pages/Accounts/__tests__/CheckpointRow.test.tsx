@@ -1,18 +1,15 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CheckpointRow } from '../CheckpointRow';
 import type { BalanceCheckpoint } from '../../../api/types';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // CheckpointRow uses both the 'accounts' namespace (the "add a note" hint)
 // and 'common' (the delete button). Preload both for both locales, pinned
 // to French, so `useTranslation` never suspends and the existing
 // French-literal assertions below keep matching real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['accounts', 'common']);
-});
+pinLocale('accounts');
 
 const cp: BalanceCheckpoint = {
   id: 1, accountId: 1, checkpointDate: '2025-06-01',

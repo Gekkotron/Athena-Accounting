@@ -1,12 +1,9 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { PeriodSelector } from '../PeriodSelector';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['budgets']);
-});
+pinLocale('budgets');
 
 describe('PeriodSelector', () => {
   it('renders Mois / Année tabs and the current period label', () => {

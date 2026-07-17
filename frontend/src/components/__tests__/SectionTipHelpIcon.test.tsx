@@ -1,16 +1,13 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { TipsProvider } from '../../contexts/TipsContext';
 import { SectionTipHelpIcon } from '../SectionTipHelpIcon';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['tips']);
-});
+pinLocale('tips');
 
 beforeEach(() => {
   fetchMock.mockReset();

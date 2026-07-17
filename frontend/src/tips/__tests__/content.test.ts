@@ -1,11 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TIP_IDS, sectionTip, welcomeStep, WELCOME_STEP_COUNT, type SectionTipId } from '../content';
 import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['tips']);
-});
+pinLocale('tips');
 
 describe('tips content registry', () => {
   it('TIP_IDS has all 8 ids in the frozen order', () => {

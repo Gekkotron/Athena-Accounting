@@ -1,12 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CategoryDonut, type CategorySegment } from '../CategoryDonut';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['charts']);
-});
+pinLocale('charts');
 
 const seg = (name: string, amount: number, color: string | null = null): CategorySegment => ({
   id: name.charCodeAt(0),

@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TransactionRow } from '../TransactionRow';
 import type { Transaction, Category, Account, BalanceCheckpoint } from '../../../api/types';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // TransactionRow renders French strings by default (the app's current UI
 // language). Preload the 'transactions'/'common' namespaces for both locales
@@ -11,10 +11,7 @@ import i18n from '../../../i18n';
 // language to French so the existing French-literal assertions below keep
 // matching real rendered text (per the i18n migration recipe's
 // locale-preserving-helper fallback).
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['transactions', 'common']);
-});
+pinLocale('transactions');
 
 const acc: Account = {
   id: 1,

@@ -1,12 +1,9 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { SuggestionCard } from '../SuggestionCard';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['budgets']);
-});
+pinLocale('budgets');
 
 const rowOver = {
   id: 5, categoryId: 42, name: 'Restaurants', color: null, parentId: null, accountId: null,

@@ -1,17 +1,14 @@
-import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Patterns } from '../Patterns';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // Patterns renders PatternsSection, which uses the 'accounts' namespace.
 // Preload it for both locales, pinned to French, so `useTranslation` never
 // suspends and the existing French-literal assertions below keep matching
 // real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['accounts']);
-});
+pinLocale('accounts');
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');

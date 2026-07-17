@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BudgetEnvelopeSection } from '../BudgetEnvelopeSection';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 vi.mock('../../../api/client', () => ({ api: vi.fn() }));
 import { api } from '../../../api/client';
@@ -19,14 +19,10 @@ function wrap(children: React.ReactNode) {
 // to French so the existing French-literal assertions below keep matching
 // real rendered text (per the i18n migration recipe's locale-preserving-
 // helper fallback).
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['dashboard']);
-});
+pinLocale('dashboard');
 
 describe('BudgetEnvelopeSection', () => {
   beforeEach(async () => {
-    await i18n.changeLanguage('fr');
     vi.mocked(api).mockReset();
   });
 

@@ -1,20 +1,17 @@
-import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Rules } from '../Rules';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
 // The Rules page renders French strings by default and reuses the shared
 // 'common' namespace (AdvancedEditor's Save/Cancel/Delete). Preload both
 // namespaces for both locales, pinned to French, so `useTranslation` never
 // suspends mid-render and the existing French-literal assertions below keep
 // matching real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['rules', 'common']);
-});
+pinLocale('rules');
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');

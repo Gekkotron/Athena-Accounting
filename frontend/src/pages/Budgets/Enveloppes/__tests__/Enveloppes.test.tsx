@@ -1,17 +1,14 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Enveloppes } from '../Enveloppes';
-import i18n from '../../../../i18n';
+import { pinLocale } from '../../../../test/i18n';
 
 vi.mock('../../../../api/client', () => ({ api: vi.fn() }));
 import { api } from '../../../../api/client';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['budgets']);
-});
+pinLocale('budgets');
 
 const report = {
   month: '2026-07',

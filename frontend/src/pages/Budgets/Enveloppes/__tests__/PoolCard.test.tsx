@@ -1,12 +1,9 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PoolCard } from '../PoolCard';
-import i18n from '../../../../i18n';
+import { pinLocale } from '../../../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['budgets']);
-});
+pinLocale('budgets');
 
 const pool = {
   incomeCumulative: '18400.00',

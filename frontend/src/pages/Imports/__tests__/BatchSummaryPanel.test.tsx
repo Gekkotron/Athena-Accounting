@@ -1,18 +1,15 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BatchSummaryPanel, type BatchState } from '../BatchSummaryPanel';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // BatchSummaryPanel renders French strings by default (the app's current UI
 // language). Preload the 'imports'/'common' namespaces for both locales so
 // `useTranslation` never suspends mid-render, then pin the active language
 // to French so the existing French-literal assertions below keep matching
 // real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports', 'common']);
-});
+pinLocale('imports');
 
 const doneWithErrors: BatchState = {
   phase: 'done', imported: 1, inserted: 3, skipped: 0, needsTemplate: [],

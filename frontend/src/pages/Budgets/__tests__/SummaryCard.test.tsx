@@ -1,12 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SummaryCard } from '../SummaryCard';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['budgets']);
-});
+pinLocale('budgets');
 
 describe('SummaryCard', () => {
   it('renders the hero sentence with spent and limit for monthly period', () => {

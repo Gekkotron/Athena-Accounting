@@ -1,19 +1,16 @@
-import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BackupPanel } from '../BackupPanel';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // BackupPanel renders French strings by default (the app's current UI
 // language). Preload the 'imports' namespace for both locales so
 // `useTranslation` never suspends mid-render, then pin the active language
 // to French so the existing French-literal assertions below keep matching
 // real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports', 'common']);
-});
+pinLocale('imports');
 
 // jsdom's Blob/File implementation in this environment has no `.text()`
 // method (BackupPanel reads the picked file via `File#text()`), so polyfill

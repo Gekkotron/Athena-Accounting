@@ -1,18 +1,15 @@
-import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../App';
 import { PrivacyProvider } from '../contexts/PrivacyContext';
-import i18n from '../i18n';
+import { pinLocale } from '../test/i18n';
 
 // App now reads a couple of translated strings directly (the loader text +
 // the hub-tab labels passed to HubLayout). Preload the namespaces it needs
 // so `useTranslation` never suspends mid-render.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['layout', 'common', 'tips']);
-});
+pinLocale('layout', 'tips');
 
 // The page-level components are covered by their own tests; here we just
 // want the auth-gate + routing behavior. Stub them out with markers so the

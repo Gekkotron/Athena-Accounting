@@ -1,17 +1,14 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Settings } from '../Settings';
 import { withTips } from '../../test/renderWithProviders';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
 // Preload 'settings'/'common' for both locales and pin French so
 // `useTranslation` never suspends mid-render and existing assertions keep
 // matching real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['settings', 'common']);
-});
+pinLocale('settings');
 
 vi.mock('../../api/mcp', () => ({
   getMcpSettings: vi.fn().mockResolvedValue({ enabled: false, hasToken: false }),

@@ -1,14 +1,11 @@
-import { it, expect, beforeAll } from 'vitest';
+import { it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Sankey } from '../Sankey';
 import { buildSankeyModel } from '../../pages/Dashboard/sankey';
 import type { Category, CategoryReportRow } from '../../api/types';
-import i18n from '../../i18n';
+import { pinLocale } from '../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['charts']);
-});
+pinLocale('charts');
 
 const cat = (id: number, name: string, kind: Category['kind']): Category => ({
   id, name, kind, color: null, parentId: null, isDefault: false, isInternalTransfer: false,

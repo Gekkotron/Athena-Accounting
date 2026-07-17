@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PdfTemplates } from '../PdfTemplates';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -19,10 +19,7 @@ vi.mock('../../../api/pdf-templates', async () => {
 // suspends mid-render, then pin the active language to French so the
 // existing French-literal assertion below keeps matching real rendered
 // text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports', 'common']);
-});
+pinLocale('imports');
 
 describe('PdfTemplates route', () => {
   it('renders the PdfTemplatesPanel', async () => {

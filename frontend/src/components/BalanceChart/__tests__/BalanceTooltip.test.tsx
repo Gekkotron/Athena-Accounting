@@ -1,14 +1,11 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BalanceTooltip } from '../BalanceTooltip';
 import type { SeriesPoint } from '../series';
 import type { CheckpointMark } from '../checkpoints';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['charts']);
-});
+pinLocale('charts');
 
 const hovered: SeriesPoint = { date: '2026-06-15', value: 2300 };
 

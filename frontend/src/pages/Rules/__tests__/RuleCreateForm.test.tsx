@@ -1,18 +1,15 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RuleCreateForm } from '../RuleCreateForm';
 import type { Category } from '../../../api/types';
-import i18n from '../../../i18n';
+import { pinLocale } from '../../../test/i18n';
 
 // RuleCreateForm renders French strings by default. Preload the 'rules'
 // namespace for both locales so `useTranslation` never suspends mid-render,
 // then pin the active language to French so the existing French-literal
 // assertions below keep matching real rendered text.
-beforeAll(async () => {
-  await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['rules']);
-});
+pinLocale('rules');
 
 const categories: Category[] = [
   { id: 10, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
