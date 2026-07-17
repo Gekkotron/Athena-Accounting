@@ -22,7 +22,7 @@
 //   node desktop/scripts/build-sidecar.mjs
 //   NODE_TARGET=v22.11.0 TARGET_OS=darwin TARGET_ARCH=arm64 node desktop/scripts/build-sidecar.mjs
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   cpSync,
@@ -49,7 +49,14 @@ const TARGET_ARCH = process.env.TARGET_ARCH ?? process.arch; // arm64 | x64
 const log = (msg) => console.log(`[build-sidecar] ${msg}`);
 
 function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', ...opts });
+  // On Windows, npm/curl are shipped as .cmd/.exe launchers; spawn without a
+  // shell won't resolve them via PATHEXT. Enabling shell mode is enough — args
+  // are still passed as an array, so we don't reintroduce quoting hazards.
+  const r = spawnSync(cmd, args, {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    ...opts,
+  });
   if (r.status !== 0) {
     throw new Error(`${cmd} ${args.join(' ')} exited with ${r.status}`);
   }
@@ -93,11 +100,9 @@ function extractNode(archivePath) {
   const workdir = path.join(CACHE, `${path.basename(archivePath)}.extracted`);
   if (existsSync(workdir)) rmSync(workdir, { recursive: true, force: true });
   mkdirSync(workdir, { recursive: true });
-  if (archivePath.endsWith('.zip')) {
-    run('unzip', ['-q', archivePath, '-d', workdir]);
-  } else {
-    run('tar', ['-xf', archivePath, '-C', workdir]);
-  }
+  // GitHub Actions' windows-latest ships a bsdtar that transparently extracts
+  // .zip archives, so a single `tar -xf` covers all three platforms.
+  run('tar', ['-xf', archivePath, '-C', workdir]);
   const [top] = readdirSync(workdir);
   const src =
     TARGET_OS === 'win32'

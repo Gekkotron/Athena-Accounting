@@ -19,7 +19,8 @@
     "active": true,
     "targets": "all",
     "resources": {
-      "../sidecar/": "sidecar/"
+      "../sidecar/": "sidecar/",
+      "../../frontend/dist/": "frontend/dist/"
     },
     "icon": [
       "icons/32x32.png",

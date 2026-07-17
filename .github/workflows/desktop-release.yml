@@ -1,0 +1,167 @@
+name: Desktop release
+
+# Cross-platform packaging for the Tauri desktop app. Triggered by pushing a
+# tag matching v*-desktop (e.g. v1.0.0-desktop-rc1). Each matrix job builds
+# the sidecar for its own runner (native prebuilds pick up automatically),
+# builds the frontend, invokes `cargo tauri build`, and attaches the resulting
+# platform installer to a draft GitHub Release.
+#
+# macOS code-signing is intentionally skipped in this initial revision. Users
+# will see the "unidentified developer" Gatekeeper dialog on first launch;
+# `docs/standalone-app-distribution.md` documents the right-click → Open
+# workaround. Revisit once we hold an Apple Developer account.
+
+on:
+  push:
+    tags:
+      - 'v*-desktop'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name to use for the draft release (workflow_dispatch only)'
+        required: true
+        default: 'v0.0.0-desktop-manual'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS (arm64)
+            tauri_target: aarch64-apple-darwin
+            artifact_glob: 'desktop/src-tauri/target/release/bundle/dmg/*.dmg'
+          - os: ubuntu-latest
+            label: Linux (x64)
+            tauri_target: x86_64-unknown-linux-gnu
+            artifact_glob: 'desktop/src-tauri/target/release/bundle/appimage/*.AppImage'
+          - os: windows-latest
+            label: Windows (x64)
+            tauri_target: x86_64-pc-windows-msvc
+            artifact_glob: 'desktop/src-tauri/target/release/bundle/nsis/*.exe'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.tauri_target }}
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock', 'desktop/src-tauri/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Tauri on Linux needs webkit2gtk + a few X libs. macOS/Windows runners
+      # ship everything Tauri needs preinstalled.
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend (npm run build)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build sidecar for host platform
+        shell: bash
+        run: node desktop/scripts/build-sidecar.mjs
+
+      # Tauri CLI v2. Pinned to the same major the shell was authored against.
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2.0.0
+
+      - name: Build Tauri app
+        working-directory: desktop/src-tauri
+        env:
+          # No code-signing keys wired up yet. Explicit empty vars keep the
+          # tauri-bundler from attempting to sign on macOS.
+          APPLE_SIGNING_IDENTITY: ''
+          APPLE_CERTIFICATE: ''
+          APPLE_CERTIFICATE_PASSWORD: ''
+        run: tauri build --target ${{ matrix.tauri_target }}
+
+      - name: Collect installer artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          matches=( ${{ matrix.artifact_glob }} )
+          if [ ${#matches[@]} -eq 0 ]; then
+            echo "No artifacts matched ${{ matrix.artifact_glob }}" >&2
+            find desktop/src-tauri/target/release/bundle -maxdepth 4 -type f >&2 || true
+            exit 1
+          fi
+          echo "path=${matches[0]}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${matches[0]}")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: ${{ steps.artifact.outputs.path }}
+          if-no-files-found: error
+
+      - name: Attach to draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          draft: true
+          prerelease: ${{ contains(steps.tag.outputs.name, '-rc') || contains(steps.tag.outputs.name, '-beta') || contains(steps.tag.outputs.name, '-alpha') }}
+          files: ${{ steps.artifact.outputs.path }}
+          fail_on_unmatched_files: true
+          body: |
+            Desktop build for `${{ steps.tag.outputs.name }}`.
+
+            Artifacts (one per platform): `.dmg` (macOS arm64), `.AppImage` (Linux x64), `.exe` (Windows x64).
+
+            **macOS**: not code-signed yet. First launch triggers Gatekeeper's
+            "unidentified developer" dialog — right-click the app in Finder
+            and choose *Open* to bypass. See
+            `docs/standalone-app-distribution.md` for the full workaround.
