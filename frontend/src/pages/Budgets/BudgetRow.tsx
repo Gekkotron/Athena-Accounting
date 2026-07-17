@@ -117,7 +117,7 @@ export function BudgetRow(props: {
     <li
       data-role="budget-row"
       data-depth={depth}
-      className={`surface p-4 ${depth === 1 ? 'ml-8 bg-ink-900/20' : ''}`}
+      className={`surface p-4 ${depth === 1 ? 'border-l-2 border-l-sage-500/40' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="font-medium">{r.name}</span>
