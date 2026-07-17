@@ -7,8 +7,10 @@ sidebar_position: 1
 
 You installed Athena or plan to. Start here.
 
-- **[Getting started](getting-started.md)** — install, first-run
-  onboarding, your first ten minutes.
+- **[Getting started](getting-started.md)** — pick a path (Docker
+  family server vs solo desktop app), install, first-run onboarding.
+- **[Desktop install](desktop-install.md)** — download the standalone
+  app, first-run flow per OS, where data lives, how to back up.
 - **[Importing](importing.md)** — OFX, French CSV, and PDF bank
   statements.
 - **[Categorization](categorization.md)** — rules, Tri tab, internal

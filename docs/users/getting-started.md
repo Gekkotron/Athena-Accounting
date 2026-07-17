@@ -5,10 +5,60 @@ sidebar_position: 2
 
 # Getting started
 
-This page takes you from an empty machine to a running Athena instance
-you're actively using. It should take about ten minutes.
+Athena ships in two flavours from the same codebase. Pick the one that
+matches how you want to use it — both stay local, neither talks to the
+cloud, and your data never leaves the machine you install it on.
 
-## What you need
+## Pick a path
+
+<table>
+  <thead>
+    <tr>
+      <th>Family server (Docker)</th>
+      <th>Solo user (Desktop)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Runs as a small stack (Postgres + Fastify + nginx) on a machine
+          you leave on — a NAS, a mini-PC, a spare laptop. Everyone in
+          the household reaches it over the LAN in a browser.</td>
+      <td>A single desktop application on macOS, Windows, or Linux. You
+          double-click it, a window opens, and everything runs inside
+          that process on your own machine.</td>
+    </tr>
+    <tr>
+      <td>Multi-user with real login sessions. Handles concurrent
+          imports and dashboards from several devices.</td>
+      <td>Single-user. The onboarding password unlocks the app locally;
+          no network login flow.</td>
+    </tr>
+    <tr>
+      <td>Requires Docker and Docker Compose on the host.</td>
+      <td>No prerequisites. Download, install, launch.</td>
+    </tr>
+    <tr>
+      <td>Data lives in a Postgres volume you control.</td>
+      <td>Data lives in a per-OS user directory as a single PGlite
+          file — easy to copy for backup.</td>
+    </tr>
+    <tr>
+      <td>➜ Continue below.</td>
+      <td>➜ Jump to <a href="desktop-install.md"><strong>Desktop install</strong></a>.</td>
+    </tr>
+  </tbody>
+</table>
+
+Both paths share the same features, the same UI, the same backup format,
+and the same MCP endpoint — the only real differences are the ones in
+the table above. You can move a backup export between them freely.
+
+The rest of this page walks the **Docker** path. If you picked desktop,
+head to **[Desktop install](desktop-install.md)** and then come back for
+[Your first ten minutes](#your-first-ten-minutes) — that section applies
+to both paths unchanged.
+
+## Docker path — what you need
 
 - A Linux or macOS host with Docker and Docker Compose. Windows works
   under WSL 2 but is not the primary target.

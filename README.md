@@ -6,6 +6,27 @@
 Self-hosted personal accounting. Local-only, no cloud dependencies, your
 bank data never leaves your network.
 
+## Install
+
+Two supported paths from the same codebase — pick the one that matches
+how you want to use Athena:
+
+[![Docker install](https://img.shields.io/badge/Install-Docker%20%28family%20server%29-2496ed?logo=docker&logoColor=white)](docs/users/getting-started.md)
+[![Desktop install](https://img.shields.io/badge/Install-Desktop%20app%20%28solo%20user%29-4b8bbe?logo=tauri&logoColor=white)](docs/users/desktop-install.md)
+[![Latest release](https://img.shields.io/github/v/release/Gekkotron/Athena-Accounting?label=Latest%20release&color=brightgreen)](https://github.com/Gekkotron/Athena-Accounting/releases/latest)
+
+- **Family server (Docker).** Runs the full stack (Postgres + Fastify +
+  nginx) on a machine you leave on. Multi-user, LAN-wide, everyone in
+  the household reaches it in a browser. See the
+  [Quickstart](#quickstart-docker) below.
+- **Solo user (Desktop).** A single `.dmg` / `.exe` / `.AppImage` you
+  download and launch. Single-user, everything runs in-process with an
+  embedded PGlite database — no Docker, no other prerequisites. See
+  the [desktop install guide](docs/users/desktop-install.md).
+
+Both paths ship the same features, the same UI, and the same backup
+format. You can move a backup export between them freely.
+
 ## Documentation
 
 Full docs live in [`docs/`](docs/README.md) — split into a user track
@@ -88,9 +109,18 @@ bucket (configuration, API, glossary).
 - **Backend:** Node 20 + Fastify 5 + TypeScript + Drizzle ORM
 - **Database:** PostgreSQL 16 (`pg_trgm`, `unaccent`, `pgcrypto`)
 - **Frontend:** React 18 + Vite + Tailwind 3 + TanStack Query
-- **Packaging:** single `docker-compose.yml` (postgres + backend + frontend)
+- **Packaging (family-server path):** single `docker-compose.yml`
+  (postgres + backend + frontend).
+- **Packaging (desktop path):** Tauri 2 shell + directory-based sidecar
+  (bundled Node runtime + Fastify + PGlite). Same backend code, no
+  Docker required.
 
-## Quickstart
+## Quickstart (Docker)
+
+> Prerequisite: Docker and Docker Compose on the host. If you don't
+> want Docker in the picture at all, use the
+> [desktop app](docs/users/desktop-install.md) instead — no
+> prerequisites, no LAN, single user.
 
 ```sh
 ./install.sh                  # generates .env with strong random secrets
