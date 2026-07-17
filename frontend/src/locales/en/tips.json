@@ -1,0 +1,64 @@
+{
+  "sections": {
+    "dashboard": {
+      "title": "Welcome to the dashboard",
+      "body": "Here you can see your account balances, the balance curve, and your spending by category. Click a category in the donut chart to filter transactions."
+    },
+    "imports": {
+      "title": "Import your statements",
+      "body": "Drop an OFX, CSV, or PDF file. The first time a bank's PDF is imported, a wizard asks you to mark the amount/date/description zones — later imports are automatic."
+    },
+    "transactions": {
+      "title": "Search, fix, split",
+      "body": "Search ignores accents and case. You can split a transaction into several sub-lines, edit a category inline, or select multiple transactions to delete them all at once."
+    },
+    "rules": {
+      "title": "Automatic categorization",
+      "body": "Rules apply to new imports and can be re-applied retroactively without overwriting your manual categories. From the Sort tab, you can create a rule from a keyword in one click."
+    },
+    "budgets": {
+      "title": "Monthly budget tracking",
+      "body": "For each expense category, set a planned amount and track the variance in real time. Categories over budget turn red."
+    },
+    "accounts": {
+      "title": "Your accounts",
+      "body": "Add a checking account, savings account, PEA… The opening balance is required: every balance is computed from there. Locked funds (PEA, term deposit) are kept separate from the available amount."
+    },
+    "data": {
+      "title": "Backup and restore",
+      "body": "Export a full backup (accounts, transactions, checkpoints, splits) and re-import it on another install or to restore."
+    }
+  },
+  "welcome": {
+    "stepCounter": "Step {{step}} / {{total}}",
+    "buttons": {
+      "skip": "Skip",
+      "next": "Next",
+      "finish": "Finish"
+    },
+    "steps": {
+      "0": {
+        "title": "Welcome to Athena",
+        "body": "Athena is a self-hosted personal accounting app. Your banking data never leaves your network."
+      },
+      "1": {
+        "title": "Create your accounts",
+        "body": "Start by adding your bank accounts under \"Accounts\". The opening balance and opening date are the basis for every calculation."
+      },
+      "2": {
+        "title": "Import your statements",
+        "body": "From \"Data › Imports\", drop your OFX, CSV, or PDF files. Duplicates are detected automatically."
+      },
+      "3": {
+        "title": "Analyze your spending",
+        "body": "The dashboard shows your balance and spending by category. You can then set monthly budgets if you'd like."
+      }
+    }
+  },
+  "sectionTip": {
+    "hideAriaLabel": "Hide this tip"
+  },
+  "sectionTipHelpIcon": {
+    "showAriaLabel": "Show this section's tip again"
+  }
+}

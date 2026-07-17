@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BalancePoint } from '../../api/types';
 import { formatAmountCompact, formatDateShort } from '../../lib/format';
 import { buildAggregatedSeries } from './series';
@@ -56,6 +57,7 @@ function isoDate(ms: number): string {
 const MIN_ZOOM_WIDTH_VB = 10;
 
 export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6 }: Props): JSX.Element {
+  const { t } = useTranslation('charts');
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
@@ -67,7 +69,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   if (data.length < 2) {
     return (
       <div className="text-sm text-ink-500 py-12 text-center font-display italic">
-        Pas encore assez de données pour tracer une courbe.
+        {t('balanceChart.notEnoughData')}
       </div>
     );
   }
@@ -463,9 +465,9 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           type="button"
           onClick={() => setZoom(null)}
           className="absolute top-2 right-2 text-[11px] text-ink-300 hover:text-ink-50 bg-ink-900/85 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition"
-          title="Double-cliquez sur le graphique pour la même action"
+          title={t('balanceChart.zoomReset.title')}
         >
-          Réinitialiser le zoom
+          {t('balanceChart.zoomReset.button')}
         </button>
       )}
 

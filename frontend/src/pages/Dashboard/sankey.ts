@@ -25,7 +25,15 @@ export interface SankeyModel {
   totalExpense: number;
   currency: string;
 }
-export interface BuildOpts { topNIncome?: number; topNExpense?: number; }
+export interface BuildOpts {
+  topNIncome?: number;
+  topNExpense?: number;
+  /** Label for the aggregated tail node beyond topN. Defaults to the
+      French 'Autres' for backward compatibility with existing callers/tests
+      that don't pass a translated override; production call sites (e.g.
+      SankeySection.tsx) pass the 'charts' namespace's translated string. */
+  otherLabel?: string;
+}
 
 export const DEFAULT_TOP_N_INCOME = 4;
 export const DEFAULT_TOP_N_EXPENSE = 6;
@@ -47,6 +55,7 @@ function bucketToNodes(
   groups: Map<number, Group>,
   topN: number,
   keyPrefix: string,
+  otherLabel: string,
 ): SankeyNode[] {
   // Exclude groups with net amount <= 0: a Sankey ribbon cannot have negative width,
   // so categories that net to zero or negative over the period (e.g. expense groups
@@ -59,7 +68,7 @@ function bucketToNodes(
   }));
   if (tail.length > 0) {
     nodes.push({
-      key: `${keyPrefix}:autres`, label: 'Autres',
+      key: `${keyPrefix}:autres`, label: otherLabel,
       amount: tail.reduce((s, g) => s + g.amount, 0), color: null, tone: 'neutral',
       breakdown: tail.map((g) => ({ label: g.label, amount: g.amount, color: g.color })),
     });
@@ -95,8 +104,9 @@ export function buildSankeyModel(
     target.set(root.id, g);
   }
 
-  const incomeNodes = bucketToNodes(income, topNIncome, 'in');
-  const expenseNodes = bucketToNodes(expense, topNExpense, 'out');
+  const otherLabel = opts.otherLabel ?? 'Autres';
+  const incomeNodes = bucketToNodes(income, topNIncome, 'in', otherLabel);
+  const expenseNodes = bucketToNodes(expense, topNExpense, 'out', otherLabel);
   const totalIncome = incomeNodes.reduce((s, n) => s + n.amount, 0);
   const totalExpense = expenseNodes.reduce((s, n) => s + n.amount, 0);
 
@@ -120,7 +130,19 @@ export interface LaidOutLink {
   path: string; width: number; color: string | null;
 }
 export interface SankeyLayout { nodes: LaidOutNode[]; links: LaidOutLink[]; width: number; height: number; }
-export interface LayoutOpts { width?: number; height?: number; nodeWidth?: number; gap?: number; minNodeHeight?: number; }
+export interface LayoutOpts {
+  width?: number;
+  height?: number;
+  nodeWidth?: number;
+  gap?: number;
+  minNodeHeight?: number;
+  /** Labels for the synthetic pool/savings nodes. Default to the French
+      copy for backward compatibility with existing callers/tests; the
+      Sankey component passes the 'charts' namespace's translated strings. */
+  poolLabel?: string;
+  savingsLabel?: string;
+  savingsWithdrawnLabel?: string;
+}
 
 // Filled Sankey ribbon: two cubic-bezier curves (top + bottom) connecting a
 // source segment [top0..bot0] at x0 to a target segment [top1..bot1] at x1,
@@ -148,15 +170,18 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   // span 26 px; 28 px gives 1 px of slack top and bottom so the amount
   // never bleeds outside the coloured ribbon.
   const minNodeHeight = opts.minNodeHeight ?? 28;
+  const poolLabel = opts.poolLabel ?? 'Revenus';
+  const savingsLabel = opts.savingsLabel ?? 'Épargne';
+  const savingsWithdrawnLabel = opts.savingsWithdrawnLabel ?? 'Épargne puisée';
 
   // Left = income sources (+ deficit source); right = expenses (+ savings).
   const leftNodes: SankeyNode[] = [...model.incomeNodes];
   if (model.deficit > 0) {
-    leftNodes.push({ key: 'in:deficit', label: 'Épargne puisée', amount: model.deficit, color: null, tone: 'clay' });
+    leftNodes.push({ key: 'in:deficit', label: savingsWithdrawnLabel, amount: model.deficit, color: null, tone: 'clay' });
   }
   const rightNodes: SankeyNode[] = [...model.expenseNodes];
   if (model.savings > 0) {
-    rightNodes.push({ key: 'out:savings', label: 'Épargne', amount: model.savings, color: null, tone: 'sage' });
+    rightNodes.push({ key: 'out:savings', label: savingsLabel, amount: model.savings, color: null, tone: 'sage' });
   }
 
   const grandTotal = leftNodes.reduce((s, n) => s + n.amount, 0) || 1;
@@ -206,7 +231,7 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   const rightPoolFlowTop = (height - rightStackH) / 2;
 
   const pool: LaidOutNode = {
-    key: 'pool', label: 'Revenus', amount: model.totalIncome, color: null, tone: 'category',
+    key: 'pool', label: poolLabel, amount: model.totalIncome, color: null, tone: 'category',
     column: 'center', x: (width - nodeWidth) / 2, y: 0, w: nodeWidth, h: height,
   };
 

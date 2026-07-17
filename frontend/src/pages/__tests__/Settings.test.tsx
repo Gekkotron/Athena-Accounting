@@ -15,7 +15,7 @@ import i18n from '../../i18n';
 // real rendered text.
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['settings', 'common']);
+  await i18n.loadNamespaces(['settings', 'common', 'charts']);
 });
 
 vi.mock('../../api/client', async () => {

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatAmount, formatDate } from '../../lib/format';
 import type { SeriesPoint } from './series';
 import type { CheckpointMark } from './checkpoints';
@@ -23,6 +24,7 @@ function clamp(v: number, min: number, max: number): number {
 // above the dot, centered horizontally. The container also clamps the X so
 // the tooltip never overflows on the sides.
 export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, containerWidth, previousValue }: Props): JSX.Element {
+  const { t } = useTranslation('charts');
   // Diff from the previous data point, e.g. "2 300 € (−100 €)". Intl renders
   // the minus for negatives; we prepend an explicit "+" for gains so the
   // direction reads at a glance without relying on colour alone.
@@ -54,19 +56,19 @@ export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, con
       </div>
       {hoveredCheckpoint && (
         <div className="mt-1 pt-1 border-t border-ink-800/60 font-mono text-[10px] text-ink-500">
-          {/* Explicit checkpoint date so the écart is unambiguously tied
+          {/* Explicit checkpoint date so the delta is unambiguously tied
               to the checkpoint you set, not to the hovered bucket. */}
           <div className="text-ink-400 mb-0.5">
-            point de contrôle · <span className="text-ink-200">{formatDate(hoveredCheckpoint.date)}</span>
+            {t('balanceTooltip.checkpoint')} · <span className="text-ink-200">{formatDate(hoveredCheckpoint.date)}</span>
           </div>
           {hoveredCheckpoint.drift ? (
             <>
-              <div>attendu · <span className="text-ink-300 private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
-              <div>réel · <span className="text-ink-300 private">{formatAmount(hoveredCheckpoint.actual, currency)}</span></div>
-              <div className="text-amber-300">écart · <span className="private">{formatAmount(hoveredCheckpoint.delta, currency)}</span></div>
+              <div>{t('balanceTooltip.expected')} · <span className="text-ink-300 private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
+              <div>{t('balanceTooltip.actual')} · <span className="text-ink-300 private">{formatAmount(hoveredCheckpoint.actual, currency)}</span></div>
+              <div className="text-amber-300">{t('balanceTooltip.delta')} · <span className="private">{formatAmount(hoveredCheckpoint.delta, currency)}</span></div>
             </>
           ) : (
-            <div className="text-sage-300">attendu ✓ <span className="private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
+            <div className="text-sage-300">{t('balanceTooltip.expectedConfirmed')} <span className="private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
           )}
         </div>
       )}

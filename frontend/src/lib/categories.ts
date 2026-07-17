@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { Category, CategoryKind } from '../api/types';
 
 // Curated 10-color palette shared with Sankey, CategoryDonut, and the
@@ -25,11 +26,14 @@ export function resolveCategoryColor(c: Category): string {
   return CATEGORY_FALLBACK_PALETTE[c.id % CATEGORY_FALLBACK_PALETTE.length]!;
 }
 
-export const KIND_LABEL: Record<CategoryKind, string> = {
-  expense: 'Dépense',
-  income: 'Revenu',
-  neutral: 'Neutre',
-};
+// Translated label for a category kind. Looked up from the shared 'common'
+// namespace regardless of which namespace the caller's `t` is bound to —
+// pass any component's `t` (e.g. from useTranslation('rules')) as long as
+// its useTranslation call also declares 'common' so the namespace is
+// preloaded and doesn't suspend mid-render.
+export function kindLabel(kind: CategoryKind, t: TFunction): string {
+  return t(`kind.${kind}`, { ns: 'common' });
+}
 
 // Tailwind class set for a small kind badge. Palette is intentionally low
 // saturation — the badge is a hint, not the focal point of the row.

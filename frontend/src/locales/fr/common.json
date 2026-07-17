@@ -10,5 +10,10 @@
   "close": "Fermer",
   "back": "Retour",
   "next": "Suivant",
-  "previous": "Précédent"
+  "previous": "Précédent",
+  "kind": {
+    "expense": "Dépense",
+    "income": "Revenu",
+    "neutral": "Neutre"
+  }
 }

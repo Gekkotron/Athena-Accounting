@@ -1,0 +1,53 @@
+{
+  "balanceChart": {
+    "notEnoughData": "Not enough data yet to draw a curve.",
+    "zoomReset": {
+      "button": "Reset zoom",
+      "title": "Double-click the chart for the same action"
+    }
+  },
+  "balanceTooltip": {
+    "checkpoint": "checkpoint",
+    "expected": "expected",
+    "actual": "actual",
+    "delta": "delta",
+    "expectedConfirmed": "expected ✓"
+  },
+  "sankey": {
+    "sourcesLabel": "Sources",
+    "categoriesLabel": "Categories",
+    "income": "Income",
+    "other": "Other",
+    "savings": "Savings",
+    "savingsWithdrawn": "Savings drawn down",
+    "ariaLabel": "Flow: {{income}} in income, {{expense}} in expenses",
+    "breakdownCount_one": "{{count}} item",
+    "breakdownCount_other": "{{count}} items"
+  },
+  "categoryBreakdown": {
+    "modeExpense": "Expenses",
+    "modeIncome": "Income",
+    "noCategory": "No category"
+  },
+  "categoryDonut": {
+    "empty": "No data to display yet.",
+    "total": "Total"
+  },
+  "rangePicker": {
+    "ariaLabel": "Displayed period",
+    "labels": {
+      "d30": "30d",
+      "m3": "3mo",
+      "m6": "6mo",
+      "m12": "12mo",
+      "all": "All"
+    },
+    "suffix": {
+      "d30": "over 30 days",
+      "m3": "over 3 months",
+      "m6": "over 6 months",
+      "m12": "over 12 months",
+      "all": "since account opening"
+    }
+  }
+}

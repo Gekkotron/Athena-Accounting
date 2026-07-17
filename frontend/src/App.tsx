@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
 import { TipsProvider } from './contexts/TipsContext';
@@ -24,27 +25,32 @@ import { Backup } from './pages/Data/Backup';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 
-const RULES_TABS: HubTab[] = [
-  { to: '/regles/tri', label: 'Tri' },
-  { to: '/regles/liste', label: 'Règles' },
-  { to: '/regles/categories', label: 'Catégories' },
-];
-
-const COMPTES_TABS: HubTab[] = [
-  { to: '/comptes', label: 'Comptes', end: true },
-  { to: '/comptes/motifs', label: 'Motifs de fichier' },
-];
-
-const DONNEES_TABS: HubTab[] = [
-  { to: '/donnees/imports', label: 'Imports' },
-  { to: '/donnees/doublons', label: 'Doublons' },
-  { to: '/donnees/modeles', label: 'Modèles PDF' },
-  { to: '/donnees/sauvegarde', label: 'Sauvegarde' },
-];
-
 export default function App() {
   const location = useLocation();
   const qc = useQueryClient();
+  const { t } = useTranslation(['layout', 'common']);
+
+  // Hub-tab labels reuse the same 'layout' namespace keys the sidebar nav
+  // (Layout.tsx) already uses for these same routes, so both stay in sync
+  // under a language switch. Computed per-render (not hoisted to module
+  // scope) since they now depend on `t`.
+  const RULES_TABS: HubTab[] = [
+    { to: '/regles/tri', label: t('nav.children.rules.sort') },
+    { to: '/regles/liste', label: t('nav.children.rules.list') },
+    { to: '/regles/categories', label: t('nav.children.rules.categories') },
+  ];
+
+  const COMPTES_TABS: HubTab[] = [
+    { to: '/comptes', label: t('nav.children.accounts.list'), end: true },
+    { to: '/comptes/motifs', label: t('nav.children.accounts.patterns') },
+  ];
+
+  const DONNEES_TABS: HubTab[] = [
+    { to: '/donnees/imports', label: t('nav.children.data.imports') },
+    { to: '/donnees/doublons', label: t('nav.children.data.duplicates') },
+    { to: '/donnees/modeles', label: t('nav.children.data.pdfTemplates') },
+    { to: '/donnees/sauvegarde', label: t('nav.children.data.backup') },
+  ];
 
   // Global session-expiry redirect: any 401 from a non-auth-me endpoint
   // clears the cache and sets me to a null user, which triggers the redirect
@@ -72,7 +78,7 @@ export default function App() {
   if (me.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
-        Chargement…
+        {t('loading', { ns: 'common' })}
       </div>
     );
   }
@@ -104,7 +110,7 @@ export default function App() {
           <Route path="/budgets/enveloppes" element={<Enveloppes />} />
 
           {/* Règles hub */}
-          <Route path="/regles" element={<HubLayout title="Règles" tabs={RULES_TABS} />}>
+          <Route path="/regles" element={<HubLayout title={t('nav.items.rules')} tabs={RULES_TABS} />}>
             <Route index element={<Navigate to="tri" replace />} />
             <Route path="tri" element={<Tri />} />
             <Route path="liste" element={<Rules />} />
@@ -112,13 +118,13 @@ export default function App() {
           </Route>
 
           {/* Comptes hub */}
-          <Route path="/comptes" element={<HubLayout title="Comptes" tabs={COMPTES_TABS} />}>
+          <Route path="/comptes" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
             <Route index element={<Accounts />} />
             <Route path="motifs" element={<Patterns />} />
           </Route>
 
           {/* Données hub */}
-          <Route path="/donnees" element={<HubLayout title="Données" tabs={DONNEES_TABS} />}>
+          <Route path="/donnees" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
             <Route index element={<Navigate to="imports" replace />} />
             <Route path="imports" element={<Imports />} />
             <Route path="doublons" element={<Duplicates />} />

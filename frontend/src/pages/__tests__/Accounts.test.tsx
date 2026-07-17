@@ -15,7 +15,7 @@ import i18n from '../../i18n';
 // French-literal assertions below keep matching real rendered text.
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['accounts', 'common']);
+  await i18n.loadNamespaces(['accounts', 'common', 'tips']);
 });
 
 vi.mock('../../api/client', async () => {

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { layoutSankey, type SankeyModel, type LaidOutNode } from '../pages/Dashboard/sankey';
 import { formatAmount } from '../lib/format';
 
@@ -31,9 +32,17 @@ function resolveColor(
 }
 
 export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
+  const { t } = useTranslation('charts');
   const layout = useMemo(
-    () => layoutSankey(model, { width: VIEW_W, height: VIEW_H }),
-    [model],
+    () =>
+      layoutSankey(model, {
+        width: VIEW_W,
+        height: VIEW_H,
+        poolLabel: t('sankey.income'),
+        savingsLabel: t('sankey.savings'),
+        savingsWithdrawnLabel: t('sankey.savingsWithdrawn'),
+      }),
+    [model, t],
   );
 
   // Pre-resolve each node's colour so palette-fallback indices stay stable
@@ -87,9 +96,10 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
     setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  const ariaLabel =
-    `Flux : ${formatAmount(model.totalIncome, model.currency)} de revenus, ` +
-    `${formatAmount(model.totalExpense, model.currency)} de dépenses`;
+  const ariaLabel = t('sankey.ariaLabel', {
+    income: formatAmount(model.totalIncome, model.currency),
+    expense: formatAmount(model.totalExpense, model.currency),
+  });
 
   const pool = layout.nodes.find((n) => n.key === 'pool');
 
@@ -98,14 +108,14 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
   const hoverPct = hoveredNode
     ? Math.round((hoveredNode.amount / (model.totalIncome || 1)) * 100)
     : 0;
-  const centerCaption = hoveredNode ? hoveredNode.label : 'Revenus';
+  const centerCaption = hoveredNode ? hoveredNode.label : t('sankey.income');
   const centerAmount = hoveredNode ? hoveredNode.amount : model.totalIncome;
   const centerColor = hoveredNode ? (colorByKey.get(hoveredNode.key) ?? '#e6e8ed') : '#e6e8ed';
 
   return (
     <div ref={wrapperRef} className="overflow-x-auto relative">
       <div className="grid grid-cols-3 items-end gap-2 mb-4 px-1">
-        <div className="label">Sources</div>
+        <div className="label">{t('sankey.sourcesLabel')}</div>
         <div className="text-center min-h-[44px]">
           <div className="label mb-0.5" style={{ transition: 'color 180ms' }}>
             {centerCaption}
@@ -122,7 +132,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
             )}
           </div>
         </div>
-        <div className="label text-right">Postes</div>
+        <div className="label text-right">{t('sankey.categoriesLabel')}</div>
       </div>
 
       <svg
@@ -253,6 +263,7 @@ function BreakdownTooltip({
   wrapperWidth: number;
   currency: string;
 }): JSX.Element {
+  const { t } = useTranslation('charts');
   const items = node.breakdown ?? [];
   // Flip to the left of the cursor when close to the right edge so the
   // panel never overflows the wrapper. 220 px is the tooltip's target width.
@@ -272,7 +283,7 @@ function BreakdownTooltip({
     >
       <div className="label mb-1.5 flex items-baseline justify-between gap-2">
         <span>{node.label}</span>
-        <span className="text-[10px] text-ink-400">{items.length} postes</span>
+        <span className="text-[10px] text-ink-400">{t('sankey.breakdownCount', { count: items.length })}</span>
       </div>
       <ul className="space-y-1">
         {items.map((it, i) => (

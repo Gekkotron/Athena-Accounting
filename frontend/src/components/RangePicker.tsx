@@ -1,17 +1,31 @@
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+
 export type RangeKey = '30d' | '3m' | '6m' | '12m' | 'all';
 
-interface RangeSpec { key: RangeKey; label: string; days: number | null }
+interface RangeSpec { key: RangeKey; days: number | null }
 
 // Days = null → "all time" (no lower bound). Kept as the source of truth for
-// every consumer, so the label ("3 m") and the lookup window (~90 days) can
-// never drift apart.
+// the lookup window (~90 days) so it never drifts from the range key. The
+// display label and "sur X" suffix are translated — see rangeLabel() /
+// rangeSuffixLabel() below — keyed off `charts.rangePicker` using a
+// translation-key-safe id (RANGES[i].key with the leading digit dropped,
+// e.g. '30d' -> 'd30') since i18next keys can't start with a digit.
 export const RANGES: readonly RangeSpec[] = [
-  { key: '30d', label: '30 j',  days: 30  },
-  { key: '3m',  label: '3 m',   days: 90  },
-  { key: '6m',  label: '6 m',   days: 180 },
-  { key: '12m', label: '12 m',  days: 365 },
-  { key: 'all', label: 'Tout',  days: null },
+  { key: '30d', days: 30  },
+  { key: '3m',  days: 90  },
+  { key: '6m',  days: 180 },
+  { key: '12m', days: 365 },
+  { key: 'all', days: null },
 ] as const;
+
+const LABEL_KEY: Record<RangeKey, string> = {
+  '30d': 'd30',
+  '3m': 'm3',
+  '6m': 'm6',
+  '12m': 'm12',
+  all: 'all',
+};
 
 function todayMinusDays(days: number): string {
   const d = new Date();
@@ -26,15 +40,10 @@ export function fromDateFor(range: RangeKey): string | undefined {
   return todayMinusDays(r.days);
 }
 
-/** Short human label for the "sur X" affordance ("sur 30 j" / "depuis l'ouverture"). */
-export function rangeSuffixLabel(range: RangeKey): string {
-  switch (range) {
-    case '30d': return 'sur 30 jours';
-    case '3m':  return 'sur 3 mois';
-    case '6m':  return 'sur 6 mois';
-    case '12m': return 'sur 12 mois';
-    case 'all': return "depuis l'ouverture";
-  }
+/** Short human label for the "sur X" affordance ("sur 30 j" / "depuis l'ouverture").
+    `t` must be bound to (or declare) the 'charts' namespace. */
+export function rangeSuffixLabel(range: RangeKey, t: TFunction): string {
+  return t(`rangePicker.suffix.${LABEL_KEY[range]}`, { ns: 'charts' });
 }
 
 interface Props {
@@ -44,11 +53,12 @@ interface Props {
   ariaLabel?: string;
 }
 
-export function RangePicker({ value, onChange, ariaLabel = 'Période affichée' }: Props): JSX.Element {
+export function RangePicker({ value, onChange, ariaLabel }: Props): JSX.Element {
+  const { t } = useTranslation('charts');
   return (
     <div
       role="group"
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? t('rangePicker.ariaLabel')}
       className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs"
     >
       {RANGES.map((r) => (
@@ -63,7 +73,7 @@ export function RangePicker({ value, onChange, ariaLabel = 'Période affichée' 
               : 'text-ink-400 hover:text-ink-100'
           }`}
         >
-          {r.label}
+          {t(`rangePicker.labels.${LABEL_KEY[r.key]}`)}
         </button>
       ))}
     </div>

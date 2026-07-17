@@ -18,14 +18,14 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
 import { formatAmount } from '../../lib/format';
-import { KIND_LABEL, kindBadgeClass, groupCategories, resolveCategoryColor } from '../../lib/categories';
+import { kindLabel, kindBadgeClass, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { resolveDrop } from './dragNest';
 import { CategoryColorPicker } from './CategoryColorPicker';
 
 export function Categories() {
-  const { t } = useTranslation('rules');
+  const { t } = useTranslation(['rules', 'common']);
   const qc = useQueryClient();
   const catQ = useQuery({
     queryKey: ['categories'],
@@ -214,13 +214,9 @@ export function Categories() {
             value={kind}
             onChange={(e) => setKind(e.target.value as CategoryKind)}
           >
-            {/* Intentionally left untranslated: mirrors the shared KIND_LABEL
-                map in lib/categories.ts (out of this task's file scope), so
-                the create-form select stays consistent with the kind badges
-                rendered elsewhere on this page. */}
-            <option value="expense">Dépense</option>
-            <option value="income">Revenu</option>
-            <option value="neutral">Neutre</option>
+            <option value="expense">{kindLabel('expense', t)}</option>
+            <option value="income">{kindLabel('income', t)}</option>
+            <option value="neutral">{kindLabel('neutral', t)}</option>
           </select>
         </div>
         <div className="w-full sm:w-32">
@@ -372,7 +368,7 @@ function CategoryTableRow(props: {
   onDelete: () => void;
   onOpenColorPicker: () => void;
 }): JSX.Element {
-  const { t } = useTranslation('rules');
+  const { t } = useTranslation(['rules', 'common']);
   const { c, depth, total, hasChildren, parent, childrenByParent, updateCategory, onDelete, onOpenColorPicker } = props;
 
   const kindDisabled = depth === 1;
@@ -461,7 +457,7 @@ function CategoryTableRow(props: {
       </td>
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className={kindBadgeClass(c.kind)}>{KIND_LABEL[c.kind]}</span>
+          <span className={kindBadgeClass(c.kind)}>{kindLabel(c.kind, t)}</span>
           <select
             className="input-sm"
             value={c.kind}
@@ -487,11 +483,9 @@ function CategoryTableRow(props: {
               updateCategory.mutate({ id: c.id, patch: { kind: nextKind } });
             }}
           >
-            {/* Intentionally left untranslated — see the create-form select
-                above; mirrors the shared, out-of-scope KIND_LABEL map. */}
-            <option value="expense">Dépense</option>
-            <option value="income">Revenu</option>
-            <option value="neutral">Neutre</option>
+            <option value="expense">{kindLabel('expense', t)}</option>
+            <option value="income">{kindLabel('income', t)}</option>
+            <option value="neutral">{kindLabel('neutral', t)}</option>
           </select>
         </div>
       </td>
@@ -560,6 +554,7 @@ function DragGhost({
   id: number;
   byId: Map<number, Category>;
 }): JSX.Element | null {
+  const { t } = useTranslation('common');
   const c = byId.get(id);
   if (!c) return null;
   return (
@@ -571,7 +566,7 @@ function DragGhost({
         />
       )}
       <span>{c.name}</span>
-      <span className={kindBadgeClass(c.kind)}>{KIND_LABEL[c.kind]}</span>
+      <span className={kindBadgeClass(c.kind)}>{kindLabel(c.kind, t)}</span>
     </div>
   );
 }

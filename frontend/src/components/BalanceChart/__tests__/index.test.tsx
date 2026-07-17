@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from '@testing-library/react';
 import { BalanceChart } from '../index';
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['charts']);
+});
 
 describe('BalanceChart gapThresholdDays', () => {
   const points = [

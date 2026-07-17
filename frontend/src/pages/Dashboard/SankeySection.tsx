@@ -37,6 +37,7 @@ export function SankeySection({
   primaryCurrency,
 }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
+  const { t: tCharts } = useTranslation('charts');
   const fromDate = fromDateFor(range);
   const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
 
@@ -60,8 +61,11 @@ export function SankeySection({
   });
 
   const model = useMemo(
-    () => buildSankeyModel(reportQ.data?.rows ?? [], catListQ.data?.categories ?? [], currency),
-    [reportQ.data, catListQ.data, currency],
+    () =>
+      buildSankeyModel(reportQ.data?.rows ?? [], catListQ.data?.categories ?? [], currency, {
+        otherLabel: tCharts('sankey.other'),
+      }),
+    [reportQ.data, catListQ.data, currency, tCharts],
   );
 
   const isLoading = catListQ.isLoading || reportQ.isLoading;
@@ -73,7 +77,7 @@ export function SankeySection({
         <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
           {t('sankey.title', { currency })}{' '}
           <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
-            — {rangeSuffixLabel(range)}
+            — {rangeSuffixLabel(range, tCharts)}
           </span>
         </span>
         <div className="flex-1 h-px bg-ink-800" />

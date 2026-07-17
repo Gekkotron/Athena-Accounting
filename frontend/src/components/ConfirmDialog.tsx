@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -20,14 +21,17 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirmer',
-  cancelLabel = 'Annuler',
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   busy = false,
   error = null,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('common');
+  const resolvedConfirmLabel = confirmLabel ?? t('confirm');
+  const resolvedCancelLabel = cancelLabel ?? t('cancel');
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -62,7 +66,7 @@ export function ConfirmDialog({
         )}
         <div className="flex justify-end gap-2">
           <button className="btn-ghost" onClick={onCancel} disabled={busy}>
-            {cancelLabel}
+            {resolvedCancelLabel}
           </button>
           <button
             className={destructive ? 'btn-danger' : 'btn-primary'}
@@ -70,7 +74,7 @@ export function ConfirmDialog({
             disabled={busy}
             autoFocus
           >
-            {busy ? '…' : confirmLabel}
+            {busy ? '…' : resolvedConfirmLabel}
           </button>
         </div>
       </div>

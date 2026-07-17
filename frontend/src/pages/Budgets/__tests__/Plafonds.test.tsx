@@ -14,7 +14,7 @@ import i18n from '../../../i18n';
 // real rendered text.
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['budgets', 'common']);
+  await i18n.loadNamespaces(['budgets', 'common', 'tips']);
 });
 
 function withProviders(children: React.ReactNode, opts?: { initialEntries?: string[] }): JSX.Element {

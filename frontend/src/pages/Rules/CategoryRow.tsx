@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
-import { KIND_LABEL, kindBadgeClass, formatCategoryPath } from '../../lib/categories';
+import { kindLabel, kindBadgeClass, formatCategoryPath } from '../../lib/categories';
 import { Chip } from './Chip';
 import type { GroupedEntry } from './types';
 
@@ -31,7 +31,7 @@ export function CategoryRow({
   onRequestDelete: (rule: Rule) => void;
   onEdit: (rule: Rule) => void;
 }) {
-  const { t } = useTranslation('rules');
+  const { t } = useTranslation(['rules', 'common']);
   const { category, rules } = group;
   const hasEnabled = rules.some((r) => r.enabled);
   const hasDisabled = rules.some((r) => !r.enabled);
@@ -59,7 +59,7 @@ export function CategoryRow({
           <span className="font-medium text-ink-100 truncate">{formatCategoryPath(category, byId)}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
-          <span className={kindBadgeClass(category.kind)}>{KIND_LABEL[category.kind]}</span>
+          <span className={kindBadgeClass(category.kind)}>{kindLabel(category.kind, t)}</span>
           <span className="text-[11px] text-ink-500 font-mono">
             {rules.length} {t('categoryRow.keywordCount', { count: rules.length })}
           </span>

@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { TIP_IDS, SECTION_TIPS, WELCOME_STEPS } from '../content';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { TIP_IDS, sectionTip, welcomeStep, WELCOME_STEP_COUNT, type SectionTipId } from '../content';
+import i18n from '../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['tips']);
+});
 
 describe('tips content registry', () => {
   it('TIP_IDS has all 8 ids in the frozen order', () => {
@@ -15,20 +21,26 @@ describe('tips content registry', () => {
     ]);
   });
 
-  it('SECTION_TIPS has an entry for every section id', () => {
-    const sectionIds = TIP_IDS.filter((id) => id !== 'welcome_tour');
+  it('sectionTip() resolves a non-empty {title, body} for every section id', () => {
+    const t = i18n.getFixedT('fr', 'tips');
+    const sectionIds = TIP_IDS.filter((id) => id !== 'welcome_tour') as SectionTipId[];
     for (const id of sectionIds) {
-      expect(SECTION_TIPS[id as Exclude<typeof TIP_IDS[number], 'welcome_tour'>]).toMatchObject({
-        title: expect.any(String),
-        body: expect.any(String),
-      });
+      const copy = sectionTip(id, t);
+      expect(copy.title.length).toBeGreaterThan(0);
+      expect(copy.body.length).toBeGreaterThan(0);
+      // Lookups must actually resolve — a missing key falls back to the key
+      // string itself (containing a '.'), which would never happen for
+      // real prose copy.
+      expect(copy.title).not.toContain('.');
     }
   });
 
-  it('WELCOME_STEPS has 3–4 steps', () => {
-    expect(WELCOME_STEPS.length).toBeGreaterThanOrEqual(3);
-    expect(WELCOME_STEPS.length).toBeLessThanOrEqual(4);
-    for (const step of WELCOME_STEPS) {
+  it('WELCOME_STEP_COUNT is 3–4 and welcomeStep() resolves every index', () => {
+    expect(WELCOME_STEP_COUNT).toBeGreaterThanOrEqual(3);
+    expect(WELCOME_STEP_COUNT).toBeLessThanOrEqual(4);
+    const t = i18n.getFixedT('fr', 'tips');
+    for (let i = 0; i < WELCOME_STEP_COUNT; i++) {
+      const step = welcomeStep(i, t);
       expect(step.title.length).toBeGreaterThan(0);
       expect(step.body.length).toBeGreaterThan(0);
     }

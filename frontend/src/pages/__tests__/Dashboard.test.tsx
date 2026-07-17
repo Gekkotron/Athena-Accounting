@@ -53,7 +53,7 @@ function renderDashboard() {
 // helper fallback).
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['dashboard', 'common']);
+  await i18n.loadNamespaces(['dashboard', 'common', 'charts', 'tips']);
 });
 
 beforeEach(async () => {

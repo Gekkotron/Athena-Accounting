@@ -1,11 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { TipsProvider } from '../../contexts/TipsContext';
 import { WelcomeTour } from '../WelcomeTour';
+import i18n from '../../i18n';
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
+
+beforeAll(async () => {
+  await i18n.changeLanguage('fr');
+  await i18n.loadNamespaces(['tips']);
+});
 
 beforeEach(() => {
   fetchMock.mockReset();

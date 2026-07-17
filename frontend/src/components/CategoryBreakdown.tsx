@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { Category, CategoryReportRow } from '../api/types';
 import { CategoryDonut, type CategorySegment } from './CategoryDonut';
@@ -31,6 +32,7 @@ export function CategoryBreakdown({
   onRangeChange,
   accountId,
 }: Props) {
+  const { t } = useTranslation('charts');
   const [internalRange, setInternalRange] = useState<RangeKey>(defaultRange);
   const [mode, setMode] = useState<DonutMode>(defaultMode);
   const isControlled = controlledRange !== undefined;
@@ -81,13 +83,13 @@ export function CategoryBreakdown({
         const c = catId !== null ? byCatId.get(catId) : null;
         return {
           id: catId,
-          name: c?.name ?? 'Sans catégorie',
+          name: c?.name ?? t('categoryBreakdown.noCategory'),
           color: c?.color ?? null,
           amount: Math.abs(sum),
         } satisfies CategorySegment;
       })
       .filter((s) => s.amount > 0);
-  }, [reportQ.data, categoriesQ.data, mode]);
+  }, [reportQ.data, categoriesQ.data, mode, t]);
 
   const isLoading = reportQ.isLoading || categoriesQ.isLoading;
 
@@ -105,7 +107,7 @@ export function CategoryBreakdown({
               mode === 'expense' ? 'bg-ink-850 text-ink-100' : 'text-ink-400 hover:text-ink-100'
             }`}
           >
-            Dépenses
+            {t('categoryBreakdown.modeExpense')}
           </button>
           <button
             onClick={() => setMode('income')}
@@ -113,7 +115,7 @@ export function CategoryBreakdown({
               mode === 'income' ? 'bg-ink-850 text-ink-100' : 'text-ink-400 hover:text-ink-100'
             }`}
           >
-            Revenus
+            {t('categoryBreakdown.modeIncome')}
           </button>
         </div>
       </div>
@@ -124,7 +126,7 @@ export function CategoryBreakdown({
         <CategoryDonut
           data={donutData}
           currency={currency}
-          centerLabel={mode === 'expense' ? 'Dépenses' : 'Revenus'}
+          centerLabel={mode === 'expense' ? t('categoryBreakdown.modeExpense') : t('categoryBreakdown.modeIncome')}
         />
       )}
     </div>

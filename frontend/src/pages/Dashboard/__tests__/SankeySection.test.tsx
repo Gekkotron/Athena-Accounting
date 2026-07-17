@@ -46,7 +46,7 @@ function renderSection(opts: {
 // helper fallback).
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['dashboard']);
+  await i18n.loadNamespaces(['dashboard', 'charts']);
 });
 
 beforeEach(async () => {

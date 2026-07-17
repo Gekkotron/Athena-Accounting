@@ -10,5 +10,10 @@
   "close": "Close",
   "back": "Back",
   "next": "Next",
-  "previous": "Previous"
+  "previous": "Previous",
+  "kind": {
+    "expense": "Expense",
+    "income": "Income",
+    "neutral": "Neutral"
+  }
 }

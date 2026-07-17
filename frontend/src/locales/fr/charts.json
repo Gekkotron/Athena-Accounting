@@ -1,0 +1,53 @@
+{
+  "balanceChart": {
+    "notEnoughData": "Pas encore assez de données pour tracer une courbe.",
+    "zoomReset": {
+      "button": "Réinitialiser le zoom",
+      "title": "Double-cliquez sur le graphique pour la même action"
+    }
+  },
+  "balanceTooltip": {
+    "checkpoint": "point de contrôle",
+    "expected": "attendu",
+    "actual": "réel",
+    "delta": "écart",
+    "expectedConfirmed": "attendu ✓"
+  },
+  "sankey": {
+    "sourcesLabel": "Sources",
+    "categoriesLabel": "Postes",
+    "income": "Revenus",
+    "other": "Autres",
+    "savings": "Épargne",
+    "savingsWithdrawn": "Épargne puisée",
+    "ariaLabel": "Flux : {{income}} de revenus, {{expense}} de dépenses",
+    "breakdownCount_one": "{{count}} poste",
+    "breakdownCount_other": "{{count}} postes"
+  },
+  "categoryBreakdown": {
+    "modeExpense": "Dépenses",
+    "modeIncome": "Revenus",
+    "noCategory": "Sans catégorie"
+  },
+  "categoryDonut": {
+    "empty": "Pas encore de données à représenter ici.",
+    "total": "Total"
+  },
+  "rangePicker": {
+    "ariaLabel": "Période affichée",
+    "labels": {
+      "d30": "30 j",
+      "m3": "3 m",
+      "m6": "6 m",
+      "m12": "12 m",
+      "all": "Tout"
+    },
+    "suffix": {
+      "d30": "sur 30 jours",
+      "m3": "sur 3 mois",
+      "m6": "sur 6 mois",
+      "m12": "sur 12 mois",
+      "all": "depuis l'ouverture"
+    }
+  }
+}

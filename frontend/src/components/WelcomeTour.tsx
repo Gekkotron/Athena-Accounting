@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTips } from '../contexts/TipsContext';
-import { WELCOME_STEPS } from '../tips/content';
+import { welcomeStep, WELCOME_STEP_COUNT } from '../tips/content';
 
 // First-launch modal shown once on the Dashboard ('/') for authenticated
-// users who have not yet dismissed 'welcome_tour'. Passer, Terminer, Esc
+// users who have not yet dismissed 'welcome_tour'. Skip, Finish, Esc
 // and backdrop click all call dismiss('welcome_tour') via TipsContext.
 export function WelcomeTour(): JSX.Element | null {
   const { ready, isDismissed, dismiss } = useTips();
+  const { t } = useTranslation('tips');
   const location = useLocation();
   const [step, setStep] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -70,8 +72,8 @@ export function WelcomeTour(): JSX.Element | null {
 
   if (!shouldShow) return null;
 
-  const current = WELCOME_STEPS[step];
-  const isLast = step === WELCOME_STEPS.length - 1;
+  const current = welcomeStep(step, t);
+  const isLast = step === WELCOME_STEP_COUNT - 1;
 
   return (
     <div
@@ -89,7 +91,7 @@ export function WelcomeTour(): JSX.Element | null {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="label mb-2">
-          Étape {step + 1} / {WELCOME_STEPS.length}
+          {t('welcome.stepCounter', { step: step + 1, total: WELCOME_STEP_COUNT })}
         </div>
         <div id="welcome-tour-title" className="display text-xl text-ink-50 mb-2 leading-snug">
           {current.title}
@@ -97,15 +99,15 @@ export function WelcomeTour(): JSX.Element | null {
         <p className="text-sm text-ink-400 mb-6 leading-relaxed">{current.body}</p>
         <div className="flex items-center justify-between">
           <button type="button" className="btn-ghost" onClick={close}>
-            Passer
+            {t('welcome.buttons.skip')}
           </button>
           {isLast ? (
             <button type="button" className="btn-primary" onClick={close}>
-              Terminer
+              {t('welcome.buttons.finish')}
             </button>
           ) : (
             <button type="button" className="btn-primary" onClick={() => setStep((s) => s + 1)}>
-              Suivant
+              {t('welcome.buttons.next')}
             </button>
           )}
         </div>

@@ -1,17 +1,17 @@
+import { useTranslation } from 'react-i18next';
 import { useTips } from '../contexts/TipsContext';
-import { SECTION_TIPS, type TipId } from '../tips/content';
-
-type SectionTipId = Exclude<TipId, 'welcome_tour'>;
+import { sectionTip, type SectionTipId } from '../tips/content';
 
 // Small inline card shown once at the top of a main section, until the
 // user dismisses it via the close button. Dismissal is persisted through
 // TipsContext, so it will not reappear on future visits or reloads.
 export function SectionTip({ id }: { id: SectionTipId }): JSX.Element | null {
   const { ready, isDismissed, dismiss } = useTips();
+  const { t } = useTranslation('tips');
 
   if (!ready || isDismissed(id)) return null;
 
-  const { title, body } = SECTION_TIPS[id];
+  const { title, body } = sectionTip(id, t);
 
   return (
     <section
@@ -26,7 +26,7 @@ export function SectionTip({ id }: { id: SectionTipId }): JSX.Element | null {
       </div>
       <button
         type="button"
-        aria-label="Masquer ce conseil"
+        aria-label={t('sectionTip.hideAriaLabel')}
         onClick={() => {
           dismiss(id).catch(() => {
             // Optimistic update already applied; TipsContext rolls back on

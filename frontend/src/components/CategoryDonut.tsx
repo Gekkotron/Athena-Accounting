@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatAmount } from '../lib/format';
 
 export interface CategorySegment {
@@ -37,6 +38,7 @@ const CENTER = VIEWBOX / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
+  const { t } = useTranslation('charts');
   const [hovered, setHovered] = useState<number | null>(null);
 
   const segments = useMemo(() => {
@@ -71,7 +73,7 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
   if (segments.length === 0) {
     return (
       <div className="text-sm text-ink-500 py-12 text-center display-italic">
-        Pas encore de données à représenter ici.
+        {t('categoryDonut.empty')}
       </div>
     );
   }
@@ -131,7 +133,7 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
               letterSpacing="1.5"
               style={{ textTransform: 'uppercase' }}
             >
-              {centerLabel ?? 'Total'}
+              {centerLabel ?? t('categoryDonut.total')}
             </text>
             <text
               x={CENTER}

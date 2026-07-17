@@ -129,7 +129,7 @@ describe('CategoryRow', () => {
   it('renders a colored kind badge next to the category name', () => {
     const group: GroupedEntry = { category: { ...category, kind: 'income' }, rules: [] };
     renderRow(group);
-    // KIND_LABEL['income'] = 'Revenu'.
+    // kindLabel('income', t) resolves to common:kind.income = 'Revenu' (fr).
     expect(screen.getByText('Revenu')).toBeInTheDocument();
   });
 

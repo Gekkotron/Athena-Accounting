@@ -12,7 +12,7 @@ import i18n from '../../../i18n';
 // real rendered text.
 beforeAll(async () => {
   await i18n.changeLanguage('fr');
-  await i18n.loadNamespaces(['imports']);
+  await i18n.loadNamespaces(['imports', 'common']);
 });
 
 // jsdom's Blob/File implementation in this environment has no `.text()`
