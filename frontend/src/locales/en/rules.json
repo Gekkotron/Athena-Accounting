@@ -130,13 +130,13 @@
     },
     "deleteDialog": {
       "title": "Delete \"{{name}}\"?",
-      "description": "Rules pointing to this category will also be deleted (cascade). Transactions that were assigned to it will move to <1>no category</1> — you'll be able to find them again via the \"Tri\" tab.",
+      "description": "Rules pointing to this category will also be deleted (cascade). Transactions that were assigned to it will move to <1>no category</1> — you'll be able to find them again via the \"Sort\" tab.",
       "childrenWillBecomeRoots": "Its {{count}} sub-categories will become root categories.",
       "confirmLabel": "Delete the category"
     }
   },
   "tri": {
-    "title": "Tri",
+    "title": "Sort",
     "subtitle": {
       "groups_one": "group",
       "groups_other": "groups",
