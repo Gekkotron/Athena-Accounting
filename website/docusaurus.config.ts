@@ -55,6 +55,11 @@ const config: Config = {
 
   themeConfig: {
     image: 'img/logo.svg',
+    // Dark-first, to mirror the app (frontend/src/index.css: color-scheme: dark).
+    colorMode: {
+      defaultMode: 'dark',
+      respectPrefersColorScheme: true,
+    },
     navbar: {
       title: 'Athena Accounting',
       logo: {
@@ -101,8 +106,10 @@ const config: Config = {
       copyright: `Athena Accounting. Built by Gekkotron. MIT licensed.`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      // Light — subtle; Dark — Nord/Oceanic-style tones that read well on the
+      // ink-900 code-block background.
+      theme: prismThemes.oneLight,
+      darkTheme: prismThemes.oneDark,
     },
   } satisfies Preset.ThemeConfig,
 };

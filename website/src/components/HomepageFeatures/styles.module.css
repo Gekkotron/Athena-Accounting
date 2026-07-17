@@ -1,13 +1,41 @@
 .features {
   display: flex;
   align-items: center;
-  padding: 3rem 0;
+  padding: 4rem 0;
   width: 100%;
 }
 
+/* Echoes the app's `.surface`: rounded, thin border, subtle inset shadow. */
 .featureCard {
   padding: 1.5rem;
-  border-radius: 8px;
-  background: var(--ifm-card-background-color, transparent);
+  border-radius: 16px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-surface-color);
   height: 100%;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.featureCard:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-2px);
+}
+
+.featureCard h3 {
+  font-family: var(--athena-font-display);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.featureCard p {
+  color: var(--ifm-color-content-secondary);
+  margin-bottom: 0;
+}
+
+[data-theme='dark'] .featureCard {
+  border-color: rgba(29, 34, 48, 0.7);
+  background: rgba(17, 20, 26, 0.6);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 12px 32px -16px rgba(0, 0, 0, 0.6);
 }

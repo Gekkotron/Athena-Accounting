@@ -1,13 +1,44 @@
+/* Hero — mirrors the app's dark, atmospheric surfaces. */
 .heroBanner {
-  padding: 4rem 0;
+  padding: 6rem 0 5rem;
   text-align: center;
   position: relative;
   overflow: hidden;
+  background-color: var(--athena-ink-950);
+  background-image:
+    radial-gradient(1200px 800px at 15% -10%, rgba(125, 211, 192, 0.10), transparent 60%),
+    radial-gradient(900px 600px at 115% 110%, rgba(220, 120, 97, 0.06), transparent 60%);
+  color: var(--athena-ink-100);
+  border-bottom: 1px solid var(--athena-ink-800);
+}
+
+/* Override Infima's default hero--primary sage wash — we want ink + accent,
+   not a solid sage rectangle. */
+.heroBanner.hero--primary {
+  --ifm-hero-background-color: var(--athena-ink-950);
+  --ifm-hero-text-color: var(--athena-ink-100);
+}
+
+.heroBanner :global(.hero__title) {
+  font-family: var(--athena-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--athena-ink-50);
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 0;
+}
+
+.heroBanner :global(.hero__subtitle) {
+  color: var(--athena-ink-300);
+  max-width: 42rem;
+  margin: 1rem auto 2rem;
+  font-size: 1.15rem;
+  line-height: 1.55;
 }
 
 @media screen and (max-width: 996px) {
   .heroBanner {
-    padding: 2rem;
+    padding: 3rem 1.25rem;
   }
 }
 

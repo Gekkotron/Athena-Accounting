@@ -1,20 +1,262 @@
+/* ---------------------------------------------------------------------------
+ * Athena Accounting docs site theme.
+ *
+ * Tokens mirror the app (frontend/tailwind.config.js + frontend/src/index.css):
+ *   • Ink palette (warm-cool charcoal) — surfaces & text
+ *   • Sage-300 (#7dd3c0) — primary accent (positive brand colour)
+ *   • Clay-400 (#dc7861) — secondary accent (negative in the app)
+ *   • Hanken Grotesk (body), Fraunces (display), JetBrains Mono (code)
+ * ------------------------------------------------------------------------- */
+
+/* Self-hosted variable fonts from the same fontsource packages the app uses.
+   These load from jsDelivr's CDN so the docs build stays npm-dep-free. */
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/hanken-grotesk@5.1.1/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/fraunces@5.1.0/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.1.1/index.css');
+
 :root {
-  --ifm-color-primary: #2e5aac;
-  --ifm-color-primary-dark: #2951a0;
-  --ifm-color-primary-darker: #274d97;
-  --ifm-color-primary-darkest: #204080;
-  --ifm-color-primary-light: #3363b8;
-  --ifm-color-primary-lighter: #3868be;
-  --ifm-color-primary-lightest: #557dc9;
-  --ifm-code-font-size: 95%;
+  /* Ink palette */
+  --athena-ink-950: #0b0d11;
+  --athena-ink-900: #11141a;
+  --athena-ink-850: #161a21;
+  --athena-ink-800: #1d2230;
+  --athena-ink-700: #272d3b;
+  --athena-ink-600: #3a4252;
+  --athena-ink-500: #5b6478;
+  --athena-ink-400: #7c8493;
+  --athena-ink-300: #a0a7b4;
+  --athena-ink-200: #cdd2db;
+  --athena-ink-100: #e6e8ed;
+  --athena-ink-50:  #f4f5f8;
+
+  /* Sage — positive/primary */
+  --athena-sage-50:  #eef9f4;
+  --athena-sage-100: #d6f1e4;
+  --athena-sage-200: #aee2cb;
+  --athena-sage-300: #7dd3c0;
+  --athena-sage-400: #52baa6;
+  --athena-sage-500: #349e8b;
+  --athena-sage-600: #247c6e;
+  --athena-sage-700: #1d6258;
+  --athena-sage-800: #194f48;
+  --athena-sage-900: #16413b;
+
+  /* Clay — secondary/accent */
+  --athena-clay-400: #dc7861;
+  --athena-clay-300: #e69782;
+
+  /* Font stacks (verbatim from frontend/tailwind.config.js) */
+  --athena-font-sans: 'Hanken Grotesk Variable', 'Hanken Grotesk', system-ui, sans-serif;
+  --athena-font-display: 'Fraunces Variable', Fraunces, Georgia, serif;
+  --athena-font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* --- Docusaurus (Infima) tokens ------------------------------------- */
+
+  /* Light mode uses sage-600 as primary so contrast on white is legible. */
+  --ifm-color-primary: #247c6e;
+  --ifm-color-primary-dark: #206f62;
+  --ifm-color-primary-darker: #1d6258;
+  --ifm-color-primary-darkest: #194f48;
+  --ifm-color-primary-light: #299586;
+  --ifm-color-primary-lighter: #349e8b;
+  --ifm-color-primary-lightest: #52baa6;
+
+  --ifm-font-family-base: var(--athena-font-sans);
+  --ifm-font-family-monospace: var(--athena-font-mono);
+  --ifm-heading-font-family: var(--athena-font-display);
+  --ifm-heading-font-weight: 600;
+  --ifm-font-feature-settings: 'ss01', 'ss02', 'ss03', 'cv11';
+
+  --ifm-code-font-size: 92%;
+  --ifm-code-background: rgba(125, 211, 192, 0.10);
+  --ifm-code-border-radius: 6px;
+  --ifm-code-padding-horizontal: 0.35rem;
+  --ifm-code-padding-vertical: 0.15rem;
+
+  --ifm-global-radius: 10px;
+  --ifm-button-border-radius: 10px;
+  --ifm-alert-border-radius: 10px;
+
+  --docusaurus-highlighted-code-line-bg: rgba(125, 211, 192, 0.12);
 }
 
+html {
+  font-feature-settings: 'ss01', 'ss02', 'ss03', 'cv11';
+}
+
+/* Sharper display headings — mirrors .page-title in the app. */
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.hero__title,
+.navbar__title {
+  font-family: var(--athena-font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Tabular numerals for tables in docs. */
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Dark mode: mirror the app's ink palette ------------------------- */
 [data-theme='dark'] {
-  --ifm-color-primary: #6b93de;
-  --ifm-color-primary-dark: #4f7fd5;
-  --ifm-color-primary-darker: #4176d1;
-  --ifm-color-primary-darkest: #305fb1;
-  --ifm-color-primary-light: #87a7e7;
-  --ifm-color-primary-lighter: #95b0eb;
-  --ifm-color-primary-lightest: #bdcef2;
+  --ifm-color-primary: #7dd3c0;         /* sage-300 */
+  --ifm-color-primary-dark: #52baa6;    /* sage-400 */
+  --ifm-color-primary-darker: #349e8b;  /* sage-500 */
+  --ifm-color-primary-darkest: #247c6e; /* sage-600 */
+  --ifm-color-primary-light: #aee2cb;   /* sage-200 */
+  --ifm-color-primary-lighter: #d6f1e4; /* sage-100 */
+  --ifm-color-primary-lightest: #eef9f4;/* sage-50  */
+
+  --ifm-background-color: var(--athena-ink-950);
+  --ifm-background-surface-color: var(--athena-ink-900);
+  --ifm-navbar-background-color: rgba(17, 20, 26, 0.85);
+  --ifm-footer-background-color: var(--athena-ink-900);
+  --ifm-color-content: var(--athena-ink-100);
+  --ifm-color-content-secondary: var(--athena-ink-300);
+  --ifm-heading-color: var(--athena-ink-50);
+  --ifm-toc-border-color: var(--athena-ink-800);
+  --ifm-hr-border-color: var(--athena-ink-800);
+  --ifm-table-stripe-background: rgba(255, 255, 255, 0.02);
+  --ifm-code-background: rgba(125, 211, 192, 0.12);
+  --ifm-blockquote-color: var(--athena-ink-300);
+  --ifm-blockquote-border-left-color: var(--athena-sage-700);
+  --ifm-link-hover-color: var(--athena-sage-200);
+  --ifm-menu-color: var(--athena-ink-200);
+  --ifm-menu-color-background-active: rgba(125, 211, 192, 0.08);
+  --ifm-menu-color-background-hover: rgba(255, 255, 255, 0.03);
+
+  --docusaurus-highlighted-code-line-bg: rgba(125, 211, 192, 0.14);
+}
+
+/* Global background: subtle radial wash matching the app's atmosphere. */
+[data-theme='dark'] body {
+  background-color: var(--athena-ink-950);
+  background-image:
+    radial-gradient(1200px 800px at 15% -10%, rgba(125, 211, 192, 0.06), transparent 60%),
+    radial-gradient(900px 600px at 115% 110%, rgba(220, 120, 97, 0.04), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Light-mode background: warm off-white so the sage/clay tokens sit well. */
+html:not([data-theme='dark']) body {
+  background-color: #fafaf7;
+}
+
+/* Navbar — glassmorphism to echo the app's `.surface` treatment. */
+[data-theme='dark'] .navbar {
+  border-bottom: 1px solid var(--athena-ink-800);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+}
+.navbar__title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Footer */
+.footer--dark {
+  --ifm-footer-background-color: var(--athena-ink-900);
+  --ifm-footer-color: var(--athena-ink-300);
+  --ifm-footer-link-color: var(--athena-ink-200);
+  --ifm-footer-title-color: var(--athena-ink-50);
+  border-top: 1px solid var(--athena-ink-800);
+}
+
+/* Cards, sidebars, tables — pick up the ink palette in dark mode. */
+[data-theme='dark'] .card,
+[data-theme='dark'] .menu {
+  background-color: rgba(17, 20, 26, 0.6);
+  border: 1px solid rgba(29, 34, 48, 0.7);
+  border-radius: 16px;
+}
+[data-theme='dark'] .theme-doc-sidebar-container {
+  border-right: 1px solid var(--athena-ink-800);
+  background-color: var(--athena-ink-950);
+}
+[data-theme='dark'] .table-of-contents__link--active,
+[data-theme='dark'] .menu__link--active {
+  color: var(--athena-sage-200);
+}
+
+/* Inline code + code blocks — match the app's mono treatment. */
+code {
+  font-family: var(--athena-font-mono);
+  font-feature-settings: 'zero', 'ss01';
+  font-size: 0.9em;
+}
+[data-theme='dark'] code {
+  color: var(--athena-sage-200);
+  border: 1px solid rgba(125, 211, 192, 0.15);
+}
+[data-theme='dark'] pre code {
+  border: none;
+  color: inherit;
+}
+[data-theme='dark'] .prism-code,
+[data-theme='dark'] div[class*='codeBlockContainer'] {
+  background-color: var(--athena-ink-900) !important;
+  border: 1px solid var(--athena-ink-800);
+  border-radius: 12px;
+}
+
+/* Buttons — echo the app's `.btn-primary` (sage-on-ink). */
+.button--primary {
+  --ifm-button-background-color: var(--athena-sage-300);
+  --ifm-button-border-color: var(--athena-sage-300);
+  color: var(--athena-ink-950);
+  font-weight: 600;
+}
+.button--primary:hover {
+  --ifm-button-background-color: var(--athena-sage-200);
+  --ifm-button-border-color: var(--athena-sage-200);
+  color: var(--athena-ink-950);
+}
+[data-theme='dark'] .button--secondary {
+  background-color: rgba(17, 20, 26, 0.7);
+  border: 1px solid var(--athena-ink-800);
+  color: var(--athena-ink-100);
+}
+[data-theme='dark'] .button--secondary:hover {
+  background-color: var(--athena-ink-850);
+  border-color: var(--athena-ink-700);
+  color: var(--athena-ink-50);
+}
+[data-theme='dark'] .button--outline.button--secondary {
+  background-color: transparent;
+  color: var(--athena-ink-100);
+}
+
+/* Focus ring — sage tint, no offset, to match the app. */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(125, 211, 192, 0.4);
+  border-radius: 6px;
+}
+
+/* Blockquotes lean on the sage border, mirroring the app's soft surfaces. */
+blockquote {
+  border-left-width: 3px;
+  padding: 0.6rem 1rem;
+  background-color: rgba(125, 211, 192, 0.04);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Admonitions — nudge their accent to the brand palette. */
+.alert--success,
+.alert--info {
+  --ifm-alert-background-color: rgba(125, 211, 192, 0.08);
+  --ifm-alert-border-color: var(--athena-sage-500);
+  --ifm-alert-foreground-color: inherit;
+}
+[data-theme='dark'] .alert--warning,
+[data-theme='dark'] .alert--danger {
+  --ifm-alert-background-color: rgba(220, 120, 97, 0.08);
+  --ifm-alert-border-color: var(--athena-clay-400);
+}
+
+/* Pagination + hover states pick up the accent. */
+.pagination-nav__link:hover {
+  border-color: var(--athena-sage-400);
 }
