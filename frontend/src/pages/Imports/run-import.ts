@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import { apiUpload } from '../../api/client';
 import { submitPdf, type PdfImportNeedsTemplate } from '../../api/pdf-templates';
+import { errorMessage } from '../../api/errorMessage';
 
 export type RunOneResult =
   | { ok: true; inserted: number; skipped: number }
@@ -28,6 +29,6 @@ export async function runOne(file: File, accountId: number | '', t: TFunction): 
     }>('/api/imports', file, { query: accountId ? { accountId } : undefined });
     return { ok: true, inserted: data.insertedCount, skipped: data.dedupSkipped };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+    return { ok: false, message: errorMessage(err, t) };
   }
 }

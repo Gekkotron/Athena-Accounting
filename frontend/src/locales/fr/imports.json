@@ -3,7 +3,17 @@
     "accountRequiredForPdf": "Compte requis pour un PDF.",
     "templateCancelled": "Template annulé.",
     "previewFailed": "Erreur lors de la prévisualisation.",
-    "importFailed": "Erreur lors de l'import."
+    "importFailed": "Erreur lors de l'import.",
+    "pdfEncrypted": "Le PDF est protégé par un mot de passe",
+    "pdfTooLarge": "Le PDF dépasse la limite de 10 Mo",
+    "needsTemplate": {
+      "noTextLayer": "Ce PDF n'a pas de couche de texte ; configurez un modèle via l'import d'Athena",
+      "noTemplate": "Aucun modèle enregistré pour ce relevé + compte ; importez-le une fois via Athena",
+      "templateStale": "Le modèle enregistré ne correspond plus à ce PDF ; ré-entraînez-le via l'import d'Athena",
+      "default": "Ce PDF nécessite un modèle"
+    },
+    "templateYieldedNoRows": "Le modèle enregistré ne correspond pas à ce PDF ; ré-entraînez-le",
+    "draftExpired": "Brouillon expiré ou introuvable"
   },
   "uploadForm": {
     "dropzone": {

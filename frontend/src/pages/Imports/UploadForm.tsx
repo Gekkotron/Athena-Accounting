@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Account } from '../../api/types';
 import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
+import { errorMessage } from '../../api/errorMessage';
 import { useImportPreview } from './useImportPreview';
 import { ImportPreviewModal } from './ImportPreviewModal';
 import { runOne } from './run-import';
@@ -134,7 +135,7 @@ export function UploadForm({
             onPdfNeedsTemplate(r);
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : t('uploadForm.errors.pdfImportFailed'));
+          setError(err instanceof Error ? errorMessage(err, t) : t('uploadForm.errors.pdfImportFailed'));
         } finally {
           setBatch(null);
         }

@@ -5,11 +5,12 @@ import type { PdfImportNeedsTemplate } from '../../../api/pdf-templates';
 import { pinLocale } from '../../../test/i18n';
 
 // PdfTemplateBuilder renders French strings by default (the app's current UI
-// language). Preload the 'pdf-template' namespace for both locales so
-// `useTranslation` never suspends mid-render, then pin the active language
-// to French so the existing French-literal assertions below keep matching
-// real rendered text.
-pinLocale('pdf-template');
+// language). Preload the 'pdf-template' namespace (plus 'imports', which
+// backend-error translations are keyed under — see api/errorMessage.ts) for
+// both locales so `useTranslation` never suspends mid-render, then pin the
+// active language to French so the existing French-literal assertions below
+// keep matching real rendered text.
+pinLocale('pdf-template', 'imports');
 
 // Mocking ZoneCanvas at the module boundary (rather than the brief's
 // vi.doMock + dynamic re-import) — the test file already imports

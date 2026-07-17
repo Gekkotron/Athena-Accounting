@@ -3,7 +3,17 @@
     "accountRequiredForPdf": "Account required for a PDF.",
     "templateCancelled": "Template cancelled.",
     "previewFailed": "Error while generating the preview.",
-    "importFailed": "Error during import."
+    "importFailed": "Error during import.",
+    "pdfEncrypted": "PDF is password-protected",
+    "pdfTooLarge": "PDF exceeds 10MB limit",
+    "needsTemplate": {
+      "noTextLayer": "PDF has no text layer; set up a template via Athena import first",
+      "noTemplate": "No saved template for this statement + account; import it once in Athena first",
+      "templateStale": "Saved template no longer matches this PDF; re-train it via Athena import",
+      "default": "This PDF needs a template"
+    },
+    "templateYieldedNoRows": "Saved template did not match this PDF; re-train it",
+    "draftExpired": "Draft expired or not found"
   },
   "uploadForm": {
     "dropzone": {

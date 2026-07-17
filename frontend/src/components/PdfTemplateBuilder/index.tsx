@@ -11,6 +11,7 @@ import {
   type PreviewResult,
   type PdfTextItem,
 } from '../../api/pdf-templates.js';
+import { errorMessage } from '../../api/errorMessage';
 import { InfoTip } from './InfoTip';
 import { StepIndicator } from './StepIndicator';
 import { TableStep } from './TableStep';
@@ -32,7 +33,7 @@ interface Props {
 }
 
 export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props): JSX.Element {
-  const { t } = useTranslation(['pdf-template', 'common']);
+  const { t } = useTranslation(['pdf-template', 'imports', 'common']);
   const firstPage = needsTemplate.pages[0]!;
   const [step, setStep] = useState<Step>('header');
 
@@ -219,7 +220,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       setPreviewSkipped(r.skippedRows);
     } catch (e: any) {
       if (myReqId !== previewReqIdRef.current) return; // stale response, ignore
-      setPreviewError(e?.message ?? t('errors.previewFailed'));
+      setPreviewError(e ? errorMessage(e, t) : t('errors.previewFailed'));
       setPreviewRows(null);
       setPreviewSkipped([]);
     } finally {
@@ -236,7 +237,7 @@ export function PdfTemplateBuilder({ needsTemplate, onClose, onImported }: Props
       const result = await submitZones(needsTemplate.draftId, label.trim(), zones, overrideRows);
       onImported(result);
     } catch (e: any) {
-      setErr(e?.message ?? t('errors.submitFailed'));
+      setErr(e ? errorMessage(e, t) : t('errors.submitFailed'));
     } finally {
       setSubmitting(false);
     }
