@@ -4,7 +4,6 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-import Screenshots from '@site/src/components/Screenshots';
 import styles from './index.module.css';
 
 function HomepageHeader({ title, tagline }: { title: string; tagline: string }) {
@@ -41,7 +40,6 @@ export default function Home(): React.JSX.Element {
       <HomepageHeader title={siteConfig.title} tagline={siteConfig.tagline} />
       <main>
         <HomepageFeatures />
-        <Screenshots />
       </main>
     </Layout>
   );

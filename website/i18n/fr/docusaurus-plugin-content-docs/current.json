@@ -1,0 +1,18 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.For users": {
+    "message": "For users",
+    "description": "The label for category 'For users' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Reference": {
+    "message": "Reference",
+    "description": "The label for category 'Reference' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.For contributors": {
+    "message": "For contributors",
+    "description": "The label for category 'For contributors' in sidebar 'docs'"
+  }
+}
