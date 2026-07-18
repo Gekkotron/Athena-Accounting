@@ -19,6 +19,6 @@ behave the way you expect it to.
 - [ ] Default ports (host and container)
 - [ ] Per-user defaults exposed on the Réglages page
 
-*See also:* [Getting started](../users/getting-started.md)
+*See also:* [Getting started](/docs/users/getting-started)
 
 ← [Back to reference index](README.md)

@@ -1,34 +1,34 @@
 ---
-title: Catégoriser les transactions
+title: Categorise transactions
 sidebar_position: 2
 ---
 
-# Catégoriser les transactions
+# Categorise transactions
 
-Une transaction bien catégorisée alimente le tableau de bord, les budgets et les rapports. Athena propose trois voies : édition unitaire, tri assisté par lots, et règles automatiques qui prennent le relais pour la suite.
+A properly categorised transaction feeds the dashboard, the budgets and the reports. Athena offers three routes: single-row edits, assisted bulk sorting, and automatic rules that take over from there.
 
-## 1. Éditer une catégorie en ligne
+## 1. Edit a category inline
 
-Ouvrez **Transactions** dans la barre latérale. Chaque ligne expose un sélecteur **Catégorie** modifiable directement — pas de modale, pas d'aller-retour. Les filtres du haut (compte, période, recherche) permettent d'isoler un lot avant de basculer une série de lignes.
+Open **Transactions** from the sidebar. Every row exposes a **Category** picker you can edit directly — no modal, no round-trip. The filters at the top (account, period, search) let you isolate a batch before flipping a series of rows.
 
-![Page Transactions avec les catégories éditables en ligne](./img/categorise-01-transactions.png)
+![Transactions page with inline-editable categories](/img/walkthroughs/en/categorise-01-transactions.png)
 
-## 2. Trier par lots depuis l'atelier « Tri »
+## 2. Sort in bulk from the "Sort" workshop
 
-Pour un premier passage massif sur un import fraîchement chargé, ouvrez **Règles → Tri**. L'atelier vous présente les transactions non catégorisées regroupées par motif de libellé — assignez la catégorie une fois, tout le lot suit. À chaque assignation, Athena vous propose de **transformer le lot en règle** pour que les prochains libellés identiques soient triés tout seuls.
+For a first sweep over a freshly loaded import, open **Rules → Sort**. The workshop groups uncategorised transactions by label pattern — assign the category once and the whole batch follows. On each assignment, Athena offers to **turn the batch into a rule** so future identical labels get sorted on their own.
 
-![Atelier de tri par motif](./img/categorise-02-tri.png)
+![Sort workshop grouped by pattern](/img/walkthroughs/en/categorise-02-tri.png)
 
-## 3. Créer une règle à partir d'une transaction
+## 3. Create a rule from a transaction
 
-Sur une transaction individuelle, le bouton **Créer une règle** ouvre un formulaire pré-rempli avec le motif détecté (contient, commence par, expression régulière). Réglez la catégorie cible, la portée (comptes concernés) et validez — la règle s'exécute rétroactivement sur l'historique et automatiquement sur les prochains imports.
+On an individual transaction, the **Create a rule** button opens a form pre-filled with the detected pattern (contains, starts with, regular expression). Set the target category, the scope (which accounts it applies to) and confirm — the rule runs retroactively on history and automatically on future imports.
 
-## 4. Gérer et prioriser les règles
+## 4. Manage and prioritise rules
 
-L'onglet **Règles → Liste** affiche toutes vos règles, avec leur ordre d'évaluation. Les règles de **virement interne** (entre deux de vos comptes) y sont marquées : elles neutralisent la transaction dans les rapports de dépenses. Réordonnez par glisser-déposer si deux règles se chevauchent.
+The **Rules → List** tab shows all your rules, in evaluation order. **Internal transfer** rules (between two of your own accounts) are flagged: they neutralise the transaction in spending reports. Reorder by drag-and-drop if two rules overlap.
 
-![Liste des règles avec les virements internes distingués](./img/categorise-03-regles-liste.png)
+![Rules list with internal transfers highlighted](/img/walkthroughs/en/categorise-03-regles-liste.png)
 
-## Étapes suivantes
+## Next steps
 
-Une fois vos catégories propres, passez à [Définir un budget](./set-a-budget.md) pour poser un plafond mensuel sur chacune d'elles.
+Once your categories are clean, move on to [Set a budget](./set-a-budget.md) to place a monthly cap on each of them.

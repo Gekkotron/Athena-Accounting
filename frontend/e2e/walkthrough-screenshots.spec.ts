@@ -6,9 +6,14 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Captures the PNGs that back docs/users/walkthroughs/*.md.
+// Captures the PNGs that back the walkthrough docs.
 // Runs against the demo build (VITE_DEMO=1) so no backend is required.
 // Set WALKTHROUGH_SHOTS=1 to opt in; the default suite (demo.spec.ts) skips it.
+//
+// WALKTHROUGH_LANG selects the UI language (`fr` default; `en` supported).
+// Output goes to website/static/img/walkthroughs/<lang>/ — the shared,
+// bilingual asset tree referenced by both the default-locale docs and the
+// i18n/fr mirror.
 
 const SHOULD_RUN = process.env.WALKTHROUGH_SHOTS === '1';
 // Real-backend mode: WALKTHROUGH_LOCAL_URL points playwright.config's
@@ -18,14 +23,19 @@ const SHOULD_RUN = process.env.WALKTHROUGH_SHOTS === '1';
 // committed.
 const LOCAL_MODE = process.env.WALKTHROUGH_LOCAL_URL !== undefined && process.env.WALKTHROUGH_LOCAL_URL !== '';
 
+const RAW_LANG = (process.env.WALKTHROUGH_LANG ?? 'fr').toLowerCase();
+const LANG: 'fr' | 'en' = RAW_LANG === 'en' ? 'en' : 'fr';
+const PLAYWRIGHT_LOCALE = LANG === 'en' ? 'en-US' : 'fr-FR';
+
 const OUT_DIR = path.resolve(
   __dirname,
   '..',
   '..',
-  'docs',
-  'users',
-  'walkthroughs',
+  'website',
+  'static',
   'img',
+  'walkthroughs',
+  LANG,
 );
 
 async function dismissWelcomeTour(page: Page): Promise<void> {
@@ -48,14 +58,14 @@ async function shot(page: Page, name: string): Promise<void> {
 test.describe('walkthrough screenshots', () => {
   test.skip(!SHOULD_RUN, 'set WALKTHROUGH_SHOTS=1 to regenerate walkthrough PNGs');
 
-  test.use({ locale: 'fr-FR' });
+  test.use({ locale: PLAYWRIGHT_LOCALE });
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    // Force i18next to French — it persists language in localStorage.
-    await page.addInitScript(() => {
-      try { localStorage.setItem('i18nextLng', 'fr'); } catch { /* noop */ }
-    });
+    // Force i18next to the requested language — it persists in localStorage.
+    await page.addInitScript((lang) => {
+      try { localStorage.setItem('i18nextLng', lang); } catch { /* noop */ }
+    }, LANG);
     if (LOCAL_MODE) {
       const user = process.env.WALKTHROUGH_LOCAL_USER;
       const pass = process.env.WALKTHROUGH_LOCAL_PASS;

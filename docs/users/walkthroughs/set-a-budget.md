@@ -1,34 +1,34 @@
 ---
-title: Définir un budget
+title: Set a budget
 sidebar_position: 3
 ---
 
-# Définir un budget
+# Set a budget
 
-Un budget dans Athena, c'est un plafond de dépense par catégorie sur une période donnée. Suivi en temps réel, dépassement mis en évidence, projection sur la fin de période — le tout sans quitter le tableau de bord.
+A budget in Athena is a spending cap per category over a given period. Real-time tracking, overruns highlighted, projection to end of period — all without leaving the dashboard.
 
-## 1. Créer un plafond mensuel par catégorie
+## 1. Create a monthly cap per category
 
-Ouvrez **Budgets → Plafonds**. En haut, le bandeau récapitule votre consommation globale pour la période sélectionnée. Chaque catégorie de dépense y apparaît avec sa barre de progression : verte tant que vous êtes sous le plafond, orange à l'approche, rouge en dépassement. Utilisez le formulaire **Ajouter un budget** en bas de page pour définir un montant sur une catégorie qui n'a pas encore de plafond.
+Open **Budgets → Caps**. At the top, the banner sums up your overall spending for the selected period. Every expense category shows its own progress bar: green while you're under the cap, orange as you approach it, red past it. Use the **Add a budget** form at the bottom of the page to set an amount on a category that doesn't have a cap yet.
 
-![Page Plafonds avec les barres de progression par catégorie](./img/budget-01-plafonds.png)
+![Caps page with per-category progress bars](/img/walkthroughs/en/budget-01-plafonds.png)
 
-## 2. Choisir la période : mois ou année
+## 2. Pick the period: month or year
 
-Le sélecteur **Mois / Année** en tête de page bascule tous les plafonds entre suivi mensuel et suivi annuel. Utile pour les catégories saisonnières (assurances, vacances) qu'un plafond mensuel décrirait mal. Les flèches à côté du mois affiché naviguent d'une période à l'autre pour comparer.
+The **Month / Year** switcher at the top of the page flips every cap between monthly and yearly tracking. Useful for seasonal categories (insurance, holidays) that a monthly cap would describe poorly. The arrows next to the displayed month navigate between periods for comparison.
 
-## 3. Basculer sur la vue « Enveloppes »
+## 3. Switch to the "Envelopes" view
 
-L'onglet **Budgets → Enveloppes** propose une seconde lecture : chaque catégorie devient une enveloppe qui reçoit son plafond en début de période, et se vide au fil des dépenses. Les enveloppes non consommées peuvent être **reportées** au mois suivant. C'est le modèle « zero‑based » pour qui aime allouer chaque euro à l'avance.
+The **Budgets → Envelopes** tab offers a second read: every category becomes an envelope that gets its cap at the start of the period and drains as you spend. Unused envelopes can be **carried over** to the next month. This is the zero-based model for people who like allocating every euro up front.
 
-![Vue Enveloppes](./img/budget-02-enveloppes.png)
+![Envelopes view](/img/walkthroughs/en/budget-02-enveloppes.png)
 
-## 4. Suivre la progression depuis le Dashboard
+## 4. Track progress from the Dashboard
 
-Retour sur **Dashboard**. Les catégories avec un plafond apparaissent en haut du panneau **Insights** dès que vous approchez ou franchissez le seuil : « Vos dépenses de juin : … », « Vous avez dépensé plus que vos revenus en juin », etc. Le donut des dépenses par catégorie reste cliquable — un clic filtre les transactions correspondantes.
+Back on **Dashboard**. Capped categories appear at the top of the **Insights** panel as soon as you approach or cross the threshold: "Your June spending: …", "You spent more than your income in June", etc. The category donut is still clickable — one click filters the matching transactions.
 
-![Insights et progression sur le tableau de bord](./img/budget-03-dashboard-progress.png)
+![Insights and progress on the dashboard](/img/walkthroughs/en/budget-03-dashboard-progress.png)
 
-## Étapes suivantes
+## Next steps
 
-Vos budgets tournent — il est temps d'en tirer une vue d'ensemble. Continuez avec [Consulter les rapports](./view-reports.md) pour explorer le Sankey, les Insights et la vue mensuelle.
+Your budgets are running — time to zoom out. Continue with [View reports](./view-reports.md) to explore the Sankey, the Insights and the monthly view.

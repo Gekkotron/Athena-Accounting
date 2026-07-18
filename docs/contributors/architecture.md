@@ -95,7 +95,7 @@ Follow one operation end-to-end so the layers become concrete.
    frontend renders it under the drop zone.
 
 For PDFs, step 5 is replaced by the template wizard flow (see the
-user-facing [Importing](../users/importing.md) page); everything else
+user-facing [Importing](/docs/users/importing) page); everything else
 is the same.
 
 ## Key libraries

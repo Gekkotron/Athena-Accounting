@@ -1,17 +1,31 @@
 # Regenerating walkthrough screenshots
 
-The PNGs backing `docs/users/walkthroughs/*.md` are captured by a
-gated Playwright suite: `frontend/e2e/walkthrough-screenshots.spec.ts`.
+The PNGs backing the walkthrough docs are captured by a gated
+Playwright suite: `frontend/e2e/walkthrough-screenshots.spec.ts`.
 It ships in two modes — a VITE_DEMO fallback that needs no backend
 and a real-backend mode that logs in against a running Athena
 instance. Real-backend mode is the one that produces the shots
 currently on gh-pages (no demo banner, real data).
 
+The docs are bilingual. The suite writes into a shared,
+per-language asset tree used by both the default-locale (English)
+docs and the `website/i18n/fr/` mirror:
+
+```
+website/static/img/walkthroughs/
+├── fr/   ← referenced from i18n/fr walkthrough docs
+└── en/   ← referenced from the default-locale walkthrough docs
+```
+
+Pass `WALKTHROUGH_LANG=fr` (default) or `WALKTHROUGH_LANG=en` to
+target the language. The suite also flips the Playwright browser
+locale and forces the app's i18next language accordingly.
+
 ## What the suite captures
 
 Four tests, one per walkthrough page. Every test writes into
-`docs/users/walkthroughs/img/` with the exact filenames the docs
-reference.
+`website/static/img/walkthroughs/<lang>/` with the exact filenames
+the docs reference.
 
 | Test | PNGs |
 |------|------|
@@ -20,7 +34,8 @@ reference.
 | `set-a-budget` | `budget-01-plafonds.png`, `budget-02-enveloppes.png`, `budget-03-dashboard-progress.png` |
 | `view-reports` | `reports-01-dashboard.png`, `reports-02-dashboard-mid.png`, `reports-03-dashboard-bottom.png` |
 
-All shots use viewport `1440 × 900`, locale `fr-FR`, and dismiss the
+All shots use viewport `1440 × 900`, browser locale
+`fr-FR`/`en-US` (driven by `WALKTHROUGH_LANG`), and dismiss the
 welcome tour if it fires. Screenshots are viewport-only (`fullPage:
 false`) so scrolling stays outside the frame.
 
@@ -52,18 +67,25 @@ cd frontend
 WALKTHROUGH_LOCAL_URL=http://<lan-host>:<port> \
 WALKTHROUGH_LOCAL_USER=<demo-user> \
 WALKTHROUGH_LOCAL_PASS=<demo-pass> \
+WALKTHROUGH_LANG=fr \
 WALKTHROUGH_SHOTS=1 \
 npx playwright test e2e/walkthrough-screenshots.spec.ts
 ```
 
+Re-run with `WALKTHROUGH_LANG=en` to capture the English shots into
+`website/static/img/walkthroughs/en/`. The two languages share
+identical filenames — the tests are locale-agnostic, only the UI
+strings differ.
+
 Add `-g "<test-name>"` to run one walkthrough, e.g.
-`-g "set-a-budget"`. The whole suite takes ~40 s.
+`-g "set-a-budget"`. The whole suite takes ~40 s per language.
 
 ### What the env vars do
 
 | Variable | Effect |
 |----------|--------|
 | `WALKTHROUGH_SHOTS=1` | Opts into the suite. Without it, every test is skipped so the demo smoke (`demo.spec.ts`) stays fast. |
+| `WALKTHROUGH_LANG` | `fr` (default) or `en`. Sets the Playwright browser locale, forces the app's i18next language, and picks the output subfolder under `website/static/img/walkthroughs/`. |
 | `WALKTHROUGH_LOCAL_URL` | `playwright.config.ts` reads this at load time. When set, it skips the VITE_DEMO webServer entirely and uses this URL as `baseURL`. |
 | `WALKTHROUGH_LOCAL_USER` | Filled into the `input[autocomplete="username"]` field on `/login`. |
 | `WALKTHROUGH_LOCAL_PASS` | Filled into the `input[type="password"]` field. |
@@ -96,9 +118,12 @@ fine for demo-focused captures, wrong for the user-facing docs.
    `walkthrough-screenshots.spec.ts`: navigate to the target route,
    `await page.waitForLoadState('networkidle')`, interact if
    needed, then `await shot(page, 'my-new-shot')`.
-2. Reference `./img/my-new-shot.png` from the walkthrough `.md`.
-3. Regenerate with the command above; commit both the spec change
-   and the PNG in the same commit.
+2. Reference `/img/walkthroughs/en/my-new-shot.png` (or `/fr/…`)
+   from the walkthrough `.md`. Both language docs share the same
+   filename per shot — only the folder differs.
+3. Regenerate for **both** languages (`WALKTHROUGH_LANG=fr` and
+   `WALKTHROUGH_LANG=en`); commit the spec change and both PNGs in
+   the same commit.
 
 If the shot needs an expanded panel, dropdown, or modal, use
 Playwright's role-based locators (`getByRole('button', { name:

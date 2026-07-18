@@ -15,7 +15,18 @@ const config: Config = {
   trailingSlash: false,
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+
+  markdown: {
+    hooks: {
+      // Docusaurus v4-style hooks. Broken markdown links still just warn;
+      // missing images downgrade to warn so builds don't fail on the
+      // English screenshot slots before they've been re-shot (see
+      // docs/dev/walkthrough-screenshots.md — the `/img/walkthroughs/en/`
+      // tree is populated by the Playwright suite with WALKTHROUGH_LANG=en).
+      onBrokenMarkdownLinks: 'warn',
+      onBrokenMarkdownImages: 'warn',
+    },
+  },
 
   i18n: {
     defaultLocale: 'en',

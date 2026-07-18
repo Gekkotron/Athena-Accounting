@@ -15,4 +15,4 @@ then check **[development](development.md)** for the local dev loop.
   flow.
 - **[Database](database.md)** — schema highlights, migrations.
 
-← [Back to docs index](../README.md)
+← [Back to docs index](/docs/)
