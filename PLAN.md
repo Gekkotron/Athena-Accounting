@@ -19,25 +19,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## Backlog
 
 
-- [ ] Browser-only demo — Task 2: seed data
-      Sub-task of the browser-only demo plan (Task 2). Depends on Task 1 landed. Frontend-only, direct commit to `main`.
-      Create `frontend/src/api/demo/seed.ts` matching TS types in `frontend/src/api/types.ts`: 2 accounts ("Compte courant" EUR opening 2500 €, "Livret A" EUR opening 8000 €); ~180 transactions over the last 6 months with recurring items (loyer, salaire, EDF, internet, phone) and discretionary (courses, restos, transports) plus one large blip ("Vacances août 2026 —2 800 €"); 8 categories (Courses, Restaurant, Transport, Logement, Énergie, Loisirs, Santé + Salaire); 5 rules ("sncf" → Transport, "carrefour" → Courses, etc.); 3 budgets (Courses 400 €, Restaurant 150 €, Loisirs 100 €); 1 balance checkpoint on Compte courant 3 months ago (matches computed value → green diamond).
-      Public-safe: no real names, no real IBANs, no realistic emails; plausible-but-fake French vendors ("Café du Coin", "Boulangerie Martin"); amounts round-ish.
-      Wire `store.getState()` to load seed on first mount and after `reset()`.
-      Success criteria: (a) `tsc -b` passes; (b) seed constants match `frontend/src/api/types.ts`; (c) `store.reset()` restores exactly the seed.
-
-- [ ] Browser-only demo — Task 3: read-side handlers
-      Sub-task of the browser-only demo plan (Task 3). Depends on Task 2 landed. Frontend-only, direct commit to `main`.
-      Implement GET handlers in the demo adapter, highest-visibility first: `/api/auth/me` (returns `{userId:'demo', username:'Démo'}`, never 401), `/api/onboarding/status` (`{onboarded:true}`), `/api/accounts`, `/api/categories`, `/api/rules`, `/api/transfer-rules`, `/api/budgets`, `/api/settings`, `/api/transactions` (paginated + filterable: `account`, `from`, `to`, `q`, `page`, `limit`, `category`), `/api/reports/{balance,timeseries,categories,budget}` (compute on the fly, no caching), `/api/tri/groups` (group uncategorised by normalised label), `/health` (`{ok:true, mode:'demo'}`).
-      Each handler is a pure function of current store state. Unit tests per resource in `frontend/src/api/demo/__tests__/` asserting response shape matches `types.ts`.
-      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `dist-demo/`; (b) unit tests pass; (c) manual smoke — `VITE_DEMO=1 npm run dev` loads Dashboard/Transactions/Budgets against seed with zero network calls to `/api/*`.
-
-- [ ] Browser-only demo — Task 4: write-side handlers
-      Sub-task of the browser-only demo plan (Task 4). Depends on Task 3 landed. Frontend-only, direct commit to `main`.
-      Implement mutating handlers: `POST/PUT/DELETE /api/accounts[/…]`, `PATCH /api/transactions/:id` (inline category edit — sets `is_manual=true`), `POST/PUT/DELETE /api/categories[/…]` + `/api/rules[/…]` + `/api/budgets[/…]` + `/api/transfer-rules[/…]`, `POST /api/tri/assign` (bulk assign + optional rule creation), `POST /api/recategorize` (walk transactions, re-apply rules where `is_manual=false`), `PATCH /api/settings` (merge into JSONB blob), `GET /api/backup/export` (synthesise the JSON envelope; browser downloads via `Blob`).
-      Every write goes through `store.setState(mutator)`, persisting to `localStorage` in the same tick and notifying subscribers. Debounce localStorage persistence at 250 ms to avoid write storms during bulk ops.
-      Unit tests per handler.
-      Success criteria: (a) tests pass; (b) manual smoke — inline-edit a transaction category, refresh the page, edit survives.
 
 - [ ] Browser-only demo — Task 5: stubbed endpoints + "not available" modal
       Sub-task of the browser-only demo plan (Task 5). Depends on Task 4 landed. Frontend-only, direct commit to `main`.
@@ -89,7 +70,21 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Browser-only demo — Task 4: write-side handlers     <!-- session: conv:claude:claude-178437870258534 -->
+      Sub-task of the browser-only demo plan (Task 4). Depends on Task 3 landed. Frontend-only, direct commit to `main`.
+      Implement mutating handlers: `POST/PUT/DELETE /api/accounts[/…]`, `PATCH /api/transactions/:id` (inline category edit — sets `is_manual=true`), `POST/PUT/DELETE /api/categories[/…]` + `/api/rules[/…]` + `/api/budgets[/…]` + `/api/transfer-rules[/…]`, `POST /api/tri/assign` (bulk assign + optional rule creation), `POST /api/recategorize` (walk transactions, re-apply rules where `is_manual=false`), `PATCH /api/settings` (merge into JSONB blob), `GET /api/backup/export` (synthesise the JSON envelope; browser downloads via `Blob`).
+      Every write goes through `store.setState(mutator)`, persisting to `localStorage` in the same tick and notifying subscribers. Debounce localStorage persistence at 250 ms to avoid write storms during bulk ops.
+      Unit tests per handler.
+      Success criteria: (a) tests pass; (b) manual smoke — inline-edit a transaction category, refresh the page, edit survives.
 ## Done
+
+- [x] Browser-only demo — Task 3: read-side handlers
+      Sub-task of the browser-only demo plan (Task 3). Frontend-only, committed to `main`.
+      Every GET the frontend calls to paint Dashboard/Transactions/Budgets/Rules/Tri now serves from the seed: `/api/auth/me`, `/api/onboarding/status`, `/health`, `/api/accounts` (with computed balances + counts), `/api/categories`, `/api/rules`, `/api/transfer-rules`, `/api/budgets`, `/api/settings`, `/api/transactions` (paginate + filter + runningBalance), `/api/reports/{balance,timeseries,categories,budget}`, `/api/tri/groups`, `/api/accounts/:id/balance-checkpoints`. 17 handler tests lock the shapes and verify the checkpoint still matches computed balance under filtering.
+
+- [x] Browser-only demo — Task 2: seed data
+      Sub-task of the browser-only demo plan (Task 2). Frontend-only, committed to `main`.
+      `frontend/src/api/demo/seed.ts` — 2 accounts (Compte courant + Livret A), 175 tx over Feb–Jul 2026 (recurring salaire/loyer/EDF/internet/mobile + rotating discretionary vendors + one large vacation blip), 8 categories, 5 rules, 3 budgets, 1 balance checkpoint that matches the computed balance at 2026-04-18. All names/vendors invented — no real IBANs, no real names. Store auto-registers the seed provider at adapter load and returns a fresh clone on every `reset()`.
 
 - [x] Browser-only demo — Task 1: adapter scaffolding + `VITE_DEMO` flag
       Sub-task of the browser-only demo plan at `docs/superpowers/plans/2026-07-18-browser-only-demo.md` (Task 1). Frontend-only, direct commit to `main`.

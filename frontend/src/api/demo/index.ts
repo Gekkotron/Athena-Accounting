@@ -14,6 +14,7 @@ import { buildSeedState } from './seed';
 // module. Both are function declarations so the bindings are hoisted;
 // the call site (bottom of this file) runs after everything is defined.
 import { registerReadHandlers } from './handlers/reads';
+import { registerWriteHandlers } from './handlers/writes';
 
 // Register the seed provider at adapter-load time so store.getState()
 // (first call, or after reset()) always has a seed to fall back to.
@@ -108,5 +109,6 @@ export async function apiUpload<T>(
   );
 }
 
-// Registrations run once registerHandler and reads.ts are both defined.
+// Registrations run once registerHandler is defined.
 registerReadHandlers();
+registerWriteHandlers();
