@@ -20,11 +20,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Browser-only demo mode — execute existing plan
-      The implementation plan already exists at `docs/superpowers/plans/2026-07-18-browser-only-demo.md`. Execute it end-to-end.
-      Use `superpowers:subagent-driven-development` (or `superpowers:executing-plans` as fallback) — the plan is structured with `- [ ]` checkboxes across 10 tasks (adapter scaffolding, seed data, read/write handlers, stubbed endpoints for unsupported features, banner + reset, docs-site integration, CI deploy to `gh-pages` under `/demo/`, tests, ship).
-      Global constraints (repeated for the headless worker): frontend-only, no backend changes; direct commits on `main`, push only when the plan is fully done; every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`; seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes); French UI stays primary.
-      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
 
 - [ ] Empty / loading / error state audit across all pages
       Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
@@ -51,6 +46,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Browser-only demo mode — execute existing plan     <!-- blocked: 10-task plan (~30 API handlers incl. compound reports, unit + Playwright tests, GH Pages deploy job, banner, docs integration) is a multi-day human-supervised effort; not safely completable end-to-end in one headless dispatch when success requires every checkbox ticked and the constraint is direct-commit-to-main. Recommend splitting into per-task backlog items. -->
+      The implementation plan already exists at `docs/superpowers/plans/2026-07-18-browser-only-demo.md`. Execute it end-to-end.
+      Use `superpowers:subagent-driven-development` (or `superpowers:executing-plans` as fallback) — the plan is structured with `- [ ]` checkboxes across 10 tasks (adapter scaffolding, seed data, read/write handlers, stubbed endpoints for unsupported features, banner + reset, docs-site integration, CI deploy to `gh-pages` under `/demo/`, tests, ship).
+      Global constraints (repeated for the headless worker): frontend-only, no backend changes; direct commits on `main`, push only when the plan is fully done; every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`; seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes); French UI stays primary.
+      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
 ## Done
 
 - [x] Public-launch essentials pack — LICENSE, SECURITY, CONTRIBUTING, CoC, templates
