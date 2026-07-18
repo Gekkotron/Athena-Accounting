@@ -42,10 +42,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
-- [ ] Browser-only demo — Task 9 follow-up: Playwright e2e infrastructure     <!-- session: conv:claude:claude-178437960257035 -->
+## Done
+
+- [x] Browser-only demo — Task 9 follow-up: Playwright e2e infrastructure
       Unit + component tests are already in `frontend/src/api/demo/__tests__/` (33 tests). Playwright itself is not installed. This task installs `@playwright/test`, adds `e2e/demo.spec.ts` following the outline in `docs/dev/browser-only-demo-e2e-notes.md`, and adds a CI step that runs it against `VITE_DEMO=1 npm run preview`.
       Success criteria: `npx playwright test` green locally and in CI.
-## Done
 
 - [x] Browser-only demo — Task 8: CI + deploy to gh-pages
       Sub-task of the browser-only demo plan (Task 8). Frontend + CI change; committed to `main`.

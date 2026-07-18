@@ -7,3 +7,5 @@ dist-types-node/
 .env
 .env.*
 *.log
+playwright-report/
+test-results/
