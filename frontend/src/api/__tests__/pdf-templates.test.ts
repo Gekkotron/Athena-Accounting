@@ -7,6 +7,7 @@ import {
   deletePdfTemplate,
   type TemplateZones,
 } from '../pdf-templates';
+import { isDemoStubError } from '../errorMessage';
 
 const originalFetch = globalThis.fetch;
 
@@ -104,5 +105,38 @@ describe('template CRUD', () => {
       message: 'rename failed: label taken',
       status: 409,
     });
+  });
+});
+
+describe('demo-mode propagation', () => {
+  // Matches the Response shape produced by the demo fetch patch in
+  // api/demo/index.ts when a stubbed /api/* path is hit — a 501 with
+  // { error, demoStub: true, path } in the JSON body. If failure() drops
+  // demoStub, ErrorState can't route to DemoUnavailableState and the
+  // PdfTemplatesPanel falls back to a bare "Couldn't load templates" card.
+  it('listPdfTemplates propagates demoStub so isDemoStubError() matches', async () => {
+    mockFetch(() =>
+      json(
+        {
+          error: "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser.",
+          demoStub: true,
+          path: '/api/pdf-templates',
+        },
+        501,
+      ),
+    );
+    let caught: unknown = null;
+    try { await listPdfTemplates(); } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(Error);
+    expect(isDemoStubError(caught)).toBe(true);
+  });
+
+  it('listPdfTemplates propagates demoMissingHandler for unregistered demo paths', async () => {
+    mockFetch(() =>
+      json({ error: 'Demo: no handler for GET /api/pdf-templates', demoMissingHandler: true }, 501),
+    );
+    let caught: unknown = null;
+    try { await listPdfTemplates(); } catch (e) { caught = e; }
+    expect(isDemoStubError(caught)).toBe(true);
   });
 });

@@ -42,10 +42,19 @@ function extractCodeAndReason(err: unknown): { code: string | null; reason: stri
 // haven't taught the demo adapter about). Callers can gate a
 // friendlier UI on this; errorMessage() itself already returns the
 // French copy for us.
+//
+// Two shapes are recognized — same rationale as extractCodeAndReason
+// above: `api()` throws ApiError with the demo flags under `err.data`,
+// while raw-fetch call sites (api/pdf-templates.ts) rebuild a plain
+// Error and carry the flags as own properties.
 export function isDemoStubError(err: unknown): boolean {
   if (err instanceof ApiError && err.data && typeof err.data === 'object') {
     const d = err.data as { demoStub?: unknown; demoMissingHandler?: unknown };
     return d.demoStub === true || d.demoMissingHandler === true;
+  }
+  if (err instanceof Error) {
+    const e = err as Error & { demoStub?: unknown; demoMissingHandler?: unknown };
+    return e.demoStub === true || e.demoMissingHandler === true;
   }
   return false;
 }

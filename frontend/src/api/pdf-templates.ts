@@ -172,10 +172,17 @@ async function failure(r: Response, fallback: string): Promise<never> {
   // show the underlying cause instead of just the generic "apply failed".
   const head = body.error ?? fallback;
   const text = body.message ? `${head}: ${body.message}` : head;
+  // demoStub / demoMissingHandler flags flow through the demo-mode fetch
+  // patch (api/demo/index.ts) — propagate them so isDemoStubError() in
+  // errorMessage.ts can gate ErrorState → DemoUnavailableState. Without
+  // this, the PDF templates panel (and every other raw-fetch call site)
+  // shows a bare "Couldn't load templates" card in the demo build.
   throw Object.assign(new Error(text), {
     code: body.code,
     status: r.status,
     detail: body.message ?? null,
+    demoStub: body.demoStub,
+    demoMissingHandler: body.demoMissingHandler,
   });
 }
 
