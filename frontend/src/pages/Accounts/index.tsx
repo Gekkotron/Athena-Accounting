@@ -25,6 +25,7 @@ import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
 import { MergeModal } from './MergeModal';
 import type { MergeResult } from '../../api/accounts';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 export function Accounts() {
   const { t } = useTranslation(['accounts', 'common']);
@@ -215,7 +216,15 @@ export function Accounts() {
 
       <section>
         <div className="section-rule mb-4">{t('myAccounts')}</div>
-        {(accountsQ.data?.accounts ?? []).length === 0 ? (
+        {accountsQ.isError ? (
+          <ErrorState
+            title={t('listErrorTitle')}
+            error={accountsQ.error}
+            onRetry={() => void accountsQ.refetch()}
+          />
+        ) : accountsQ.isLoading ? (
+          <LoadingBlock height="min-h-40" />
+        ) : (accountsQ.data?.accounts ?? []).length === 0 ? (
           <div className="surface p-6 text-sm text-ink-400 display-italic">
             {t('emptyState')}
           </div>

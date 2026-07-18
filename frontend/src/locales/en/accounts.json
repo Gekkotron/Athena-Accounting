@@ -4,6 +4,7 @@
   "newAccount": "New account",
   "myAccounts": "My accounts",
   "emptyState": "No accounts yet.",
+  "listErrorTitle": "Couldn't load accounts",
   "editHeading": "Edit account",
   "deleteAccountDialog": {
     "title": "Delete \"{{name}}\"?",

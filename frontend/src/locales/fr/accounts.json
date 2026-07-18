@@ -4,6 +4,7 @@
   "newAccount": "Nouveau compte",
   "myAccounts": "Mes comptes",
   "emptyState": "Aucun compte pour l'instant.",
+  "listErrorTitle": "Impossible de charger les comptes",
   "editHeading": "Éditer le compte",
   "deleteAccountDialog": {
     "title": "Supprimer « {{name}} » ?",
