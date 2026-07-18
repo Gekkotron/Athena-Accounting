@@ -18,9 +18,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-- [ ] Fill in docs/users/categorization.md with real content
-      Cover the sections currently listed under "Planned sections" — bulk vs single categorisation from the Tri tab, creating a rule from a transaction, transfer rules, regenerating categories, how sources (auto / rule / manual) interact when a transaction is edited or re-imported. Model tone and length on shipped user docs like docs/users/importing.md and docs/users/backup-recovery.md — short paragraphs, one imperative per subsection, no lorem or placeholder text. Remove the "**Status:** draft — content coming." line and the entire "## Planned sections" block once every bullet is covered. Keep the front matter (title, sidebar_position) and any existing internal links intact. Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/categorization.md, reusing the FR terminology already established (point de contrôle, courbe du solde, enveloppe, Réglages, Tri, Règles) — the FR mirror is currently a stub and needs the same content in French.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/users/categorization.md` returns nothing; (b) "## Planned sections" is gone from both EN and FR versions; (c) FR mirror matches EN structure section-for-section.
 
 - [ ] Fill in docs/users/dashboard.md with real content
       Cover the anatomy of the Dashboard — Net Balance card, monthly averages, Insights panel, Trend chart with checkpoint diamonds, Category donut, Cash-flow Sankey — plus how the Range picker and Account scope pickers interact across cards and what filtering by donut slice does. Reference the existing shots in website/static/img/walkthroughs/en/reports-*.png where useful. Model tone on docs/users/walkthroughs/view-reports.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block. Keep the front matter as-is.
@@ -97,6 +94,10 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/users/categorization.md with real content
+      Cover the sections currently listed under "Planned sections" — bulk vs single categorisation from the Tri tab, creating a rule from a transaction, transfer rules, regenerating categories, how sources (auto / rule / manual) interact when a transaction is edited or re-imported. Model tone and length on shipped user docs like docs/users/importing.md and docs/users/backup-recovery.md — short paragraphs, one imperative per subsection, no lorem or placeholder text. Remove the "**Status:** draft — content coming." line and the entire "## Planned sections" block once every bullet is covered. Keep the front matter (title, sidebar_position) and any existing internal links intact. Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/categorization.md, reusing the FR terminology already established (point de contrôle, courbe du solde, enveloppe, Réglages, Tri, Règles) — the FR mirror is currently a stub and needs the same content in French.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/categorization.md` returns nothing; (b) "## Planned sections" is gone from both EN and FR versions; (c) FR mirror matches EN structure section-for-section.
 
 - [x] Backup/restore drill + documented recovery playbook (scripted PGlite pass)
       Delivered as a scripted round-trip drill instead of the UI-driven one — the "side-by-side UI screenshots" step is still pending a live Tauri run and is noted in the drill report as follow-up.
