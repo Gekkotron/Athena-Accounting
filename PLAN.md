@@ -26,10 +26,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/contributors/code-map.md with real content
-      Walk the repository top-down: root layout (frontend/, backend/, mcp/, desktop/, website/, docs/, .github/), then a per-directory tour of the top three (backend/src by module, frontend/src by module, mcp/src). For each subdirectory, one paragraph explaining what lives there and one example file to open first. Cover shared conventions — path aliases in tsconfig, the naming convention for tests (__tests__), where generated code lands (Drizzle migrations, OpenAPI clients if any). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/contributors/code-map.md.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/contributors/code-map.md` returns nothing; (b) every top-level directory in the repo is mentioned at least once with a reason to visit; (c) FR mirror ships alongside EN.
 
 - [ ] Fill in docs/contributors/database.md with real content
       Cover PostgreSQL extensions and their rationale (`pg_trgm` for trigram-indexed full-text search, `unaccent` for accent folding, `pgcrypto` for MCP payload encryption); key tables and their invariants (users, accounts, transactions with normalised full-text columns, rules, budgets, envelopes, checkpoints, imports audit); how migrations are authored and applied (files under `backend/src/db/migrations/`, lexicographic order, one transaction each, tracked in `schema_migrations`); deferrable triggers for transaction splits; and the running-balance column setup. Cross-link to docs/contributors/architecture.md for the higher-level context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -66,6 +62,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/contributors/code-map.md with real content
+      Walk the repository top-down: root layout (frontend/, backend/, mcp/, desktop/, website/, docs/, .github/), then a per-directory tour of the top three (backend/src by module, frontend/src by module, mcp/src). For each subdirectory, one paragraph explaining what lives there and one example file to open first. Cover shared conventions — path aliases in tsconfig, the naming convention for tests (__tests__), where generated code lands (Drizzle migrations, OpenAPI clients if any). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/contributors/code-map.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/contributors/code-map.md` returns nothing; (b) every top-level directory in the repo is mentioned at least once with a reason to visit; (c) FR mirror ships alongside EN.
 
 - [x] Fill in docs/reference/glossary.md with real content
       Build the French UI ↔ English terms mapping the file promises: navigation and tabs (Tri, Réglages, Comptes, Règles, Imports, Doublons), money terms (Disponible, Bloqué, Ventilation, Points de contrôle, Enveloppe), import terms (Relevé, Modèle, Ligne, Colonne, Doublon), chart and dashboard terms (Évolution, Répartition, Sankey des flux, Insights). Format as a two-column table (FR term → English equivalent) with a one-line context note per row. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
