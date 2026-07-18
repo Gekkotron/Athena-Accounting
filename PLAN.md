@@ -86,6 +86,27 @@ Deliverables: one commit series on `main` per page (per project convention — c
 
 Success criteria: (a) every page above has confirmed empty, loading, and error states via a manual walkthrough on the dev server; (b) `docs/dev/state-audit.md` has one entry per page; (c) no page renders a raw error object or a bare skeleton for more than ~300 ms.
 
+### User walkthroughs — screenshotted guides for core flows
+
+Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: conversion from README/docs-site visitors into installs.
+
+Flows (one file each):
+1. `import-a-statement.md` — import a PDF/CSV bank statement, resolve categorisation prompts, verify balance checkpoint.
+2. `categorise-transactions.md` — bulk vs single categorisation, creating a rule from a transaction, transfer rules.
+3. `set-a-budget.md` — creating a budget for a category, choosing period, seeing progress on Dashboard.
+4. `view-reports.md` — Dashboard tour (Sankey, Insights, monthly overview), filtering by account/date range.
+
+Format per file:
+- Docusaurus frontmatter (`title`, `sidebar_position`).
+- 3–6 short numbered steps, each with one screenshot (PNG under `docs/users/walkthroughs/img/`) captured against the demo build (task above) **or** the dev server with seed data. Screenshots use the French UI (project's primary language).
+- Ends with a "Next steps" pointer to a related walkthrough.
+
+Wire into the Docusaurus sidebar (`website/sidebars.js` or equivalent) under a new "Walkthroughs" category ordered above "Reference".
+
+Do NOT rewrite existing docs. Do NOT translate to English yet — French only for v1.
+
+Success criteria: (a) all four files exist with real screenshots (not placeholders); (b) each renders on the local Docusaurus dev server; (c) the sidebar shows the new "Walkthroughs" category with four entries; (d) `grep -rE 'Lorem|TODO|placeholder' docs/users/walkthroughs/` returns nothing.
+
 ## In progress
 
 ## Done
