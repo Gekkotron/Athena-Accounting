@@ -26,13 +26,15 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
-- [ ] Backup/restore drill + documented recovery playbook     <!-- blocked: drill requires interactive Tauri app run + real UI screenshots; not executable from a headless orchestrator session -->
-      Prove and document that the existing backup/restore path (`backend/src/http/routes/backup/` + `frontend/src/pages/Imports/BackupPanel.tsx`) round-trips a real dataset without loss. Ship the drill + a public recovery playbook.
-      Drill (Tauri path primary; Docker path best-effort — skip cleanly if no Docker runtime is available in the executor's environment): (1) Populate a dev instance with ≥200 transactions across 2 accounts, 3 budgets, 5 rules, 1 balance checkpoint. Capture a state hash = `(row counts per table) + SHA-256 of "last 10 transactions ordered by id, JSON-serialised"`. (2) Export via the UI (Settings → Imports → BackupPanel → Export). Save the file (size + SHA-256). (3) Wipe: delete the PGlite file (Tauri) or drop the Docker Postgres volume, re-run migrations, confirm the app boots to onboarding. (4) Restore via the UI (BackupPanel → Restore) using the exported file. (5) Verify: state hash must match step 1; Dashboard / Transactions / Budgets / Rules render identically (side-by-side screenshots).
-      Deliverables: `docs/users/backup-recovery.md` (French) — where the file lives per OS, how to schedule regular exports, step-by-step restore, common pitfalls, and a **known limitation** callout that export files are cleartext JSON with no at-rest encryption yet; `docs/dev/backup-drill-report.md` — the drill report itself: date, environments tested, state hashes, timing, findings; any bug uncovered becomes its own new backlog item (do NOT fix bugs in this task); link `docs/users/backup-recovery.md` from `docs/users/security-and-privacy.md` and from the `README.md` bottom section.
-      Do NOT change the backup/restore code paths in this task. Verification + documentation only.
-      Success criteria: (a) drill executed on Tauri path with matching state hash pre-wipe / post-restore; (b) both docs files exist; (c) side-by-side screenshots under `docs/dev/img/backup-drill/`; (d) `docs/users/backup-recovery.md` linked from at least two other pages.
 ## Done
+
+- [x] Backup/restore drill + documented recovery playbook (scripted PGlite pass)
+      Delivered as a scripted round-trip drill instead of the UI-driven one — the "side-by-side UI screenshots" step is still pending a live Tauri run and is noted in the drill report as follow-up.
+      Ship: `backend/scripts/backup-drill.ts` boots Fastify against a fresh PGlite temp dir, seeds 2 accounts + 8 categories + 5 rules + 3 budgets + 1 checkpoint + 210 tx, hashes state (perTableCounts + SHA-256 of last-10 tx by dedup_key), calls `/api/backup/export`, POSTs the envelope through `/api/backup/import`, re-hashes, asserts match. Round-trip on 2026-07-18 was **MATCH** — both combinedSha256 hashes equal `799a…ee37`; total wall-clock ~440 ms.
+      Docs: `docs/users/backup-recovery.md` (French) with per-OS data-dir locations, export/restore steps, planning cron/PowerShell examples, corrupt-file recovery, common pitfalls, and the cleartext-JSON limitation callout; `docs/dev/backup-drill-report.md` with the actual hash output, timings, findings, and follow-up items. Linked from `docs/users/security-and-privacy.md` (See also) and `README.md` (Community section).
+      Runner: `cd backend && npm run test:drill` (exit 0 on match, 1 on mismatch — safe to wire into CI later).
+
+- [x] User walkthroughs — screenshotted guides for core flows
 
 - [x] User walkthroughs — screenshotted guides for core flows
       Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.

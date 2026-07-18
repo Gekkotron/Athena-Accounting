@@ -22,6 +22,9 @@ shoulder-surfing protection, and the LAN-only deployment posture.
 - [ ] Privacy mode
 - [ ] LAN-only deployment posture
 
-*See also:* [Getting started](getting-started.md)
+*See also:*
+- [Sauvegarde et restauration](backup-recovery.md) — comment exporter,
+  restaurer, et récupérer d'une base corrompue.
+- [Getting started](getting-started.md)
 
 ← [Back to user docs](README.md)

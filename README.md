@@ -388,3 +388,4 @@ labels.
 - [Security policy](SECURITY.md)
 - [Contributing guide](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Backup and recovery](docs/users/backup-recovery.md)
