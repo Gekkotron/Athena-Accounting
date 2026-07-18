@@ -29,10 +29,12 @@ format. You can move a backup export between them freely.
 
 ## Documentation
 
-Full docs live in [`docs/`](docs/README.md) — split into a user track
-(install, importing, dashboard, security), a contributor track
-(architecture, code map, development, database), and a reference
-bucket (configuration, API, glossary).
+Read the docs online at
+**<https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started>**
+— the same content also lives in [`docs/`](docs/README.md) in the repo,
+split into a user track (install, importing, dashboard, security), a
+contributor track (architecture, code map, development, database), and
+a reference bucket (configuration, API, glossary).
 
 ## Features
 
