@@ -23,10 +23,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/reference/configuration.md with real content
-      Enumerate every environment variable Athena reads (source of truth: `.env.example` plus any getEnv/process.env calls in backend/src and frontend). For each: name, default, valid values, effect, and which service consumes it (frontend / backend / postgres). Include the default host + container ports for the three main services. Include the persistent user settings surfaced on the Réglages page (chart gap threshold, default range, default account scope). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/configuration.md.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/configuration.md` returns nothing; (b) every env var in `.env.example` appears with default + effect; (c) FR mirror matches EN table row-for-row.
 
 - [ ] Fill in docs/reference/api-endpoints.md with real content
       Document every route the frontend calls. Source of truth: `backend/src/http/routes/**/*.ts` — walk each `fastify.route(...)` call. For each endpoint: method, path, auth requirement, request shape (headers / query / body), response shape, notable side effects. Group by area (Auth, Onboarding, Accounts, Transactions, Imports, Rules and categorization, Dashboard aggregates, Budgets, Backup, MCP). Cross-link to `docs/contributors/architecture.md` for the request-flow context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -78,6 +74,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/reference/configuration.md with real content
+      Enumerate every environment variable Athena reads (source of truth: `.env.example` plus any getEnv/process.env calls in backend/src and frontend). For each: name, default, valid values, effect, and which service consumes it (frontend / backend / postgres). Include the default host + container ports for the three main services. Include the persistent user settings surfaced on the Réglages page (chart gap threshold, default range, default account scope). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/configuration.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/configuration.md` returns nothing; (b) every env var in `.env.example` appears with default + effect; (c) FR mirror matches EN table row-for-row.
 
 - [x] Fill in docs/users/troubleshooting.md with real content
       Cover the sections currently listed under "Planned sections" — common startup failures (Postgres port collision, `.env` missing, migration failure), import-time failures (PDF template not matching, OFX encoding, CSV format mismatch), balance mismatch (missed transaction, duplicate not merged, checkpoint drift), backup restore errors, and how to gather diagnostics (`docker compose logs`, `/health`, `/metrics`). Model tone on docs/users/backup-recovery.md — problem statement → cause → fix, one per subsection. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
