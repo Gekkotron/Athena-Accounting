@@ -8,6 +8,13 @@
 // loud instead of silent.
 
 import { ApiError } from '../apiError';
+import { registerSeedProvider } from './store';
+import { buildSeedState } from './seed';
+
+// Register the seed provider at adapter-load time so store.getState()
+// (first call, or after reset()) always has a seed to fall back to.
+// Handlers land in Task 3+; the map below stays empty for now.
+registerSeedProvider(buildSeedState);
 
 export { getState, setState, reset, subscribe, registerSeedProvider } from './store';
 
