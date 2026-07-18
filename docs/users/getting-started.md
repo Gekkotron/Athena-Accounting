@@ -5,6 +5,13 @@ sidebar_position: 2
 
 # Getting started
 
+:::tip Essayez avant d'installer
+Une démo interactive tourne dans votre navigateur — pas de compte,
+pas d'installation. Toutes les données restent en local (localStorage)
+et un bouton **Réinitialiser la démo** remet le jeu de données d'origine.
+[Ouvrir la démo →](./demo)
+:::
+
 Athena ships in two flavours from the same codebase. Pick the one that
 matches how you want to use it — both stay local, neither talks to the
 cloud, and your data never leaves the machine you install it on.

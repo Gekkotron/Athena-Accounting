@@ -6,6 +6,16 @@
 Self-hosted personal accounting. Local-only, no cloud dependencies, your
 bank data never leaves your network.
 
+## Try the demo
+
+[![Try the demo](https://img.shields.io/badge/Try%20the%20demo-in%20your%20browser-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Accounting/demo/)
+
+A fully interactive Athena runs directly in your browser — no account,
+no install, no server. All state lives in `localStorage`; a **Reset
+demo** button restores the seed. Open it to walk the dashboard,
+categorise transactions, and see budgets against six months of
+plausible French bank data.
+
 ## Install
 
 Two supported paths from the same codebase — pick the one that matches
