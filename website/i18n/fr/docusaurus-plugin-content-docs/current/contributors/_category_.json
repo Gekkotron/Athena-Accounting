@@ -1,0 +1,6 @@
+{
+  "label": "Pour les contributeurs",
+  "position": 3,
+  "link": { "type": "doc", "id": "contributors/README" },
+  "collapsed": true
+}

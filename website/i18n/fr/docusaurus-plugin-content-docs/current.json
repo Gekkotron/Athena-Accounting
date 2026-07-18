@@ -4,15 +4,15 @@
     "description": "The label for version current"
   },
   "sidebar.docs.category.For users": {
-    "message": "For users",
+    "message": "Pour les utilisateurs",
     "description": "The label for category 'For users' in sidebar 'docs'"
   },
   "sidebar.docs.category.Reference": {
-    "message": "Reference",
+    "message": "Référence",
     "description": "The label for category 'Reference' in sidebar 'docs'"
   },
   "sidebar.docs.category.For contributors": {
-    "message": "For contributors",
+    "message": "Pour les contributeurs",
     "description": "The label for category 'For contributors' in sidebar 'docs'"
   }
 }
