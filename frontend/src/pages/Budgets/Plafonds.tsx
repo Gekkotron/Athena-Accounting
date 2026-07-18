@@ -17,6 +17,7 @@ import { SuggestionCard } from './SuggestionCard';
 import { UnbudgetedSection } from './UnbudgetedSection';
 import { AddBudgetForm } from './AddBudgetForm';
 import { topLevelRows } from './budget-math';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 function currentMonth(): string {
   const d = new Date();
@@ -168,7 +169,15 @@ export function Plafonds(): JSX.Element {
           sourced from the new `report.data.rows` shape (a strict superset
           of the old one).                                                */}
 
-      {rows.length === 0 ? (
+      {report.isError ? (
+        <ErrorState
+          title={t('reportErrorTitle')}
+          error={report.error}
+          onRetry={() => void report.refetch()}
+        />
+      ) : report.isLoading ? (
+        <LoadingBlock height="min-h-48" />
+      ) : rows.length === 0 ? (
         <div className="surface p-8 text-center text-ink-400">
           <p className="mb-1">{t('emptyState.title')}</p>
           <p className="text-sm text-ink-500">{t('emptyState.hint')}</p>

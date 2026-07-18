@@ -11,6 +11,7 @@ import { HoldModal } from './HoldModal';
 import { SettingsModal } from './SettingsModal';
 import { UnbudgetedInline } from './UnbudgetedInline';
 import { distributePoolAcrossEnvelopes } from '../envelope-math';
+import { ErrorState, LoadingBlock } from '../../../components/StateBlocks';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -68,6 +69,16 @@ export function Enveloppes(): JSX.Element {
         <h1 className="display text-2xl w-64 text-center">{formatMonthLabel(month, i18n.language)}</h1>
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, +1))} aria-label={t('envelopes.nextMonth')}>›</button>
       </header>
+
+      {reportQ.isError && (
+        <ErrorState
+          title={t('envelopes.errorTitle')}
+          error={reportQ.error}
+          onRetry={() => void reportQ.refetch()}
+        />
+      )}
+
+      {reportQ.isLoading && <LoadingBlock height="min-h-48" />}
 
       {poolNegative && (
         <div className="surface p-4 border border-clay-500/60 text-clay-200">

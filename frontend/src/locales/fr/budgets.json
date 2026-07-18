@@ -6,6 +6,7 @@
   "mutationError": {
     "fallback": "Impossible d'enregistrer le budget."
   },
+  "reportErrorTitle": "Impossible de charger les plafonds",
   "emptyState": {
     "title": "Aucun budget défini.",
     "hint": "Ajoutez un plafond à une catégorie de dépense ci-dessous."
@@ -76,6 +77,7 @@
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
     "sectionLabel": "Enveloppes",
+    "errorTitle": "Impossible de charger les enveloppes",
     "emptyState": {
       "title": "Aucune enveloppe pour ce mois",
       "hint": "Créez votre première enveloppe pour commencer."

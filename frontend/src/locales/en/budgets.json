@@ -6,6 +6,7 @@
   "mutationError": {
     "fallback": "Could not save the budget."
   },
+  "reportErrorTitle": "Couldn't load budgets",
   "emptyState": {
     "title": "No budget defined yet.",
     "hint": "Add a cap to an expense category below."
@@ -76,6 +77,7 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "sectionLabel": "Envelopes",
+    "errorTitle": "Couldn't load envelopes",
     "emptyState": {
       "title": "No envelope for this month",
       "hint": "Create your first envelope to get started."
