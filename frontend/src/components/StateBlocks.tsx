@@ -114,7 +114,12 @@ export function DemoUnavailableState({
         {hint ??
           "Cette section a besoin du back-end Athena pour fonctionner. Installez Athena localement pour l'utiliser."}
       </div>
-      <a href="/docs/users/getting-started" className="btn-secondary mt-1 text-xs">
+      <a
+        href="https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started"
+        className="btn-secondary mt-1 text-xs"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         Comment installer
       </a>
     </div>
