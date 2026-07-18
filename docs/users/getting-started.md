@@ -120,6 +120,35 @@ asks for a username and password.
 Pick a strong password and store it in a password manager. Athena has
 no "forgot my password" email flow because it doesn't send email.
 
+## Updating
+
+From the checkout directory, run:
+
+```bash
+./update.sh
+```
+
+`update.sh` runs a fast-forward `git pull --rebase`, rebuilds the
+`backend` and `frontend` containers with `--no-cache`, brings the stack
+back up in the background (`docker compose up -d --build`), and prunes
+any dangling images left over by the rebuild. Postgres is a stock image
+and is **not** rebuilt, so your data volume is preserved untouched.
+
+The script is safe to re-run — if there are no new commits and both
+containers are already up, it exits early without touching anything. If
+the pull brought no changes but a container is stopped, it starts it.
+
+You can wire it to a cron for a light-touch homelab auto-update; a
+sensible cadence is once a day off-peak:
+
+```cron
+0 4 * * * /path/to/Athena-Accounting/update.sh >> /var/log/athena-update.log 2>&1
+```
+
+Desktop users update by downloading the latest installer from the
+[Releases page](https://github.com/Gekkotron/Athena-Accounting/releases)
+and running it over the existing app — the data directory is untouched.
+
 ## Your first ten minutes
 
 Once you're logged in:
