@@ -3,7 +3,6 @@ slug: browser-only-demo
 title: Try Athena in your browser — no install, no signup
 authors: [Gekkotron]
 tags: [demo, release, frontend]
-draft: true
 ---
 
 Athena Accounting now has a fully interactive demo running in the

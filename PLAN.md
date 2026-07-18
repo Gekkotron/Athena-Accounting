@@ -21,9 +21,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Browser-only demo — Task 10: ship (push + verify live URL)
-      Local work for the demo is complete (Tasks 1–8 landed, blog post drafted at `website/blog/2026-07-18-browser-only-demo.md` with `draft: true`). This task pushes `main` to origin, waits for the `docs.yml` workflow to publish `https://gekkotron.github.io/Athena-Accounting/demo/`, verifies the URL loads and no network calls hit `/api/*`, and flips the blog post's `draft:` flag off.
-      Success criteria: demo URL live; blog post published.
 
 - [ ] User walkthroughs — screenshotted guides for core flows
       Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.
@@ -43,6 +40,10 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Browser-only demo — Task 10: ship (push + verify live URL)
+      Local work for the demo is complete (Tasks 1–8 landed, blog post drafted at `website/blog/2026-07-18-browser-only-demo.md` with `draft: true`). This task pushes `main` to origin, waits for the `docs.yml` workflow to publish `https://gekkotron.github.io/Athena-Accounting/demo/`, verifies the URL loads and no network calls hit `/api/*`, and flips the blog post's `draft:` flag off.
+      Success criteria: demo URL live; blog post published.
 
 - [x] Browser-only demo — Task 9 follow-up: Playwright e2e infrastructure
       Unit + component tests are already in `frontend/src/api/demo/__tests__/` (33 tests). Playwright itself is not installed. This task installs `@playwright/test`, adds `e2e/demo.spec.ts` following the outline in `docs/dev/browser-only-demo-e2e-notes.md`, and adds a CI step that runs it against `VITE_DEMO=1 npm run preview`.
