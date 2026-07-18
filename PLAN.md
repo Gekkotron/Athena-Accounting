@@ -22,13 +22,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] User walkthroughs — screenshotted guides for core flows
-      Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.
-      Flows (one file each): `import-a-statement.md` (import a PDF/CSV bank statement, resolve categorisation prompts, verify balance checkpoint); `categorise-transactions.md` (bulk vs single categorisation, creating a rule from a transaction, transfer rules); `set-a-budget.md` (creating a budget for a category, choosing period, seeing progress on Dashboard); `view-reports.md` (Dashboard tour — Sankey, Insights, monthly overview — filtering by account/date range).
-      Format per file: Docusaurus frontmatter (`title`, `sidebar_position`); 3–6 short numbered steps, each with one screenshot (PNG under `docs/users/walkthroughs/img/`) captured against the demo build (task above) or the dev server with seed data; screenshots use the French UI (project's primary language); ends with a "Next steps" pointer to a related walkthrough.
-      Wire into the Docusaurus sidebar (`website/sidebars.js` or equivalent) under a new "Walkthroughs" category ordered above "Reference".
-      Do NOT rewrite existing docs. Do NOT translate to English yet — French only for v1.
-      Success criteria: (a) all four files exist with real screenshots (not placeholders); (b) each renders on the local Docusaurus dev server; (c) the sidebar shows the new "Walkthroughs" category with four entries; (d) `grep -rE 'Lorem|TODO|placeholder' docs/users/walkthroughs/` returns nothing.
 
 - [ ] Backup/restore drill + documented recovery playbook
       Prove and document that the existing backup/restore path (`backend/src/http/routes/backup/` + `frontend/src/pages/Imports/BackupPanel.tsx`) round-trips a real dataset without loss. Ship the drill + a public recovery playbook.
@@ -40,6 +33,14 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] User walkthroughs — screenshotted guides for core flows
+      Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.
+      Flows (one file each): `import-a-statement.md` (import a PDF/CSV bank statement, resolve categorisation prompts, verify balance checkpoint); `categorise-transactions.md` (bulk vs single categorisation, creating a rule from a transaction, transfer rules); `set-a-budget.md` (creating a budget for a category, choosing period, seeing progress on Dashboard); `view-reports.md` (Dashboard tour — Sankey, Insights, monthly overview — filtering by account/date range).
+      Format per file: Docusaurus frontmatter (`title`, `sidebar_position`); 3–6 short numbered steps, each with one screenshot (PNG under `docs/users/walkthroughs/img/`) captured against the demo build (task above) or the dev server with seed data; screenshots use the French UI (project's primary language); ends with a "Next steps" pointer to a related walkthrough.
+      Wire into the Docusaurus sidebar (`website/sidebars.js` or equivalent) under a new "Walkthroughs" category ordered above "Reference".
+      Do NOT rewrite existing docs. Do NOT translate to English yet — French only for v1.
+      Success criteria: (a) all four files exist with real screenshots (not placeholders); (b) each renders on the local Docusaurus dev server; (c) the sidebar shows the new "Walkthroughs" category with four entries; (d) `grep -rE 'Lorem|TODO|placeholder' docs/users/walkthroughs/` returns nothing.
 
 - [x] Browser-only demo — Task 10: ship (push + verify live URL)
       Local work for the demo is complete (Tasks 1–8 landed, blog post drafted at `website/blog/2026-07-18-browser-only-demo.md` with `draft: true`). This task pushes `main` to origin, waits for the `docs.yml` workflow to publish `https://gekkotron.github.io/Athena-Accounting/demo/`, verifies the URL loads and no network calls hit `/api/*`, and flips the blog post's `draft:` flag off.
