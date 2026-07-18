@@ -6,7 +6,8 @@ import type { Account } from '../../api/types';
 import { getAccountName } from '../../lib/accounts';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
-import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { DemoUnavailableState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { isDemoStubError } from '../../api/errorMessage';
 
 export function DuplicatesPanel(): JSX.Element {
   const { t } = useTranslation(['imports', 'common', 'transactions']);
@@ -161,17 +162,24 @@ export function DuplicatesPanel(): JSX.Element {
   );
 
   if (dupsQ.isError) {
+    const demo = isDemoStubError(dupsQ.error);
     return (
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
-          {refreshButton}
+          {!demo && refreshButton}
         </div>
-        <ErrorState
-          title={t('duplicates.errorTitle')}
-          error={dupsQ.error}
-          onRetry={() => void dupsQ.refetch()}
-        />
+        {demo ? (
+          <DemoUnavailableState
+            hint="La détection de doublons croise les transactions côté base de données. Installez Athena localement pour l'utiliser."
+          />
+        ) : (
+          <ErrorState
+            title={t('duplicates.errorTitle')}
+            error={dupsQ.error}
+            onRetry={() => void dupsQ.refetch()}
+          />
+        )}
       </section>
     );
   }

@@ -27,6 +27,14 @@ export function registerStubHandlers(): void {
   registerHandler('PUT',    '/api/pdf-templates/:id', stub);
   registerHandler('DELETE', '/api/pdf-templates/:id', stub);
 
+  // Duplicates panel — the SQL grouping is real-backend-only. Stubbing
+  // (rather than leaving the missing-handler fallback) lets the frontend
+  // detect demoStub and render the dedicated section instead of a raw
+  // error string.
+  registerHandler('GET',    '/api/transactions/duplicates', stub);
+  registerHandler('POST',   '/api/transactions/mark-not-duplicate', stub);
+  registerHandler('POST',   '/api/transactions/delete-bulk', stub);
+
   // MCP settings — token generation needs a real server; read stubs
   // let the settings page render "disabled" without a raw error.
   registerHandler('GET',    '/api/settings/mcp', () => ({ enabled: false, hasToken: false }));

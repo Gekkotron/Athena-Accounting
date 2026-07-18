@@ -77,6 +77,42 @@ export function ErrorState({
   );
 }
 
+interface DemoUnavailableStateProps {
+  title?: string;
+  hint?: ReactNode;
+  variant?: SizeVariant;
+}
+
+// "Not available in the demo" state — same visual weight as EmptyState so
+// pages that can't run in the browser-only demo don't look broken, just
+// intentionally disabled. Use for feature areas that need a real backend
+// (imports, PDF templates, duplicates panel, MCP tokens, …).
+export function DemoUnavailableState({
+  title,
+  hint,
+  variant = 'card',
+}: DemoUnavailableStateProps): JSX.Element {
+  const wrap =
+    variant === 'card'
+      ? 'surface-soft flex flex-col items-center justify-center gap-3 px-6 py-10 text-center'
+      : 'flex flex-col items-center justify-center gap-2 px-4 py-6 text-center';
+  return (
+    <div className={wrap}>
+      <div className="text-xs uppercase tracking-[0.2em] text-sage-300/80">Démo</div>
+      <div className="display text-lg text-ink-100">
+        {title ?? 'Non disponible dans la démo'}
+      </div>
+      <div className="text-sm text-ink-400 max-w-md">
+        {hint ??
+          "Cette section a besoin du back-end Athena pour fonctionner. Installez Athena localement pour l'utiliser."}
+      </div>
+      <a href="/docs/users/getting-started" className="btn-secondary mt-1 text-xs">
+        Comment installer
+      </a>
+    </div>
+  );
+}
+
 interface LoadingBlockProps {
   label?: string;
   height?: string;

@@ -38,11 +38,14 @@ function extractCodeAndReason(err: unknown): { code: string | null; reason: stri
 }
 
 // True when the error is one of the browser-only demo's "not
-// available" stubs. Callers can gate a friendlier modal on this;
-// errorMessage() itself already returns the French copy for us.
+// available" stubs OR a missing-handler miss (any /api/* path we
+// haven't taught the demo adapter about). Callers can gate a
+// friendlier UI on this; errorMessage() itself already returns the
+// French copy for us.
 export function isDemoStubError(err: unknown): boolean {
   if (err instanceof ApiError && err.data && typeof err.data === 'object') {
-    return (err.data as { demoStub?: unknown }).demoStub === true;
+    const d = err.data as { demoStub?: unknown; demoMissingHandler?: unknown };
+    return d.demoStub === true || d.demoMissingHandler === true;
   }
   return false;
 }
