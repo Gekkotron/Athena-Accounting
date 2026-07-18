@@ -36,8 +36,10 @@ export function AccountCard({
     <div ref={setNodeRef} style={style} className="surface p-5 relative group">
       {/* Reserve room on the right for the absolute-positioned drag handle
           + modifier cluster (top-3 right-3) so the currency badge doesn't
-          drift underneath it. */}
-      <div className="flex items-baseline justify-between gap-3 pr-24">
+          drift underneath it. Cluster is ~127px wide (drag + "modifier"
+          + kebab menu), so we reserve pr-36 (144px) to leave a comfortable
+          gap between the badge and the drag dots. */}
+      <div className="flex items-baseline justify-between gap-3 pr-36">
         <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
         <span className="badge">{a.currency}</span>
       </div>
