@@ -37,6 +37,23 @@ Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session — cross
 
 Success criteria: `gh release view v1.0.0-desktop-beta1 --json isDraft,assets` shows `isDraft:false` and three assets (`.dmg`, `.AppImage`, `.exe`).
 
+### Public-launch essentials pack — LICENSE, SECURITY, CONTRIBUTING, CoC, templates
+
+Add the minimum "trustable public repo" file set at repo root and under `.github/`. All attribution to `Gekkotron` (email `60887050+Gekkotron@users.noreply.github.com`); no real name anywhere in any added file.
+
+Files to create:
+- `LICENSE` — MIT, `Copyright (c) 2026 Gekkotron`.
+- `SECURITY.md` — how to report vulnerabilities (use the noreply GitHub email as contact), 90-day coordinated-disclosure window, explicit note that this is a solo-maintainer project with no SLA.
+- `CONTRIBUTING.md` — issue filing guidance, PR conventions matching the existing commit format (`type(scope): subject`, see `git log --oneline -20` for examples), dev-setup pointer to `docs/users/getting-started.md`, maintainer-bandwidth expectations.
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1 verbatim (fetch canonical text; substitute `[INSERT CONTACT METHOD]` with the noreply email).
+- `.github/ISSUE_TEMPLATE/bug_report.md` — front-matter (`name`, `about`, `labels: bug`); body sections: reproduction steps, expected vs actual behavior, environment (OS, Docker vs Desktop path, release version), logs.
+- `.github/ISSUE_TEMPLATE/feature_request.md` — front-matter (`name`, `about`, `labels: enhancement`); body sections: problem statement, proposed solution, why now.
+- `.github/PULL_REQUEST_TEMPLATE.md` — summary, test-plan checklist, UI screenshots, breaking-changes flag.
+
+Update `README.md`: append a bottom section linking `LICENSE`, `SECURITY.md`, and `CONTRIBUTING.md`. Do NOT touch the existing header/badges/install section.
+
+Success criteria: (a) all files exist at correct paths; (b) `grep -RIn '<any real-name variant>' LICENSE SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md .github/ISSUE_TEMPLATE .github/PULL_REQUEST_TEMPLATE.md` returns nothing; (c) `LICENSE` copyright line is exactly `Copyright (c) 2026 Gekkotron`; (d) `README.md` bottom section links all three community docs.
+
 ## In progress
 
 ## Done
