@@ -43,7 +43,7 @@ Trois raisons de le faire dès maintenant :
 
 Sur le **Tableau de bord**, les points de contrôle apparaissent sous forme de losanges le long de la courbe du solde — verts quand le solde calculé correspond, teintés quand un écart est détecté. Passez la souris dessus pour lire l'écart exact entre le solde attendu et le solde calculé à cette date.
 
-![Losange de point de contrôle sur la courbe du solde](/img/walkthroughs/fr/reports-01-dashboard.png)
+![Losange de point de contrôle sur la courbe du solde](/img/walkthroughs/fr/reports-04-balance-curve.png)
 
 ## Étapes suivantes
 

@@ -43,7 +43,7 @@ Three reasons to do this now:
 
 On the **Dashboard**, checkpoints appear as diamonds along the balance curve — green when the computed balance matches, tinted when a drift is detected. Hover to read the exact delta between the expected and computed balance at that date.
 
-![Checkpoint diamond on the balance curve](/img/walkthroughs/en/reports-01-dashboard.png)
+![Checkpoint diamond on the balance curve](/img/walkthroughs/en/reports-04-balance-curve.png)
 
 ## Next steps
 

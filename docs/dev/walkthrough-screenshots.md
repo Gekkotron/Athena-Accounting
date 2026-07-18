@@ -32,7 +32,7 @@ the docs reference.
 | `import-a-statement` | `import-01-imports-page.png`, `import-02-doublons.png`, `import-03-comptes-solde.png`, `import-04-checkpoints.png` |
 | `categorise-transactions` | `categorise-01-transactions.png`, `categorise-02-tri.png`, `categorise-03-regles-liste.png` |
 | `set-a-budget` | `budget-01-plafonds.png`, `budget-02-enveloppes.png`, `budget-03-dashboard-progress.png` |
-| `view-reports` | `reports-01-dashboard.png`, `reports-02-dashboard-mid.png`, `reports-03-dashboard-bottom.png` |
+| `view-reports` | `reports-01-dashboard.png`, `reports-02-dashboard-mid.png`, `reports-03-dashboard-bottom.png`, `reports-04-balance-curve.png` |
 
 All shots use viewport `1440 × 900`, browser locale
 `fr-FR`/`en-US` (driven by `WALKTHROUGH_LANG`), and dismiss the

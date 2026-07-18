@@ -5,29 +5,35 @@ sidebar_position: 4
 
 # View reports
 
-Athena's dashboard fits on a single page — three complementary reads answering three questions: "How much do I have available?", "What's happening this month?", "Where is the money going over time?".
+Athena's dashboard fits on a single page — a top-down read that answers three questions: "How much do I have available?", "How is it evolving?", "Where is the money going?".
 
-## 1. Overview and monthly averages
+## 1. Balance, monthly averages, and insights
 
-Open **Dashboard**. Up top, the available balance sums your current accounts; the line right below it splits out **invested** funds (savings accounts, brokerage, etc.) so you don't confuse them with what's actually available. The three **Monthly averages** cards — spending, income, savings — are computed over the last five rolling months to smooth out the dips.
+Open **Dashboard**. Up top, the available balance sums your current accounts; the line right below splits out **invested** funds (savings accounts, brokerage, etc.) so you don't confuse them with what's actually available. The three **Monthly averages** cards — spending, income, savings — are computed over the last five rolling months to smooth out the dips. Below them, the **Insights** panel highlights the standout events of the current month: sharpest rise vs last month, budget overruns, income below spending. Each insight is a clickable sentence that jumps straight to the matching transactions.
 
-![Dashboard — balance and monthly averages](/img/walkthroughs/en/reports-01-dashboard.png)
+![Dashboard — balance, monthly averages, and insights](/img/walkthroughs/en/reports-01-dashboard.png)
 
-## 2. Insights for the current month
+## 2. Trend curve and checkpoints
 
-The **Insights** panel highlights the standout events of the month: the sharpest rise from last month, a budget overrun, income lower than spending. Every insight is a short clickable sentence that jumps you straight to the matching transactions. The arrows at the right of the panel move you from one month to the next.
+Scroll a bit further down to the **Trend** card. It plots the daily balance over the chosen period, one line per account (or a summed line when all accounts are selected). **Checkpoints** you anchored from the account cards show up as diamonds along the curve — green when the computed balance matches the anchor, tinted when a drift is detected. Hover any diamond to see the exact delta between the expected and computed balance.
 
-![Insights panel on the dashboard](/img/walkthroughs/en/reports-02-dashboard-mid.png)
+![Trend curve with checkpoint diamonds](/img/walkthroughs/en/reports-04-balance-curve.png)
 
-## 3. Monthly view and Sankey diagram
+## 3. Category breakdown
 
-Keep scrolling to reach the **monthly view** (balance and spending curves over the last few months) then the **Sankey** which traces, over the chosen period, the path from your income into your spending categories and your savings. This is the read that answers "where is the money going?" at a glance.
+Keep scrolling to reach **Breakdown by category** — a donut of outflows over the chosen period, with the ranked list on the right. Click a slice to filter every card on the page (trend, Sankey, insights) to that category. The Sankey below starts to reveal itself here — the natural transition into the next read.
 
-![Bottom of the dashboard — Sankey and monthly view](/img/walkthroughs/en/reports-03-dashboard-bottom.png)
+![Breakdown by category — donut](/img/walkthroughs/en/reports-02-dashboard-mid.png)
 
-## 4. Filter by account and by period
+## 4. Cash-flow Sankey
 
-The filters at the top of the dashboard — account picker, date range — apply instantly to every card, including the Sankey and the Insights. Handy for isolating a joint account, or comparing two quarters without leaving the page.
+At the bottom sits the **Cash flow** Sankey which traces, over the chosen period, the path from your income sources into your spending categories and your savings. This is the read that answers "where is the money going?" at a glance.
+
+![Cash-flow Sankey diagram](/img/walkthroughs/en/reports-03-dashboard-bottom.png)
+
+## 5. Filter by account and by period
+
+The filters embedded in each card header — account picker, date range — apply instantly to every chart that shares the same scope. Handy for isolating a joint account, or comparing two quarters without leaving the page.
 
 ## Next steps
 

@@ -168,5 +168,27 @@ test.describe('walkthrough screenshots', () => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
     await shot(page, 'reports-03-dashboard-bottom');
+
+    // Balance curve section (Trend / Évolution) — captured last because the
+    // interactions below (single-account scope + widest range) are shared
+    // page state that would otherwise leak into the donut and Sankey shots.
+    //
+    // Diamond markers only render when a specific account is picked
+    // (chartCheckpoints returns undefined for chartScope === 'all', see
+    // Dashboard/index.tsx), and the default 3-month range predates the
+    // demo seed's oldest checkpoint. Pick the first account and set the
+    // range to All / Tout so every diamond appears on the curve.
+    const balanceSection = page
+      .locator('section')
+      .filter({ has: page.getByText(/^Trend · |^Évolution · /i) });
+    await balanceSection.locator('select').selectOption({ index: 1 });
+    await page.waitForLoadState('networkidle');
+    await balanceSection
+      .getByRole('button', { name: /^All$|^Tout$/i })
+      .click();
+    await page.waitForLoadState('networkidle');
+    await balanceSection.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(600);
+    await shot(page, 'reports-04-balance-curve');
   });
 });
