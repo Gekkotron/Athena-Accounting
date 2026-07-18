@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'Athena Accounting',
   tagline: 'Self-hosted personal accounting. Your bank data never leaves your network.',
-  favicon: 'img/favicon.svg',
+  favicon: 'img/logo.png',
 
   url: 'https://gekkotron.github.io',
   baseUrl: '/Athena-Accounting/',
@@ -54,7 +54,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/logo.svg',
+    image: 'img/logo.png',
     // Dark-first, to mirror the app (frontend/src/index.css: color-scheme: dark).
     colorMode: {
       defaultMode: 'dark',
@@ -64,7 +64,7 @@ const config: Config = {
       title: 'Athena Accounting',
       logo: {
         alt: 'Athena Accounting logo',
-        src: 'img/logo.svg',
+        src: 'img/logo.png',
       },
       items: [
         { to: '/docs/users/getting-started', label: 'Docs', position: 'left' },
