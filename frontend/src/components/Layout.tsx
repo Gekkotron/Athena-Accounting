@@ -8,6 +8,8 @@ import { Logo } from './Logo';
 import { navIcons, type NavIconName } from './NavIcons';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
+import { DemoBanner } from './DemoBanner';
+import { DemoUnavailableModal } from './DemoUnavailableModal';
 
 type NavChild = { to: string; labelKey: string; end?: boolean };
 type NavItem = {
@@ -208,8 +210,10 @@ export function Layout({ user }: { user: User }) {
   });
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Mobile top bar */}
+    <>
+      <DemoBanner />
+      <div className="min-h-screen flex flex-col md:flex-row">
+        {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-ink-800/70 bg-ink-950/85 backdrop-blur">
         <Brand />
         <button
@@ -271,7 +275,9 @@ export function Layout({ user }: { user: User }) {
           <SiteFooter />
         </div>
       </main>
-    </div>
+      </div>
+      <DemoUnavailableModal />
+    </>
   );
 }
 
