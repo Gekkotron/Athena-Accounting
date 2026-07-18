@@ -20,10 +20,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/users/accounts-and-data.md with real content
-      Cover the sections currently listed under "Planned sections" — creating and editing accounts, currency handling, marking an account as "invested", editing account order, merging duplicate accounts, checkpoints on the account card (already covered in the import walkthrough — cross-link rather than duplicate), and how the Data tab (Imports / Duplicates / PDF templates / Backup) fits in. Model tone on docs/users/importing.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/accounts-and-data.md, reusing FR terminology (Comptes, Données, Doublons, Sauvegarde, points de contrôle).
-      Success criteria: (a) `grep -n 'draft — content coming' docs/users/accounts-and-data.md` returns nothing; (b) FR mirror matches EN section-for-section; (c) checkpoint content cross-links to the import walkthrough rather than being duplicated.
 
 - [ ] Fill in docs/users/security-and-privacy.md with real content
       Cover the sections currently listed under "Planned sections" — the security model (LAN-only by default, session cookies rotated on login, argon2id password hashing with per-user salt), Postgres bound to 127.0.0.1, MCP endpoint token encryption, backup file cleartext caveat, and the privacy stance (no telemetry, no third-party analytics, no cloud). Cross-link to docs/users/backup-recovery.md and docs/reference/configuration.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -90,6 +86,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/users/accounts-and-data.md with real content
+      Cover the sections currently listed under "Planned sections" — creating and editing accounts, currency handling, marking an account as "invested", editing account order, merging duplicate accounts, checkpoints on the account card (already covered in the import walkthrough — cross-link rather than duplicate), and how the Data tab (Imports / Duplicates / PDF templates / Backup) fits in. Model tone on docs/users/importing.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/accounts-and-data.md, reusing FR terminology (Comptes, Données, Doublons, Sauvegarde, points de contrôle).
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/accounts-and-data.md` returns nothing; (b) FR mirror matches EN section-for-section; (c) checkpoint content cross-links to the import walkthrough rather than being duplicated.
 
 - [x] Fill in docs/users/dashboard.md with real content
       Cover the anatomy of the Dashboard — Net Balance card, monthly averages, Insights panel, Trend chart with checkpoint diamonds, Category donut, Cash-flow Sankey — plus how the Range picker and Account scope pickers interact across cards and what filtering by donut slice does. Reference the existing shots in website/static/img/walkthroughs/en/reports-*.png where useful. Model tone on docs/users/walkthroughs/view-reports.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block. Keep the front matter as-is.
