@@ -9,9 +9,12 @@ import type { PdfImportNeedsTemplate, PdfImportImported } from '../../api/pdf-te
 import { PdfTemplateWizard } from '../Imports/PdfTemplateWizard';
 import { FileImportsList } from '../Imports/FileImportsList';
 import { UploadForm } from '../Imports/UploadForm';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { useTranslation } from 'react-i18next';
 
 export function Imports() {
   const qc = useQueryClient();
+  const { t } = useTranslation('imports');
 
   const [lastResult, setLastResult] = useState<{
     filename: string;
@@ -162,11 +165,21 @@ export function Imports() {
         onCancel={() => { setPendingDeleteImport(null); setDeleteError(null); }}
       />
 
-      <FileImportsList
-        imports={importsQ.data?.imports ?? []}
-        accounts={accountsQ.data?.accounts ?? []}
-        onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
-      />
+      {importsQ.isError ? (
+        <ErrorState
+          title={t('fileImports.errorTitle')}
+          error={importsQ.error}
+          onRetry={() => void importsQ.refetch()}
+        />
+      ) : importsQ.isLoading ? (
+        <LoadingBlock height="min-h-32" />
+      ) : (
+        <FileImportsList
+          imports={importsQ.data?.imports ?? []}
+          accounts={accountsQ.data?.accounts ?? []}
+          onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
+        />
+      )}
     </div>
   );
 }

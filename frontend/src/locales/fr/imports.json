@@ -139,6 +139,7 @@
   "fileImports": {
     "sectionTitle": "Historique",
     "empty": "Aucun import pour l'instant.",
+    "errorTitle": "Impossible de charger l'historique",
     "table": {
       "file": "Fichier",
       "account": "Compte",
