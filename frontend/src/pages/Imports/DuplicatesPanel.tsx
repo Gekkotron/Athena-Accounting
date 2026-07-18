@@ -6,6 +6,7 @@ import type { Account } from '../../api/types';
 import { getAccountName } from '../../lib/accounts';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 export function DuplicatesPanel(): JSX.Element {
   const { t } = useTranslation(['imports', 'common', 'transactions']);
@@ -158,6 +159,34 @@ export function DuplicatesPanel(): JSX.Element {
       {dupsQ.isFetching ? t('duplicates.refresh.loading') : t('duplicates.refresh.idle')}
     </button>
   );
+
+  if (dupsQ.isError) {
+    return (
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
+          {refreshButton}
+        </div>
+        <ErrorState
+          title={t('duplicates.errorTitle')}
+          error={dupsQ.error}
+          onRetry={() => void dupsQ.refetch()}
+        />
+      </section>
+    );
+  }
+
+  if (dupsQ.isLoading) {
+    return (
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
+          {refreshButton}
+        </div>
+        <LoadingBlock height="min-h-32" />
+      </section>
+    );
+  }
 
   if (scoredGroups.length === 0) {
     return (

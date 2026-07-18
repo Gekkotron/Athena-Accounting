@@ -10,6 +10,7 @@ import {
 } from '../../api/pdf-templates';
 import { getAccountName } from '../../lib/accounts';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 // Reads YYYY-MM-DD from an ISO timestamp and formats it as a short
 // human-readable date. Kept inline to avoid pulling in the full formatDate
@@ -46,11 +47,24 @@ export function PdfTemplatesPanel(): JSX.Element {
   const accounts = accountsQ.data?.accounts ?? [];
   const templates = templatesQ.data ?? [];
 
+  if (templatesQ.isError) {
+    return (
+      <section>
+        <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
+        <ErrorState
+          title={t('templates.errorTitle')}
+          error={templatesQ.error}
+          onRetry={() => void templatesQ.refetch()}
+        />
+      </section>
+    );
+  }
+
   if (templatesQ.isLoading) {
     return (
       <section>
         <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
-        <div className="surface p-5 h-20 animate-pulse rounded-lg bg-ink-900" />
+        <LoadingBlock height="min-h-24" />
       </section>
     );
   }

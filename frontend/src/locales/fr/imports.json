@@ -103,6 +103,7 @@
   "duplicates": {
     "sectionTitle": "Possibles doublons",
     "emptyState": "Aucun doublon détecté.",
+    "errorTitle": "Impossible de charger les doublons",
     "refresh": {
       "title": "Recharger la liste des doublons",
       "ariaLabel": "Rafraîchir la liste des doublons",
@@ -197,6 +198,7 @@
   "templates": {
     "sectionTitle": "Templates PDF",
     "emptyState": "Aucun template enregistré. Ils sont créés automatiquement à la fin de l'assistant après votre premier import PDF d'une nouvelle banque.",
+    "errorTitle": "Impossible de charger les templates",
     "description": "Un template décrit la mise en page d'une banque (zones du tableau, colonnes, pages du compte). Il est réutilisé automatiquement pour tous les prochains PDF de la même banque + compte.",
     "legacyWarning_one": "{{count}} template utilise le filtrage par numéros de page absolus.",
     "legacyWarning_other": "{{count}} templates utilisent le filtrage par numéros de page absolus.",

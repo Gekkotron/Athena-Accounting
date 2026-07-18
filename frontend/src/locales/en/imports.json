@@ -103,6 +103,7 @@
   "duplicates": {
     "sectionTitle": "Possible duplicates",
     "emptyState": "No duplicates detected.",
+    "errorTitle": "Couldn't load duplicates",
     "refresh": {
       "title": "Reload the duplicates list",
       "ariaLabel": "Refresh the duplicates list",
@@ -197,6 +198,7 @@
   "templates": {
     "sectionTitle": "PDF templates",
     "emptyState": "No template saved yet. Templates are created automatically at the end of the wizard after your first PDF import from a new bank.",
+    "errorTitle": "Couldn't load templates",
     "description": "A template describes a bank's layout (table zones, columns, account pages). It's reused automatically for every future PDF from the same bank + account.",
     "legacyWarning_one": "{{count}} template uses absolute page-number filtering.",
     "legacyWarning_other": "{{count}} templates use absolute page-number filtering.",
