@@ -20,38 +20,10 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Browser-only demo — Task 5: stubbed endpoints + "not available" modal
-      Sub-task of the browser-only demo plan (Task 5). Depends on Task 4 landed. Frontend-only, direct commit to `main`.
-      Stub `POST /api/imports` (all file types), `GET/POST /api/pdf-templates[/…]`, `POST /api/mcp/tokens[/…]` — each rejects with a typed `ApiError` whose `data.demoStub = true`.
-      Update `frontend/src/api/errorMessage.ts` to detect `demoStub` and return the French message: *"Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser."*
-      Create a shared `<DemoUnavailableModal>` component; wire it into the affected pages (Imports, PDF Templates, MCP tokens) so they open the modal when they catch a `demoStub` error.
-      Success criteria: attempting a PDF import in demo mode opens the modal instead of a raw error.
 
-- [ ] Browser-only demo — Task 6: demo banner + reset
-      Sub-task of the browser-only demo plan (Task 6). Depends on Task 5 landed. Frontend-only, direct commit to `main`.
-      Create `frontend/src/components/DemoBanner.tsx`. Only renders when `import.meta.env.VITE_DEMO === '1'`. Copy: *"Démo — vos actions sont enregistrées uniquement dans votre navigateur. [Réinitialiser la démo]"*. Reset button calls `store.reset()`, shows a toast "Démo réinitialisée.", and invalidates TanStack Query's cache. Mount inside `Layout.tsx` above the top bar. Layout height adjusts (banner is 32 px; the app's fixed offsets need to account for it).
-      Success criteria: banner visible only under `VITE_DEMO=1`; reset restores seed.
-
-- [ ] Browser-only demo — Task 7: docs-site integration
-      Sub-task of the browser-only demo plan (Task 7). Depends on Task 6 landed. Docs-site + README change; direct commit to `main`.
-      Add a `/docs/demo` page under `docs/` (Docusaurus) that iframes `/demo/` with a note explaining the sandboxing. Update `README.md` top: add a "Try the demo" badge just above the install badges, linking to the docs page. Update `docs/users/getting-started.md`: add a "Try before you install" callout at the top pointing to the demo URL.
-      Success criteria: (a) docs page renders locally; (b) README badge added; (c) getting-started callout added.
-
-- [ ] Browser-only demo — Task 8: CI + deploy to gh-pages
-      Sub-task of the browser-only demo plan (Task 8). Depends on Task 7 landed. Workflow change; direct commit to `main`.
-      Extend the existing docs workflow (or add `.github/workflows/demo.yml`): triggers on pushes to `main` that touch `frontend/**` or the workflow file. Runs `npm ci` in `frontend/`, `VITE_DEMO=1 npm run build:demo`, publishes `frontend/dist-demo/` into the `gh-pages` branch at `/demo/`, preserving Docusaurus content at `/`. Namespace localStorage key with `athena_demo_` prefix (already the plan).
-      Success criteria: on push, workflow is green; `https://gekkotron.github.io/Athena-Accounting/demo/` returns the demo app.
-
-- [ ] Browser-only demo — Task 9: tests + verification
-      Sub-task of the browser-only demo plan (Task 9). Depends on Task 8 landed. Direct commit to `main`.
-      Add unit tests per resource handler in `frontend/src/api/demo/__tests__/`, component test for `DemoBanner` (renders only under flag, reset clears state), Playwright smoke in `frontend/e2e/demo.spec.ts` (boot `VITE_DEMO=1 npm run preview`, land on `/`, click through Dashboard → Transactions → assign a category → Reset → assert seed comes back). Manual verification: `npm run build:demo`, `npx serve dist-demo`, walk every top-level nav item, confirm no network calls in DevTools.
-      Success criteria: unit + e2e tests green; manual verification clean.
-
-- [ ] Browser-only demo — Task 10: ship
-      Sub-task of the browser-only demo plan (Task 10). Depends on Task 9 landed. Direct commit to `main`.
-      Verify all previous sub-tasks completed. Push `main` to origin (only push here — earlier sub-tasks commit locally per project convention). Write a blog post announcing the demo (`website/blog/YYYY-MM-DD-browser-only-demo.md`) and link it in the next release notes.
-      Success criteria: `https://gekkotron.github.io/Athena-Accounting/demo/` is live; blog post published; every `- [ ]` in `docs/superpowers/plans/2026-07-18-browser-only-demo.md` ticked to `- [x]`.
-
+- [ ] Browser-only demo — Task 10: ship (push + verify live URL)
+      Local work for the demo is complete (Tasks 1–8 landed, blog post drafted at `website/blog/2026-07-18-browser-only-demo.md` with `draft: true`). This task pushes `main` to origin, waits for the `docs.yml` workflow to publish `https://gekkotron.github.io/Athena-Accounting/demo/`, verifies the URL loads and no network calls hit `/api/*`, and flips the blog post's `draft:` flag off.
+      Success criteria: demo URL live; blog post published.
 
 - [ ] User walkthroughs — screenshotted guides for core flows
       Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.
@@ -70,14 +42,30 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
+- [ ] Browser-only demo — Task 9 follow-up: Playwright e2e infrastructure     <!-- session: conv:claude:claude-178437960257035 -->
+      Unit + component tests are already in `frontend/src/api/demo/__tests__/` (33 tests). Playwright itself is not installed. This task installs `@playwright/test`, adds `e2e/demo.spec.ts` following the outline in `docs/dev/browser-only-demo-e2e-notes.md`, and adds a CI step that runs it against `VITE_DEMO=1 npm run preview`.
+      Success criteria: `npx playwright test` green locally and in CI.
 ## Done
 
+- [x] Browser-only demo — Task 8: CI + deploy to gh-pages
+      Sub-task of the browser-only demo plan (Task 8). Frontend + CI change; committed to `main`.
+      `.github/workflows/docs.yml` now also triggers on `frontend/**`, builds the demo with `VITE_DEMO=1`, and copies `frontend/dist-demo/` into `website/build/demo/` before uploading the merged artifact. `vite.config.ts`: `base = '/Athena-Accounting/demo/'` under VITE_DEMO. `main.tsx`: BrowserRouter reads `import.meta.env.BASE_URL` for its `basename`, so the same code runs at `/` (Docker/Tauri) and at `/Athena-Accounting/demo/` (GH Pages).
+
+- [x] Browser-only demo — Task 7: docs-site integration
+      Sub-task of the browser-only demo plan (Task 7). Docs change; committed to `main`.
+      New `docs/users/demo.md` (sidebar_position: 1) iframes `/demo/` with sandboxing notes. `docs/users/getting-started.md`: French tip callout at the top pointing to `./demo`. `README.md`: shields.io badge above the install badges linking to the deployed demo URL.
+
+- [x] Browser-only demo — Task 6: banner + reset + mount modal
+      Sub-task of the browser-only demo plan (Task 6). Frontend-only; committed to `main`.
+      `DemoBanner` renders only under `import.meta.env.VITE_DEMO === '1'`; reset calls `store.reset()`, invalidates TanStack Query's cache, and flashes a "Démo réinitialisée." confirmation. `Layout.tsx` mounts the banner above the top bar and the `<DemoUnavailableModal>` (from Task 5) at the tree root. 2 component tests cover both branches.
+
+- [x] Browser-only demo — Task 5: stubbed endpoints + errorMessage handling
+      Sub-task of the browser-only demo plan (Task 5). Frontend-only; committed to `main`.
+      Stubs registered for `/api/imports*`, `/api/pdf-templates*`, `/api/settings/mcp/token` — each throws `ApiError { demoStub: true, status 501 }`. `errorMessage.ts` detects `demoStub` and returns the French copy. `isDemoStubError()` exposed for callers wanting a dedicated UI. `window.fetch` is patched (gated on VITE_DEMO) so raw-fetch callers (pdf-templates.ts) also hit the adapter. New `<DemoUnavailableModal>` component dispatches via `demo:show-unavailable` custom event.
+
 - [x] Browser-only demo — Task 4: write-side handlers
-      Sub-task of the browser-only demo plan (Task 4). Depends on Task 3 landed. Frontend-only, direct commit to `main`.
-      Implement mutating handlers: `POST/PUT/DELETE /api/accounts[/…]`, `PATCH /api/transactions/:id` (inline category edit — sets `is_manual=true`), `POST/PUT/DELETE /api/categories[/…]` + `/api/rules[/…]` + `/api/budgets[/…]` + `/api/transfer-rules[/…]`, `POST /api/tri/assign` (bulk assign + optional rule creation), `POST /api/recategorize` (walk transactions, re-apply rules where `is_manual=false`), `PATCH /api/settings` (merge into JSONB blob), `GET /api/backup/export` (synthesise the JSON envelope; browser downloads via `Blob`).
-      Every write goes through `store.setState(mutator)`, persisting to `localStorage` in the same tick and notifying subscribers. Debounce localStorage persistence at 250 ms to avoid write storms during bulk ops.
-      Unit tests per handler.
-      Success criteria: (a) tests pass; (b) manual smoke — inline-edit a transaction category, refresh the page, edit survives.
+      Sub-task of the browser-only demo plan (Task 4). Frontend-only; committed to `main`.
+      POST/PUT/PATCH/DELETE handlers for accounts, transactions, categories (delete nulls owning tx), rules, budgets, transfer-rules. `POST /api/tri/assign` bulk-categorises + optional rule creation. `POST /api/recategorize` walks tx and re-applies enabled rules where `categorySource != manual`. `PATCH /api/settings` merges. `GET /api/backup/export` returns the state envelope. 8 write-side tests.
 
 - [x] Browser-only demo — Task 3: read-side handlers
       Sub-task of the browser-only demo plan (Task 3). Frontend-only, committed to `main`.
