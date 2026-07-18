@@ -8,6 +8,7 @@ sidebar_position: 1
 A version of Athena Accounting runs directly in your browser. No account, no install, no server: everything you do is saved only in `localStorage` (on your machine, in your browser, walled off from the rest of the web).
 
 - The default dataset covers the last six months of a fictional profile (two accounts, ~180 transactions, budgets, categories, rules).
+- Sample-data labels — category, envelope and account names — are in French because the fictional profile is based in France. The UI itself follows whatever language you pick from the switcher, top-right of the sidebar.
 - Every feature that needs a real server — PDF/CSV statement imports, MCP tokens — shows a "not available in the demo" panel. The rest (sort, categorisation, budgets, dashboard, Sankey, insights) is fully usable.
 - The **Reset the demo** button at the top of the screen restores the original dataset if you want to start over.
 
