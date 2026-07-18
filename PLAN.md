@@ -1,17 +1,13 @@
 # Plan
 
-## Backlog
+## Notes
 
-### First desktop beta release
-
-
+Not parsed by the orchestrator — informational context for the human and the
+planner. See `CLAUDE.md` for the parser contract.
 
 ### Docker + Tauri dual-track — foundational refactor
 
 Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker stack, from the same codebase. Docker path stays the family-server story; Tauri path is the "no install, no Docker" solo-user story. **Packaging pivoted from single-binary to directory-based sidecar** (2026-07-17) — the native-deps tree (sharp+libvips, @napi-rs/canvas, argon2, PGlite WASM, pdfjs worker, tesseract) is hostile to single-binary bundlers, and Tauri's sidecar mechanism accepts a folder just as happily.
-
-
-
 
 ### Cross-cutting risks to flag before starting
 
@@ -20,116 +16,55 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 - **Bundle size** — directory-based sidecar is ~50–80 MB per platform (Node runtime ~30 MB + sharp/libvips ~15 MB + canvas/PGlite/pdfjs/tesseract adding more). Larger than a single stripped binary, but reliable. Note in release notes.
 - **Cross-arch Node binaries** — macOS-arm64 hosts building macOS-x64 (or vice versa) need `unofficial-builds.nodejs.org` or a matching runner in CI. The packaging workflow's matrix strategy handles this automatically.
 
-### Docs site polish
+## Backlog
 
 
-### Cut `v1.0.0-desktop-beta1` — finish + publish release
+- [ ] Public-launch essentials pack — LICENSE, SECURITY, CONTRIBUTING, CoC, templates
+      Add the minimum "trustable public repo" file set at repo root and under `.github/`. All attribution to `Gekkotron` (email `60887050+Gekkotron@users.noreply.github.com`); no real name anywhere in any added file.
+      Files to create: `LICENSE` (MIT, `Copyright (c) 2026 Gekkotron`); `SECURITY.md` (how to report vulnerabilities via the noreply GitHub email; 90-day coordinated-disclosure window; explicit note that this is a solo-maintainer project with no SLA); `CONTRIBUTING.md` (issue filing guidance; PR conventions matching the existing commit format `type(scope): subject` — see `git log --oneline -20` for examples; dev-setup pointer to `docs/users/getting-started.md`; maintainer-bandwidth expectations); `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1 verbatim; fetch canonical text and substitute `[INSERT CONTACT METHOD]` with the noreply email); `.github/ISSUE_TEMPLATE/bug_report.md` (front-matter `name`, `about`, `labels: bug`; body sections: reproduction steps, expected vs actual behavior, environment (OS, Docker vs Desktop path, release version), logs); `.github/ISSUE_TEMPLATE/feature_request.md` (front-matter `name`, `about`, `labels: enhancement`; body sections: problem statement, proposed solution, why now); `.github/PULL_REQUEST_TEMPLATE.md` (summary, test-plan checklist, UI screenshots, breaking-changes flag).
+      Update `README.md`: append a bottom section linking `LICENSE`, `SECURITY.md`, and `CONTRIBUTING.md`. Do NOT touch the existing header/badges/install section.
+      Success criteria: (a) all files exist at correct paths; (b) `grep -RIn '<any real-name variant>' LICENSE SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md .github/ISSUE_TEMPLATE .github/PULL_REQUEST_TEMPLATE.md` returns nothing; (c) `LICENSE` copyright line is exactly `Copyright (c) 2026 Gekkotron`; (d) `README.md` bottom section links all three community docs.
 
-Prior state (verified 2026-07-18): version bumps in `desktop/src-tauri/Cargo.toml` + `tauri.conf.json` are done; `docs/RELEASES/v1.0.0-desktop-beta1.md` exists; annotated tag `v1.0.0-desktop-beta1` is on `origin` pointing at commit `9edc8b4`; both workflow triggers are correct (`desktop-release.yml` uses `v*-desktop*`, `release.yml` excludes `!v*-desktop*`); the latest `desktop-release` run at that tag (`29638068094`) is green with all three "Attach to draft GitHub Release" steps succeeding. Despite that, `gh api repos/Gekkotron/Athena-Accounting/releases` returns `[]` — no release exists. What remains is figuring out where the draft went and finishing publication.
+- [ ] Browser-only demo mode — execute existing plan
+      The implementation plan already exists at `docs/superpowers/plans/2026-07-18-browser-only-demo.md`. Execute it end-to-end.
+      Use `superpowers:subagent-driven-development` (or `superpowers:executing-plans` as fallback) — the plan is structured with `- [ ]` checkboxes across 10 tasks (adapter scaffolding, seed data, read/write handlers, stubbed endpoints for unsupported features, banner + reset, docs-site integration, CI deploy to `gh-pages` under `/demo/`, tests, ship).
+      Global constraints (repeated for the headless worker): frontend-only, no backend changes; direct commits on `main`, push only when the plan is fully done; every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`; seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes); French UI stays primary.
+      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
 
-Investigate: pull the raw logs of run `29638068094` (`gh run view 29638068094 --log`), specifically the "Attach to draft GitHub Release" step for each matrix job, to confirm whether `softprops/action-gh-release@v2` actually created/updated the release or silently no-op'd. Look for the `release_id`, `upload_url`, or `html_url` fields in that step's output.
+- [ ] Empty / loading / error state audit across all pages
+      Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
+      Scope (visibility-ordered): Dashboard → Transactions → Accounts → Budgets → Rules → Data → Imports → Settings → Profile → Login.
+      For each page, cover the three states: **Empty** (no data yet) — friendly onboarding block with a CTA, not a blank page; **Loading** (fetch in-flight) — reuse existing skeleton components (`grep -r 'Skeleton' frontend/src/components/`) or a spinner block, no CLS; **Error** (fetch failed, network offline, mutation rejected) — actionable error block with a retry, not a raw stack trace or `[object Object]`.
+      Do NOT introduce new UI patterns or tokens. Reuse existing `ink-*`, `sage-*`, `clay-*` classes and existing component primitives. Do NOT touch the demo-mode adapter (separate task).
+      Deliverables: one commit series on `main` per page (per project convention — commits use `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`); plus `docs/dev/state-audit.md` with one short entry per page recording what was found and what changed.
+      Success criteria: (a) every page above has confirmed empty, loading, and error states via a manual walkthrough on the dev server; (b) `docs/dev/state-audit.md` has one entry per page; (c) no page renders a raw error object or a bare skeleton for more than ~300 ms.
 
-If the draft was created and then deleted: re-trigger the workflow via `gh workflow run desktop-release.yml -f tag=v1.0.0-desktop-beta1` (workflow_dispatch input) — this reuses the same tag without re-tagging, and rebuilds artifacts. Do NOT force-retag unless the tag itself is corrupt.
+- [ ] User walkthroughs — screenshotted guides for core flows
+      Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.
+      Flows (one file each): `import-a-statement.md` (import a PDF/CSV bank statement, resolve categorisation prompts, verify balance checkpoint); `categorise-transactions.md` (bulk vs single categorisation, creating a rule from a transaction, transfer rules); `set-a-budget.md` (creating a budget for a category, choosing period, seeing progress on Dashboard); `view-reports.md` (Dashboard tour — Sankey, Insights, monthly overview — filtering by account/date range).
+      Format per file: Docusaurus frontmatter (`title`, `sidebar_position`); 3–6 short numbered steps, each with one screenshot (PNG under `docs/users/walkthroughs/img/`) captured against the demo build (task above) or the dev server with seed data; screenshots use the French UI (project's primary language); ends with a "Next steps" pointer to a related walkthrough.
+      Wire into the Docusaurus sidebar (`website/sidebars.js` or equivalent) under a new "Walkthroughs" category ordered above "Reference".
+      Do NOT rewrite existing docs. Do NOT translate to English yet — French only for v1.
+      Success criteria: (a) all four files exist with real screenshots (not placeholders); (b) each renders on the local Docusaurus dev server; (c) the sidebar shows the new "Walkthroughs" category with four entries; (d) `grep -rE 'Lorem|TODO|placeholder' docs/users/walkthroughs/` returns nothing.
 
-Once a draft release with three artifacts (`.dmg`, `.AppImage`, `.exe`) exists, promote: `gh release edit v1.0.0-desktop-beta1 --draft=false`.
-
-Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session — cross-OS install verification is the human-owned checklist under `## Manual checklist` in this file (parser-invisible section) and is expected to complete outside the orchestrator.
-
-Success criteria: `gh release view v1.0.0-desktop-beta1 --json isDraft,assets` shows `isDraft:false` and three assets (`.dmg`, `.AppImage`, `.exe`).
-
-### Public-launch essentials pack — LICENSE, SECURITY, CONTRIBUTING, CoC, templates
-
-Add the minimum "trustable public repo" file set at repo root and under `.github/`. All attribution to `Gekkotron` (email `60887050+Gekkotron@users.noreply.github.com`); no real name anywhere in any added file.
-
-Files to create:
-- `LICENSE` — MIT, `Copyright (c) 2026 Gekkotron`.
-- `SECURITY.md` — how to report vulnerabilities (use the noreply GitHub email as contact), 90-day coordinated-disclosure window, explicit note that this is a solo-maintainer project with no SLA.
-- `CONTRIBUTING.md` — issue filing guidance, PR conventions matching the existing commit format (`type(scope): subject`, see `git log --oneline -20` for examples), dev-setup pointer to `docs/users/getting-started.md`, maintainer-bandwidth expectations.
-- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1 verbatim (fetch canonical text; substitute `[INSERT CONTACT METHOD]` with the noreply email).
-- `.github/ISSUE_TEMPLATE/bug_report.md` — front-matter (`name`, `about`, `labels: bug`); body sections: reproduction steps, expected vs actual behavior, environment (OS, Docker vs Desktop path, release version), logs.
-- `.github/ISSUE_TEMPLATE/feature_request.md` — front-matter (`name`, `about`, `labels: enhancement`); body sections: problem statement, proposed solution, why now.
-- `.github/PULL_REQUEST_TEMPLATE.md` — summary, test-plan checklist, UI screenshots, breaking-changes flag.
-
-Update `README.md`: append a bottom section linking `LICENSE`, `SECURITY.md`, and `CONTRIBUTING.md`. Do NOT touch the existing header/badges/install section.
-
-Success criteria: (a) all files exist at correct paths; (b) `grep -RIn '<any real-name variant>' LICENSE SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md .github/ISSUE_TEMPLATE .github/PULL_REQUEST_TEMPLATE.md` returns nothing; (c) `LICENSE` copyright line is exactly `Copyright (c) 2026 Gekkotron`; (d) `README.md` bottom section links all three community docs.
-
-### Browser-only demo mode — execute existing plan
-
-The implementation plan already exists at `docs/superpowers/plans/2026-07-18-browser-only-demo.md`. Execute it end-to-end.
-
-Use `superpowers:subagent-driven-development` (or `superpowers:executing-plans` as fallback) — the plan is structured with `- [ ]` checkboxes across 10 tasks (adapter scaffolding, seed data, read/write handlers, stubbed endpoints for unsupported features, banner + reset, docs-site integration, CI deploy to `gh-pages` under `/demo/`, tests, ship).
-
-Global constraints (repeated for the headless worker):
-- Frontend-only; no backend changes.
-- Direct commits on `main`; push only when the plan is fully done.
-- Every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`.
-- Seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes).
-- French UI stays primary.
-
-Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
-
-### Empty / loading / error state audit across all pages
-
-Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
-
-Scope (visibility-ordered): Dashboard → Transactions → Accounts → Budgets → Rules → Data → Imports → Settings → Profile → Login.
-
-For each page, cover the three states:
-- **Empty** (no data yet). Friendly onboarding block with a CTA — not a blank page.
-- **Loading** (fetch in-flight). Reuse existing skeleton components (`grep -r 'Skeleton' frontend/src/components/`) or a spinner block; no CLS.
-- **Error** (fetch failed, network offline, mutation rejected). Actionable error block with a retry — not a raw stack trace or `[object Object]`.
-
-Do NOT introduce new UI patterns or tokens. Reuse existing `ink-*`, `sage-*`, `clay-*` classes and existing component primitives. Do NOT touch the demo-mode adapter (separate task above).
-
-Deliverables: one commit series on `main` per page (per project convention — commits use `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`); plus `docs/dev/state-audit.md` with one short entry per page recording what was found and what changed.
-
-Success criteria: (a) every page above has confirmed empty, loading, and error states via a manual walkthrough on the dev server; (b) `docs/dev/state-audit.md` has one entry per page; (c) no page renders a raw error object or a bare skeleton for more than ~300 ms.
-
-### User walkthroughs — screenshotted guides for core flows
-
-Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: conversion from README/docs-site visitors into installs.
-
-Flows (one file each):
-1. `import-a-statement.md` — import a PDF/CSV bank statement, resolve categorisation prompts, verify balance checkpoint.
-2. `categorise-transactions.md` — bulk vs single categorisation, creating a rule from a transaction, transfer rules.
-3. `set-a-budget.md` — creating a budget for a category, choosing period, seeing progress on Dashboard.
-4. `view-reports.md` — Dashboard tour (Sankey, Insights, monthly overview), filtering by account/date range.
-
-Format per file:
-- Docusaurus frontmatter (`title`, `sidebar_position`).
-- 3–6 short numbered steps, each with one screenshot (PNG under `docs/users/walkthroughs/img/`) captured against the demo build (task above) **or** the dev server with seed data. Screenshots use the French UI (project's primary language).
-- Ends with a "Next steps" pointer to a related walkthrough.
-
-Wire into the Docusaurus sidebar (`website/sidebars.js` or equivalent) under a new "Walkthroughs" category ordered above "Reference".
-
-Do NOT rewrite existing docs. Do NOT translate to English yet — French only for v1.
-
-Success criteria: (a) all four files exist with real screenshots (not placeholders); (b) each renders on the local Docusaurus dev server; (c) the sidebar shows the new "Walkthroughs" category with four entries; (d) `grep -rE 'Lorem|TODO|placeholder' docs/users/walkthroughs/` returns nothing.
-
-### Backup/restore drill + documented recovery playbook
-
-Prove and document that the existing backup/restore path (`backend/src/http/routes/backup/` + `frontend/src/pages/Imports/BackupPanel.tsx`) round-trips a real dataset without loss. Ship the drill + a public recovery playbook.
-
-Drill (Tauri path primary; Docker path best-effort — skip cleanly if no Docker runtime is available in the executor's environment):
-1. Populate a dev instance: ≥200 transactions across 2 accounts, 3 budgets, 5 rules, 1 balance checkpoint. Capture a state hash = `(row counts per table) + SHA-256 of "last 10 transactions ordered by id, JSON-serialised"`.
-2. Export via the UI (Settings → Imports → BackupPanel → Export). Save the file (size + SHA-256).
-3. Wipe: delete the PGlite file (Tauri) or drop the Docker Postgres volume, re-run migrations, confirm the app boots to onboarding.
-4. Restore via the UI (BackupPanel → Restore) using the exported file.
-5. Verify: state hash must match step 1; Dashboard / Transactions / Budgets / Rules render identically (side-by-side screenshots).
-
-Deliverables:
-- `docs/users/backup-recovery.md` (French) — where the file lives per OS, how to schedule regular exports, step-by-step restore, common pitfalls, and a **known limitation** callout: export files are cleartext JSON, no at-rest encryption yet.
-- `docs/dev/backup-drill-report.md` — the drill report itself: date, environments tested, state hashes, timing, findings. Any bug uncovered becomes its own new backlog item — do NOT fix bugs in this task.
-- Link `docs/users/backup-recovery.md` from `docs/users/security-and-privacy.md` and from the `README.md` bottom section.
-
-Do NOT change the backup/restore code paths in this task. Verification + documentation only.
-
-Success criteria: (a) drill executed on Tauri path with matching state hash pre-wipe / post-restore; (b) both docs files exist; (c) side-by-side screenshots under `docs/dev/img/backup-drill/`; (d) `docs/users/backup-recovery.md` linked from at least two other pages.
+- [ ] Backup/restore drill + documented recovery playbook
+      Prove and document that the existing backup/restore path (`backend/src/http/routes/backup/` + `frontend/src/pages/Imports/BackupPanel.tsx`) round-trips a real dataset without loss. Ship the drill + a public recovery playbook.
+      Drill (Tauri path primary; Docker path best-effort — skip cleanly if no Docker runtime is available in the executor's environment): (1) Populate a dev instance with ≥200 transactions across 2 accounts, 3 budgets, 5 rules, 1 balance checkpoint. Capture a state hash = `(row counts per table) + SHA-256 of "last 10 transactions ordered by id, JSON-serialised"`. (2) Export via the UI (Settings → Imports → BackupPanel → Export). Save the file (size + SHA-256). (3) Wipe: delete the PGlite file (Tauri) or drop the Docker Postgres volume, re-run migrations, confirm the app boots to onboarding. (4) Restore via the UI (BackupPanel → Restore) using the exported file. (5) Verify: state hash must match step 1; Dashboard / Transactions / Budgets / Rules render identically (side-by-side screenshots).
+      Deliverables: `docs/users/backup-recovery.md` (French) — where the file lives per OS, how to schedule regular exports, step-by-step restore, common pitfalls, and a **known limitation** callout that export files are cleartext JSON with no at-rest encryption yet; `docs/dev/backup-drill-report.md` — the drill report itself: date, environments tested, state hashes, timing, findings; any bug uncovered becomes its own new backlog item (do NOT fix bugs in this task); link `docs/users/backup-recovery.md` from `docs/users/security-and-privacy.md` and from the `README.md` bottom section.
+      Do NOT change the backup/restore code paths in this task. Verification + documentation only.
+      Success criteria: (a) drill executed on Tauri path with matching state hash pre-wipe / post-restore; (b) both docs files exist; (c) side-by-side screenshots under `docs/dev/img/backup-drill/`; (d) `docs/users/backup-recovery.md` linked from at least two other pages.
 
 ## In progress
 
 ## Done
+
+- [x] Cut `v1.0.0-desktop-beta1` — finish + publish release
+      Prior state (verified 2026-07-18): version bumps in `desktop/src-tauri/Cargo.toml` + `tauri.conf.json` are done; `docs/RELEASES/v1.0.0-desktop-beta1.md` exists; annotated tag `v1.0.0-desktop-beta1` is on `origin` pointing at commit `9edc8b4`; both workflow triggers are correct (`desktop-release.yml` uses `v*-desktop*`, `release.yml` excludes `!v*-desktop*`); the latest `desktop-release` run at that tag (`29638068094`) is green with all three "Attach to draft GitHub Release" steps succeeding. Despite that, `gh api repos/Gekkotron/Athena-Accounting/releases` returns `[]` — no release exists. What remains is figuring out where the draft went and finishing publication.
+      Investigate: pull the raw logs of run `29638068094` (`gh run view 29638068094 --log`), specifically the "Attach to draft GitHub Release" step for each matrix job, to confirm whether `softprops/action-gh-release@v2` actually created/updated the release or silently no-op'd. Look for the `release_id`, `upload_url`, or `html_url` fields in that step's output.
+      If the draft was created and then deleted: re-trigger the workflow via `gh workflow run desktop-release.yml -f tag=v1.0.0-desktop-beta1` (workflow_dispatch input) — this reuses the same tag without re-tagging, and rebuilds artifacts. Do NOT force-retag unless the tag itself is corrupt.
+      Once a draft release with three artifacts (`.dmg`, `.AppImage`, `.exe`) exists, promote: `gh release edit v1.0.0-desktop-beta1 --draft=false`.
+      Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session — cross-OS install verification is the human-owned checklist under `## Manual checklist` in this file (parser-invisible section) and is expected to complete outside the orchestrator.
+      Success criteria: `gh release view v1.0.0-desktop-beta1 --json isDraft,assets` shows `isDraft:false` and three assets (`.dmg`, `.AppImage`, `.exe`).
 
 - [x] Restyle the public docs site to match the app's visual identity
       Target: <https://gekkotron.github.io/Athena-Accounting/> — currently uses the default theme of whatever static-site generator sits behind it. Make it feel like a first-party companion to the app.
