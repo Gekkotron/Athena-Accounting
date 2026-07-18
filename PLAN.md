@@ -107,6 +107,26 @@ Do NOT rewrite existing docs. Do NOT translate to English yet — French only fo
 
 Success criteria: (a) all four files exist with real screenshots (not placeholders); (b) each renders on the local Docusaurus dev server; (c) the sidebar shows the new "Walkthroughs" category with four entries; (d) `grep -rE 'Lorem|TODO|placeholder' docs/users/walkthroughs/` returns nothing.
 
+### Backup/restore drill + documented recovery playbook
+
+Prove and document that the existing backup/restore path (`backend/src/http/routes/backup/` + `frontend/src/pages/Imports/BackupPanel.tsx`) round-trips a real dataset without loss. Ship the drill + a public recovery playbook.
+
+Drill (Tauri path primary; Docker path best-effort — skip cleanly if no Docker runtime is available in the executor's environment):
+1. Populate a dev instance: ≥200 transactions across 2 accounts, 3 budgets, 5 rules, 1 balance checkpoint. Capture a state hash = `(row counts per table) + SHA-256 of "last 10 transactions ordered by id, JSON-serialised"`.
+2. Export via the UI (Settings → Imports → BackupPanel → Export). Save the file (size + SHA-256).
+3. Wipe: delete the PGlite file (Tauri) or drop the Docker Postgres volume, re-run migrations, confirm the app boots to onboarding.
+4. Restore via the UI (BackupPanel → Restore) using the exported file.
+5. Verify: state hash must match step 1; Dashboard / Transactions / Budgets / Rules render identically (side-by-side screenshots).
+
+Deliverables:
+- `docs/users/backup-recovery.md` (French) — where the file lives per OS, how to schedule regular exports, step-by-step restore, common pitfalls, and a **known limitation** callout: export files are cleartext JSON, no at-rest encryption yet.
+- `docs/dev/backup-drill-report.md` — the drill report itself: date, environments tested, state hashes, timing, findings. Any bug uncovered becomes its own new backlog item — do NOT fix bugs in this task.
+- Link `docs/users/backup-recovery.md` from `docs/users/security-and-privacy.md` and from the `README.md` bottom section.
+
+Do NOT change the backup/restore code paths in this task. Verification + documentation only.
+
+Success criteria: (a) drill executed on Tauri path with matching state hash pre-wipe / post-restore; (b) both docs files exist; (c) side-by-side screenshots under `docs/dev/img/backup-drill/`; (d) `docs/users/backup-recovery.md` linked from at least two other pages.
+
 ## In progress
 
 ## Done
