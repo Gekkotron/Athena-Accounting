@@ -23,6 +23,20 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ### Docs site polish
 
 
+### Cut `v1.0.0-desktop-beta1` — finish + publish release
+
+Prior state (verified 2026-07-18): version bumps in `desktop/src-tauri/Cargo.toml` + `tauri.conf.json` are done; `docs/RELEASES/v1.0.0-desktop-beta1.md` exists; annotated tag `v1.0.0-desktop-beta1` is on `origin` pointing at commit `9edc8b4`; both workflow triggers are correct (`desktop-release.yml` uses `v*-desktop*`, `release.yml` excludes `!v*-desktop*`); the latest `desktop-release` run at that tag (`29638068094`) is green with all three "Attach to draft GitHub Release" steps succeeding. Despite that, `gh api repos/Gekkotron/Athena-Accounting/releases` returns `[]` — no release exists. What remains is figuring out where the draft went and finishing publication.
+
+Investigate: pull the raw logs of run `29638068094` (`gh run view 29638068094 --log`), specifically the "Attach to draft GitHub Release" step for each matrix job, to confirm whether `softprops/action-gh-release@v2` actually created/updated the release or silently no-op'd. Look for the `release_id`, `upload_url`, or `html_url` fields in that step's output.
+
+If the draft was created and then deleted: re-trigger the workflow via `gh workflow run desktop-release.yml -f tag=v1.0.0-desktop-beta1` (workflow_dispatch input) — this reuses the same tag without re-tagging, and rebuilds artifacts. Do NOT force-retag unless the tag itself is corrupt.
+
+Once a draft release with three artifacts (`.dmg`, `.AppImage`, `.exe`) exists, promote: `gh release edit v1.0.0-desktop-beta1 --draft=false`.
+
+Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session — cross-OS install verification is the human-owned checklist under `## Manual checklist` in this file (parser-invisible section) and is expected to complete outside the orchestrator.
+
+Success criteria: `gh release view v1.0.0-desktop-beta1 --json isDraft,assets` shows `isDraft:false` and three assets (`.dmg`, `.AppImage`, `.exe`).
+
 ## In progress
 
 ## Done
