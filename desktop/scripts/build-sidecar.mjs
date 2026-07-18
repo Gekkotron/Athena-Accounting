@@ -100,13 +100,18 @@ function extractNode(archivePath) {
   const workdir = path.join(CACHE, `${path.basename(archivePath)}.extracted`);
   if (existsSync(workdir)) rmSync(workdir, { recursive: true, force: true });
   mkdirSync(workdir, { recursive: true });
-  // GitHub Actions' windows-latest ships a bsdtar that transparently extracts
-  // .zip archives, so a single `tar -xf` covers all three platforms. On
-  // Windows the drive-letter path (`D:\…`) is otherwise parsed as an rsh-style
-  // host — `--force-local` keeps tar looking at the local filesystem.
-  const tarArgs = ['-xf', archivePath, '-C', workdir];
-  if (TARGET_OS === 'win32') tarArgs.push('--force-local');
-  run('tar', tarArgs);
+  // Node's Windows archive is a .zip; on Windows the shell is Git-Bash whose
+  // GNU tar does NOT understand .zip, so we shell out to PowerShell's
+  // Expand-Archive. macOS/Linux use `tar` for .tar.xz.
+  if (TARGET_OS === 'win32') {
+    run('powershell', [
+      '-NoProfile',
+      '-Command',
+      `Expand-Archive -Path '${archivePath}' -DestinationPath '${workdir}' -Force`,
+    ]);
+  } else {
+    run('tar', ['-xf', archivePath, '-C', workdir]);
+  }
   const [top] = readdirSync(workdir);
   const src =
     TARGET_OS === 'win32'
