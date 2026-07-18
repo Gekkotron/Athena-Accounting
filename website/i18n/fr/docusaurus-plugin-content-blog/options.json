@@ -1,14 +1,14 @@
 {
   "title": {
-    "message": "Athena Accounting blog",
+    "message": "Blog Athena Accounting",
     "description": "The title for the blog used in SEO"
   },
   "description": {
-    "message": "Release notes and news",
+    "message": "Notes de version et actualités",
     "description": "The description for the blog used in SEO"
   },
   "sidebar.title": {
-    "message": "Recent posts",
+    "message": "Articles récents",
     "description": "The label for the left sidebar"
   }
 }
