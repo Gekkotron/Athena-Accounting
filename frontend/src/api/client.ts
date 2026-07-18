@@ -1,3 +1,13 @@
+import { ApiError } from './apiError';
+import * as demo from './demo';
+
+export { ApiError };
+
+// import.meta.env.VITE_DEMO is compile-time replaced by Vite. The unused
+// branch is dead-code-eliminated in the production build, so demo/* is
+// only bundled when built with VITE_DEMO=1.
+const IS_DEMO = import.meta.env.VITE_DEMO === '1';
+
 // Global 401 hook: fires when any request except /api/auth/me returns 401,
 // so App can drop cached data and redirect to /login when the session
 // silently expires mid-session. Consumers register via
@@ -23,6 +33,7 @@ export async function api<T>(
   path: string,
   init?: RequestInit & { json?: unknown; query?: Record<string, unknown> },
 ): Promise<T> {
+  if (IS_DEMO) return demo.api<T>(path, init);
   const url = new URL(path, window.location.origin);
   if (init?.query) {
     for (const [k, v] of Object.entries(init.query)) {
@@ -63,19 +74,13 @@ function safeParse(text: string): unknown {
   }
 }
 
-export class ApiError extends Error {
-  constructor(message: string, public readonly status: number, public readonly data: unknown) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 // Multipart upload helper for file imports.
 export async function apiUpload<T>(
   path: string,
   file: File,
   opts?: { query?: Record<string, unknown> },
 ): Promise<T> {
+  if (IS_DEMO) return demo.apiUpload<T>(path, file, opts);
   const url = new URL(path, window.location.origin);
   if (opts?.query) {
     for (const [k, v] of Object.entries(opts.query)) {

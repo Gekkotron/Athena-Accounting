@@ -18,11 +18,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-- [ ] Browser-only demo — Task 1: adapter scaffolding + `VITE_DEMO` flag
-      Sub-task of the browser-only demo plan at `docs/superpowers/plans/2026-07-18-browser-only-demo.md` (Task 1). Frontend-only, direct commit to `main`.
-      Modify `frontend/vite.config.ts` to expose `VITE_DEMO` and output to `dist-demo/` when set. Add `build:demo` script to `frontend/package.json`. Create `frontend/src/api/demo/index.ts` (adapter exposing `api()` / `apiUpload()` matching `client.ts` shapes) with an empty `path → handler` map. Create `frontend/src/api/demo/store.ts` with versioned schema (`v: 1`), `getState()`, `setState(mutator)`, `reset()`, `subscribe(fn)`, seed loader hook (seed itself lands in Task 2). Wire compile-time switch inside `frontend/src/api/client.ts` so `import.meta.env.VITE_DEMO === '1'` routes to the demo adapter.
-      Do NOT implement any API handlers yet; leave the map empty. Do NOT touch backend.
-      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/` without errors; (b) `npm run build` (no flag) still produces `frontend/dist/` unchanged; (c) `tsc -b` passes in `frontend/`.
 
 - [ ] Browser-only demo — Task 2: seed data
       Sub-task of the browser-only demo plan (Task 2). Depends on Task 1 landed. Frontend-only, direct commit to `main`.
@@ -95,6 +90,12 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Browser-only demo — Task 1: adapter scaffolding + `VITE_DEMO` flag
+      Sub-task of the browser-only demo plan at `docs/superpowers/plans/2026-07-18-browser-only-demo.md` (Task 1). Frontend-only, direct commit to `main`.
+      Modify `frontend/vite.config.ts` to expose `VITE_DEMO` and output to `dist-demo/` when set. Add `build:demo` script to `frontend/package.json`. Create `frontend/src/api/demo/index.ts` (adapter exposing `api()` / `apiUpload()` matching `client.ts` shapes) with an empty `path → handler` map. Create `frontend/src/api/demo/store.ts` with versioned schema (`v: 1`), `getState()`, `setState(mutator)`, `reset()`, `subscribe(fn)`, seed loader hook (seed itself lands in Task 2). Wire compile-time switch inside `frontend/src/api/client.ts` so `import.meta.env.VITE_DEMO === '1'` routes to the demo adapter.
+      Do NOT implement any API handlers yet; leave the map empty. Do NOT touch backend.
+      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/` without errors; (b) `npm run build` (no flag) still produces `frontend/dist/` unchanged; (c) `tsc -b` passes in `frontend/`.
 
 - [x] Browser-only demo mode — split into per-task backlog items
       Original 10-task plan (`docs/superpowers/plans/2026-07-18-browser-only-demo.md`) was too large for a single headless dispatch. Split into 10 sub-tasks in `## Backlog` (Task 1: adapter scaffolding, Task 2: seed data, Task 3: reads, Task 4: writes, Task 5: stubs + modal, Task 6: banner + reset, Task 7: docs integration, Task 8: CI/deploy, Task 9: tests, Task 10: ship) so the orchestrator dispatches one at a time.
