@@ -21,13 +21,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Empty / loading / error state audit across all pages
-      Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
-      Scope (visibility-ordered): Dashboard → Transactions → Accounts → Budgets → Rules → Data → Imports → Settings → Profile → Login.
-      For each page, cover the three states: **Empty** (no data yet) — friendly onboarding block with a CTA, not a blank page; **Loading** (fetch in-flight) — reuse existing skeleton components (`grep -r 'Skeleton' frontend/src/components/`) or a spinner block, no CLS; **Error** (fetch failed, network offline, mutation rejected) — actionable error block with a retry, not a raw stack trace or `[object Object]`.
-      Do NOT introduce new UI patterns or tokens. Reuse existing `ink-*`, `sage-*`, `clay-*` classes and existing component primitives. Do NOT touch the demo-mode adapter (separate task).
-      Deliverables: one commit series on `main` per page (per project convention — commits use `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`); plus `docs/dev/state-audit.md` with one short entry per page recording what was found and what changed.
-      Success criteria: (a) every page above has confirmed empty, loading, and error states via a manual walkthrough on the dev server; (b) `docs/dev/state-audit.md` has one entry per page; (c) no page renders a raw error object or a bare skeleton for more than ~300 ms.
 
 - [ ] User walkthroughs — screenshotted guides for core flows
       Add step-by-step, screenshotted user guides for Athena's four core flows under `docs/users/walkthroughs/`. Aim: convert README/docs-site visitors into installs.
@@ -52,6 +45,14 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
       Global constraints (repeated for the headless worker): frontend-only, no backend changes; direct commits on `main`, push only when the plan is fully done; every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`; seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes); French UI stays primary.
       Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
 ## Done
+
+- [x] Empty / loading / error state audit across all pages
+      Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
+      Scope (visibility-ordered): Dashboard → Transactions → Accounts → Budgets → Rules → Data → Imports → Settings → Profile → Login.
+      For each page, cover the three states: **Empty** (no data yet) — friendly onboarding block with a CTA, not a blank page; **Loading** (fetch in-flight) — reuse existing skeleton components (`grep -r 'Skeleton' frontend/src/components/`) or a spinner block, no CLS; **Error** (fetch failed, network offline, mutation rejected) — actionable error block with a retry, not a raw stack trace or `[object Object]`.
+      Do NOT introduce new UI patterns or tokens. Reuse existing `ink-*`, `sage-*`, `clay-*` classes and existing component primitives. Do NOT touch the demo-mode adapter (separate task).
+      Deliverables: one commit series on `main` per page (per project convention — commits use `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`); plus `docs/dev/state-audit.md` with one short entry per page recording what was found and what changed.
+      Success criteria: (a) every page above has confirmed empty, loading, and error states via a manual walkthrough on the dev server; (b) `docs/dev/state-audit.md` has one entry per page; (c) no page renders a raw error object or a bare skeleton for more than ~300 ms.
 
 - [x] Public-launch essentials pack — LICENSE, SECURITY, CONTRIBUTING, CoC, templates
       Add the minimum "trustable public repo" file set at repo root and under `.github/`. All attribution to `Gekkotron` (email `60887050+Gekkotron@users.noreply.github.com`); no real name anywhere in any added file.
