@@ -21,14 +21,14 @@ dans votre navigateur, isolé du reste du web).
 - Le bouton **Réinitialiser la démo** en haut de l'écran remet le jeu
   de données d'origine si vous voulez repartir de zéro.
 
-<div style={{ position: 'relative', width: '100%', height: '80vh', border: '1px solid var(--ifm-color-emphasis-300)', borderRadius: 8, overflow: 'hidden' }}>
-  <iframe
-    src="/Athena-Accounting/demo/"
-    title="Démo Athena Accounting"
-    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-    loading="lazy"
-  />
-</div>
+<p style={{ textAlign: 'center', margin: '2rem 0' }}>
+  <a
+    href="/Athena-Accounting/demo/"
+    className="button button--primary button--lg"
+  >
+    Ouvrir la démo →
+  </a>
+</p>
 
 ## Vous voulez l'installer ?
 
