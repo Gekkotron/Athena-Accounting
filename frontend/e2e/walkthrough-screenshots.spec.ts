@@ -11,6 +11,12 @@ const __dirname = path.dirname(__filename);
 // Set WALKTHROUGH_SHOTS=1 to opt in; the default suite (demo.spec.ts) skips it.
 
 const SHOULD_RUN = process.env.WALKTHROUGH_SHOTS === '1';
+// Real-backend mode: WALKTHROUGH_LOCAL_URL points playwright.config's
+// baseURL at a running Athena instance instead of the demo build. When set,
+// we also need to log in as the demo user first (WALKTHROUGH_LOCAL_USER /
+// WALKTHROUGH_LOCAL_PASS). Credentials are read at run time only — never
+// committed.
+const LOCAL_MODE = process.env.WALKTHROUGH_LOCAL_URL !== undefined && process.env.WALKTHROUGH_LOCAL_URL !== '';
 
 const OUT_DIR = path.resolve(
   __dirname,
@@ -50,6 +56,21 @@ test.describe('walkthrough screenshots', () => {
     await page.addInitScript(() => {
       try { localStorage.setItem('i18nextLng', 'fr'); } catch { /* noop */ }
     });
+    if (LOCAL_MODE) {
+      const user = process.env.WALKTHROUGH_LOCAL_USER;
+      const pass = process.env.WALKTHROUGH_LOCAL_PASS;
+      if (!user || !pass) {
+        throw new Error('WALKTHROUGH_LOCAL_URL is set but WALKTHROUGH_LOCAL_USER / WALKTHROUGH_LOCAL_PASS are missing.');
+      }
+      await page.goto('/login');
+      await page.locator('input[autocomplete="username"]').fill(user);
+      await page.locator('input[type="password"]').fill(pass);
+      await page.getByRole('button', { name: /Se connecter|Log in/i }).click();
+      // Login mutation navigates to '/' on success — wait for it explicitly
+      // so downstream page.goto() calls don't race the auth redirect.
+      await page.waitForURL('**/', { timeout: 10_000 });
+      await dismissWelcomeTour(page);
+    }
   });
 
   test('import-a-statement', async ({ page }) => {
