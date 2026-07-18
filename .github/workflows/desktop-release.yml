@@ -35,14 +35,20 @@ jobs:
           - os: macos-latest
             label: macOS (arm64)
             tauri_target: aarch64-apple-darwin
+            tauri_bundles: dmg
             artifact_glob: 'desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg'
           - os: ubuntu-latest
             label: Linux (x64)
             tauri_target: x86_64-unknown-linux-gnu
+            tauri_bundles: appimage
             artifact_glob: 'desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage'
           - os: windows-latest
             label: Windows (x64)
             tauri_target: x86_64-pc-windows-msvc
+            # NSIS only — MSI/WiX requires a numeric-only pre-release
+            # identifier (`beta1` is rejected). NSIS accepts the full
+            # SemVer string and still produces a signed-able .exe installer.
+            tauri_bundles: nsis
             artifact_glob: 'desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe'
 
     runs-on: ${{ matrix.os }}
@@ -121,7 +127,7 @@ jobs:
         # is set to `null` in tauri.conf.json so the bundler skips signing
         # entirely; setting APPLE_* env vars (even to empty strings) triggers
         # `security import`, so we leave them unset.
-        run: tauri build --target ${{ matrix.tauri_target }}
+        run: tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.tauri_bundles }}
 
       - name: Collect installer artifact
         id: artifact
