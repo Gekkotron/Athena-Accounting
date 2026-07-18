@@ -21,6 +21,8 @@ dans votre navigateur, isolé du reste du web).
 - Le bouton **Réinitialiser la démo** en haut de l'écran remet le jeu
   de données d'origine si vous voulez repartir de zéro.
 
+![Tableau de bord Athena avec le jeu de données de démo](./img/demo-dashboard.png)
+
 <p style={{ textAlign: 'center', margin: '2rem 0' }}>
   <a
     href="/Athena-Accounting/demo/"
