@@ -22,10 +22,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/users/troubleshooting.md with real content
-      Cover the sections currently listed under "Planned sections" — common startup failures (Postgres port collision, `.env` missing, migration failure), import-time failures (PDF template not matching, OFX encoding, CSV format mismatch), balance mismatch (missed transaction, duplicate not merged, checkpoint drift), backup restore errors, and how to gather diagnostics (`docker compose logs`, `/health`, `/metrics`). Model tone on docs/users/backup-recovery.md — problem statement → cause → fix, one per subsection. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/troubleshooting.md using the terminology already established.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/users/troubleshooting.md` returns nothing; (b) both EN and FR versions cover startup, import, balance, backup, and diagnostics; (c) every subsection follows a problem → cause → fix shape.
 
 - [ ] Fill in docs/reference/configuration.md with real content
       Enumerate every environment variable Athena reads (source of truth: `.env.example` plus any getEnv/process.env calls in backend/src and frontend). For each: name, default, valid values, effect, and which service consumes it (frontend / backend / postgres). Include the default host + container ports for the three main services. Include the persistent user settings surfaced on the Réglages page (chart gap threshold, default range, default account scope). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -82,6 +78,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/users/troubleshooting.md with real content
+      Cover the sections currently listed under "Planned sections" — common startup failures (Postgres port collision, `.env` missing, migration failure), import-time failures (PDF template not matching, OFX encoding, CSV format mismatch), balance mismatch (missed transaction, duplicate not merged, checkpoint drift), backup restore errors, and how to gather diagnostics (`docker compose logs`, `/health`, `/metrics`). Model tone on docs/users/backup-recovery.md — problem statement → cause → fix, one per subsection. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/troubleshooting.md using the terminology already established.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/troubleshooting.md` returns nothing; (b) both EN and FR versions cover startup, import, balance, backup, and diagnostics; (c) every subsection follows a problem → cause → fix shape.
 
 - [x] Fill in docs/users/security-and-privacy.md with real content
       Cover the sections currently listed under "Planned sections" — the security model (LAN-only by default, session cookies rotated on login, argon2id password hashing with per-user salt), Postgres bound to 127.0.0.1, MCP endpoint token encryption, backup file cleartext caveat, and the privacy stance (no telemetry, no third-party analytics, no cloud). Cross-link to docs/users/backup-recovery.md and docs/reference/configuration.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
