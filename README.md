@@ -371,3 +371,10 @@ labels.
 - Multi-currency conversion via a small manual FX-rate table
 - Optional Ollama integration to suggest a category when no rule matches
   (LLM stays local, behind a feature flag, default off — per the original spec)
+
+## Community
+
+- [License (MIT)](LICENSE)
+- [Security policy](SECURITY.md)
+- [Contributing guide](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
