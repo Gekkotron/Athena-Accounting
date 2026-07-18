@@ -69,6 +69,12 @@ const config: Config = {
       items: [
         { to: '/docs/users/getting-started', label: 'Docs', position: 'left' },
         { to: '/blog', label: 'Blog', position: 'left' },
+        // The demo is a standalone Vite bundle merged into the Pages
+        // artifact under /demo/ (see .github/workflows/docs.yml). The
+        // `pathname://` prefix tells Docusaurus not to route this
+        // through its own SPA router, so the link falls through to a
+        // full document load and the demo bundle boots on its own.
+        { href: 'pathname:///Athena-Accounting/demo/', label: 'Live demo', position: 'left' },
         { type: 'localeDropdown', position: 'right' },
         {
           href: 'https://github.com/Gekkotron/Athena-Accounting',
