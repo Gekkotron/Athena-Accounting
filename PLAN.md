@@ -18,8 +18,63 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
+- [ ] Browser-only demo — Task 1: adapter scaffolding + `VITE_DEMO` flag
+      Sub-task of the browser-only demo plan at `docs/superpowers/plans/2026-07-18-browser-only-demo.md` (Task 1). Frontend-only, direct commit to `main`.
+      Modify `frontend/vite.config.ts` to expose `VITE_DEMO` and output to `dist-demo/` when set. Add `build:demo` script to `frontend/package.json`. Create `frontend/src/api/demo/index.ts` (adapter exposing `api()` / `apiUpload()` matching `client.ts` shapes) with an empty `path → handler` map. Create `frontend/src/api/demo/store.ts` with versioned schema (`v: 1`), `getState()`, `setState(mutator)`, `reset()`, `subscribe(fn)`, seed loader hook (seed itself lands in Task 2). Wire compile-time switch inside `frontend/src/api/client.ts` so `import.meta.env.VITE_DEMO === '1'` routes to the demo adapter.
+      Do NOT implement any API handlers yet; leave the map empty. Do NOT touch backend.
+      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/` without errors; (b) `npm run build` (no flag) still produces `frontend/dist/` unchanged; (c) `tsc -b` passes in `frontend/`.
 
+- [ ] Browser-only demo — Task 2: seed data
+      Sub-task of the browser-only demo plan (Task 2). Depends on Task 1 landed. Frontend-only, direct commit to `main`.
+      Create `frontend/src/api/demo/seed.ts` matching TS types in `frontend/src/api/types.ts`: 2 accounts ("Compte courant" EUR opening 2500 €, "Livret A" EUR opening 8000 €); ~180 transactions over the last 6 months with recurring items (loyer, salaire, EDF, internet, phone) and discretionary (courses, restos, transports) plus one large blip ("Vacances août 2026 —2 800 €"); 8 categories (Courses, Restaurant, Transport, Logement, Énergie, Loisirs, Santé + Salaire); 5 rules ("sncf" → Transport, "carrefour" → Courses, etc.); 3 budgets (Courses 400 €, Restaurant 150 €, Loisirs 100 €); 1 balance checkpoint on Compte courant 3 months ago (matches computed value → green diamond).
+      Public-safe: no real names, no real IBANs, no realistic emails; plausible-but-fake French vendors ("Café du Coin", "Boulangerie Martin"); amounts round-ish.
+      Wire `store.getState()` to load seed on first mount and after `reset()`.
+      Success criteria: (a) `tsc -b` passes; (b) seed constants match `frontend/src/api/types.ts`; (c) `store.reset()` restores exactly the seed.
 
+- [ ] Browser-only demo — Task 3: read-side handlers
+      Sub-task of the browser-only demo plan (Task 3). Depends on Task 2 landed. Frontend-only, direct commit to `main`.
+      Implement GET handlers in the demo adapter, highest-visibility first: `/api/auth/me` (returns `{userId:'demo', username:'Démo'}`, never 401), `/api/onboarding/status` (`{onboarded:true}`), `/api/accounts`, `/api/categories`, `/api/rules`, `/api/transfer-rules`, `/api/budgets`, `/api/settings`, `/api/transactions` (paginated + filterable: `account`, `from`, `to`, `q`, `page`, `limit`, `category`), `/api/reports/{balance,timeseries,categories,budget}` (compute on the fly, no caching), `/api/tri/groups` (group uncategorised by normalised label), `/health` (`{ok:true, mode:'demo'}`).
+      Each handler is a pure function of current store state. Unit tests per resource in `frontend/src/api/demo/__tests__/` asserting response shape matches `types.ts`.
+      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `dist-demo/`; (b) unit tests pass; (c) manual smoke — `VITE_DEMO=1 npm run dev` loads Dashboard/Transactions/Budgets against seed with zero network calls to `/api/*`.
+
+- [ ] Browser-only demo — Task 4: write-side handlers
+      Sub-task of the browser-only demo plan (Task 4). Depends on Task 3 landed. Frontend-only, direct commit to `main`.
+      Implement mutating handlers: `POST/PUT/DELETE /api/accounts[/…]`, `PATCH /api/transactions/:id` (inline category edit — sets `is_manual=true`), `POST/PUT/DELETE /api/categories[/…]` + `/api/rules[/…]` + `/api/budgets[/…]` + `/api/transfer-rules[/…]`, `POST /api/tri/assign` (bulk assign + optional rule creation), `POST /api/recategorize` (walk transactions, re-apply rules where `is_manual=false`), `PATCH /api/settings` (merge into JSONB blob), `GET /api/backup/export` (synthesise the JSON envelope; browser downloads via `Blob`).
+      Every write goes through `store.setState(mutator)`, persisting to `localStorage` in the same tick and notifying subscribers. Debounce localStorage persistence at 250 ms to avoid write storms during bulk ops.
+      Unit tests per handler.
+      Success criteria: (a) tests pass; (b) manual smoke — inline-edit a transaction category, refresh the page, edit survives.
+
+- [ ] Browser-only demo — Task 5: stubbed endpoints + "not available" modal
+      Sub-task of the browser-only demo plan (Task 5). Depends on Task 4 landed. Frontend-only, direct commit to `main`.
+      Stub `POST /api/imports` (all file types), `GET/POST /api/pdf-templates[/…]`, `POST /api/mcp/tokens[/…]` — each rejects with a typed `ApiError` whose `data.demoStub = true`.
+      Update `frontend/src/api/errorMessage.ts` to detect `demoStub` and return the French message: *"Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser."*
+      Create a shared `<DemoUnavailableModal>` component; wire it into the affected pages (Imports, PDF Templates, MCP tokens) so they open the modal when they catch a `demoStub` error.
+      Success criteria: attempting a PDF import in demo mode opens the modal instead of a raw error.
+
+- [ ] Browser-only demo — Task 6: demo banner + reset
+      Sub-task of the browser-only demo plan (Task 6). Depends on Task 5 landed. Frontend-only, direct commit to `main`.
+      Create `frontend/src/components/DemoBanner.tsx`. Only renders when `import.meta.env.VITE_DEMO === '1'`. Copy: *"Démo — vos actions sont enregistrées uniquement dans votre navigateur. [Réinitialiser la démo]"*. Reset button calls `store.reset()`, shows a toast "Démo réinitialisée.", and invalidates TanStack Query's cache. Mount inside `Layout.tsx` above the top bar. Layout height adjusts (banner is 32 px; the app's fixed offsets need to account for it).
+      Success criteria: banner visible only under `VITE_DEMO=1`; reset restores seed.
+
+- [ ] Browser-only demo — Task 7: docs-site integration
+      Sub-task of the browser-only demo plan (Task 7). Depends on Task 6 landed. Docs-site + README change; direct commit to `main`.
+      Add a `/docs/demo` page under `docs/` (Docusaurus) that iframes `/demo/` with a note explaining the sandboxing. Update `README.md` top: add a "Try the demo" badge just above the install badges, linking to the docs page. Update `docs/users/getting-started.md`: add a "Try before you install" callout at the top pointing to the demo URL.
+      Success criteria: (a) docs page renders locally; (b) README badge added; (c) getting-started callout added.
+
+- [ ] Browser-only demo — Task 8: CI + deploy to gh-pages
+      Sub-task of the browser-only demo plan (Task 8). Depends on Task 7 landed. Workflow change; direct commit to `main`.
+      Extend the existing docs workflow (or add `.github/workflows/demo.yml`): triggers on pushes to `main` that touch `frontend/**` or the workflow file. Runs `npm ci` in `frontend/`, `VITE_DEMO=1 npm run build:demo`, publishes `frontend/dist-demo/` into the `gh-pages` branch at `/demo/`, preserving Docusaurus content at `/`. Namespace localStorage key with `athena_demo_` prefix (already the plan).
+      Success criteria: on push, workflow is green; `https://gekkotron.github.io/Athena-Accounting/demo/` returns the demo app.
+
+- [ ] Browser-only demo — Task 9: tests + verification
+      Sub-task of the browser-only demo plan (Task 9). Depends on Task 8 landed. Direct commit to `main`.
+      Add unit tests per resource handler in `frontend/src/api/demo/__tests__/`, component test for `DemoBanner` (renders only under flag, reset clears state), Playwright smoke in `frontend/e2e/demo.spec.ts` (boot `VITE_DEMO=1 npm run preview`, land on `/`, click through Dashboard → Transactions → assign a category → Reset → assert seed comes back). Manual verification: `npm run build:demo`, `npx serve dist-demo`, walk every top-level nav item, confirm no network calls in DevTools.
+      Success criteria: unit + e2e tests green; manual verification clean.
+
+- [ ] Browser-only demo — Task 10: ship
+      Sub-task of the browser-only demo plan (Task 10). Depends on Task 9 landed. Direct commit to `main`.
+      Verify all previous sub-tasks completed. Push `main` to origin (only push here — earlier sub-tasks commit locally per project convention). Write a blog post announcing the demo (`website/blog/YYYY-MM-DD-browser-only-demo.md`) and link it in the next release notes.
+      Success criteria: `https://gekkotron.github.io/Athena-Accounting/demo/` is live; blog post published; every `- [ ]` in `docs/superpowers/plans/2026-07-18-browser-only-demo.md` ticked to `- [x]`.
 
 
 - [ ] User walkthroughs — screenshotted guides for core flows
@@ -39,12 +94,10 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
-- [ ] Browser-only demo mode — execute existing plan     <!-- blocked: 10-task plan (~30 API handlers incl. compound reports, unit + Playwright tests, GH Pages deploy job, banner, docs integration) is a multi-day human-supervised effort; not safely completable end-to-end in one headless dispatch when success requires every checkbox ticked and the constraint is direct-commit-to-main. Recommend splitting into per-task backlog items. -->
-      The implementation plan already exists at `docs/superpowers/plans/2026-07-18-browser-only-demo.md`. Execute it end-to-end.
-      Use `superpowers:subagent-driven-development` (or `superpowers:executing-plans` as fallback) — the plan is structured with `- [ ]` checkboxes across 10 tasks (adapter scaffolding, seed data, read/write handlers, stubbed endpoints for unsupported features, banner + reset, docs-site integration, CI deploy to `gh-pages` under `/demo/`, tests, ship).
-      Global constraints (repeated for the headless worker): frontend-only, no backend changes; direct commits on `main`, push only when the plan is fully done; every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`; seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes); French UI stays primary.
-      Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
 ## Done
+
+- [x] Browser-only demo mode — split into per-task backlog items
+      Original 10-task plan (`docs/superpowers/plans/2026-07-18-browser-only-demo.md`) was too large for a single headless dispatch. Split into 10 sub-tasks in `## Backlog` (Task 1: adapter scaffolding, Task 2: seed data, Task 3: reads, Task 4: writes, Task 5: stubs + modal, Task 6: banner + reset, Task 7: docs integration, Task 8: CI/deploy, Task 9: tests, Task 10: ship) so the orchestrator dispatches one at a time.
 
 - [x] Empty / loading / error state audit across all pages
       Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
