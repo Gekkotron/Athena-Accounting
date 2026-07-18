@@ -27,10 +27,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/contributors/database.md with real content
-      Cover PostgreSQL extensions and their rationale (`pg_trgm` for trigram-indexed full-text search, `unaccent` for accent folding, `pgcrypto` for MCP payload encryption); key tables and their invariants (users, accounts, transactions with normalised full-text columns, rules, budgets, envelopes, checkpoints, imports audit); how migrations are authored and applied (files under `backend/src/db/migrations/`, lexicographic order, one transaction each, tracked in `schema_migrations`); deferrable triggers for transaction splits; and the running-balance column setup. Cross-link to docs/contributors/architecture.md for the higher-level context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/contributors/database.md.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/contributors/database.md` returns nothing; (b) all three PostgreSQL extensions have a paragraph explaining why they are required; (c) FR mirror ships alongside EN.
 
 - [ ] Reconcile FR mirror of docs/users/mcp.md against latest EN version
       FR has 178 lines vs EN 279 — the FR translation lags several major EN updates. Read both files side by side, diff structure section-by-section, and port every missing paragraph/subsection into the FR mirror at website/i18n/fr/docusaurus-plugin-content-docs/current/users/mcp.md. Keep existing FR terminology (jeton, chiffrement, serveur MCP, etc.) — don't retranslate content that's already correct.
@@ -62,6 +58,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/contributors/database.md with real content
+      Cover PostgreSQL extensions and their rationale (`pg_trgm` for trigram-indexed full-text search, `unaccent` for accent folding, `pgcrypto` for MCP payload encryption); key tables and their invariants (users, accounts, transactions with normalised full-text columns, rules, budgets, envelopes, checkpoints, imports audit); how migrations are authored and applied (files under `backend/src/db/migrations/`, lexicographic order, one transaction each, tracked in `schema_migrations`); deferrable triggers for transaction splits; and the running-balance column setup. Cross-link to docs/contributors/architecture.md for the higher-level context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/contributors/database.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/contributors/database.md` returns nothing; (b) all three PostgreSQL extensions have a paragraph explaining why they are required; (c) FR mirror ships alongside EN.
 
 - [x] Fill in docs/contributors/code-map.md with real content
       Walk the repository top-down: root layout (frontend/, backend/, mcp/, desktop/, website/, docs/, .github/), then a per-directory tour of the top three (backend/src by module, frontend/src by module, mcp/src). For each subdirectory, one paragraph explaining what lives there and one example file to open first. Cover shared conventions — path aliases in tsconfig, the naming convention for tests (__tests__), where generated code lands (Drizzle migrations, OpenAPI clients if any). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
