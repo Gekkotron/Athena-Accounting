@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import './i18n';
 import App from './App';
-import { PrivacyProvider } from './contexts/PrivacyContext';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -24,11 +23,9 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <PrivacyProvider>
-          <Suspense fallback={<div />}>
-            <App />
-          </Suspense>
-        </PrivacyProvider>
+        <Suspense fallback={<div />}>
+          <App />
+        </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,

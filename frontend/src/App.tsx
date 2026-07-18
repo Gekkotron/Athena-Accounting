@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
+import { PrivacyProvider } from './contexts/PrivacyContext';
 import { TipsProvider } from './contexts/TipsContext';
 import { WelcomeTour } from './components/WelcomeTour';
 import { Layout } from './components/Layout';
@@ -98,46 +99,48 @@ export default function App() {
   }
 
   return (
-    <TipsProvider>
-      <WelcomeTour />
-      <Routes>
-        <Route path="/login" element={<Navigate to="/" replace />} />
-        <Route element={<Layout user={user} />}>
-          <Route index element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/budgets" element={<Navigate to="/budgets/plafonds" replace />} />
-          <Route path="/budgets/plafonds" element={<Plafonds />} />
-          <Route path="/budgets/enveloppes" element={<Enveloppes />} />
+    <PrivacyProvider>
+      <TipsProvider>
+        <WelcomeTour />
+        <Routes>
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route element={<Layout user={user} />}>
+            <Route index element={<Dashboard />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/budgets" element={<Navigate to="/budgets/plafonds" replace />} />
+            <Route path="/budgets/plafonds" element={<Plafonds />} />
+            <Route path="/budgets/enveloppes" element={<Enveloppes />} />
 
-          {/* Règles hub */}
-          <Route path="/regles" element={<HubLayout title={t('nav.items.rules')} tabs={RULES_TABS} />}>
-            <Route index element={<Navigate to="tri" replace />} />
-            <Route path="tri" element={<Tri />} />
-            <Route path="liste" element={<Rules />} />
-            <Route path="categories" element={<Categories />} />
+            {/* Règles hub */}
+            <Route path="/regles" element={<HubLayout title={t('nav.items.rules')} tabs={RULES_TABS} />}>
+              <Route index element={<Navigate to="tri" replace />} />
+              <Route path="tri" element={<Tri />} />
+              <Route path="liste" element={<Rules />} />
+              <Route path="categories" element={<Categories />} />
+            </Route>
+
+            {/* Comptes hub */}
+            <Route path="/comptes" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
+              <Route index element={<Accounts />} />
+              <Route path="motifs" element={<Patterns />} />
+            </Route>
+
+            {/* Données hub */}
+            <Route path="/donnees" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
+              <Route index element={<Navigate to="imports" replace />} />
+              <Route path="imports" element={<Imports />} />
+              <Route path="doublons" element={<Duplicates />} />
+              <Route path="modeles" element={<PdfTemplates />} />
+              <Route path="sauvegarde" element={<Backup />} />
+            </Route>
+
+            <Route path="/profil" element={<Profile />} />
+            <Route path="/reglages" element={<Settings />} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-
-          {/* Comptes hub */}
-          <Route path="/comptes" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
-            <Route index element={<Accounts />} />
-            <Route path="motifs" element={<Patterns />} />
-          </Route>
-
-          {/* Données hub */}
-          <Route path="/donnees" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
-            <Route index element={<Navigate to="imports" replace />} />
-            <Route path="imports" element={<Imports />} />
-            <Route path="doublons" element={<Duplicates />} />
-            <Route path="modeles" element={<PdfTemplates />} />
-            <Route path="sauvegarde" element={<Backup />} />
-          </Route>
-
-          <Route path="/profil" element={<Profile />} />
-          <Route path="/reglages" element={<Settings />} />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </TipsProvider>
+        </Routes>
+      </TipsProvider>
+    </PrivacyProvider>
   );
 }
