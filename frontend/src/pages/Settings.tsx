@@ -9,6 +9,7 @@ import { RangePicker, type RangeKey } from '../components/RangePicker';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../api/mcp';
 import { useTips } from '../contexts/TipsContext';
+import { LoadingBlock } from '../components/StateBlocks';
 
 export function Settings(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -56,7 +57,9 @@ export function Settings(): JSX.Element {
   if (!isReady) {
     return (
       <div className="max-w-xl">
-        <div data-testid="settings-skeleton" className="surface p-6 h-64 animate-pulse rounded-lg bg-ink-900" />
+        <div data-testid="settings-skeleton">
+          <LoadingBlock height="min-h-64" />
+        </div>
       </div>
     );
   }
