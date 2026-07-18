@@ -75,7 +75,7 @@ test.describe('walkthrough screenshots', () => {
       await page.goto('/login');
       await page.locator('input[autocomplete="username"]').fill(user);
       await page.locator('input[type="password"]').fill(pass);
-      await page.getByRole('button', { name: /Se connecter|Log in/i }).click();
+      await page.getByRole('button', { name: /Se connecter|Sign in/i }).click();
       // Login mutation navigates to '/' on success — wait for it explicitly
       // so downstream page.goto() calls don't race the auth redirect.
       await page.waitForURL('**/', { timeout: 10_000 });
