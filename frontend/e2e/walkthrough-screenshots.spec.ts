@@ -71,6 +71,13 @@ test.describe('walkthrough screenshots', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await shot(page, 'import-03-comptes-solde');
+
+    // Expand the checkpoints panel on the first account card so the drawer
+    // (year accordion + add-form) is visible for the walkthrough shot.
+    const firstToggle = page.getByRole('button', { name: /Points de contrôle|Checkpoints/i }).first();
+    await firstToggle.click();
+    await page.waitForTimeout(400);
+    await shot(page, 'import-04-checkpoints');
   });
 
   test('categorise-transactions', async ({ page }) => {

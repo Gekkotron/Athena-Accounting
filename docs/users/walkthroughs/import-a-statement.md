@@ -29,6 +29,22 @@ Rendez-vous sur **Comptes** dans la barre latérale. Chaque compte affiche son s
 
 ![Vérification du solde sur la page Comptes](./img/import-03-comptes-solde.png)
 
+### Ancrer un point de contrôle
+
+Une fois le solde vérifié, transformez-le en **point de contrôle**. Cliquez sur ▸ **Points de contrôle** en bas de la carte du compte pour ouvrir le tiroir chronologique, puis saisissez la date du relevé, le solde constaté et une note optionnelle (« Vérifié depuis le relevé papier », par exemple).
+
+Trois raisons de le faire dès maintenant :
+
+- **Garde-fou d'intégrité.** Chaque futur import est comparé silencieusement à tous les points de contrôle passés. Si un solde recalculé s'écarte de la référence d'un centime, Athena affiche l'écart — c'est le seul moyen fiable de détecter une transaction perdue lors d'un import, ou un doublon fusionné à tort des mois plus tard.
+- **Ancrage d'historique.** Vos comptes n'ont pas besoin d'être « propres depuis le jour 1 ». Ancrez le solde du jour, importez seulement les derniers mois, et Athena calcule tout ce qui vient après en s'appuyant sur cette ancre.
+- **Trace papier.** Chaque point porte une date et une note libre — les entrées les plus récentes s'ouvrent en tête du tiroir, groupées par année.
+
+![Tiroir des points de contrôle sur la carte du compte](./img/import-04-checkpoints.png)
+
+Sur le **Tableau de bord**, les points de contrôle apparaissent sous forme de losanges le long de la courbe du solde — verts quand le solde calculé correspond, teintés quand un écart est détecté. Passez la souris dessus pour lire l'écart exact entre le solde attendu et le solde calculé à cette date.
+
+![Losange de point de contrôle sur la courbe du solde](./img/reports-01-dashboard.png)
+
 ## Étapes suivantes
 
 Les transactions importées attendent d'être catégorisées. Continuez avec [Catégoriser les transactions](./categorise-transactions.md) pour créer vos premières règles et automatiser le tri.
