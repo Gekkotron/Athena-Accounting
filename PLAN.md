@@ -19,10 +19,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## Backlog
 
 
-- [ ] Fill in docs/users/dashboard.md with real content
-      Cover the anatomy of the Dashboard — Net Balance card, monthly averages, Insights panel, Trend chart with checkpoint diamonds, Category donut, Cash-flow Sankey — plus how the Range picker and Account scope pickers interact across cards and what filtering by donut slice does. Reference the existing shots in website/static/img/walkthroughs/en/reports-*.png where useful. Model tone on docs/users/walkthroughs/view-reports.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block. Keep the front matter as-is.
-      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/dashboard.md using the FR terminology (Tableau de bord, Évolution, Répartition par catégorie, Sankey des flux).
-      Success criteria: (a) `grep -n 'draft — content coming' docs/users/dashboard.md` returns nothing; (b) both EN and FR versions describe every visible Dashboard section; (c) links to referenced walkthrough images resolve.
 
 - [ ] Fill in docs/users/accounts-and-data.md with real content
       Cover the sections currently listed under "Planned sections" — creating and editing accounts, currency handling, marking an account as "invested", editing account order, merging duplicate accounts, checkpoints on the account card (already covered in the import walkthrough — cross-link rather than duplicate), and how the Data tab (Imports / Duplicates / PDF templates / Backup) fits in. Model tone on docs/users/importing.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -94,6 +90,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/users/dashboard.md with real content
+      Cover the anatomy of the Dashboard — Net Balance card, monthly averages, Insights panel, Trend chart with checkpoint diamonds, Category donut, Cash-flow Sankey — plus how the Range picker and Account scope pickers interact across cards and what filtering by donut slice does. Reference the existing shots in website/static/img/walkthroughs/en/reports-*.png where useful. Model tone on docs/users/walkthroughs/view-reports.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block. Keep the front matter as-is.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/dashboard.md using the FR terminology (Tableau de bord, Évolution, Répartition par catégorie, Sankey des flux).
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/dashboard.md` returns nothing; (b) both EN and FR versions describe every visible Dashboard section; (c) links to referenced walkthrough images resolve.
 
 - [x] Fill in docs/users/categorization.md with real content
       Cover the sections currently listed under "Planned sections" — bulk vs single categorisation from the Tri tab, creating a rule from a transaction, transfer rules, regenerating categories, how sources (auto / rule / manual) interact when a transaction is edited or re-imported. Model tone and length on shipped user docs like docs/users/importing.md and docs/users/backup-recovery.md — short paragraphs, one imperative per subsection, no lorem or placeholder text. Remove the "**Status:** draft — content coming." line and the entire "## Planned sections" block once every bullet is covered. Keep the front matter (title, sidebar_position) and any existing internal links intact. Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/categorization.md, reusing the FR terminology already established (point de contrôle, courbe du solde, enveloppe, Réglages, Tri, Règles) — the FR mirror is currently a stub and needs the same content in French.
