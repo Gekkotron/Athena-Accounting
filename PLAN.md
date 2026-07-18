@@ -54,6 +54,21 @@ Update `README.md`: append a bottom section linking `LICENSE`, `SECURITY.md`, an
 
 Success criteria: (a) all files exist at correct paths; (b) `grep -RIn '<any real-name variant>' LICENSE SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md .github/ISSUE_TEMPLATE .github/PULL_REQUEST_TEMPLATE.md` returns nothing; (c) `LICENSE` copyright line is exactly `Copyright (c) 2026 Gekkotron`; (d) `README.md` bottom section links all three community docs.
 
+### Browser-only demo mode — execute existing plan
+
+The implementation plan already exists at `docs/superpowers/plans/2026-07-18-browser-only-demo.md`. Execute it end-to-end.
+
+Use `superpowers:subagent-driven-development` (or `superpowers:executing-plans` as fallback) — the plan is structured with `- [ ]` checkboxes across 10 tasks (adapter scaffolding, seed data, read/write handlers, stubbed endpoints for unsupported features, banner + reset, docs-site integration, CI deploy to `gh-pages` under `/demo/`, tests, ship).
+
+Global constraints (repeated for the headless worker):
+- Frontend-only; no backend changes.
+- Direct commits on `main`; push only when the plan is fully done.
+- Every commit uses `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`.
+- Seed data is public-safe (no real names, IBANs, or emails; plausible French-vendor fakes).
+- French UI stays primary.
+
+Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
+
 ## In progress
 
 ## Done
