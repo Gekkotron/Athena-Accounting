@@ -56,6 +56,9 @@
     },
     "empty": "No transactions."
   },
+  "list": {
+    "errorTitle": "Couldn't load transactions"
+  },
   "row": {
     "selectAriaLabel": "Select the transaction {{label}}",
     "internalTransferBadge": "internal transfer",

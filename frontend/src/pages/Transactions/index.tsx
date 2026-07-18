@@ -13,6 +13,7 @@ import { FiltersBar } from './FiltersBar';
 import { TransactionModal } from './TransactionModal';
 import { parseAmountQuery } from './parseAmountQuery';
 import { listCheckpoints, createCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
+import { ErrorState } from '../../components/StateBlocks';
 
 export type { Filters } from './filters';
 import type { Filters } from './filters';
@@ -387,6 +388,13 @@ export function Transactions() {
         </div>
       )}
 
+      {txQ.isError ? (
+        <ErrorState
+          title={t('list.errorTitle')}
+          error={txQ.error}
+          onRetry={() => void txQ.refetch()}
+        />
+      ) : (
       <TransactionsTable
         transactions={txs}
         categories={categories}
@@ -432,6 +440,7 @@ export function Transactions() {
           setDeletingTx(tx);
         }}
       />
+      )}
 
       <div className="flex items-center justify-between text-sm text-ink-400">
         <div className="font-mono text-xs">
