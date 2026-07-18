@@ -10,11 +10,17 @@
 import { ApiError } from '../apiError';
 import { registerSeedProvider } from './store';
 import { buildSeedState } from './seed';
+// Circular by design: reads.ts imports registerHandler from this
+// module. Both are function declarations so the bindings are hoisted;
+// the call site (bottom of this file) runs after everything is defined.
+import { registerReadHandlers } from './handlers/reads';
 
 // Register the seed provider at adapter-load time so store.getState()
 // (first call, or after reset()) always has a seed to fall back to.
-// Handlers land in Task 3+; the map below stays empty for now.
 registerSeedProvider(buildSeedState);
+
+// Handler registration is lazy — the registerReadHandlers() call runs
+// once at bottom of this module, after registerHandler is declared.
 
 export { getState, setState, reset, subscribe, registerSeedProvider } from './store';
 
@@ -101,3 +107,6 @@ export async function apiUpload<T>(
     { demoStub: true, path },
   );
 }
+
+// Registrations run once registerHandler and reads.ts are both defined.
+registerReadHandlers();
