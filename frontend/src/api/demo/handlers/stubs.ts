@@ -13,13 +13,31 @@ function stub(_req: unknown): never {
 
 export function registerStubHandlers(): void {
   // File imports (multipart also stubbed via apiUpload in index.ts).
+  registerHandler('GET',    '/api/imports', stub);
+  registerHandler('GET',    '/api/imports/:id', stub);
+  registerHandler('DELETE', '/api/imports/:id', stub);
   registerHandler('POST',   '/api/imports', stub);
+  registerHandler('POST',   '/api/imports/preview', stub);
   registerHandler('POST',   '/api/imports/pdf', stub);
   registerHandler('POST',   '/api/imports/photo', stub);
   registerHandler('POST',   '/api/imports/pdf/templates', stub);
   registerHandler('POST',   '/api/imports/pdf/templates/preview', stub);
   registerHandler('GET',    '/api/imports/pdf/drafts/:id', stub);
   registerHandler('GET',    '/api/imports/pdf/drafts/:id/ocr-status', stub);
+
+  // Envelopes (Budgets → Enveloppes) — the report joins across
+  // transactions/categories/settings with SQL that has no demo
+  // equivalent. Stub the whole surface uniformly.
+  registerHandler('GET',    '/api/envelopes/report', stub);
+  registerHandler('GET',    '/api/envelopes/categories', stub);
+  registerHandler('POST',   '/api/envelopes/categories', stub);
+  registerHandler('PUT',    '/api/envelopes/categories/:categoryId', stub);
+  registerHandler('DELETE', '/api/envelopes/categories/:categoryId', stub);
+  registerHandler('GET',    '/api/envelopes/assignments', stub);
+  registerHandler('POST',   '/api/envelopes/assignments', stub);
+  registerHandler('GET',    '/api/envelopes/holds', stub);
+  registerHandler('POST',   '/api/envelopes/holds', stub);
+  registerHandler('POST',   '/api/envelopes/reallocate', stub);
 
   // PDF templates CRUD.
   registerHandler('GET',    '/api/pdf-templates', stub);

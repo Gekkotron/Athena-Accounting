@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isDemoStubError } from '../api/errorMessage';
 
 // Shared state primitives. Every page state (empty / loading / error) should
 // route through one of these — reusing existing ink/sage/clay tokens — so no
@@ -53,6 +54,13 @@ export function ErrorState({
   variant = 'card',
 }: ErrorStateProps): JSX.Element {
   const { t } = useTranslation('common');
+  // In the browser-only demo, backend-only endpoints fail with a
+  // demoStub / demoMissingHandler ApiError. Every call site already
+  // routes through ErrorState, so absorbing the demo case here means
+  // pages don't have to opt in one at a time.
+  if (isDemoStubError(error)) {
+    return <DemoUnavailableState variant={variant} />;
+  }
   const wrap =
     variant === 'card'
       ? 'rounded-2xl border border-clay-700/60 bg-clay-900/20 px-6 py-8 text-center'
