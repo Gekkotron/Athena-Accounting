@@ -17,8 +17,9 @@ coverage/
 # tesseract.js trained-language cache files (written to cwd during OCR tests)
 *.traineddata
 
-# Claude Code personal settings (never committed)
+# Claude Code personal settings (never committed) and runtime state
 .claude/settings.local.json
+.claude/*.lock
 
 # Desktop sidecar build artifacts (produced by desktop/scripts/build-sidecar.mjs)
 desktop/sidecar/node
