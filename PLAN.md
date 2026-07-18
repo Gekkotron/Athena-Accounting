@@ -18,8 +18,78 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
+- [ ] Fill in docs/users/categorization.md with real content
+      Cover the sections currently listed under "Planned sections" — bulk vs single categorisation from the Tri tab, creating a rule from a transaction, transfer rules, regenerating categories, how sources (auto / rule / manual) interact when a transaction is edited or re-imported. Model tone and length on shipped user docs like docs/users/importing.md and docs/users/backup-recovery.md — short paragraphs, one imperative per subsection, no lorem or placeholder text. Remove the "**Status:** draft — content coming." line and the entire "## Planned sections" block once every bullet is covered. Keep the front matter (title, sidebar_position) and any existing internal links intact. Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/categorization.md, reusing the FR terminology already established (point de contrôle, courbe du solde, enveloppe, Réglages, Tri, Règles) — the FR mirror is currently a stub and needs the same content in French.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/categorization.md` returns nothing; (b) "## Planned sections" is gone from both EN and FR versions; (c) FR mirror matches EN structure section-for-section.
 
+- [ ] Fill in docs/users/dashboard.md with real content
+      Cover the anatomy of the Dashboard — Net Balance card, monthly averages, Insights panel, Trend chart with checkpoint diamonds, Category donut, Cash-flow Sankey — plus how the Range picker and Account scope pickers interact across cards and what filtering by donut slice does. Reference the existing shots in website/static/img/walkthroughs/en/reports-*.png where useful. Model tone on docs/users/walkthroughs/view-reports.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block. Keep the front matter as-is.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/dashboard.md using the FR terminology (Tableau de bord, Évolution, Répartition par catégorie, Sankey des flux).
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/dashboard.md` returns nothing; (b) both EN and FR versions describe every visible Dashboard section; (c) links to referenced walkthrough images resolve.
 
+- [ ] Fill in docs/users/accounts-and-data.md with real content
+      Cover the sections currently listed under "Planned sections" — creating and editing accounts, currency handling, marking an account as "invested", editing account order, merging duplicate accounts, checkpoints on the account card (already covered in the import walkthrough — cross-link rather than duplicate), and how the Data tab (Imports / Duplicates / PDF templates / Backup) fits in. Model tone on docs/users/importing.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/accounts-and-data.md, reusing FR terminology (Comptes, Données, Doublons, Sauvegarde, points de contrôle).
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/accounts-and-data.md` returns nothing; (b) FR mirror matches EN section-for-section; (c) checkpoint content cross-links to the import walkthrough rather than being duplicated.
+
+- [ ] Fill in docs/users/security-and-privacy.md with real content
+      Cover the sections currently listed under "Planned sections" — the security model (LAN-only by default, session cookies rotated on login, argon2id password hashing with per-user salt), Postgres bound to 127.0.0.1, MCP endpoint token encryption, backup file cleartext caveat, and the privacy stance (no telemetry, no third-party analytics, no cloud). Cross-link to docs/users/backup-recovery.md and docs/reference/configuration.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/security-and-privacy.md using the FR terminology already in use for auth/session/backup topics.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/security-and-privacy.md` returns nothing; (b) both EN and FR versions cover the security model, hashing, network boundary, backup caveat, and privacy stance; (c) internal cross-links resolve.
+
+- [ ] Fill in docs/users/troubleshooting.md with real content
+      Cover the sections currently listed under "Planned sections" — common startup failures (Postgres port collision, `.env` missing, migration failure), import-time failures (PDF template not matching, OFX encoding, CSV format mismatch), balance mismatch (missed transaction, duplicate not merged, checkpoint drift), backup restore errors, and how to gather diagnostics (`docker compose logs`, `/health`, `/metrics`). Model tone on docs/users/backup-recovery.md — problem statement → cause → fix, one per subsection. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/troubleshooting.md using the terminology already established.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/troubleshooting.md` returns nothing; (b) both EN and FR versions cover startup, import, balance, backup, and diagnostics; (c) every subsection follows a problem → cause → fix shape.
+
+- [ ] Fill in docs/reference/configuration.md with real content
+      Enumerate every environment variable Athena reads (source of truth: `.env.example` plus any getEnv/process.env calls in backend/src and frontend). For each: name, default, valid values, effect, and which service consumes it (frontend / backend / postgres). Include the default host + container ports for the three main services. Include the persistent user settings surfaced on the Réglages page (chart gap threshold, default range, default account scope). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/configuration.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/configuration.md` returns nothing; (b) every env var in `.env.example` appears with default + effect; (c) FR mirror matches EN table row-for-row.
+
+- [ ] Fill in docs/reference/api-endpoints.md with real content
+      Document every route the frontend calls. Source of truth: `backend/src/http/routes/**/*.ts` — walk each `fastify.route(...)` call. For each endpoint: method, path, auth requirement, request shape (headers / query / body), response shape, notable side effects. Group by area (Auth, Onboarding, Accounts, Transactions, Imports, Rules and categorization, Dashboard aggregates, Budgets, Backup, MCP). Cross-link to `docs/contributors/architecture.md` for the request-flow context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/api-endpoints.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/api-endpoints.md` returns nothing; (b) every `fastify.route(...)` registration in backend/src has a corresponding entry in the doc; (c) FR mirror matches EN section-for-section.
+
+- [ ] Fill in docs/reference/glossary.md with real content
+      Build the French UI ↔ English terms mapping the file promises: navigation and tabs (Tri, Réglages, Comptes, Règles, Imports, Doublons), money terms (Disponible, Bloqué, Ventilation, Points de contrôle, Enveloppe), import terms (Relevé, Modèle, Ligne, Colonne, Doublon), chart and dashboard terms (Évolution, Répartition, Sankey des flux, Insights). Format as a two-column table (FR term → English equivalent) with a one-line context note per row. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/glossary.md — the FR version explains the same terms to French users landing on English documentation elsewhere on the site, so the table direction may reverse or the intro may reframe accordingly.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/glossary.md` returns nothing; (b) the glossary covers every FR label that appears in the app's sidebar and Dashboard; (c) both EN and FR versions ship.
+
+- [ ] Fill in docs/contributors/code-map.md with real content
+      Walk the repository top-down: root layout (frontend/, backend/, mcp/, desktop/, website/, docs/, .github/), then a per-directory tour of the top three (backend/src by module, frontend/src by module, mcp/src). For each subdirectory, one paragraph explaining what lives there and one example file to open first. Cover shared conventions — path aliases in tsconfig, the naming convention for tests (__tests__), where generated code lands (Drizzle migrations, OpenAPI clients if any). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/contributors/code-map.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/contributors/code-map.md` returns nothing; (b) every top-level directory in the repo is mentioned at least once with a reason to visit; (c) FR mirror ships alongside EN.
+
+- [ ] Fill in docs/contributors/database.md with real content
+      Cover PostgreSQL extensions and their rationale (`pg_trgm` for trigram-indexed full-text search, `unaccent` for accent folding, `pgcrypto` for MCP payload encryption); key tables and their invariants (users, accounts, transactions with normalised full-text columns, rules, budgets, envelopes, checkpoints, imports audit); how migrations are authored and applied (files under `backend/src/db/migrations/`, lexicographic order, one transaction each, tracked in `schema_migrations`); deferrable triggers for transaction splits; and the running-balance column setup. Cross-link to docs/contributors/architecture.md for the higher-level context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/contributors/database.md.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/contributors/database.md` returns nothing; (b) all three PostgreSQL extensions have a paragraph explaining why they are required; (c) FR mirror ships alongside EN.
+
+- [ ] Reconcile FR mirror of docs/users/mcp.md against latest EN version
+      FR has 178 lines vs EN 279 — the FR translation lags several major EN updates. Read both files side by side, diff structure section-by-section, and port every missing paragraph/subsection into the FR mirror at website/i18n/fr/docusaurus-plugin-content-docs/current/users/mcp.md. Keep existing FR terminology (jeton, chiffrement, serveur MCP, etc.) — don't retranslate content that's already correct.
+      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) `diff <(grep '^##' docs/users/mcp.md) <(grep '^##' website/i18n/fr/docusaurus-plugin-content-docs/current/users/mcp.md)` returns nothing; (c) FR code blocks / commands / env vars match EN verbatim.
+
+- [ ] Reconcile FR mirror of docs/users/getting-started.md against latest EN version
+      FR has 139 lines vs EN 188. The EN version has drifted forward — likely new sections on the two-path install (Docker vs Desktop), update.sh callout, or the demo pointer. Port any missing sections into website/i18n/fr/docusaurus-plugin-content-docs/current/users/getting-started.md preserving existing FR terminology.
+      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff between EN and FR is empty; (c) both language docs cover the two install paths and the demo link identically.
+
+- [ ] Reconcile FR mirror of docs/users/importing.md against latest EN version
+      FR has 92 lines vs EN 149. Diff structure, port missing sections into website/i18n/fr/docusaurus-plugin-content-docs/current/users/importing.md — likely the balance-checkpoint step, the PDF template wizard details, or the CSV/OFX format specifics. Preserve existing FR terminology.
+      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) FR references the same walkthrough shots as EN (via /img/walkthroughs/fr/ paths).
+
+- [ ] Reconcile FR mirror of docs/users/desktop-install.md against latest EN version
+      FR has 95 lines vs EN 147. Port the missing content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/desktop-install.md, keeping FR terminology (installateur, glisser-déposer, dossier de données, sauvegarde) consistent.
+      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) per-OS instructions (macOS / Windows / Linux) present in both.
+
+- [ ] Reconcile FR mirror of docs/users/backup-recovery.md against latest EN version
+      Reverse of the usual drift — FR has 127 lines vs EN 78. The FR version was written earlier and hasn't been trimmed to match the current, tighter EN structure. Rewrite website/i18n/fr/docusaurus-plugin-content-docs/current/users/backup-recovery.md to match the EN structure section-for-section, keeping the FR wording for content that survives the reorg and dropping content that no longer maps.
+      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) no orphaned FR-only section that has no EN equivalent.
+
+- [ ] Reconcile FR mirror of docs/users/README.md against latest EN version
+      FR has 20 lines vs EN 26 — likely one or two missing bullets or a paragraph. Port the delta into website/i18n/fr/docusaurus-plugin-content-docs/current/users/README.md.
+      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) internal links resolve.
 
 
 
