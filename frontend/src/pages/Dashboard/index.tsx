@@ -17,6 +17,8 @@ import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { AccountSelect } from './AccountSelect';
+import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { Link } from 'react-router-dom';
 
 export function Dashboard(): JSX.Element {
   const { t } = useTranslation('dashboard');
@@ -38,6 +40,9 @@ export function Dashboard(): JSX.Element {
   const currencies = balanceQ.data?.perCurrency ?? [];
   const accounts = accountsQ.data?.accounts ?? [];
   const primary = currencies[0];
+  const rootErr = accountsQ.error ?? balanceQ.error;
+  const rootLoading = accountsQ.isLoading || balanceQ.isLoading;
+  const rootEmpty = !rootLoading && !rootErr && accounts.length === 0;
 
   // Page-wide period and chart scope. Both seeded from user settings on
   // mount; in-session changes are ephemeral (no writeback). To make a
@@ -103,10 +108,36 @@ export function Dashboard(): JSX.Element {
         </div>
       </div>
       <SectionTip id="section:dashboard" />
-      <DashboardHero primary={primary} />
 
-      {/* Other currencies */}
-      {currencies.length > 1 && (
+      {rootErr && (
+        <ErrorState
+          title={t('error.title')}
+          error={rootErr}
+          onRetry={() => {
+            void accountsQ.refetch();
+            void balanceQ.refetch();
+            void seriesQ.refetch();
+          }}
+        />
+      )}
+
+      {rootEmpty && (
+        <EmptyState
+          title={t('empty.title')}
+          hint={t('empty.hint')}
+          action={
+            <Link to="/comptes" className="btn-primary text-sm">
+              {t('empty.cta')}
+            </Link>
+          }
+        />
+      )}
+
+      {!rootErr && !rootEmpty && <DashboardHero primary={primary} />}
+
+      {/* Sections below are hidden while the root queries are erroring or empty
+          — no point showing a wall of skeletons behind a top-level error. */}
+      {!rootErr && !rootEmpty && currencies.length > 1 && (
         <section className="flex flex-wrap gap-3">
           {currencies.slice(1).map((c) => (
             <div key={c.currency} className="surface-soft px-4 py-3">
@@ -119,16 +150,16 @@ export function Dashboard(): JSX.Element {
         </section>
       )}
 
-      {primary && <MoyennesMensuellesSection currency={primary.currency} />}
-      {primary && <InsightsSection currency={primary.currency} />}
-      <BudgetEnvelopeSection />
+      {!rootErr && !rootEmpty && primary && <MoyennesMensuellesSection currency={primary.currency} />}
+      {!rootErr && !rootEmpty && primary && <InsightsSection currency={primary.currency} />}
+      {!rootErr && !rootEmpty && <BudgetEnvelopeSection />}
 
       {/* Time series — the account scope and period picker sit in the card
           header (right-aligned). Both drive the donut and the Sankey below
           via the shared `range` / `chartScope` state, and each chart card
           mirrors the same control cluster for visibility. Persistent
           defaults live in Réglages; in-session changes are ephemeral. */}
-      {currencies.length > 0 && (
+      {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
@@ -143,7 +174,9 @@ export function Dashboard(): JSX.Element {
               <RangePicker value={range} onChange={setRange} />
             </div>
           </div>
-          {seriesQ.data && primary ? (
+          {seriesQ.isError ? (
+            <ErrorState variant="inline" error={seriesQ.error} onRetry={() => void seriesQ.refetch()} />
+          ) : seriesQ.data && primary ? (
             <BalanceChart
               points={chartPoints}
               currency={chartCurrency}
@@ -151,13 +184,13 @@ export function Dashboard(): JSX.Element {
               gapThresholdDays={settings.chartGapThresholdDays}
             />
           ) : (
-            <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
+            <LoadingBlock variant="inline" height="min-h-40" />
           )}
         </section>
       )}
 
       {/* Category breakdown — donut */}
-      {currencies.length > 0 && (
+      {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
@@ -182,7 +215,7 @@ export function Dashboard(): JSX.Element {
       )}
 
       {/* Cash-flow Sankey — follows the page range and account scope */}
-      {currencies.length > 0 && (
+      {!rootErr && !rootEmpty && currencies.length > 0 && (
         <SankeySection
           range={range}
           onRangeChange={setRange}

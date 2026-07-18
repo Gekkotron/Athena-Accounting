@@ -12,6 +12,7 @@ import {
 import { buildSankeyModel } from './sankey';
 import { Sankey } from '../../components/Sankey';
 import { AccountSelect } from './AccountSelect';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 interface Props {
   range: RangeKey;
@@ -93,9 +94,17 @@ export function SankeySection({
       </div>
 
       {isLoading ? (
-        <div className="h-40 animate-pulse rounded-lg bg-ink-900" />
+        <LoadingBlock variant="inline" height="min-h-40" />
       ) : isError ? (
-        <div className="text-sm text-clay-300">{t('sankey.loadError')}</div>
+        <ErrorState
+          variant="inline"
+          title={t('sankey.loadError')}
+          error={catListQ.error ?? reportQ.error}
+          onRetry={() => {
+            void catListQ.refetch();
+            void reportQ.refetch();
+          }}
+        />
       ) : model.totalIncome <= 0 ? (
         <div className="text-sm text-ink-400 display-italic">{t('sankey.noIncome')}</div>
       ) : (

@@ -1,5 +1,13 @@
 {
   "title": "Tableau de bord",
+  "empty": {
+    "title": "Bienvenue sur Athena",
+    "hint": "Commencez par créer un compte, puis importez vos premières transactions.",
+    "cta": "Créer un compte"
+  },
+  "error": {
+    "title": "Impossible de charger le tableau de bord"
+  },
   "hero": {
     "netBalance": "Solde net",
     "available": "Disponible",

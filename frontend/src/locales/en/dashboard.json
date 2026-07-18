@@ -1,5 +1,13 @@
 {
   "title": "Dashboard",
+  "empty": {
+    "title": "Welcome to Athena",
+    "hint": "Start by creating an account, then import your first transactions.",
+    "cta": "Create an account"
+  },
+  "error": {
+    "title": "Couldn't load the dashboard"
+  },
   "hero": {
     "netBalance": "Net balance",
     "available": "Available",

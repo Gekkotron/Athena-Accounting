@@ -6,6 +6,7 @@ import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/typ
 import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { buildInsights, monthLabel, type InsightTone } from './insights';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 const TONE_CLASS: Record<InsightTone, string> = {
   sage: 'text-sage-300',
@@ -74,7 +75,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
     return (
       <section>
         <div className="section-rule mb-4">{t('insights.title')}</div>
-        <div className="h-32 animate-pulse rounded-lg bg-ink-900" />
+        <LoadingBlock variant="inline" height="min-h-32" />
       </section>
     );
   }
@@ -109,9 +110,12 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
       </div>
 
       {catQ.isError ? (
-        <div className="surface p-5 text-sm text-clay-300">
-          {t('insights.loadError')}
-        </div>
+        <ErrorState
+          variant="inline"
+          title={t('insights.loadError')}
+          error={catQ.error}
+          onRetry={() => void catQ.refetch()}
+        />
       ) : insights.length === 0 ? (
         <div className="surface p-5 text-sm text-ink-400 display-italic">
           {t('insights.empty')}
