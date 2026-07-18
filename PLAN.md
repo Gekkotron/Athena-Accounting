@@ -21,10 +21,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/users/security-and-privacy.md with real content
-      Cover the sections currently listed under "Planned sections" — the security model (LAN-only by default, session cookies rotated on login, argon2id password hashing with per-user salt), Postgres bound to 127.0.0.1, MCP endpoint token encryption, backup file cleartext caveat, and the privacy stance (no telemetry, no third-party analytics, no cloud). Cross-link to docs/users/backup-recovery.md and docs/reference/configuration.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/security-and-privacy.md using the FR terminology already in use for auth/session/backup topics.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/users/security-and-privacy.md` returns nothing; (b) both EN and FR versions cover the security model, hashing, network boundary, backup caveat, and privacy stance; (c) internal cross-links resolve.
 
 - [ ] Fill in docs/users/troubleshooting.md with real content
       Cover the sections currently listed under "Planned sections" — common startup failures (Postgres port collision, `.env` missing, migration failure), import-time failures (PDF template not matching, OFX encoding, CSV format mismatch), balance mismatch (missed transaction, duplicate not merged, checkpoint drift), backup restore errors, and how to gather diagnostics (`docker compose logs`, `/health`, `/metrics`). Model tone on docs/users/backup-recovery.md — problem statement → cause → fix, one per subsection. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -86,6 +82,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/users/security-and-privacy.md with real content
+      Cover the sections currently listed under "Planned sections" — the security model (LAN-only by default, session cookies rotated on login, argon2id password hashing with per-user salt), Postgres bound to 127.0.0.1, MCP endpoint token encryption, backup file cleartext caveat, and the privacy stance (no telemetry, no third-party analytics, no cloud). Cross-link to docs/users/backup-recovery.md and docs/reference/configuration.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror the completed English content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/security-and-privacy.md using the FR terminology already in use for auth/session/backup topics.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/users/security-and-privacy.md` returns nothing; (b) both EN and FR versions cover the security model, hashing, network boundary, backup caveat, and privacy stance; (c) internal cross-links resolve.
 
 - [x] Fill in docs/users/accounts-and-data.md with real content
       Cover the sections currently listed under "Planned sections" — creating and editing accounts, currency handling, marking an account as "invested", editing account order, merging duplicate accounts, checkpoints on the account card (already covered in the import walkthrough — cross-link rather than duplicate), and how the Data tab (Imports / Duplicates / PDF templates / Backup) fits in. Model tone on docs/users/importing.md. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
