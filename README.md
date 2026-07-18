@@ -360,27 +360,125 @@ labels.
 
 ## Roadmap
 
-- [x] Étape 1 — Architecture + schema design
-- [x] Étape 2 — docker-compose + schema + `/health`
-- [x] Étape 3 — Auth + onboarding + accounts CRUD
-- [x] Étape 4 — OFX/CSV parsers + dedup
-- [x] Étape 5 — Rule engine + retroactive recategorization
-- [x] Étape 6 — Internal transfer detection
-- [x] Étape 7 — Transactions API + reports
-- [x] Étape 8 — Frontend: layout + dashboard + transactions + accounts + imports
-- [x] Étape 9 — "Tri des catégories" tab
-- [x] Étape 10 — Categories/rules UI + README polish
-- [x] Étape 11 — PDF bank statement import (heuristic + interactive template)
-- [x] Étape 12 — Points de contrôle (réconciliation visuelle par compte)
-- [x] Étape 13 — Réglages utilisateur (défauts par compte pour le dashboard et les doublons)
+Athena Accounting is a solo-maintained side project. The roadmap below is a
+**direction of travel**, not a schedule — see [`CHANGELOG.md`](CHANGELOG.md)
+for what's landed, [`STATUS.md`](STATUS.md) for the most recent work, and
+[`TODO.md`](TODO.md) for the raw brainstorm behind the v2 candidates.
 
-## Possible next steps (v2)
+### Milestones (v1)
 
-- A `/transfer-rules` UI page (the API exists)
-- Pie/bar charts on the dashboard (recharts or similar)
-- Multi-currency conversion via a small manual FX-rate table
-- Optional Ollama integration to suggest a category when no rule matches
-  (LLM stays local, behind a feature flag, default off — per the original spec)
+- [x] **Core** — imports (OFX/CSV), rule engine, retroactive
+      categorisation, transactions, accounts, dashboard, security baseline.
+- [x] **PDF + OCR imports** — interactive template wizard, multi-account
+      templates, content-based page filtering, auto-recovery re-train,
+      scanned-PDF and photo OCR (`tesseract.js`, LAN-only).
+- [x] **Dashboard depth** — balance chart with brush + checkpoints,
+      category donut, Insights panel, Sankey cash-flow.
+- [x] **Data richness** — sub-categories (2-level), transaction splits
+      (ventilation with DB-enforced sum), full-text search across
+      label/memo/notes.
+- [x] **Budgets v2** — monthly *or* yearly plafonds, optional per-account
+      scope, end-of-period projection, anomaly detection, cap suggestions,
+      unbudgeted-candidate surfacing.
+- [x] **Distribution** — Docker family-server + Tauri desktop app
+      (macOS/Windows/Linux) + browser-only demo, all from one codebase.
+- [x] **i18n** — English + French with browser detection (12 namespaces).
+- [x] **MCP** — end-to-end-encrypted local LLM access via a per-user token.
+- [x] **Ops** — Prometheus `/metrics`, backup export/import with a
+      scripted round-trip drill, backup docs per OS.
+- [x] **Trust polish** — LICENSE (MIT), SECURITY, CONTRIBUTING, CoC,
+      restyled docs site, screenshotted user walkthroughs.
+
+### Possible next steps (v2)
+
+Nothing here is committed — treat it as a menu contributors and sponsors
+can help prioritise. Grouped by theme; see [`TODO.md`](TODO.md) for the
+full brainstorm with per-item context.
+
+**Ergonomics** — small wins, high signal
+
+- `/transfer-rules` UI page (backend CRUD already exists)
+- Rule preview: show past transactions a rule *would have* matched before
+  saving it
+- Undo toast (~5 s) after a transaction or import deletion
+- Keyboard shortcuts on Transactions (`j`/`k` nav, `/` focus search,
+  `e` edit, `d` delete)
+- Reorder rules by drag-and-drop (priority is already stored)
+- Merge two accounts (for duplicates created by mistake)
+- Auto-suggest a rule when N transactions get the same category from Tri
+- Export a filtered CSV (category × date range, for tax declarations)
+- Rename a PDF template inline; edit template zones without re-uploading
+  the source PDF
+
+**Import surface expansion**
+
+- CAMT.053 / CAMT.052 (ISO 20022 SEPA XML) — widely exported by EU banks
+- MT940 (SWIFT text)
+- QIF (legacy, useful for old-software migration)
+- Migration paths from YNAB, Firefly III, GnuCash
+
+**Budgeting depth**
+
+- Envelope budgeting (Actual/YNAB-style zero-based allocation with
+  rollover) — larger posture shift vs. today's retrospective model,
+  spec required before implementation
+- Savings goals / tirelires (Firefly III-style) tied to an account, with
+  progress bar and optional deadline
+
+**Detection & automation**
+
+- Recurring-transaction detection (Netflix, salaire, loyer) with
+  "expected this month but not seen" alerts
+- Scheduled / future transactions
+- Rule-driven auto-splits (e.g. Amazon → 70 % Livres / 30 % Électro)
+
+**Data richness**
+
+- Transaction attachments (receipts, invoices — stored on the local
+  volume, no cloud)
+- Receipt OCR (image → date / montant / marchand), extending the PDF and
+  photo OCR stack
+- Custom report builder (Actual-style: choose dimensions, grouping,
+  range, then save the view)
+
+**Multi-currency**
+
+- Manual FX-rate table for the occasional USD/GBP account (no external
+  API dependency)
+- User-configurable date / number / currency formats
+
+**Security & privacy hardening**
+
+- 2FA TOTP (optional per user; login rate-limit is already in place)
+- App PIN lock — real re-authentication before revealing amounts, not
+  just the current inactivity blur
+- WebAuthn / passkey unlock
+
+**Platform**
+
+- Multi-arch Docker image (ARM64) — for homelabs that aren't x86
+- PWA (manifest + service worker, offline shell) for LAN mobile use
+- Public HTTP API reference + a small CLI for homelab scripting
+
+**Local LLM (feature-flagged, opt-in, always local)**
+
+- Category suggestion via Ollama when no rule matches
+- Natural-language explanation of an Insights panel anomaly
+
+### Explicitly *not* on the roadmap
+
+To keep expectations honest — these are deliberate scope choices, not
+oversights.
+
+- **Bank sync via cloud aggregators** (GoCardless, SimpleFIN, Nordigen,
+  Plaid). All of them route data through a third-party cloud, which
+  breaks the LAN-only guarantee. Import files instead.
+- **Multi-device sync via a hosted server.** Every browser on your LAN
+  already talks to the same self-hosted Athena; there's no per-device
+  local state to reconcile.
+- **A managed cloud offering or paid SaaS tier.** Athena is
+  self-hosted, MIT-licensed, and funded (if at all) by voluntary
+  sponsorship.
 
 ## Community
 
