@@ -25,10 +25,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Fill in docs/reference/glossary.md with real content
-      Build the French UI ↔ English terms mapping the file promises: navigation and tabs (Tri, Réglages, Comptes, Règles, Imports, Doublons), money terms (Disponible, Bloqué, Ventilation, Points de contrôle, Enveloppe), import terms (Relevé, Modèle, Ligne, Colonne, Doublon), chart and dashboard terms (Évolution, Répartition, Sankey des flux, Insights). Format as a two-column table (FR term → English equivalent) with a one-line context note per row. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
-      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/glossary.md — the FR version explains the same terms to French users landing on English documentation elsewhere on the site, so the table direction may reverse or the intro may reframe accordingly.
-      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/glossary.md` returns nothing; (b) the glossary covers every FR label that appears in the app's sidebar and Dashboard; (c) both EN and FR versions ship.
 
 - [ ] Fill in docs/contributors/code-map.md with real content
       Walk the repository top-down: root layout (frontend/, backend/, mcp/, desktop/, website/, docs/, .github/), then a per-directory tour of the top three (backend/src by module, frontend/src by module, mcp/src). For each subdirectory, one paragraph explaining what lives there and one example file to open first. Cover shared conventions — path aliases in tsconfig, the naming convention for tests (__tests__), where generated code lands (Drizzle migrations, OpenAPI clients if any). Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
@@ -70,6 +66,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Fill in docs/reference/glossary.md with real content
+      Build the French UI ↔ English terms mapping the file promises: navigation and tabs (Tri, Réglages, Comptes, Règles, Imports, Doublons), money terms (Disponible, Bloqué, Ventilation, Points de contrôle, Enveloppe), import terms (Relevé, Modèle, Ligne, Colonne, Doublon), chart and dashboard terms (Évolution, Répartition, Sankey des flux, Insights). Format as a two-column table (FR term → English equivalent) with a one-line context note per row. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
+      Mirror into website/i18n/fr/docusaurus-plugin-content-docs/current/reference/glossary.md — the FR version explains the same terms to French users landing on English documentation elsewhere on the site, so the table direction may reverse or the intro may reframe accordingly.
+      Success criteria: (a) `grep -n 'draft — content coming' docs/reference/glossary.md` returns nothing; (b) the glossary covers every FR label that appears in the app's sidebar and Dashboard; (c) both EN and FR versions ship.
 
 - [x] Fill in docs/reference/api-endpoints.md with real content
       Document every route the frontend calls. Source of truth: `backend/src/http/routes/**/*.ts` — walk each `fastify.route(...)` call. For each endpoint: method, path, auth requirement, request shape (headers / query / body), response shape, notable side effects. Group by area (Auth, Onboarding, Accounts, Transactions, Imports, Rules and categorization, Dashboard aggregates, Budgets, Backup, MCP). Cross-link to `docs/contributors/architecture.md` for the request-flow context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
