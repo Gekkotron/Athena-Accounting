@@ -70,13 +70,14 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## In progress
 
-- [ ] Browser-only demo — Task 4: write-side handlers     <!-- session: conv:claude:claude-178437870258534 -->
+## Done
+
+- [x] Browser-only demo — Task 4: write-side handlers
       Sub-task of the browser-only demo plan (Task 4). Depends on Task 3 landed. Frontend-only, direct commit to `main`.
       Implement mutating handlers: `POST/PUT/DELETE /api/accounts[/…]`, `PATCH /api/transactions/:id` (inline category edit — sets `is_manual=true`), `POST/PUT/DELETE /api/categories[/…]` + `/api/rules[/…]` + `/api/budgets[/…]` + `/api/transfer-rules[/…]`, `POST /api/tri/assign` (bulk assign + optional rule creation), `POST /api/recategorize` (walk transactions, re-apply rules where `is_manual=false`), `PATCH /api/settings` (merge into JSONB blob), `GET /api/backup/export` (synthesise the JSON envelope; browser downloads via `Blob`).
       Every write goes through `store.setState(mutator)`, persisting to `localStorage` in the same tick and notifying subscribers. Debounce localStorage persistence at 250 ms to avoid write storms during bulk ops.
       Unit tests per handler.
       Success criteria: (a) tests pass; (b) manual smoke — inline-edit a transaction category, refresh the page, edit survives.
-## Done
 
 - [x] Browser-only demo — Task 3: read-side handlers
       Sub-task of the browser-only demo plan (Task 3). Frontend-only, committed to `main`.

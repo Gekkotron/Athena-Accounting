@@ -15,6 +15,7 @@ import { buildSeedState } from './seed';
 // the call site (bottom of this file) runs after everything is defined.
 import { registerReadHandlers } from './handlers/reads';
 import { registerWriteHandlers } from './handlers/writes';
+import { registerStubHandlers } from './handlers/stubs';
 
 // Register the seed provider at adapter-load time so store.getState()
 // (first call, or after reset()) always has a seed to fall back to.
