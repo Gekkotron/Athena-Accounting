@@ -1,5 +1,6 @@
 {
   "title": "Rules",
+  "listErrorTitle": "Couldn't load rules",
   "subtitle": "Matching <1>is accent/case-insensitive</1>. \"Whole word\" prevents \"paye\" from matching \"payweb\".",
   "view": {
     "grouped": "By category",

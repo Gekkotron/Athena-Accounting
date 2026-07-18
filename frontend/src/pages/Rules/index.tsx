@@ -9,6 +9,7 @@ import { FlatTable } from './FlatTable';
 import { GroupedView } from './GroupedView';
 import { RuleCreateForm } from './RuleCreateForm';
 import type { GroupedEntry } from './types';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 type View = 'grouped' | 'flat';
 
@@ -189,7 +190,18 @@ export function Rules() {
         </div>
       </div>
 
-      {view === 'grouped' ? (
+      {(rulesQ.isError || catQ.isError) ? (
+        <ErrorState
+          title={t('listErrorTitle')}
+          error={rulesQ.error ?? catQ.error}
+          onRetry={() => {
+            void rulesQ.refetch();
+            void catQ.refetch();
+          }}
+        />
+      ) : (rulesQ.isLoading || catQ.isLoading) ? (
+        <LoadingBlock height="min-h-48" />
+      ) : view === 'grouped' ? (
         <GroupedView
           grouped={grouped}
           byId={byId}

@@ -1,5 +1,6 @@
 {
   "title": "Règles",
+  "listErrorTitle": "Impossible de charger les règles",
   "subtitle": "Matching <1>insensible aux accents/casse</1>. « Mot entier » empêche « paye » de matcher « payweb ».",
   "view": {
     "grouped": "Par catégorie",
