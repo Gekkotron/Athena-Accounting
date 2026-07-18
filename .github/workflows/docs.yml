@@ -1,4 +1,4 @@
-name: Deploy docs site
+name: Deploy docs site + browser-only demo
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
       - '!docs/superpowers/**'
       - '!docs/standalone-app-distribution.md'
       - 'website/**'
+      - 'frontend/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -31,14 +32,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          # cache-dependency-path takes a newline-separated glob so both
+          # lockfiles are hashed into the cache key.
           cache: 'npm'
-          cache-dependency-path: website/package-lock.json
-      - name: Install dependencies
+          cache-dependency-path: |
+            website/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install docs dependencies
         run: npm ci
         working-directory: website
-      - name: Build
+      - name: Build docs
         run: npm run build
         working-directory: website
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Build browser-only demo
+        run: npm run build:demo
+        working-directory: frontend
+
+      - name: Merge demo into docs artifact under /demo/
+        run: |
+          mkdir -p website/build/demo
+          cp -R frontend/dist-demo/. website/build/demo/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

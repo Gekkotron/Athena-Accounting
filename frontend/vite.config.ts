@@ -9,8 +9,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', ['VITE_']);
   const viteDemo = env.VITE_DEMO ?? '';
   const isDemo = viteDemo === '1';
+  // When VITE_DEMO=1 we're building for gh-pages under /Athena-Accounting/demo/.
+  // A build-time base override lets local previews still use '/'.
+  const demoBase = env.VITE_DEMO_BASE ?? '/Athena-Accounting/demo/';
   return {
     plugins: [react()],
+    base: isDemo ? demoBase : '/',
     define: {
       'import.meta.env.VITE_DEMO': JSON.stringify(viteDemo),
     },

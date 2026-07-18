@@ -23,7 +23,7 @@ if (!root) throw new Error('#root not found');
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <PrivacyProvider>
           <Suspense fallback={<div />}>
             <App />
