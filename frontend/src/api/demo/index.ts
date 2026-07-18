@@ -113,3 +113,54 @@ export async function apiUpload<T>(
 // Registrations run once registerHandler is defined.
 registerReadHandlers();
 registerWriteHandlers();
+registerStubHandlers();
+
+// Some pages (pdf-templates) use raw fetch() instead of api(); patch
+// window.fetch to route /api/* through the adapter so the demo mode
+// stays hermetic. Guarded on VITE_DEMO so the prod bundle can import
+// this module (through client.ts's unconditional import) without
+// mutating window.fetch.
+if (import.meta.env.VITE_DEMO === '1' && typeof window !== 'undefined' && typeof window.fetch === 'function') {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : (input as URL | Request).toString();
+    let path: string;
+    try {
+      path = new URL(url, window.location.origin).pathname;
+    } catch {
+      path = url;
+    }
+    if (!path.startsWith('/api/') && path !== '/health') {
+      return originalFetch(input, init);
+    }
+    const method = ((init?.method ?? 'GET') as string).toUpperCase() as
+      'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    let body: unknown = null;
+    if (init?.body) {
+      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : null; } catch { body = null; }
+    }
+    const req = { method, path, query: {}, body };
+    const found = findHandler(req);
+    if (!found) {
+      return new Response(
+        JSON.stringify({ error: `Demo: no handler for ${method} ${path}`, demoStub: true }),
+        { status: 501, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    try {
+      const result = await Promise.resolve(found.handler({ ...req, query: found.params }));
+      return new Response(JSON.stringify(result ?? {}), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        return new Response(
+          JSON.stringify({ error: err.message, ...(err.data && typeof err.data === 'object' ? err.data : {}) }),
+          { status: err.status, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      throw err;
+    }
+  };
+}

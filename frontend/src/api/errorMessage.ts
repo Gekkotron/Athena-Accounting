@@ -37,7 +37,20 @@ function extractCodeAndReason(err: unknown): { code: string | null; reason: stri
   return { code: null, reason: null };
 }
 
+// True when the error is one of the browser-only demo's "not
+// available" stubs. Callers can gate a friendlier modal on this;
+// errorMessage() itself already returns the French copy for us.
+export function isDemoStubError(err: unknown): boolean {
+  if (err instanceof ApiError && err.data && typeof err.data === 'object') {
+    return (err.data as { demoStub?: unknown }).demoStub === true;
+  }
+  return false;
+}
+
 export function errorMessage(err: unknown, t: TFunction): string {
+  if (isDemoStubError(err)) {
+    return "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser.";
+  }
   const { code, reason } = extractCodeAndReason(err);
   switch (code) {
     case 'pdf_encrypted':
