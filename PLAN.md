@@ -69,6 +69,23 @@ Global constraints (repeated for the headless worker):
 
 Success criteria: (a) `VITE_DEMO=1 npm run build` produces `frontend/dist-demo/`; (b) the GH Actions job publishes to `gh-pages` under `/demo/` alongside the docs site; (c) `https://gekkotron.github.io/Athena-Accounting/demo/` boots and lets a visitor navigate dashboard, transactions, and budgets against the seed with no network calls beyond static assets; (d) every `- [ ]` checkbox in the plan is ticked to `- [x]`.
 
+### Empty / loading / error state audit across all pages
+
+Systematically audit each page under `frontend/src/pages/` for empty, loading, and error states. Goal: no page can present a bare skeleton or a raw error object; every state has an intentional design. Public-launch trust polish.
+
+Scope (visibility-ordered): Dashboard → Transactions → Accounts → Budgets → Rules → Data → Imports → Settings → Profile → Login.
+
+For each page, cover the three states:
+- **Empty** (no data yet). Friendly onboarding block with a CTA — not a blank page.
+- **Loading** (fetch in-flight). Reuse existing skeleton components (`grep -r 'Skeleton' frontend/src/components/`) or a spinner block; no CLS.
+- **Error** (fetch failed, network offline, mutation rejected). Actionable error block with a retry — not a raw stack trace or `[object Object]`.
+
+Do NOT introduce new UI patterns or tokens. Reuse existing `ink-*`, `sage-*`, `clay-*` classes and existing component primitives. Do NOT touch the demo-mode adapter (separate task above).
+
+Deliverables: one commit series on `main` per page (per project convention — commits use `-c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github.com`); plus `docs/dev/state-audit.md` with one short entry per page recording what was found and what changed.
+
+Success criteria: (a) every page above has confirmed empty, loading, and error states via a manual walkthrough on the dev server; (b) `docs/dev/state-audit.md` has one entry per page; (c) no page renders a raw error object or a bare skeleton for more than ~300 ms.
+
 ## In progress
 
 ## Done
