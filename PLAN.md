@@ -13,8 +13,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-
-
 ### Cross-cutting risks to flag before starting
 
 - **PGlite maturity** — 0.x. Extensions and some advanced JSON features unsupported. Athena's schema doesn't use those, but each task above should be verified rather than assumed.
@@ -26,14 +24,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 ## In progress
-
-- [ ] Cut `v1.0.0-desktop-beta1` — mechanical release path only     <!-- blocked: tag pushed but the wrong workflow ran — (1) desktop-release.yml trigger `v*-desktop` doesn't match `v1.0.0-desktop-beta1` (needs trailing `-desktop`; fix to `v*-desktop*`); (2) release.yml `v*.*.*` DID match and failed because CHANGELOG.md has no `## [1.0.0-desktop-beta1]` section (also needs `paths-ignore` / tag-exclude for desktop tags). Both mitigations from this session were blocked (delete/retag denied by classifier; workflow_dispatch → HTTP 403 admin scope). Human fix: patch both workflow triggers, force-retag `v1.0.0-desktop-beta1`, then re-push. -->
-      Bump the release-visible version to `1.0.0-desktop-beta1` in the places the workflow expects (root `package.json` `version`, `desktop/src-tauri/Cargo.toml` `[package] version`, `desktop/src-tauri/tauri.conf.json` `productName`/`version` if present).
-      Draft release notes into `docs/RELEASES/v1.0.0-desktop-beta1.md`: pull commit subjects since the last non-desktop tag with `git log <last-release>..HEAD --oneline` (if no prior desktop tag exists, use the first commit of this branch as the base), group by category (features / fixes / infra), headline the Docker → Tauri pivot, note the Gatekeeper "unidentified developer" workaround for macOS, and include an empty "Manual verification" section with three checkboxes (macOS / Linux / Windows) for the human to tick after installing.
-      Commit the version bumps + release notes, then create an annotated tag: `git tag -a v1.0.0-desktop-beta1 -m "First desktop beta"`. Push both: `git push origin main v1.0.0-desktop-beta1`. This matches `.github/workflows/desktop-release.yml`'s `v*-desktop` pattern.
-      Watch the workflow to completion with `gh run watch` on the triggered run. Wait for all three matrix jobs to be green. If any fail, capture the run URL and treat as blocked (per contract clause 3). If green, promote the draft release to published via `gh release edit v1.0.0-desktop-beta1 --draft=false`.
-      **Do NOT attempt to launch `.exe` or `.AppImage` from this macOS session** — cross-OS install verification is the human-owned checklist under `## Manual checklist` in this file (parser-invisible section) and is expected to complete outside the orchestrator.
-      Success criteria: (a) version bumps + release notes committed, (b) `v1.0.0-desktop-beta1` tag on `origin`, (c) workflow green with three artifacts (`.dmg`, `.AppImage`, `.exe`) on the release, (d) release published (not draft).
 
 ## Done
 
