@@ -80,20 +80,41 @@ export async function recurringRoutes(app: FastifyInstance): Promise<void> {
           SELECT COUNT(*)::int FROM ${recurringSeriesTransactions}
           WHERE ${recurringSeriesTransactions.seriesId} = ${recurringSeries.id}
         )`,
-        // Majority-vote account across the series' member transactions.
-        // Groups by ${transactions.accountId}, picks the account with the
-        // highest count (ties break arbitrarily via ORDER BY). Returns
-        // NULL when the series has zero members. Used by the frontend
-        // forecast to avoid attributing a salary that lands on Checking
-        // to the Savings projection.
-        primaryAccountId: sql<number | null>`(
-          SELECT ${transactions.accountId}
-          FROM ${recurringSeriesTransactions}
-          JOIN ${transactions} ON ${transactions.id} = ${recurringSeriesTransactions.transactionId}
-          WHERE ${recurringSeriesTransactions.seriesId} = ${recurringSeries.id}
-          GROUP BY ${transactions.accountId}
-          ORDER BY COUNT(*) DESC
-          LIMIT 1
+        // Majority-vote the account this series primarily lands on.
+        // Tries two lookups in order via COALESCE:
+        //   1. Vote across the series' member rows in the join table.
+        //      Fast when members are populated.
+        //   2. Fall back to matching transactions by rawLabel = series.label,
+        //      scoped by userId. Handles the case where the join table
+        //      is empty for legacy reasons — e.g. the series was created
+        //      by an earlier detector run whose members have since been
+        //      dropped by a transaction re-import (ON DELETE CASCADE from
+        //      transactions.id), and no subsequent Regenerate has been
+        //      able to re-link them because the detector now chooses a
+        //      different bestLabel and the preserve-key (label|cadence)
+        //      doesn't match.
+        // Returns NULL only when neither lookup finds anything —
+        // legitimately unknown; the frontend then falls through to
+        // "include everywhere" so the projection stays useful.
+        primaryAccountId: sql<number | null>`COALESCE(
+          (
+            SELECT ${transactions.accountId}
+            FROM ${recurringSeriesTransactions}
+            JOIN ${transactions} ON ${transactions.id} = ${recurringSeriesTransactions.transactionId}
+            WHERE ${recurringSeriesTransactions.seriesId} = ${recurringSeries.id}
+            GROUP BY ${transactions.accountId}
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+          ),
+          (
+            SELECT ${transactions.accountId}
+            FROM ${transactions}
+            WHERE ${transactions.userId} = ${recurringSeries.userId}
+              AND ${transactions.rawLabel} = ${recurringSeries.label}
+            GROUP BY ${transactions.accountId}
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+          )
         )`,
       })
       .from(recurringSeries)
