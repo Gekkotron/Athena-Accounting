@@ -235,6 +235,337 @@ Relaunch the app, go through onboarding, then use **Settings → Data →
 Restore** with your latest export. Keep the `.corrupt` file until
 you've verified the restore — it's your last-resort recovery source.
 
+## Categorization and rules
+
+### A rule stops matching new transactions
+
+**Symptom.** A rule that worked for months suddenly misses new
+transactions from the same source. Their category stays blank in
+**Transactions** and the Tri queue picks them up.
+
+**Cause.** Your bank changed the memo format — a prefix moved, a
+merchant code shifted, or an OFX importer started keeping the raw
+tag where a PDF importer used to strip it. Rules match against the
+*normalised* memo, so even a small change breaks the match.
+
+**Fix.** Open **Rules → Tri**, find one of the miscategorised rows,
+and click **"règle depuis cette transaction"** — the form pre-fills
+with the current normalised memo so you can widen the matcher (e.g.
+switch a `startsWith` to `contains`, or accept an extra optional
+suffix). Delete the stale rule once the new one covers the same span.
+
+### The same transaction gets recategorised every time it appears
+
+**Symptom.** You edit a transaction's category by hand, save, and the
+next morning it's back to the "wrong" category — reproducibly.
+
+**Cause.** A rule you forgot about matches this memo and runs on every
+categorisation sweep, so your manual edit is overwritten. A manual
+category set on a transaction that a rule also matches is treated as
+"weaker" than the rule.
+
+**Fix.** In **Rules → Règles**, filter by the memo fragment; the
+offending rule surfaces at the top. Either narrow it (add an amount
+band, a bank-code prefix, or an exclusion) or delete it and add a more
+specific replacement. If you truly want your manual edit to stick,
+promote it to a rule — it will then win over any broader matcher.
+
+### Renaming a category leaves old transactions on the old name
+
+**Symptom.** You rename `Courses` → `Alimentation` in the category
+tree, but transactions imported before the rename still show `Courses`
+in exports, and the dashboard splits the pie into two slices.
+
+**Cause.** Categories are stored by id, not by name — so a rename
+updates future references correctly, but the display in some cached
+views can lag until the affected months are re-aggregated.
+
+**Fix.** Trigger a re-render: switch the dashboard range to a
+different month and back, or reload the page. If two slices persist,
+you actually have two distinct category ids — merge them from
+**Rules → Categories** (drag one onto the other).
+
+## Budgets and envelopes
+
+### An envelope is over budget by the amount of a transfer
+
+**Symptom.** Your `Loyer` envelope should be exactly on target this
+month, but the budget page shows it over by the amount of a transfer
+between two of your own accounts.
+
+**Cause.** The transfer leg didn't get tagged as an internal transfer
+during import, so it's still categorised as a normal outflow and
+counts against the envelope's cap.
+
+**Fix.** Open the transaction, click **"marquer comme virement
+interne"**, and pick the counterpart account. The envelope
+recomputes; the pair is excluded from budget totals from now on. To
+prevent it recurring, add a **Transfer rule** matching the memo and
+direction (see [API endpoints](../reference/api-endpoints) → Transfer
+rules).
+
+### A category I use every month isn't in the budget view
+
+**Symptom.** You see a category on the dashboard, but the Plafonds
+page doesn't list it — so you can't cap it.
+
+**Cause.** The budget view only shows categories that have at least
+one plafond set (past or present). A brand-new category that's never
+had a cap is invisible until you add one.
+
+**Fix.** Open **Budgets → Plafonds**, click **+ Ajouter un plafond**,
+pick the category, and set a cap (even a placeholder of 0 works — the
+row will appear in future months and you can adjust from there).
+
+### Rollover from last month didn't carry over
+
+**Symptom.** You had a positive balance in an envelope at end of
+month, expected it to roll forward, but the new month starts from
+zero.
+
+**Cause.** Rollover is per-envelope, not per-category, and it's off
+by default on newly-created envelopes. Categories that only have a
+plafond (no envelope) never roll over — that's a plafond, not a
+sinking fund.
+
+**Fix.** Open **Budgets → Enveloppes**, edit the envelope, and toggle
+**"reporter le solde"**. The next month's opening balance will
+include the prior month's leftover. To backfill *this* month, add a
+one-off adjustment entry inside the envelope for the missing amount.
+
+## Recurring and forecast
+
+### Forecast page says "no confirmed series"
+
+**Symptom.** You open **Récurrent → Prévision** and see an empty state
+telling you to confirm series first, even though the Détectés tab
+lists several.
+
+**Cause.** The forecast only projects **confirmed** series by design
+— an unconfirmed detection is a guess, and letting guesses drive a
+6-month balance curve produces misleading projections. This is the
+default, not a bug.
+
+**Fix.** Open **Récurrent → Détectés**, review each row, and click
+**Confirmer** on the ones that are real recurring bills. The forecast
+picks them up immediately. If you *want* the guess-inclusive view for
+a quick sanity check, toggle **"inclure les séries détectées"**
+directly on the Prévision page — a checkbox appears when only
+detected series exist.
+
+### A monthly bill is missing from Détectés
+
+**Symptom.** You pay the same subscription every month, but Athena
+never surfaced it under **Récurrent → Détectés**.
+
+**Cause.** The detector needs at least three occurrences with a
+stable memo *and* a regular cadence. If the amount varies a lot (a
+variable-price utility bill), or the memo changes between charges
+(some card processors rotate a suffix), the detector skips it.
+
+**Fix.** Add the series manually: **Récurrent → Détectés → + Ajouter
+une série**, pick the account, a memo pattern, an amount range, and
+a cadence. Confirm it and it starts feeding Upcoming and Prévision on
+the next tick.
+
+### Upcoming shows the same bill twice this month
+
+**Symptom.** **Récurrent → À venir** lists two entries for the same
+recurring series in the current month.
+
+**Cause.** The month covers a "long" period between two occurrences
+of a bi-weekly or 28-day cadence, so two payments genuinely fall in
+the same calendar month — this is correct behaviour, not a duplicate.
+Alternatively, a one-off ad-hoc payment on the same date as the
+projected occurrence has been included in the upcoming list.
+
+**Fix.** Check the dates. If both are legitimate cadence hits, leave
+them. If one is an ad-hoc payment you don't want projected, edit the
+series and pin its **next occurrence date** to the correct one — the
+duplicate drops off.
+
+## MCP access
+
+### Tools don't appear in the client
+
+**Symptom.** You wired the `athena` MCP server into your client's
+config, restarted the client, and the six Athena tools
+(`search_transactions`, `create_transaction`, …) still don't show up.
+
+**Cause.** Either the `command`/`args` path in the client config
+doesn't resolve to a built `mcp/` module, or the module is present
+but wasn't built after an update (missing `dist/`), or the client
+never re-read its config.
+
+**Fix.** From the repo, run `cd mcp && npm install && npm run build`.
+Verify the `command` in the client config points at the built entry
+(usually an absolute path to `mcp/dist/index.js`). Fully quit and
+relaunch the client — restart-in-place is not enough for most MCP
+clients.
+
+### Every tool call returns "unauthorized"
+
+**Symptom.** Tools appear in the client, but any call fails with
+`unauthorized` or `invalid token`.
+
+**Cause.** The `ATHENA_MCP_TOKEN` in the client config is empty,
+truncated on paste, or was rotated in Athena and not updated in the
+client.
+
+**Fix.** In Athena, open **Réglages → MCP**, revoke and regenerate
+the token, copy it whole (they're long — mind the terminal wrap),
+paste into the client config, restart the client. Also check the
+`ATHENA_MCP_USER` matches your login username exactly (case matters).
+
+### `reconcile_statement` says the PDF path is not readable
+
+**Symptom.** Every other MCP tool works, but `reconcile_statement`
+fails with `path not readable` or `no such file`.
+
+**Cause.** MCP tools run in the client's process, so relative paths
+resolve against the *client's* working directory — usually not where
+your statements live. Passing a bare filename fails unless
+`ATHENA_STATEMENTS_DIR` is set.
+
+**Fix.** Either pass an absolute path to the PDF, or set
+`ATHENA_STATEMENTS_DIR` in the client's `env` block to the folder
+your statements live in — then a bare filename resolves against that
+folder. See [MCP access](./mcp) for the full config shape.
+
+## Login and session
+
+### "Session expired" prompts every time you reopen the app
+
+**Symptom.** You log in, work for a minute, close the tab or the
+window; on returning you're immediately kicked back to the login
+screen.
+
+**Cause.** Either the browser is refusing to store the session
+cookie (private browsing, third-party-cookie block on a subdomain
+setup), or `SESSION_SECRET` changed between the moment you logged in
+and now (e.g. the stack was restarted with a freshly-generated
+value), which invalidates every cookie already issued.
+
+**Fix.** Use a regular (non-private) window. If you're behind a
+reverse proxy, make sure it doesn't strip or rewrite the `Set-Cookie`
+header. Confirm `SESSION_SECRET` in `.env` is stable across restarts
+— never regenerate it after the initial setup unless you want to log
+everyone out on purpose.
+
+### Fresh install won't accept any credentials
+
+**Symptom.** On a brand-new install, the login page rejects
+everything you try, and there's no obvious sign-up link.
+
+**Cause.** Athena is single-user per install and does not expose a
+public sign-up. The first user must be seeded — either via the
+desktop app's onboarding flow, or, on Docker, via the backend's
+first-run command.
+
+**Fix.** Desktop: reopen the app to the onboarding screen. Docker:
+follow the setup instructions in
+[Getting started](./getting-started) → *Create the first user*. If
+you already ran through onboarding but forgot the password, the fix
+is a database-level reset (there is no email-based reset flow, by
+design — no email server, no external dependency).
+
+## Desktop app updates
+
+### macOS Gatekeeper blocks the first launch
+
+**Symptom.** Double-clicking the downloaded `.dmg` or `.app` produces
+a dialog like *"Athena Accounting cannot be opened because Apple
+cannot check it for malicious software"*.
+
+**Cause.** The build is signed but not notarised for every macOS
+version, or Gatekeeper is being extra-cautious about a newly-issued
+signing certificate.
+
+**Fix.** Right-click the app icon → **Open** (not double-click) —
+this shows an "Open anyway" dialog that only appears via the right-
+click path. Alternatively: **System Settings → Privacy & Security**,
+scroll to the "Athena Accounting was blocked…" message, click **Open
+anyway**.
+
+### App won't start after an update
+
+**Symptom.** The app updated silently overnight; today it bounces in
+the Dock (macOS) or the process starts and immediately exits
+(Windows/Linux), with no visible window.
+
+**Cause.** A previous instance is still holding the PGlite database
+file, or the updater couldn't finish overwriting one of the app's
+resources.
+
+**Fix.** Force-quit every running instance (macOS: `⌘⌥⎋` → Athena
+Accounting → Force Quit; Windows: Task Manager → End task on every
+Athena process). Relaunch. If the crash repeats, follow
+[`athena.db` is corrupted](#athenadb-is-corrupted-desktop-app) — the
+file may have been left mid-write by the update.
+
+### Auto-update sits at "Downloading…" forever
+
+**Symptom.** The updater says it's downloading a new version, but the
+progress bar never moves, or it retries repeatedly.
+
+**Cause.** The GitHub Releases CDN is momentarily unreachable, or a
+corporate proxy / VPN is intercepting the connection with a
+certificate the updater doesn't trust.
+
+**Fix.** Cancel the in-app update, download the latest installer
+directly from
+[GitHub Releases](https://github.com/Gekkotron/Athena-Accounting/releases),
+and install over the current version — your local data is
+preserved.
+
+## Performance
+
+### Dashboard takes several seconds to render
+
+**Symptom.** Opening the dashboard on the "year to date" range
+takes noticeably long — 3–10 seconds — after your transaction table
+grew past ~50k rows.
+
+**Cause.** The heaviest widgets (Sankey, per-category breakdown,
+timeseries) each pull their own aggregate. On a wide range with a
+large history, the aggregate queries dominate.
+
+**Fix.** Narrow the default range to the current quarter — most
+users never look further back day-to-day. If you regularly need the
+full-year view, pin it to the Reports tab instead, and pre-warm the
+cache by opening it once at the start of the day.
+
+### Import feels slow on a big PDF
+
+**Symptom.** Importing a 20+ MB statement PDF takes minutes; the
+progress bar sits at "extracting text" for a long time.
+
+**Cause.** OCR passes over every page of a scanned PDF (scanned
+statements from older banks are the usual culprit), even if only a
+handful of pages contain a transaction table.
+
+**Fix.** Split the PDF to the relevant pages before importing —
+`pdftk statement.pdf cat 3-8 output slice.pdf`, or use Preview.app
+on macOS. If your bank consistently produces scanned PDFs, ask them
+for text-based exports (usually available under a different menu
+item).
+
+### A transaction you know exists doesn't show up in search
+
+**Symptom.** You search by memo, amount, or date, and a transaction
+you can see in the account view doesn't appear in the results.
+
+**Cause.** Search matches against the *normalised* memo (accents
+stripped, punctuation collapsed), not the raw one you see in the
+list — a search for `café` finds `Café` but not `CAFE-BAR` if the
+normalisation kept the dash.
+
+**Fix.** Search on a fragment rather than a full word (`caf` instead
+of `café`), or search by amount (unique amounts are the fastest way
+to find a specific row). See [Categorization](./categorization) for
+how the normalisation pipeline works — the same rules apply to
+search.
+
 ## Gathering diagnostics
 
 Before opening an issue, collect these three things — they resolve
