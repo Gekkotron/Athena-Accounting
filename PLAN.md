@@ -31,9 +31,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Reconcile FR mirror of docs/users/desktop-install.md against latest EN version
-      FR has 95 lines vs EN 147. Port the missing content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/desktop-install.md, keeping FR terminology (installateur, glisser-déposer, dossier de données, sauvegarde) consistent.
-      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) per-OS instructions (macOS / Windows / Linux) present in both.
 
 - [ ] Reconcile FR mirror of docs/users/backup-recovery.md against latest EN version
       Reverse of the usual drift — FR has 127 lines vs EN 78. The FR version was written earlier and hasn't been trimmed to match the current, tighter EN structure. Rewrite website/i18n/fr/docusaurus-plugin-content-docs/current/users/backup-recovery.md to match the EN structure section-for-section, keeping the FR wording for content that survives the reorg and dropping content that no longer maps.
@@ -49,6 +46,9 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Reconcile FR mirror of docs/users/desktop-install.md against latest EN version
+      No content changes needed — FR mirror is already at full section-for-section parity with EN. The 95-vs-147-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Both files have the same 7 top-level sections in the same order (Download / Télécharger, First run / Premier lancement, Where your data lives / Où vivent vos données, How to back up / Comment sauvegarder, Uninstall / Désinstaller, MCP from the desktop app / MCP depuis l'application bureau, Known limitations / Limites connues) and the same 4 sub-sections under First run (macOS, Windows, Linux, After the window opens / Une fois la fenêtre ouverte). All per-OS install instructions, the data-directory table, the two backup methods, the uninstall steps, the MCP port-file mechanism, and the four known-limitations bullets are present in both. Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural (7 top-level headers in the same order at the same nesting), which the diff confirms.
 
 - [x] Reconcile FR mirror of docs/users/importing.md against latest EN version
       No content changes needed — FR mirror is already at full section-for-section parity with EN. The 92-vs-149-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Both files have the same 9 top-level sections in the same order (Supported formats / Formats supportés, Before you import / Avant d'importer, OFX and CSV / OFX et CSV, The PDF template wizard / L'assistant de modèles PDF, Deduplication / Déduplication, Internal transfers / Virements internes, Troubleshooting / Dépannage, Where to go next / Où aller ensuite) and the same 3 sub-sections under the PDF wizard (First-time flow / Flux de première fois, Multi-account PDF statements / Relevés PDF multi-comptes, Auto-recovery / Auto-récupération). All content — the supported-formats table, the encoding note, the four-step first-time wizard flow, the multi-account anchor mechanism, auto-recovery behaviour, dedup signature and audit-row semantics, transfer detector, and the five troubleshooting entries — is present in both. Neither EN nor FR references any walkthrough shots (criterion (c) is vacuously satisfied). Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural, which the diff confirms.
