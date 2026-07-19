@@ -18,8 +18,13 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-
-
+- [ ] Récurrent — Task 1: detection substrate (schema + algorithm + API)
+      Data model: new Drizzle table `recurring_series` with columns id (uuid pk), user_id (fk users), label (text canonical), cadence_days (int; expect 7 | 30 | 90 | 365), avg_amount (numeric(14,2)), amount_stddev (numeric(14,2)), category_id (fk categories nullable), first_seen_at (timestamptz), last_seen_at (timestamptz), next_due_at (timestamptz), status (enum: `detected|confirmed|dismissed`, default `detected`), essentialness (enum: `essential|discretionary` nullable), created_at, updated_at. Plus join table `recurring_series_transactions` (series_id fk cascade, transaction_id fk cascade, primary key on both). Migration must apply cleanly on Postgres AND PGlite — sweep for driver quirks the way earlier PGlite tasks did.
+      Detection algorithm: `backend/src/services/recurring-detect.ts`. Reads the user's transactions from the last 12 months, groups by fuzzy label (port the label-similarity helper from `frontend/src/lib/label-similarity.ts` to a shared backend location — do not duplicate; extract to `backend/src/lib/label-similarity.ts` and re-export from the frontend if it lives outside a browser-only surface, else keep two copies with a comment linking them and a shared test fixture). Within each label bucket, group by cadence (weekly=7±20% / monthly=30±20% / quarterly=90±20% / yearly=365±20%) and amount (±15% of median). Emit a series when ≥3 occurrences span ≥2 full cadence periods. Populate first_seen_at/last_seen_at from member transactions; compute next_due_at = last_seen_at + cadence_days.
+      Endpoints (`backend/src/http/routes/recurring.ts`): `GET /api/recurring` returns all series for the current user, ordered by monthly-equivalent amount descending, includes member-transaction count per series; `PATCH /api/recurring/:id` updates status and/or essentialness; `POST /api/recurring/regenerate` re-runs detection — deletes series in `status=detected` that no longer match, preserves `confirmed`/`dismissed` decisions and their essentialness even if the underlying pattern shifts.
+      Wire: append a call to the detector at the end of the successful-import path (find the completion hook the existing import routes use; run detection async but await enough to keep the request atomic — mirror how transfer-rule recalculation is triggered today).
+      No UI in this task.
+      Success criteria: (a) `npm test` in `backend/` passes including new tests for the detection algorithm and PATCH round-trip; (b) migration applies on `DB_DRIVER=postgres` and `DB_DRIVER=pglite`; (c) a scripted smoke run seeding 6 months of "SPOTIFY 9.99" transactions once/month yields exactly one detected series with cadence_days=30, avg_amount≈9.99, status=detected; (d) marking the series essentialness=essential then calling regenerate keeps status/essentialness unchanged.
 
 
 
