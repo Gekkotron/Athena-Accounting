@@ -37,15 +37,19 @@ function addDaysIso(iso: string, days: number): string {
   return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
 }
 
-// Walk `lastSeen` forward in cadence-day steps until the returned date
-// is strictly ≥ startDate. Mirrors backend/routes/recurring.ts.
+// Return the first *future* occurrence of the series (≥ startDate). The
+// walk starts one cadence AFTER lastSeen — never at lastSeen itself,
+// because that occurrence is already reflected in startBalance and
+// counting it again would inflate the projection by one avgAmount per
+// series on the very first day (real bug: a just-received salary
+// produced a +avgAmount step on day 1 of the projection).
 function firstOccurrenceOnOrAfter(
   lastSeen: string,
   cadenceDays: number,
   startDate: string,
 ): string | null {
   if (cadenceDays <= 0) return null;
-  let next = lastSeen;
+  let next = addDaysIso(lastSeen, cadenceDays);
   for (let i = 0; i < 5000; i++) {
     if (next >= startDate) return next;
     next = addDaysIso(next, cadenceDays);

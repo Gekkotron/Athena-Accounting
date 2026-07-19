@@ -137,18 +137,37 @@ describe('projectBalance', () => {
     expect(projectBalance({ startBalance: 0, series: [], horizonDays: -1, startDate: '2026-08-01' })).toEqual([]);
   });
 
-  it('handles lastSeen already in the future (skips past occurrences)', () => {
-    // lastSeen after startDate should just fire from lastSeen forward.
+  it('never re-counts lastSeen itself (it is already in startBalance)', () => {
+    // lastSeen after startDate — the observed occurrence is already
+    // reflected in startBalance, so the first projected occurrence must
+    // be lastSeen + cadence (2026-09-09), not lastSeen (2026-08-10).
     const s = series(1, 'FUTURE', 30, -50, '2026-08-10');
     const out = projectBalance({
       startBalance: 0,
       series: [s],
-      horizonDays: 30,
+      horizonDays: 40,
       startDate: '2026-08-01',
     });
-    // First occurrence is 2026-08-10 (the lastSeen itself, since it's
-    // already >= startDate). Next would be 2026-09-09 (outside horizon).
-    expect(out.find((p) => p.date === '2026-08-10')!.projectedBalance).toBeCloseTo(-50, 2);
-    expect(out.at(-1)!.projectedBalance).toBeCloseTo(-50, 2);
+    expect(out.find((p) => p.date === '2026-08-10')!.projectedBalance).toBeCloseTo(0, 2);
+    expect(out.find((p) => p.date === '2026-09-09')!.projectedBalance).toBeCloseTo(-50, 2);
+  });
+
+  it('does not double-count a series whose lastSeen equals startDate', () => {
+    // Real-world bug: a salary just received today (lastSeen=today) was
+    // being projected as a future event, producing a +avgAmount jump on
+    // day 1. Fix: lastSeen must never fire again — the next projected
+    // occurrence is lastSeen + cadence.
+    const salary = series(1, 'SALARY', 30, 17572.16, '2026-07-19');
+    const out = projectBalance({
+      startBalance: 19000,
+      series: [salary],
+      horizonDays: 60,
+      startDate: '2026-07-19',
+    });
+    // Day 0 and day 1 must both stay at the current balance — no salary
+    // event was projected. The next salary lands on 2026-08-18.
+    expect(out[0]!.projectedBalance).toBeCloseTo(19000, 2);
+    expect(out[1]!.projectedBalance).toBeCloseTo(19000, 2);
+    expect(out.find((p) => p.date === '2026-08-18')!.projectedBalance).toBeCloseTo(36572.16, 2);
   });
 });
