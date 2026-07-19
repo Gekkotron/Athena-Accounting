@@ -303,4 +303,4 @@ de performance.
 [Démarrage](./getting-started) ·
 [Sauvegarde et restauration](./backup-recovery)
 
-← [Retour aux docs utilisateur](./README)
+← [Retour aux docs utilisateur](README.md)

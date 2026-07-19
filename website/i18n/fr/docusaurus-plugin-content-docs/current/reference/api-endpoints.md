@@ -115,7 +115,7 @@ Ingestion OFX / QFX / CSV / PDF et gestion des templates PDF.
 
 | Méthode  | Chemin                                   | Rôle |
 | -------- | ---------------------------------------- | ---- |
-| `POST`   | `/api/imports`                           | Upload multipart. Le serveur déduit le format de l'extension (`.ofx` / `.qfx` / `.csv` / `.pdf`). Compte cible : query `?accountId=…` ou correspondance de pattern de nom de fichier. Erreurs PDF : `413 pdf_too_large` (> 10 Mo), `400 pdf_encrypted`, `422 template_yielded_no_rows`. Pour un PDF peut retourner `{ kind: 'needs_template' | 'imported', … }` — le wizard prend la suite. |
+| `POST`   | `/api/imports`                           | Upload multipart. Le serveur déduit le format de l'extension (`.ofx` / `.qfx` / `.csv` / `.pdf`). Compte cible : query `?accountId=…` ou correspondance de pattern de nom de fichier. Erreurs PDF : `413 pdf_too_large` (> 10 Mo), `400 pdf_encrypted`, `422 template_yielded_no_rows`. Pour un PDF peut retourner `{ kind: 'needs_template' \| 'imported', … }` — le wizard prend la suite. |
 | `POST`   | `/api/imports/photo`                     | Photo multipart (JPEG/HEIC/PNG) → OCR de reçu. Requiert `?accountId=…`. Max 25 Mo. |
 | `POST`   | `/api/imports/preview`                   | Mêmes formats que `/api/imports` (sauf PDF), mais N'INSÈRE PAS — renvoie ce qui serait importé. Alimente la boîte de dialogue de pré-import. |
 | `POST`   | `/api/imports/pdf/templates`             | Enregistre zones + label pour un brouillon PDF et lance l'import. Body : `{ draftId, label, zones, override_rows? }`. `410 draft_expired`, `422 template_yielded_no_rows`. |
@@ -167,7 +167,7 @@ direction.
 | Méthode  | Chemin                    | Rôle |
 | -------- | ------------------------- | ---- |
 | `GET`    | `/api/transfer-rules`     | Liste. |
-| `POST`   | `/api/transfer-rules`     | Body : `{ keyword, direction: 'outgoing'|'incoming', counterpartAccountId?, enabled? }`. |
+| `POST`   | `/api/transfer-rules`     | Body : `{ keyword, direction: 'outgoing'\|'incoming', counterpartAccountId?, enabled? }`. |
 | `PUT`    | `/api/transfer-rules/:id` | Mise à jour partielle. |
 | `DELETE` | `/api/transfer-rules/:id` | Suppression. |
 
@@ -190,9 +190,9 @@ côtés s'annulent et pollueraient sinon chaque agrégat).
 | Méthode | Chemin                     | Rôle |
 | ------- | -------------------------- | ---- |
 | `GET`   | `/api/reports/balance`     | Solde total groupé par devise. Divise chaque total par devise en `total`, `available` (retire `lockYears` sur le compte et par ligne) et `invested` (le sous-ensemble d'`available` sur un compte de `type = 'investment'`). Les comptes multi-devises restent séparés — pas de conversion automatique. |
-| `GET`   | `/api/reports/timeseries`  | Solde cumulé par compte au fil du temps. Query : `fromDate`, `toDate`, `granularity: 'day'|'month'`. Les jambes de virement SONT incluses ici — elles affectent les soldes par compte même si elles sont neutres globalement. |
+| `GET`   | `/api/reports/timeseries`  | Solde cumulé par compte au fil du temps. Query : `fromDate`, `toDate`, `granularity: 'day'\|'month'`. Les jambes de virement SONT incluses ici — elles affectent les soldes par compte même si elles sont neutres globalement. |
 | `GET`   | `/api/reports/categories`  | Dépenses par (catégorie, mois). Le CTE virtualise les splits, si bien qu'un split à 3 compte comme 3 lignes attribuées à leurs propres catégories de split. Query : `fromDate`, `toDate`, `accountId?`. Virements exclus. |
-| `GET`   | `/api/reports/budget`      | Prévu / réel par catégorie de dépense budgétée, mensuel ou annuel. Query : `period='monthly'|'yearly'`, `month?` (`YYYY-MM`) ou `year?` (`YYYY`), `accountId?`. Par ligne : `spent`, `remaining`, `pct`, `over`, `projected` (extrapolation linéaire à partir de ≥ 3 jours écoulés ; `null` avant), `history` sur 6 périodes (avec `average` / `median`), `anomaly` (spent > 1σ de la moyenne), `suggestedLimit` (proposition arrondie quand la limite actuelle paraît inadaptée). Renvoie aussi `unbudgetedCandidates`. |
+| `GET`   | `/api/reports/budget`      | Prévu / réel par catégorie de dépense budgétée, mensuel ou annuel. Query : `period='monthly'\|'yearly'`, `month?` (`YYYY-MM`) ou `year?` (`YYYY`), `accountId?`. Par ligne : `spent`, `remaining`, `pct`, `over`, `projected` (extrapolation linéaire à partir de ≥ 3 jours écoulés ; `null` avant), `history` sur 6 périodes (avec `average` / `median`), `anomaly` (spent > 1σ de la moyenne), `suggestedLimit` (proposition arrondie quand la limite actuelle paraît inadaptée). Renvoie aussi `unbudgetedCandidates`. |
 
 ## Budgets
 

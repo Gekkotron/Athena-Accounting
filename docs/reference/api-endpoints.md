@@ -111,7 +111,7 @@ OFX / QFX / CSV / PDF ingestion, plus template management for PDFs.
 
 | Method   | Path                                     | Purpose |
 | -------- | ---------------------------------------- | ------- |
-| `POST`   | `/api/imports`                           | Multipart file upload. Server infers format from extension (`.ofx` / `.qfx` / `.csv` / `.pdf`). Target account: query `?accountId=…` or filename-pattern match. PDF errors: `413 pdf_too_large` (> 10 MB), `400 pdf_encrypted`, `422 template_yielded_no_rows`. On PDF may return `{ kind: 'needs_template' | 'imported', … }` — the wizard drives the follow-up. |
+| `POST`   | `/api/imports`                           | Multipart file upload. Server infers format from extension (`.ofx` / `.qfx` / `.csv` / `.pdf`). Target account: query `?accountId=…` or filename-pattern match. PDF errors: `413 pdf_too_large` (> 10 MB), `400 pdf_encrypted`, `422 template_yielded_no_rows`. On PDF may return `{ kind: 'needs_template' \| 'imported', … }` — the wizard drives the follow-up. |
 | `POST`   | `/api/imports/photo`                     | Multipart photo (JPEG/HEIC/PNG) → receipt OCR. Requires `?accountId=…`. Max 25 MB. |
 | `POST`   | `/api/imports/preview`                   | Same accepted formats as `/api/imports` (except PDF), but does NOT insert rows — returns what would be imported. Feeds the pre-import review dialog. |
 | `POST`   | `/api/imports/pdf/templates`             | Save zones + label for a PDF draft and run the import. Body: `{ draftId, label, zones, override_rows? }`. `410 draft_expired`, `422 template_yielded_no_rows`. |
@@ -160,7 +160,7 @@ Auto-detect internal transfers by keyword + direction.
 | Method   | Path                      | Purpose |
 | -------- | ------------------------- | ------- |
 | `GET`    | `/api/transfer-rules`     | List. |
-| `POST`   | `/api/transfer-rules`     | Body: `{ keyword, direction: 'outgoing'|'incoming', counterpartAccountId?, enabled? }`. |
+| `POST`   | `/api/transfer-rules`     | Body: `{ keyword, direction: 'outgoing'\|'incoming', counterpartAccountId?, enabled? }`. |
 | `PUT`    | `/api/transfer-rules/:id` | Partial update. |
 | `DELETE` | `/api/transfer-rules/:id` | Remove. |
 
@@ -182,9 +182,9 @@ otherwise poison every aggregate).
 | Method | Path                      | Purpose |
 | ------ | ------------------------- | ------- |
 | `GET`  | `/api/reports/balance`    | Total balance grouped by currency. Splits each currency total into `total`, `available` (nets `lockYears` on the account and per row), and `invested` (the subset of `available` that lives in `type = 'investment'`). Multi-currency accounts stay separate — no auto-conversion. |
-| `GET`  | `/api/reports/timeseries` | Per-account cumulative balance over time. Query: `fromDate`, `toDate`, `granularity: 'day'|'month'`. Transfer legs ARE included here — they affect per-account balances even though they're neutral overall. |
+| `GET`  | `/api/reports/timeseries` | Per-account cumulative balance over time. Query: `fromDate`, `toDate`, `granularity: 'day'\|'month'`. Transfer legs ARE included here — they affect per-account balances even though they're neutral overall. |
 | `GET`  | `/api/reports/categories` | Spend by (category, month). The CTE virtualizes splits, so a 3-way split counts as three rows attributed to its own split categories. Query: `fromDate`, `toDate`, `accountId?`. Transfers excluded. |
-| `GET`  | `/api/reports/budget`     | Planned-vs-actual per budgeted expense category, monthly or yearly. Query: `period='monthly'|'yearly'`, `month?` (`YYYY-MM`) or `year?` (`YYYY`), `accountId?`. Per row: `spent`, `remaining`, `pct`, `over`, `projected` (linear extrapolation once ≥ 3 days have elapsed; `null` before), 6-period `history` (with `average` / `median`), `anomaly` (spent > 1σ from mean), `suggestedLimit` (nearest-round proposal when the current cap looks off). Also returns `unbudgetedCandidates`. |
+| `GET`  | `/api/reports/budget`     | Planned-vs-actual per budgeted expense category, monthly or yearly. Query: `period='monthly'\|'yearly'`, `month?` (`YYYY-MM`) or `year?` (`YYYY`), `accountId?`. Per row: `spent`, `remaining`, `pct`, `over`, `projected` (linear extrapolation once ≥ 3 days have elapsed; `null` before), 6-period `history` (with `average` / `median`), `anomaly` (spent > 1σ from mean), `suggestedLimit` (nearest-round proposal when the current cap looks off). Also returns `unbudgetedCandidates`. |
 
 ## Budgets
 

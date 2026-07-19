@@ -278,4 +278,4 @@ reporting a performance regression.
 [Getting started](./getting-started) ·
 [Backup and recovery](./backup-recovery)
 
-← [Back to user docs](./README)
+← [Back to user docs](README.md)
