@@ -10,13 +10,14 @@ describe('demo store + seed', () => {
 
   it('hydrates from the seed on first getState', () => {
     const state = getState();
-    expect(state.v).toBe(1);
+    expect(state.v).toBe(2);
     expect(state.accounts).toHaveLength(2);
-    expect(state.categories).toHaveLength(8);
-    expect(state.rules).toHaveLength(5);
-    expect(state.budgets).toHaveLength(3);
+    expect(state.categories).toHaveLength(11);
+    expect(state.rules).toHaveLength(9);
+    expect(state.budgets).toHaveLength(4);
     expect(state.balanceCheckpoints).toHaveLength(1);
     expect(state.transactions.length).toBeGreaterThan(150);
+    expect((state.recurring ?? []).length).toBe(12);
   });
 
   it('reset() restores exactly the seed', () => {

@@ -11,7 +11,11 @@
 
 import type { Account, Budget, Category, RecurringSeries, Rule, TransferRule } from '../types';
 
-export const DEMO_SCHEMA_VERSION = 1;
+// Bumped to 2 when the Récurrent seed was expanded to 12 series and
+// three new categories (Impôts, Assurance, Abonnements) were added.
+// Version mismatch triggers a silent reseed, so returning demo visitors
+// pick up the richer data without having to clear localStorage by hand.
+export const DEMO_SCHEMA_VERSION = 2;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 

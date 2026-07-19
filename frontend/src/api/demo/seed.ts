@@ -31,6 +31,9 @@ const CAT = {
   Loisirs: 6,
   Sante: 7,
   Salaire: 8,
+  Impots: 9,
+  Assurance: 10,
+  Abonnements: 11,
 } as const;
 
 const ACC = {
@@ -39,14 +42,17 @@ const ACC = {
 } as const;
 
 const categories: Category[] = [
-  { id: CAT.Courses,    name: 'Courses',    kind: 'expense', color: '#c084fc', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Restaurant, name: 'Restaurant', kind: 'expense', color: '#f97316', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Transport,  name: 'Transport',  kind: 'expense', color: '#38bdf8', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Logement,   name: 'Logement',   kind: 'expense', color: '#a78bfa', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Energie,    name: 'Énergie',    kind: 'expense', color: '#facc15', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Loisirs,    name: 'Loisirs',    kind: 'expense', color: '#f472b6', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Sante,      name: 'Santé',      kind: 'expense', color: '#4ade80', parentId: null, isDefault: true, isInternalTransfer: false },
-  { id: CAT.Salaire,    name: 'Salaire',    kind: 'income',  color: '#22d3ee', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Courses,     name: 'Courses',     kind: 'expense', color: '#c084fc', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Restaurant,  name: 'Restaurant',  kind: 'expense', color: '#f97316', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Transport,   name: 'Transport',   kind: 'expense', color: '#38bdf8', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Logement,    name: 'Logement',    kind: 'expense', color: '#a78bfa', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Energie,     name: 'Énergie',     kind: 'expense', color: '#facc15', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Loisirs,     name: 'Loisirs',     kind: 'expense', color: '#f472b6', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Sante,       name: 'Santé',       kind: 'expense', color: '#4ade80', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Salaire,     name: 'Salaire',     kind: 'income',  color: '#22d3ee', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Impots,      name: 'Impôts',      kind: 'expense', color: '#94a3b8', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Assurance,   name: 'Assurance',   kind: 'expense', color: '#60a5fa', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Abonnements, name: 'Abonnements', kind: 'expense', color: '#f87171', parentId: null, isDefault: true, isInternalTransfer: false },
 ];
 
 const accounts: Account[] = [
@@ -55,19 +61,24 @@ const accounts: Account[] = [
 ];
 
 const rules: Rule[] = [
-  { id: 1, categoryId: CAT.Transport, keyword: 'sncf',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 2, categoryId: CAT.Courses,   keyword: 'carrefour', signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 3, categoryId: CAT.Energie,   keyword: 'edf',       signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 4, categoryId: CAT.Courses,   keyword: 'monoprix',  signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 5, categoryId: CAT.Logement,  keyword: 'loyer',     signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 1, categoryId: CAT.Transport,   keyword: 'sncf',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 2, categoryId: CAT.Courses,     keyword: 'carrefour', signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 3, categoryId: CAT.Energie,     keyword: 'edf',       signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 4, categoryId: CAT.Courses,     keyword: 'monoprix',  signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 5, categoryId: CAT.Logement,    keyword: 'loyer',     signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 6, categoryId: CAT.Impots,      keyword: 'impots',    signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 7, categoryId: CAT.Assurance,   keyword: 'maif',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 8, categoryId: CAT.Abonnements, keyword: 'netflix',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 9, categoryId: CAT.Abonnements, keyword: 'spotify',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
 ];
 
 const transferRules: TransferRule[] = [];
 
 const budgets: Budget[] = [
-  { id: 1, categoryId: CAT.Courses,    monthlyLimit: '400.00', currency: 'EUR', period: 'monthly', accountId: null },
-  { id: 2, categoryId: CAT.Restaurant, monthlyLimit: '150.00', currency: 'EUR', period: 'monthly', accountId: null },
-  { id: 3, categoryId: CAT.Loisirs,    monthlyLimit: '100.00', currency: 'EUR', period: 'monthly', accountId: null },
+  { id: 1, categoryId: CAT.Courses,     monthlyLimit: '400.00', currency: 'EUR', period: 'monthly', accountId: null },
+  { id: 2, categoryId: CAT.Restaurant,  monthlyLimit: '150.00', currency: 'EUR', period: 'monthly', accountId: null },
+  { id: 3, categoryId: CAT.Loisirs,     monthlyLimit: '100.00', currency: 'EUR', period: 'monthly', accountId: null },
+  { id: 4, categoryId: CAT.Abonnements, monthlyLimit:  '60.00', currency: 'EUR', period: 'monthly', accountId: null },
 ];
 
 interface TxSpec {
@@ -80,15 +91,29 @@ interface TxSpec {
 }
 
 // Monthly recurring pattern. Applied to each of the six seed months
-// (Feb–Jul 2026). Loyer → rule 5 auto; EDF → rule 3 auto; Salaire →
-// manual (no rule); Internet/Téléphone → uncategorised (populates the
-// tri panel with real content).
+// (Feb–Jul 2026). Twelve series that spread across every week of the
+// month so the Récurrent → À venir tab shows a full timeline. Some are
+// auto-categorised via rules, some are manual, three stay uncategorised
+// on purpose so the Tri queue keeps real content.
+//
+// Confirmed vs detected is set in buildRecurringSeries below:
+// - Confirmed + essential: Salaire, Loyer, Impôts, EDF, Mutuelle, MAIF,
+//   Épargne — these feed the six-month forecast on the Prévision tab.
+// - Detected (awaiting confirmation): FreeBox, Bouygues, Netflix,
+//   Spotify, Basic-Fit — these show the "Confirmer" button in action.
 const RECURRING: TxSpec[] = [
-  { day: 1,  label: 'Virement Salaire',        amount:  2500.00, categoryId: CAT.Salaire, categorySource: 'manual' },
-  { day: 5,  label: 'Prélèvement Loyer',       amount:  -850.00, categoryId: CAT.Logement, categorySource: 'auto' },
-  { day: 10, label: 'EDF Facture Électricité', amount:   -78.40, categoryId: CAT.Energie,  categorySource: 'auto' },
-  { day: 15, label: 'FreeBox Internet',        amount:   -29.99, categoryId: null,         categorySource: 'default' },
-  { day: 20, label: 'Bouygues Mobile',         amount:   -19.99, categoryId: null,         categorySource: 'default' },
+  { day: 1,  label: 'Virement Salaire',           amount:  2500.00, categoryId: CAT.Salaire,     categorySource: 'manual' },
+  { day: 5,  label: 'Prélèvement Loyer',          amount:  -850.00, categoryId: CAT.Logement,    categorySource: 'auto' },
+  { day: 8,  label: 'Impots SPFI Prelevement',    amount:  -320.00, categoryId: CAT.Impots,      categorySource: 'auto' },
+  { day: 10, label: 'EDF Facture Électricité',    amount:   -78.40, categoryId: CAT.Energie,     categorySource: 'auto' },
+  { day: 12, label: 'Mutuelle Alan',              amount:   -42.00, categoryId: CAT.Sante,       categorySource: 'manual' },
+  { day: 13, label: 'MAIF Assurance Habitation',  amount:   -18.50, categoryId: CAT.Assurance,   categorySource: 'auto' },
+  { day: 15, label: 'FreeBox Internet',           amount:   -29.99, categoryId: null,            categorySource: 'default' },
+  { day: 20, label: 'Bouygues Mobile',            amount:   -19.99, categoryId: null,            categorySource: 'default' },
+  { day: 22, label: 'Netflix Abonnement',         amount:   -13.49, categoryId: CAT.Abonnements, categorySource: 'auto' },
+  { day: 24, label: 'Spotify Premium',            amount:    -9.99, categoryId: CAT.Abonnements, categorySource: 'auto' },
+  { day: 27, label: 'Basic-Fit Abonnement',       amount:   -24.99, categoryId: CAT.Loisirs,     categorySource: 'manual' },
+  { day: 28, label: 'Virement Épargne Livret A',  amount:  -200.00, categoryId: null,            categorySource: 'default' },
 ];
 
 // Weekly-ish discretionary spend. day-of-month per week 1..4 (day 3 =
@@ -255,11 +280,21 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
     categoryId: number | null;
     essentialness: 'essential' | 'discretionary' | null;
   }> = [
-    { id: 1, label: 'Virement Salaire', amount: 2500.0, day: 1, categoryId: CAT.Salaire, essentialness: 'essential' },
-    { id: 2, label: 'Prélèvement Loyer', amount: -850.0, day: 5, categoryId: CAT.Logement, essentialness: 'essential' },
-    { id: 3, label: 'EDF Facture Électricité', amount: -78.4, day: 10, categoryId: CAT.Energie, essentialness: 'essential' },
-    { id: 4, label: 'FreeBox Internet', amount: -29.99, day: 15, categoryId: null, essentialness: null },
-    { id: 5, label: 'Bouygues Mobile', amount: -19.99, day: 20, categoryId: null, essentialness: null },
+    // Essentials — confirmed, feed the Prévision forecast.
+    { id: 1,  label: 'Virement Salaire',           amount:  2500.00, day: 1,  categoryId: CAT.Salaire,     essentialness: 'essential' },
+    { id: 2,  label: 'Prélèvement Loyer',          amount:  -850.00, day: 5,  categoryId: CAT.Logement,    essentialness: 'essential' },
+    { id: 3,  label: 'Impots SPFI Prelevement',    amount:  -320.00, day: 8,  categoryId: CAT.Impots,      essentialness: 'essential' },
+    { id: 4,  label: 'EDF Facture Électricité',    amount:   -78.40, day: 10, categoryId: CAT.Energie,     essentialness: 'essential' },
+    { id: 5,  label: 'Mutuelle Alan',              amount:   -42.00, day: 12, categoryId: CAT.Sante,       essentialness: 'essential' },
+    { id: 6,  label: 'MAIF Assurance Habitation',  amount:   -18.50, day: 13, categoryId: CAT.Assurance,   essentialness: 'essential' },
+    { id: 7,  label: 'Virement Épargne Livret A',  amount:  -200.00, day: 28, categoryId: null,            essentialness: 'essential' },
+
+    // Detected — pending confirmation, show the "Confirmer" affordance.
+    { id: 8,  label: 'FreeBox Internet',           amount:   -29.99, day: 15, categoryId: null,            essentialness: null },
+    { id: 9,  label: 'Bouygues Mobile',            amount:   -19.99, day: 20, categoryId: null,            essentialness: null },
+    { id: 10, label: 'Netflix Abonnement',         amount:   -13.49, day: 22, categoryId: CAT.Abonnements, essentialness: null },
+    { id: 11, label: 'Spotify Premium',            amount:    -9.99, day: 24, categoryId: CAT.Abonnements, essentialness: null },
+    { id: 12, label: 'Basic-Fit Abonnement',       amount:   -24.99, day: 27, categoryId: CAT.Loisirs,     essentialness: null },
   ];
 
   // last_seen from July 2026 (last seed month); next_due = last_seen + 30d.
@@ -281,9 +316,6 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
       firstSeenAt,
       lastSeenAt,
       nextDueAt,
-      // Salaire + Loyer + EDF are already confirmed to show the confirmed
-      // state in the demo; FreeBox / Bouygues stay at 'detected' so users
-      // can try the Confirmer button.
       status: s.essentialness === 'essential' ? 'confirmed' : 'detected',
       essentialness: s.essentialness,
       createdAt: firstSeenAt + 'T09:00:00.000Z',

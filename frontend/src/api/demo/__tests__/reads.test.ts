@@ -55,7 +55,7 @@ describe('demo read handlers', () => {
 
   it('GET /api/categories', async () => {
     const r = await api<{ categories: unknown[] }>('/api/categories');
-    expect(r.categories).toHaveLength(8);
+    expect(r.categories).toHaveLength(11);
   });
 
   it('GET /api/rules', async () => {
@@ -65,7 +65,7 @@ describe('demo read handlers', () => {
 
   it('GET /api/budgets', async () => {
     const r = await api<{ budgets: Array<{ monthlyLimit: string }> }>('/api/budgets');
-    expect(r.budgets).toHaveLength(3);
+    expect(r.budgets).toHaveLength(4);
   });
 
   it('GET /api/transactions paginates', async () => {
@@ -115,7 +115,7 @@ describe('demo read handlers', () => {
 
   it('GET /api/reports/budget returns per-budget rows', async () => {
     const r = await api<BudgetReportResp>('/api/reports/budget', { query: { month: '2026-07' } });
-    expect(r.rows).toHaveLength(3);
+    expect(r.rows).toHaveLength(4);
     expect(r.totals.limit).toMatch(/^\d+\.\d{2}$/);
   });
 
