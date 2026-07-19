@@ -17,7 +17,7 @@
   },
   "uploadForm": {
     "dropzone": {
-      "label": "Fichier(s) — .ofx · .qfx · .csv · .pdf",
+      "label": "Fichier(s) — .ofx · .qfx · .csv · .pdf · .jpg · .png · .heic",
       "hint": "Glissez un fichier ici ou",
       "browse": "parcourir"
     },
@@ -25,7 +25,6 @@
     "filesSelected_one": "{{count}} fichier sélectionné",
     "filesSelected_other": "{{count}} fichiers sélectionnés",
     "accountLabel": "Compte",
-    "photoLabel": "Photo (JPEG, PNG, HEIC)",
     "submit": {
       "importing": "Import…",
       "one": "Importer",
@@ -33,8 +32,7 @@
       "many_other": "Importer {{count}} fichiers"
     },
     "errors": {
-      "accountRequiredPhoto": "Veuillez sélectionner un compte pour importer une photo.",
-      "accountRequiredPdf": "Veuillez sélectionner un compte pour importer des PDF.",
+      "accountRequiredPdf": "Veuillez sélectionner un compte pour importer un PDF ou une photo.",
       "photoImportFailed": "Erreur lors de l'import de la photo.",
       "pdfImportFailed": "Erreur lors de l'import PDF."
     }

@@ -386,7 +386,7 @@ describe('UploadForm', () => {
     await waitFor(() => expect(screen.queryByText(/en erreur/)).not.toBeInTheDocument());
   });
 
-  it('routes a JPEG upload to /api/imports/photo', async () => {
+  it('routes a JPEG upload from the single file input to /api/imports/photo', async () => {
     const response = {
       kind: 'needs_template' as const,
       draftId: 5,
@@ -404,16 +404,52 @@ describe('UploadForm', () => {
     const { props } = renderForm();
 
     const jpeg = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], 'st.jpg', { type: 'image/jpeg' });
-    const photoInput = screen.getByLabelText(/photo/i) as HTMLInputElement;
-    await user.upload(photoInput, jpeg);
-    const accountSelect = screen.getByLabelText(/^compte$/i);
-    await user.selectOptions(accountSelect, '1');
-    await user.click(screen.getByRole('button', { name: /importer/i }));
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    await user.upload(fileInput, jpeg);
+    await user.selectOptions(fieldFor(/^Compte$/), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
 
     await waitFor(() => expect(submitPhotoMock).toHaveBeenCalledWith(jpeg, 1));
     expect(props.onPdfNeedsTemplate).toHaveBeenCalledWith(response);
-    // apiUpload / submitPdf must not fire on the photo path.
+    // apiUpload / submitPdf must not fire on the image path.
     expect(uploadMock).not.toHaveBeenCalled();
     expect(submitPdfMock).not.toHaveBeenCalled();
+  });
+
+  it('PDF without a text layer auto-falls-back to submitPhoto (OCR)', async () => {
+    // First response from submitPdf: no text layer detected.
+    submitPdfMock.mockResolvedValue({
+      kind: 'needs_template',
+      draftId: 9,
+      fingerprint: 'f',
+      pages: [],
+      textItems: [],
+      suggestedZones: null,
+      reason: 'no_text_layer',
+      sourceKind: 'pdf',
+      ocrStatus: 'pending',
+      ocrTotal: 1,
+    } as any);
+    // Fallback OCR resolves to an imported result.
+    const ocrImported = {
+      kind: 'imported' as const,
+      result: { fileImportId: 11, insertedCount: 3, dedupSkipped: 0, totalLines: 3 },
+      skippedRows: [],
+    };
+    submitPhotoMock.mockResolvedValue(ocrImported);
+
+    const user = userEvent.setup();
+    const { props } = renderForm();
+    const fileInput = fieldFor(/^Fichier/) as HTMLInputElement;
+    const scanned = new File(['%PDF-scan'], 'scan.pdf', { type: 'application/pdf' });
+    await user.upload(fileInput, scanned);
+    await user.selectOptions(fieldFor(/^Compte$/), '1');
+    await user.click(screen.getByRole('button', { name: 'Importer' }));
+
+    await waitFor(() => expect(submitPdfMock).toHaveBeenCalledWith(scanned, 1));
+    await waitFor(() => expect(submitPhotoMock).toHaveBeenCalledWith(scanned, 1));
+    expect(props.onPdfImported).toHaveBeenCalledWith(ocrImported);
+    // The wizard should NOT open — the fallback replaced the needs_template response.
+    expect(props.onPdfNeedsTemplate).not.toHaveBeenCalled();
   });
 });

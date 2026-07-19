@@ -2,11 +2,11 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Account } from '../../api/types';
-import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImported } from '../../api/pdf-templates';
+import { submitPdf, submitPhoto, type PdfImportNeedsTemplate, type PdfImportImported, type PdfImportResponse } from '../../api/pdf-templates';
 import { errorMessage } from '../../api/errorMessage';
 import { useImportPreview } from './useImportPreview';
 import { ImportPreviewModal } from './ImportPreviewModal';
-import { runOne } from './run-import';
+import { runOne, isPdfFile, isImageFile } from './run-import';
 import { collectDroppedFiles } from './drop-utils';
 import { BatchSummaryPanel, type BatchState } from './BatchSummaryPanel';
 import { useBatchRetry } from './useBatchRetry';
@@ -31,18 +31,17 @@ export function UploadForm({
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
-  const photoRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<File[]>([]);
-  const [photo, setPhoto] = useState<File | null>(null);
   const [accountId, setAccountId] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [batch, setBatch] = useState<BatchState | null>(null);
   const pending = batch?.phase === 'running';
 
-  // Bank statements only ship as .ofx/.qfx/.csv/.pdf. Drop anything else so a
-  // stray Thumbs.db / .DS_Store from a directory pick doesn't blow up the loop.
-  const acceptFile = (name: string) => /\.(ofx|qfx|csv|pdf)$/i.test(name);
+  // Bank statements ship as .ofx/.qfx/.csv/.pdf; scanned statements as JPEG/PNG/HEIC.
+  // Drop anything else so a stray Thumbs.db / .DS_Store from a directory pick
+  // doesn't blow up the loop.
+  const acceptFile = (name: string) => /\.(ofx|qfx|csv|pdf|jpe?g|png|webp|heic)$/i.test(name);
 
   const pickFiles = (list: FileList | null) => {
     if (!list) { setFiles([]); return; }
@@ -81,39 +80,24 @@ export function UploadForm({
     invalidate: invalidateAll,
   });
 
+  // Route a PDF or image through the OCR-aware pipeline: PDFs try the text
+  // layer first, then fall back to /api/imports/photo when the backend reports
+  // no_text_layer; images go straight to OCR since they have no text layer at all.
+  const runPdfOrImage = async (f: File): Promise<PdfImportResponse> => {
+    let r = await submitPdf(f, accountId as number);
+    if (isPdfFile(f.name) && r.kind === 'needs_template' && r.reason === 'no_text_layer') {
+      r = await submitPhoto(f, accountId as number);
+    }
+    return r;
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Photo path takes priority over the file batch when both inputs carry a
-    // value — the two are independent inputs, but a single submit can only
-    // drive one request.
-    if (photo) {
-      if (accountId === '') {
-        setError(t('uploadForm.errors.accountRequiredPhoto'));
-        return;
-      }
-      setError(null);
-      setBatch(null);
-      try {
-        const r = await submitPhoto(photo, accountId as number);
-        if (r.kind === 'imported') {
-          invalidateAll();
-          onPdfImported(r);
-        } else {
-          onPdfNeedsTemplate(r);
-        }
-        setPhoto(null);
-        if (photoRef.current) photoRef.current.value = '';
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t('uploadForm.errors.photoImportFailed'));
-      }
-      return;
-    }
-
     if (files.length === 0) return;
 
-    const hasAnyPdf = files.some((f) => f.name.toLowerCase().endsWith('.pdf'));
-    if (hasAnyPdf && accountId === '') {
+    const needsAccount = files.some((f) => isPdfFile(f.name) || isImageFile(f.name));
+    if (needsAccount && accountId === '') {
       setError(t('uploadForm.errors.accountRequiredPdf'));
       return;
     }
@@ -122,10 +106,12 @@ export function UploadForm({
       const f = files[0]!;
       setError(null);
       setBatch(null);
-      if (f.name.toLowerCase().endsWith('.pdf')) {
+      if (isPdfFile(f.name) || isImageFile(f.name)) {
         setBatch({ phase: 'running', current: 1, total: 1, currentName: f.name });
         try {
-          const r = await submitPdf(f, accountId as number);
+          const r = isPdfFile(f.name)
+            ? await runPdfOrImage(f)
+            : await submitPhoto(f, accountId as number);
           if (r.kind === 'imported') {
             invalidateAll();
             onPdfImported(r);
@@ -204,7 +190,7 @@ export function UploadForm({
               ref={fileRef}
               type="file"
               multiple
-              accept=".ofx,.qfx,.csv,.pdf"
+              accept=".ofx,.qfx,.csv,.pdf,.jpg,.jpeg,.png,.webp,.heic,image/jpeg,image/png,image/webp,image/heic"
               onChange={(e) => pickFiles(e.target.files)}
               disabled={pending}
               className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
@@ -253,26 +239,13 @@ export function UploadForm({
             </select>
           </div>
 
-          <button className="btn-primary" disabled={(files.length === 0 && !photo) || pending}>
+          <button className="btn-primary" disabled={files.length === 0 || pending}>
             {pending
               ? t('uploadForm.submit.importing')
               : files.length > 1
                 ? t('uploadForm.submit.many', { count: files.length })
                 : t('uploadForm.submit.one')}
           </button>
-        </div>
-
-        <div className="flex flex-col gap-1.5 mt-4 pt-4 border-t border-ink-800/60">
-          <label htmlFor="photo-input" className="label">{t('uploadForm.photoLabel')}</label>
-          <input
-            id="photo-input"
-            ref={photoRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
-            onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-            disabled={pending}
-            className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
-          />
         </div>
       </form>
 
