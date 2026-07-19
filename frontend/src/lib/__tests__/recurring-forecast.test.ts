@@ -109,13 +109,25 @@ describe('projectBalance', () => {
     for (const p of out) expect(p.projectedBalance).toBe(1000);
   });
 
-  it('includes detected series (not just confirmed)', () => {
+  it('excludes detected series by default (Confirmer is the projection gate)', () => {
     const rent = series(1, 'RENT', 30, -100, '2026-07-15', 'detected');
     const out = projectBalance({
       startBalance: 1000,
       series: [rent],
       horizonDays: 30,
       startDate: '2026-08-01',
+    });
+    for (const p of out) expect(p.projectedBalance).toBe(1000);
+  });
+
+  it('includeDetected=true opts back into detected-and-confirmed', () => {
+    const rent = series(1, 'RENT', 30, -100, '2026-07-15', 'detected');
+    const out = projectBalance({
+      startBalance: 1000,
+      series: [rent],
+      horizonDays: 30,
+      startDate: '2026-08-01',
+      includeDetected: true,
     });
     expect(out.find((p) => p.date === '2026-08-14')!.projectedBalance).toBeCloseTo(900, 2);
   });

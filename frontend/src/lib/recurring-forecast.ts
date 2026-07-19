@@ -19,6 +19,13 @@ export interface ProjectBalanceOptions {
   series: RecurringSeries[];
   horizonDays: number;
   startDate: string; // YYYY-MM-DD
+  // When false (default), only status='confirmed' series feed the
+  // projection. Detected-but-unreviewed series often contain false
+  // positives that inflate the forecast on real datasets — the user's
+  // Confirmer action on the Détectés tab is the explicit gate. Setting
+  // this to true opts back into the raw "any active pattern" behavior
+  // for users who want to see what detection alone would extrapolate.
+  includeDetected?: boolean;
 }
 
 // UTC-safe ISO day arithmetic — matches the backend + UpcomingTab.
@@ -47,12 +54,20 @@ function firstOccurrenceOnOrAfter(
 }
 
 export function projectBalance(opts: ProjectBalanceOptions): ForecastPoint[] {
-  const { startBalance, series, horizonDays, startDate } = opts;
+  const { startBalance, series, horizonDays, startDate, includeDetected = false } = opts;
   if (horizonDays <= 0) return [];
 
-  // Only active series contribute. Dismissed ones stay out of the
-  // projection even if their pattern still holds.
-  const active = series.filter((s) => s.status !== 'dismissed');
+  // Default: only confirmed series contribute. This deviates from the
+  // original PLAN.md spec ("status IN detected|confirmed") after a user
+  // report of a +17K/60d projection driven by unreviewed detected
+  // false positives — the Confirmer action is now the projection gate.
+  // includeDetected=true recovers the old behavior for callers that
+  // want the raw pattern-based extrapolation.
+  const active = series.filter((s) => {
+    if (s.status === 'dismissed') return false;
+    if (s.status === 'detected' && !includeDetected) return false;
+    return true;
+  });
 
   // Build a map of `date → contributions` from each series' occurrences
   // over the horizon window. Series with cadence gaps larger than the

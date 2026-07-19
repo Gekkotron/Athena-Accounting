@@ -31,6 +31,7 @@ function isoDaysAgo(days: number): string {
 export function ForecastTab(): JSX.Element {
   const [horizon, setHorizon] = useState<Horizon>(60);
   const [scope, setScope] = useState<'all' | number>('all');
+  const [includeDetected, setIncludeDetected] = useState(false);
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -68,12 +69,15 @@ export function ForecastTab(): JSX.Element {
     return Number(acc.currentBalance ?? acc.openingBalance ?? 0);
   }, [scope, accounts, balanceQ.data, currency]);
 
+  // All non-dismissed series feed the counters/UI; the projection helper
+  // then applies its own confirmed-only default (see includeDetected).
   const activeSeries = useMemo(() => {
-    // Only whole-portfolio projection uses every series. Per-account
-    // projection currently reuses the same series list — Athena's
-    // recurring series aren't yet scoped to a specific account.
     return (seriesQ.data?.recurring ?? []).filter((s) => s.status !== 'dismissed');
   }, [seriesQ.data]);
+
+  const contributingCount = useMemo(() => {
+    return activeSeries.filter((s) => includeDetected || s.status === 'confirmed').length;
+  }, [activeSeries, includeDetected]);
 
   const today = todayIso();
 
@@ -83,12 +87,13 @@ export function ForecastTab(): JSX.Element {
       series: activeSeries,
       horizonDays: horizon,
       startDate: today,
+      includeDetected,
     });
     // The projection helper emits daily samples; the chart's dashed run
     // renders them all. Skip index 0 (today) since the historical line
     // already ends there — otherwise the transition point renders twice.
     return forecast.slice(1).map((p) => ({ date: p.date, value: p.projectedBalance }));
-  }, [startBalance, activeSeries, horizon, today]);
+  }, [startBalance, activeSeries, horizon, today, includeDetected]);
 
   const scopedHistoricalPoints = useMemo<BalancePoint[]>(() => {
     const all = timeseriesQ.data?.points ?? [];
@@ -117,11 +122,29 @@ export function ForecastTab(): JSX.Element {
     );
   }
 
-  if (activeSeries.length === 0) {
+  if (contributingCount === 0) {
+    const hasDetectedButNoConfirmed = activeSeries.length > 0 && !includeDetected;
     return (
       <EmptyState
-        title="Aucune série récurrente pour projeter le solde."
-        hint="Confirmez d'abord vos séries récurrentes depuis l'onglet Détectés — la projection utilise leurs cadences et montants pour extrapoler la trajectoire de votre solde."
+        title={hasDetectedButNoConfirmed
+          ? "Aucune série confirmée pour l'instant."
+          : "Aucune série récurrente pour projeter le solde."}
+        hint={
+          hasDetectedButNoConfirmed
+            ? "La projection n'utilise que les séries que vous avez confirmées, pour éviter que des détections approximatives ne faussent le résultat. Ouvrez l'onglet Détectés et confirmez vos vraies séries récurrentes — ou activez « inclure les séries détectées » ci-dessous pour projeter avec l'ensemble."
+            : "Confirmez d'abord vos séries récurrentes depuis l'onglet Détectés — la projection utilise leurs cadences et montants pour extrapoler la trajectoire de votre solde."
+        }
+        action={
+          hasDetectedButNoConfirmed ? (
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => setIncludeDetected(true)}
+            >
+              Inclure les séries détectées
+            </button>
+          ) : undefined
+        }
       />
     );
   }
@@ -135,6 +158,18 @@ export function ForecastTab(): JSX.Element {
           </span>
           <div className="flex-1 h-px bg-ink-800" />
           <div className="flex items-center gap-2 flex-wrap">
+            <label
+              className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none"
+              title="Par défaut, seules les séries confirmées alimentent la projection. Activez pour inclure aussi les séries détectées non-confirmées."
+            >
+              <input
+                type="checkbox"
+                checked={includeDetected}
+                onChange={(e) => setIncludeDetected(e.target.checked)}
+                className="accent-sage-500"
+              />
+              Inclure séries détectées
+            </label>
             <AccountSelect
               value={scope}
               onChange={setScope}
@@ -143,6 +178,10 @@ export function ForecastTab(): JSX.Element {
             />
             <HorizonPicker value={horizon} onChange={setHorizon} />
           </div>
+        </div>
+        <div className="text-[11px] text-ink-500 mb-3">
+          Projection basée sur {contributingCount} série{contributingCount > 1 ? 's' : ''}{' '}
+          {includeDetected ? 'active' : 'confirmée'}{contributingCount > 1 ? 's' : ''}.
         </div>
         {timeseriesQ.error ? (
           <ErrorState variant="inline" error={timeseriesQ.error} onRetry={() => void timeseriesQ.refetch()} />
