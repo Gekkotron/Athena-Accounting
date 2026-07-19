@@ -198,6 +198,7 @@ export function ForecastTab(): JSX.Element {
             points={scopedHistoricalPoints}
             projection={forecastPoints}
             currency={currency}
+            alignEndTo={startBalance}
           />
         )}
       </section>

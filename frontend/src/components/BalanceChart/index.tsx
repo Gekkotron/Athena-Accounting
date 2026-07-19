@@ -20,6 +20,13 @@ interface Props {
   // and renders every projection-side segment in a dashed variant so the
   // uncertainty is visually distinct from the historical solid line.
   projection?: Array<{ date: string; value: number }>;
+  // Optional authoritative "as of today" balance. When set, the historical
+  // curve is shifted so its endpoint lands exactly on this value — which
+  // matters when the timeseries endpoint under-counts accounts that had no
+  // activity in the visible window (their opening balance never gets
+  // carried into the sum). The projection is anchored to the same value,
+  // so with this set the historical/projection join is always continuous.
+  alignEndTo?: number;
 }
 
 interface HoverState {
@@ -61,7 +68,7 @@ function isoDate(ms: number): string {
 // a stray click, not a zoom request.
 const MIN_ZOOM_WIDTH_VB = 10;
 
-export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection }: Props): JSX.Element {
+export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection, alignEndTo }: Props): JSX.Element {
   const { t } = useTranslation('charts');
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -70,7 +77,20 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   const [zoom, setZoom] = useState<ZoomState | null>(null);
 
   const { data, projectionStartIdx } = useMemo(() => {
-    const historical = buildAggregatedSeries(points, currency);
+    const raw = buildAggregatedSeries(points, currency);
+    // If the caller passes an authoritative end value, shift the whole
+    // historical curve by (alignEndTo - lastValue). This paper-over fixes
+    // the case where /api/reports/timeseries under-counts accounts that
+    // had no activity in the window and their opening balance never gets
+    // carried forward into the aggregate — without this the historical
+    // line ends far below what /api/reports/balance says is the current
+    // total, and the projection anchors introduce a huge visual jump.
+    const shift =
+      alignEndTo !== undefined && raw.length > 0
+        ? alignEndTo - raw[raw.length - 1]!.value
+        : 0;
+    const historical =
+      shift === 0 ? raw : raw.map((p) => ({ date: p.date, value: p.value + shift }));
     // Projection points render as a forward continuation of the last
     // historical value. Filtered to strictly forward-dated samples so a
     // stray past date can't disturb the historical segmentation.
@@ -83,7 +103,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
       data: [...historical, ...forward],
       projectionStartIdx: historical.length,
     };
-  }, [points, currency, projection]);
+  }, [points, currency, projection, alignEndTo]);
 
   if (data.length < 2) {
     return (
