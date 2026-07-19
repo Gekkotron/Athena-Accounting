@@ -32,8 +32,8 @@ const nav: NavSection[] = [
         labelKey: 'nav.items.budgets',
         icon: 'budgets',
         children: [
-          { to: '/budgets/plafonds', labelKey: 'nav.children.budgets.plafonds' },
-          { to: '/budgets/enveloppes', labelKey: 'nav.children.budgets.enveloppes' },
+          { to: '/budgets/caps', labelKey: 'nav.children.budgets.plafonds' },
+          { to: '/budgets/envelopes', labelKey: 'nav.children.budgets.enveloppes' },
         ],
       },
     ],
@@ -42,23 +42,23 @@ const nav: NavSection[] = [
     titleKey: 'nav.sections.classification',
     items: [
       {
-        to: '/regles',
+        to: '/rules',
         labelKey: 'nav.items.rules',
         icon: 'rules',
         children: [
-          { to: '/regles/tri', labelKey: 'nav.children.rules.sort' },
-          { to: '/regles/liste', labelKey: 'nav.children.rules.list' },
-          { to: '/regles/categories', labelKey: 'nav.children.rules.categories' },
+          { to: '/rules/sort', labelKey: 'nav.children.rules.sort' },
+          { to: '/rules/list', labelKey: 'nav.children.rules.list' },
+          { to: '/rules/categories', labelKey: 'nav.children.rules.categories' },
         ],
       },
       {
-        to: '/recurrent',
+        to: '/recurring',
         labelKey: 'nav.items.recurrent',
         icon: 'recurrent',
         children: [
-          { to: '/recurrent/detectes', labelKey: 'nav.children.recurrent.detected' },
-          { to: '/recurrent/a-venir', labelKey: 'nav.children.recurrent.upcoming' },
-          { to: '/recurrent/prevision', labelKey: 'nav.children.recurrent.forecast' },
+          { to: '/recurring/detected', labelKey: 'nav.children.recurrent.detected' },
+          { to: '/recurring/upcoming', labelKey: 'nav.children.recurrent.upcoming' },
+          { to: '/recurring/forecast', labelKey: 'nav.children.recurrent.forecast' },
         ],
       },
     ],
@@ -67,24 +67,24 @@ const nav: NavSection[] = [
     titleKey: 'nav.sections.structure',
     items: [
       {
-        to: '/comptes',
+        to: '/accounts',
         labelKey: 'nav.items.accounts',
         end: true,
         icon: 'accounts',
         children: [
-          { to: '/comptes', labelKey: 'nav.children.accounts.list', end: true },
-          { to: '/comptes/motifs', labelKey: 'nav.children.accounts.patterns' },
+          { to: '/accounts', labelKey: 'nav.children.accounts.list', end: true },
+          { to: '/accounts/patterns', labelKey: 'nav.children.accounts.patterns' },
         ],
       },
       {
-        to: '/donnees',
+        to: '/data',
         labelKey: 'nav.items.data',
         icon: 'imports',
         children: [
-          { to: '/donnees/imports', labelKey: 'nav.children.data.imports' },
-          { to: '/donnees/doublons', labelKey: 'nav.children.data.duplicates' },
-          { to: '/donnees/modeles', labelKey: 'nav.children.data.pdfTemplates' },
-          { to: '/donnees/sauvegarde', labelKey: 'nav.children.data.backup' },
+          { to: '/data/imports', labelKey: 'nav.children.data.imports' },
+          { to: '/data/duplicates', labelKey: 'nav.children.data.duplicates' },
+          { to: '/data/pdf-templates', labelKey: 'nav.children.data.pdfTemplates' },
+          { to: '/data/backup', labelKey: 'nav.children.data.backup' },
         ],
       },
     ],
@@ -109,7 +109,7 @@ function useNavBadgeCounts(): Record<string, number> {
     staleTime: 30_000,
   });
   return {
-    '/donnees/doublons': duplicates.data?.groups?.length ?? 0,
+    '/data/duplicates': duplicates.data?.groups?.length ?? 0,
   };
 }
 
@@ -341,7 +341,7 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
       </div>
       <div className="flex items-center justify-between gap-2 mb-3">
         <NavLink
-          to="/profil"
+          to="/profile"
           className={({ isActive }) =>
             `block text-sm truncate font-medium underline-offset-2 hover:underline flex-1 min-w-0 ${
               isActive ? 'text-sage-300' : 'text-ink-100 hover:text-ink-50'
@@ -352,7 +352,7 @@ function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
           {user.username}
         </NavLink>
         <NavLink
-          to="/reglages"
+          to="/settings"
           title={t('user.settings')}
           aria-label={t('user.settings')}
           className={({ isActive }) =>

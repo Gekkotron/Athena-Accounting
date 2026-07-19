@@ -39,27 +39,27 @@ export default function App() {
   // under a language switch. Computed per-render (not hoisted to module
   // scope) since they now depend on `t`.
   const RULES_TABS: HubTab[] = [
-    { to: '/regles/tri', label: t('nav.children.rules.sort') },
-    { to: '/regles/liste', label: t('nav.children.rules.list') },
-    { to: '/regles/categories', label: t('nav.children.rules.categories') },
+    { to: '/rules/sort', label: t('nav.children.rules.sort') },
+    { to: '/rules/list', label: t('nav.children.rules.list') },
+    { to: '/rules/categories', label: t('nav.children.rules.categories') },
   ];
 
   const RECURRENT_TABS: HubTab[] = [
-    { to: '/recurrent/detectes', label: t('nav.children.recurrent.detected') },
-    { to: '/recurrent/a-venir', label: t('nav.children.recurrent.upcoming') },
-    { to: '/recurrent/prevision', label: t('nav.children.recurrent.forecast') },
+    { to: '/recurring/detected', label: t('nav.children.recurrent.detected') },
+    { to: '/recurring/upcoming', label: t('nav.children.recurrent.upcoming') },
+    { to: '/recurring/forecast', label: t('nav.children.recurrent.forecast') },
   ];
 
   const COMPTES_TABS: HubTab[] = [
-    { to: '/comptes', label: t('nav.children.accounts.list'), end: true },
-    { to: '/comptes/motifs', label: t('nav.children.accounts.patterns') },
+    { to: '/accounts', label: t('nav.children.accounts.list'), end: true },
+    { to: '/accounts/patterns', label: t('nav.children.accounts.patterns') },
   ];
 
   const DONNEES_TABS: HubTab[] = [
-    { to: '/donnees/imports', label: t('nav.children.data.imports') },
-    { to: '/donnees/doublons', label: t('nav.children.data.duplicates') },
-    { to: '/donnees/modeles', label: t('nav.children.data.pdfTemplates') },
-    { to: '/donnees/sauvegarde', label: t('nav.children.data.backup') },
+    { to: '/data/imports', label: t('nav.children.data.imports') },
+    { to: '/data/duplicates', label: t('nav.children.data.duplicates') },
+    { to: '/data/pdf-templates', label: t('nav.children.data.pdfTemplates') },
+    { to: '/data/backup', label: t('nav.children.data.backup') },
   ];
 
   // Global session-expiry redirect: any 401 from a non-auth-me endpoint
@@ -116,12 +116,12 @@ export default function App() {
           <Route element={<Layout user={user} />}>
             <Route index element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
-            <Route path="/budgets" element={<Navigate to="/budgets/plafonds" replace />} />
-            <Route path="/budgets/plafonds" element={<Plafonds />} />
-            <Route path="/budgets/enveloppes" element={<Enveloppes />} />
+            <Route path="/budgets" element={<Navigate to="/budgets/caps" replace />} />
+            <Route path="/budgets/caps" element={<Plafonds />} />
+            <Route path="/budgets/envelopes" element={<Enveloppes />} />
 
             {/* Règles hub */}
-            <Route path="/regles" element={<HubLayout title={t('nav.items.rules')} tabs={RULES_TABS} />}>
+            <Route path="/rules" element={<HubLayout title={t('nav.items.rules')} tabs={RULES_TABS} />}>
               <Route index element={<Navigate to="tri" replace />} />
               <Route path="tri" element={<Tri />} />
               <Route path="liste" element={<Rules />} />
@@ -129,7 +129,7 @@ export default function App() {
             </Route>
 
             {/* Récurrent hub */}
-            <Route path="/recurrent" element={<HubLayout title={t('nav.items.recurrent')} tabs={RECURRENT_TABS} />}>
+            <Route path="/recurring" element={<HubLayout title={t('nav.items.recurrent')} tabs={RECURRENT_TABS} />}>
               <Route index element={<Navigate to="detectes" replace />} />
               <Route path="detectes" element={<DetectedTab />} />
               <Route path="a-venir" element={<UpcomingTab />} />
@@ -137,13 +137,13 @@ export default function App() {
             </Route>
 
             {/* Comptes hub */}
-            <Route path="/comptes" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
+            <Route path="/accounts" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
               <Route index element={<Accounts />} />
               <Route path="motifs" element={<Patterns />} />
             </Route>
 
             {/* Données hub */}
-            <Route path="/donnees" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
+            <Route path="/data" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
               <Route index element={<Navigate to="imports" replace />} />
               <Route path="imports" element={<Imports />} />
               <Route path="doublons" element={<Duplicates />} />
@@ -151,8 +151,8 @@ export default function App() {
               <Route path="sauvegarde" element={<Backup />} />
             </Route>
 
-            <Route path="/profil" element={<Profile />} />
-            <Route path="/reglages" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

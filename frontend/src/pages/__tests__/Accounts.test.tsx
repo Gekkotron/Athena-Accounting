@@ -67,7 +67,7 @@ beforeEach(() => {
 
 // Filename-pattern assertions now live at
 // pages/Accounts/__tests__/Patterns.test.tsx (PatternsSection was extracted
-// to the /comptes/motifs route in Task 7).
+// to the /accounts/patterns route in Task 7).
 describe('Accounts page (characterization)', () => {
   it('renders the account list', async () => {
     seedRoutes({

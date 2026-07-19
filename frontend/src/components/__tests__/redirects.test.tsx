@@ -64,10 +64,10 @@ function renderAt(url: string) {
 // Only hub-index defaults — the app is pre-release, no external bookmarks,
 // so English-slug legacy redirects were dropped.
 const cases: Array<[string, string, string]> = [
-  ['/regles', '/regles/tri', 'tri-page'],
-  ['/comptes/', '/comptes', 'accounts-page'],
-  ['/donnees', '/donnees/imports', 'imports-page'],
-  ['/budgets', '/budgets/plafonds', 'plafonds-page'],
+  ['/rules', '/rules/sort', 'tri-page'],
+  ['/accounts/', '/accounts', 'accounts-page'],
+  ['/data', '/data/imports', 'imports-page'],
+  ['/budgets', '/budgets/caps', 'plafonds-page'],
 ];
 
 describe.each(cases)('redirect %s → %s', (from, to, marker) => {

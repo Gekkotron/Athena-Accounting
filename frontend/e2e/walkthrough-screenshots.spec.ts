@@ -88,17 +88,17 @@ test.describe('walkthrough screenshots', () => {
     await dismissWelcomeTour(page);
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/donnees/imports');
+    await page.goto('/data/imports');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(600);
     await shot(page, 'import-01-imports-page');
 
-    await page.goto('/donnees/doublons');
+    await page.goto('/data/duplicates');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await shot(page, 'import-02-doublons');
 
-    await page.goto('/comptes');
+    await page.goto('/accounts');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await shot(page, 'import-03-comptes-solde');
@@ -121,12 +121,12 @@ test.describe('walkthrough screenshots', () => {
     await page.waitForTimeout(600);
     await shot(page, 'categorise-01-transactions');
 
-    await page.goto('/regles/tri');
+    await page.goto('/rules/sort');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await shot(page, 'categorise-02-tri');
 
-    await page.goto('/regles/liste');
+    await page.goto('/rules/list');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await shot(page, 'categorise-03-regles-liste');
@@ -137,12 +137,12 @@ test.describe('walkthrough screenshots', () => {
     await dismissWelcomeTour(page);
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/budgets/plafonds');
+    await page.goto('/budgets/caps');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(600);
     await shot(page, 'budget-01-plafonds');
 
-    await page.goto('/budgets/enveloppes');
+    await page.goto('/budgets/envelopes');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(400);
     await shot(page, 'budget-02-enveloppes');

@@ -167,7 +167,7 @@ export function Dashboard(): JSX.Element {
           title={t('empty.title')}
           hint={t('empty.hint')}
           action={
-            <Link to="/comptes" className="btn-primary text-sm">
+            <Link to="/accounts" className="btn-primary text-sm">
               {t('empty.cta')}
             </Link>
           }

@@ -21,8 +21,8 @@ if (!root) throw new Error('#root not found');
 
 // The demo ships as a plain Vite bundle on GitHub Pages — there is no
 // server to fall back to index.html for deep URLs, so refreshing a page
-// like /demo/recurrent/prevision returns a hard 404. HashRouter keeps
-// the whole route in the URL fragment (/demo/#/recurrent/prevision), so
+// like /demo/recurring/forecast returns a hard 404. HashRouter keeps
+// the whole route in the URL fragment (/demo/#/recurring/forecast), so
 // the browser always requests /demo/index.html and the SPA takes over
 // from there. The real self-hosted app keeps BrowserRouter — its
 // backend does the SPA fallback and clean URLs stay clean.

@@ -106,7 +106,7 @@ export function UpcomingTab(): JSX.Element {
         hint={
           <span>
             Confirmez d'abord vos séries récurrentes depuis l'onglet{' '}
-            <Link to="/recurrent/detectes" className="text-sage-300 underline-offset-2 hover:underline">
+            <Link to="/recurring/detected" className="text-sage-300 underline-offset-2 hover:underline">
               Détectés
             </Link>
             .
