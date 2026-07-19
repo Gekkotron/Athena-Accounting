@@ -91,16 +91,21 @@ interface TxSpec {
 }
 
 // Monthly recurring pattern. Applied to each of the six seed months
-// (Feb–Jul 2026). Twelve series that spread across every week of the
+// (Feb–Jul 2026). Eleven series that spread across every week of the
 // month so the Récurrent → À venir tab shows a full timeline. Some are
-// auto-categorised via rules, some are manual, three stay uncategorised
-// on purpose so the Tri queue keeps real content.
+// auto-categorised via rules, some are manual, two (FreeBox, Bouygues)
+// stay uncategorised on purpose so the Tri queue keeps real content.
 //
 // Confirmed vs detected is set in buildRecurringSeries below:
-// - Confirmed + essential: Salaire, Loyer, Impôts, EDF, Mutuelle, MAIF,
-//   Épargne — these feed the six-month forecast on the Prévision tab.
+// - Confirmed + essential: Salaire, Loyer, Impôts, EDF, Mutuelle, MAIF
+//   — these feed the six-month forecast on the Prévision tab.
 // - Detected (awaiting confirmation): FreeBox, Bouygues, Netflix,
 //   Spotify, Basic-Fit — these show the "Confirmer" button in action.
+//
+// No savings transfer here on purpose. A "virement épargne" is a
+// transfer to another of your own accounts, not a recurring outflow —
+// counting it as an essential expense makes the Prévision curve look
+// like it's eating income when the money is really just being moved.
 const RECURRING: TxSpec[] = [
   { day: 1,  label: 'Virement Salaire',           amount:  2500.00, categoryId: CAT.Salaire,     categorySource: 'manual' },
   { day: 5,  label: 'Prélèvement Loyer',          amount:  -850.00, categoryId: CAT.Logement,    categorySource: 'auto' },
@@ -113,7 +118,6 @@ const RECURRING: TxSpec[] = [
   { day: 22, label: 'Netflix Abonnement',         amount:   -13.49, categoryId: CAT.Abonnements, categorySource: 'auto' },
   { day: 24, label: 'Spotify Premium',            amount:    -9.99, categoryId: CAT.Abonnements, categorySource: 'auto' },
   { day: 27, label: 'Basic-Fit Abonnement',       amount:   -24.99, categoryId: CAT.Loisirs,     categorySource: 'manual' },
-  { day: 28, label: 'Virement Épargne Livret A',  amount:  -200.00, categoryId: null,            categorySource: 'default' },
 ];
 
 // Weekly-ish discretionary spend. day-of-month per week 1..4 (day 3 =
@@ -295,14 +299,13 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
     { id: 4,  label: 'EDF Facture Électricité',    amount:   -78.40, day: 10, categoryId: CAT.Energie,     essentialness: 'essential' },
     { id: 5,  label: 'Mutuelle Alan',              amount:   -42.00, day: 12, categoryId: CAT.Sante,       essentialness: 'essential' },
     { id: 6,  label: 'MAIF Assurance Habitation',  amount:   -18.50, day: 13, categoryId: CAT.Assurance,   essentialness: 'essential' },
-    { id: 7,  label: 'Virement Épargne Livret A',  amount:  -200.00, day: 28, categoryId: null,            essentialness: 'essential' },
 
     // Detected — pending confirmation, show the "Confirmer" affordance.
-    { id: 8,  label: 'FreeBox Internet',           amount:   -29.99, day: 15, categoryId: null,            essentialness: null },
-    { id: 9,  label: 'Bouygues Mobile',            amount:   -19.99, day: 20, categoryId: null,            essentialness: null },
-    { id: 10, label: 'Netflix Abonnement',         amount:   -13.49, day: 22, categoryId: CAT.Abonnements, essentialness: null },
-    { id: 11, label: 'Spotify Premium',            amount:    -9.99, day: 24, categoryId: CAT.Abonnements, essentialness: null },
-    { id: 12, label: 'Basic-Fit Abonnement',       amount:   -24.99, day: 27, categoryId: CAT.Loisirs,     essentialness: null },
+    { id: 7,  label: 'FreeBox Internet',           amount:   -29.99, day: 15, categoryId: null,            essentialness: null },
+    { id: 8,  label: 'Bouygues Mobile',            amount:   -19.99, day: 20, categoryId: null,            essentialness: null },
+    { id: 9,  label: 'Netflix Abonnement',         amount:   -13.49, day: 22, categoryId: CAT.Abonnements, essentialness: null },
+    { id: 10, label: 'Spotify Premium',            amount:    -9.99, day: 24, categoryId: CAT.Abonnements, essentialness: null },
+    { id: 11, label: 'Basic-Fit Abonnement',       amount:   -24.99, day: 27, categoryId: CAT.Loisirs,     essentialness: null },
   ];
 
   // lastSeenAt anchors the "last real occurrence in the ledger" — must

@@ -109,7 +109,7 @@ describe('demo write handlers', () => {
 
   it('GET /api/backup/export returns the full state envelope', async () => {
     const dump = await api<{ v: number; accounts: unknown[] }>('/api/backup/export');
-    expect(dump.v).toBe(2);
+    expect(dump.v).toBe(3);
     expect(dump.accounts).toHaveLength(2);
   });
 });

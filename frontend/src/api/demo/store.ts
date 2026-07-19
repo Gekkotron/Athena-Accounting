@@ -11,11 +11,12 @@
 
 import type { Account, Budget, Category, RecurringSeries, Rule, TransferRule } from '../types';
 
-// Bumped to 2 when the Récurrent seed was expanded to 12 series and
-// three new categories (Impôts, Assurance, Abonnements) were added.
-// Version mismatch triggers a silent reseed, so returning demo visitors
-// pick up the richer data without having to clear localStorage by hand.
-export const DEMO_SCHEMA_VERSION = 2;
+// Bumped whenever the seed shape changes in a way that must reach every
+// visitor on their next tab open. Mismatch triggers a silent reseed.
+//   v=1 → v=2  Récurrent seed expanded to 12 series, 3 new categories
+//   v=2 → v=3  removed the "Virement Épargne" recurring (a transfer,
+//              not a real outflow — it made the forecast eat income)
+export const DEMO_SCHEMA_VERSION = 3;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 
