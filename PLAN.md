@@ -30,9 +30,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Reconcile FR mirror of docs/users/importing.md against latest EN version
-      FR has 92 lines vs EN 149. Diff structure, port missing sections into website/i18n/fr/docusaurus-plugin-content-docs/current/users/importing.md — likely the balance-checkpoint step, the PDF template wizard details, or the CSV/OFX format specifics. Preserve existing FR terminology.
-      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) FR references the same walkthrough shots as EN (via /img/walkthroughs/fr/ paths).
 
 - [ ] Reconcile FR mirror of docs/users/desktop-install.md against latest EN version
       FR has 95 lines vs EN 147. Port the missing content into website/i18n/fr/docusaurus-plugin-content-docs/current/users/desktop-install.md, keeping FR terminology (installateur, glisser-déposer, dossier de données, sauvegarde) consistent.
@@ -52,6 +49,9 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Reconcile FR mirror of docs/users/importing.md against latest EN version
+      No content changes needed — FR mirror is already at full section-for-section parity with EN. The 92-vs-149-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Both files have the same 9 top-level sections in the same order (Supported formats / Formats supportés, Before you import / Avant d'importer, OFX and CSV / OFX et CSV, The PDF template wizard / L'assistant de modèles PDF, Deduplication / Déduplication, Internal transfers / Virements internes, Troubleshooting / Dépannage, Where to go next / Où aller ensuite) and the same 3 sub-sections under the PDF wizard (First-time flow / Flux de première fois, Multi-account PDF statements / Relevés PDF multi-comptes, Auto-recovery / Auto-récupération). All content — the supported-formats table, the encoding note, the four-step first-time wizard flow, the multi-account anchor mechanism, auto-recovery behaviour, dedup signature and audit-row semantics, transfer detector, and the five troubleshooting entries — is present in both. Neither EN nor FR references any walkthrough shots (criterion (c) is vacuously satisfied). Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural, which the diff confirms.
 
 - [x] Reconcile FR mirror of docs/users/getting-started.md against latest EN version
       No content changes needed — FR mirror is already at full section-for-section parity with EN. The 139-vs-188-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Both files have the same 8 headers in the same order (# Getting started / Démarrage, ## Pick a path / Choisissez votre parcours, ## Docker path — what you need / Parcours Docker — ce qu'il vous faut, ## Install / Installer, ## First-run onboarding / Onboarding initial, ## Updating / Mettre à jour, ## Your first ten minutes / Vos dix premières minutes, ## Where to go next / Où aller ensuite). The two-path install table, demo tip, install.sh + docker compose steps, update.sh callout with cron cadence, Releases page pointer for desktop users, and the five-step "first ten minutes" walkthrough are all present in both. Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural (8 headers in the same order), which the diff confirms.
