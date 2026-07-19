@@ -29,9 +29,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Reconcile FR mirror of docs/users/getting-started.md against latest EN version
-      FR has 139 lines vs EN 188. The EN version has drifted forward — likely new sections on the two-path install (Docker vs Desktop), update.sh callout, or the demo pointer. Port any missing sections into website/i18n/fr/docusaurus-plugin-content-docs/current/users/getting-started.md preserving existing FR terminology.
-      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff between EN and FR is empty; (c) both language docs cover the two install paths and the demo link identically.
 
 - [ ] Reconcile FR mirror of docs/users/importing.md against latest EN version
       FR has 92 lines vs EN 149. Diff structure, port missing sections into website/i18n/fr/docusaurus-plugin-content-docs/current/users/importing.md — likely the balance-checkpoint step, the PDF template wizard details, or the CSV/OFX format specifics. Preserve existing FR terminology.
@@ -55,6 +52,9 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Reconcile FR mirror of docs/users/getting-started.md against latest EN version
+      No content changes needed — FR mirror is already at full section-for-section parity with EN. The 139-vs-188-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Both files have the same 8 headers in the same order (# Getting started / Démarrage, ## Pick a path / Choisissez votre parcours, ## Docker path — what you need / Parcours Docker — ce qu'il vous faut, ## Install / Installer, ## First-run onboarding / Onboarding initial, ## Updating / Mettre à jour, ## Your first ten minutes / Vos dix premières minutes, ## Where to go next / Où aller ensuite). The two-path install table, demo tip, install.sh + docker compose steps, update.sh callout with cron cadence, Releases page pointer for desktop users, and the five-step "first ten minutes" walkthrough are all present in both. Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural (8 headers in the same order), which the diff confirms.
 
 - [x] Reconcile FR mirror of docs/users/mcp.md against latest EN version
       No content changes needed — FR mirror is already at full section-for-section parity with EN. The 178-vs-279-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Word count is actually higher in FR (2086 vs 1882 for EN). All headers (## Ce que c'est, ## 1–4, ## Référence des outils, ## Sécurité, ## Test de fumée manuel, ## Rapprocher un relevé and its 6 ### subsections), all bullets, the full Tools reference table, the Desktop (Tauri) port-file subsection (added in aa0c25d and mirrored in the FR bilingualize commit 6408140 the next day), and all code blocks / env var names match EN. Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural (16 headers in the same order at the same nesting), which the diff confirms.
