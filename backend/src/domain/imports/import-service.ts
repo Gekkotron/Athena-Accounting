@@ -12,6 +12,7 @@ import { computeDedupKey } from './dedup.js';
 import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { detectTransfers } from '../transfers/detector.js';
+import { runRecurringDetection } from '../../services/recurring-detect.js';
 
 export type ImportFormat = 'ofx' | 'csv' | 'pdf';
 
@@ -183,6 +184,12 @@ export async function runImport(opts: {
           .set({ categoryId: defaultId, categorySource: 'default' })
           .where(inArray(transactions.id, defaultBucket));
       }
+
+      // Refresh detected recurring series over the user's last 12
+      // months so the Récurrent page reflects the new import. Runs
+      // inside the same transaction so an import either lands with
+      // its detection artefacts or rolls back entirely.
+      await runRecurringDetection(tx, opts.userId);
     }
 
     return {

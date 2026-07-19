@@ -52,6 +52,17 @@ export const transferDirectionEnum = pgEnum('transfer_direction', [
 
 export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf']);
 
+export const recurringStatusEnum = pgEnum('recurring_status', [
+  'detected',
+  'confirmed',
+  'dismissed',
+]);
+
+export const recurringEssentialnessEnum = pgEnum('recurring_essentialness', [
+  'essential',
+  'discretionary',
+]);
+
 // ---------------------------------------------------------------------------
 // users  —  single-user auth (login basique, self-hosted)
 // ---------------------------------------------------------------------------
@@ -484,6 +495,69 @@ export const userSettings = pgTable('user_settings', {
   mcpKeyWrapped: text('mcp_key_wrapped'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// recurring_series — detected recurring transaction patterns (migration 0027).
+// The detector groups a user's transactions by (fuzzy label similarity,
+// cadence bucket, amount tolerance) and emits one row here per repeating
+// pattern. Users can Confirm/Dismiss the detection and tag a series as
+// essential vs discretionary; those decisions are preserved across
+// regenerate runs.
+// ---------------------------------------------------------------------------
+
+export const recurringSeries = pgTable(
+  'recurring_series',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    cadenceDays: integer('cadence_days').notNull(),
+    avgAmount: numeric('avg_amount', { precision: 14, scale: 2 }).notNull(),
+    amountStddev: numeric('amount_stddev', { precision: 14, scale: 2 })
+      .notNull()
+      .default('0'),
+    categoryId: integer('category_id').references(() => categories.id, {
+      onDelete: 'set null',
+    }),
+    firstSeenAt: date('first_seen_at').notNull(),
+    lastSeenAt: date('last_seen_at').notNull(),
+    nextDueAt: date('next_due_at').notNull(),
+    status: recurringStatusEnum('status').notNull().default('detected'),
+    essentialness: recurringEssentialnessEnum('essentialness'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqUserLabelCadence: uniqueIndex('recurring_series_user_label_cadence_uq').on(
+      t.userId,
+      t.label,
+      t.cadenceDays,
+    ),
+    idxUserStatus: index('recurring_series_user_status_idx').on(t.userId, t.status),
+    idxNextDue: index('recurring_series_next_due_idx').on(t.userId, t.nextDueAt),
+  }),
+);
+
+// Join table: which transactions contributed to each series. Cascades
+// both ways so a series drop or a transaction delete keeps the graph
+// consistent without needing manual cleanup.
+export const recurringSeriesTransactions = pgTable(
+  'recurring_series_transactions',
+  {
+    seriesId: integer('series_id')
+      .notNull()
+      .references(() => recurringSeries.id, { onDelete: 'cascade' }),
+    transactionId: bigint('transaction_id', { mode: 'number' })
+      .notNull()
+      .references(() => transactions.id, { onDelete: 'cascade' }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.seriesId, t.transactionId] }),
+    idxTx: index('recurring_series_transactions_tx_idx').on(t.transactionId),
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // transaction_splits — ventilation of one transaction across N (>= 2)

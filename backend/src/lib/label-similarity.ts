@@ -1,15 +1,12 @@
 // Jaccard token similarity between two transaction labels. Returns a value
 // in [0, 1] where 1 == identical token sets and 0 == disjoint sets.
 //
-// Kept in lock-step with backend/src/lib/label-similarity.ts — the two
+// Kept in lock-step with frontend/src/lib/label-similarity.ts — the two
 // files must stay identical (same tokenizer, same stopword set) so
-// backend-detected recurring series match what this frontend uses for
-// its own similarity checks. Edit both in the same commit.
-//
-// The Possibles doublons panel uses this to hide same-account / same-date /
-// same-amount pairs whose labels are too different to plausibly be the same
-// transaction — a threshold slider lets the user tune the sensitivity to
-// their own bank's label conventions.
+// backend-detected recurring series match what the frontend's dedup
+// panel would consider "similar enough". A shared test fixture at
+// backend/tests/label-similarity-parity.test.ts pins this invariant;
+// keep both copies (and the fixture) in the same commit when editing.
 //
 // Tokenizer choices:
 //   - Split on any non-alphanumeric so accents / punctuation / dashes don't

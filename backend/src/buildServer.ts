@@ -29,6 +29,7 @@ import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
 import { envelopesRoutes } from './http/routes/envelopes.js';
 import { reconcileRoutes } from './http/routes/reconcile.js';
+import { recurringRoutes } from './http/routes/recurring.js';
 import { metricsPlugin } from './http/plugins/metrics.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
@@ -81,6 +82,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(budgetsRoutes);
   await app.register(envelopesRoutes);
   await app.register(reconcileRoutes);
+  await app.register(recurringRoutes);
 
   const serveStatic = env.SERVE_STATIC ?? env.NODE_ENV === 'production';
   if (serveStatic) {
