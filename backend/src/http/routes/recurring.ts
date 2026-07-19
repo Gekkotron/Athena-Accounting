@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { recurringSeries, recurringSeriesTransactions } from '../../db/schema.js';
+import { recurringSeries, recurringSeriesTransactions, transactions } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 import { addDays } from '../../domain/transfers/matching.js';
@@ -79,6 +79,21 @@ export async function recurringRoutes(app: FastifyInstance): Promise<void> {
         memberCount: sql<number>`(
           SELECT COUNT(*)::int FROM ${recurringSeriesTransactions}
           WHERE ${recurringSeriesTransactions.seriesId} = ${recurringSeries.id}
+        )`,
+        // Majority-vote account across the series' member transactions.
+        // Groups by ${transactions.accountId}, picks the account with the
+        // highest count (ties break arbitrarily via ORDER BY). Returns
+        // NULL when the series has zero members. Used by the frontend
+        // forecast to avoid attributing a salary that lands on Checking
+        // to the Savings projection.
+        primaryAccountId: sql<number | null>`(
+          SELECT ${transactions.accountId}
+          FROM ${recurringSeriesTransactions}
+          JOIN ${transactions} ON ${transactions.id} = ${recurringSeriesTransactions.transactionId}
+          WHERE ${recurringSeriesTransactions.seriesId} = ${recurringSeries.id}
+          GROUP BY ${transactions.accountId}
+          ORDER BY COUNT(*) DESC
+          LIMIT 1
         )`,
       })
       .from(recurringSeries)

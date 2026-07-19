@@ -25,6 +25,7 @@ function series(
     createdAt: lastSeenAt + 'T00:00:00.000Z',
     updatedAt: lastSeenAt + 'T00:00:00.000Z',
     memberCount: 3,
+    primaryAccountId: null,
   };
 }
 

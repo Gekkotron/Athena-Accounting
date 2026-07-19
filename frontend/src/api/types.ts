@@ -259,6 +259,12 @@ export interface RecurringSeries {
   createdAt: string;
   updatedAt: string;
   memberCount: number;
+  // Majority-vote account across this series' member transactions, or
+  // null when the series has no members or the split is even. Lets the
+  // forecast filter out series that don't actually hit the currently
+  // scoped account (e.g. a salary lands on Checking, so it shouldn't
+  // inflate the Savings projection).
+  primaryAccountId: number | null;
 }
 
 export interface EnvelopeReport {

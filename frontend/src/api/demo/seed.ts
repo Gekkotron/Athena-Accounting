@@ -322,6 +322,19 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
     const members = transactions.filter(
       (t) => t.rawLabel === s.label,
     );
+    // Majority-vote account, matching the backend's subquery shape.
+    // Every demo series today lands on Courant; keep the vote logic
+    // real so future seed changes don't silently pin everything to id=1.
+    const accountCounts = new Map<number, number>();
+    for (const m of members) accountCounts.set(m.accountId, (accountCounts.get(m.accountId) ?? 0) + 1);
+    let primaryAccountId: number | null = null;
+    let bestCount = 0;
+    for (const [id, cnt] of accountCounts) {
+      if (cnt > bestCount) {
+        bestCount = cnt;
+        primaryAccountId = id;
+      }
+    }
     list.push({
       id: s.id,
       label: s.label,
@@ -337,6 +350,7 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
       createdAt: firstSeenAt + 'T09:00:00.000Z',
       updatedAt: now + 'T09:00:00.000Z',
       memberCount: members.length,
+      primaryAccountId,
     });
   }
   return list;

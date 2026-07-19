@@ -76,9 +76,17 @@ export function ForecastTab(): JSX.Element {
 
   // All non-dismissed series feed the counters/UI; the projection helper
   // then applies its own confirmed-only default (see includeDetected).
+  // When the scope is narrowed to a specific account, series whose
+  // primary account is a different account are dropped — otherwise a
+  // salary that only lands on Checking would inflate the Savings
+  // projection. Series with a null primaryAccountId (unknown) fall
+  // through to the current behaviour so backwards-compat with older
+  // backend payloads is preserved.
   const activeSeries = useMemo(() => {
-    return (seriesQ.data?.recurring ?? []).filter((s) => s.status !== 'dismissed');
-  }, [seriesQ.data]);
+    const all = (seriesQ.data?.recurring ?? []).filter((s) => s.status !== 'dismissed');
+    if (scope === 'all') return all;
+    return all.filter((s) => s.primaryAccountId == null || s.primaryAccountId === scope);
+  }, [seriesQ.data, scope]);
 
   const contributingCount = useMemo(() => {
     return activeSeries.filter((s) => includeDetected || s.status === 'confirmed').length;
@@ -317,6 +325,7 @@ function ForecastDebugPanel({
               <th className="pr-3 py-1 font-normal">status</th>
               <th className="pr-3 py-1 font-normal text-right">avgAmount</th>
               <th className="pr-3 py-1 font-normal">cadence</th>
+              <th className="pr-3 py-1 font-normal">acct</th>
               <th className="pr-3 py-1 font-normal">lastSeenAt</th>
               <th className="pr-3 py-1 font-normal">nextDueAt</th>
               <th className="pr-3 py-1 font-normal text-right">eq/30d</th>
@@ -334,6 +343,7 @@ function ForecastDebugPanel({
                   <td className="pr-3 py-1">{s.status}</td>
                   <td className="pr-3 py-1 text-right">{Number(s.avgAmount).toFixed(2)}</td>
                   <td className="pr-3 py-1">{s.cadenceDays}d</td>
+                  <td className="pr-3 py-1">{s.primaryAccountId ?? '—'}</td>
                   <td className="pr-3 py-1">{s.lastSeenAt}</td>
                   <td className="pr-3 py-1">{s.nextDueAt}</td>
                   <td className="pr-3 py-1 text-right">{eq >= 0 ? '+' : ''}{eq.toFixed(2)}</td>
