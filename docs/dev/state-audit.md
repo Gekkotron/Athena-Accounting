@@ -11,7 +11,7 @@ Ordered by visibility.
 ## Dashboard (`pages/Dashboard/index.tsx`)
 
 - **Empty** — accounts query returns `[]` → onboarding block with a CTA to
-  `/comptes` (was: blank Hero + "—").
+  `/accounts` (was: blank Hero + "—").
 - **Loading** — root queries pending → Hero renders "—" placeholder;
   BalanceChart section shows `LoadingBlock` (was: raw `animate-pulse` div).
   InsightsSection/SankeySection also swapped to `LoadingBlock`.
@@ -39,7 +39,7 @@ Ordered by visibility.
   Now: `LoadingBlock`.
 - **Error** — was: same implicit empty. Now: `ErrorState` with retry.
 
-## Budgets (`pages/Budgets/Plafonds.tsx`, `pages/Budgets/Enveloppes/Enveloppes.tsx`)
+## Budgets (`pages/Budgets/Caps.tsx`, `pages/Budgets/Envelopes/Envelopes.tsx`)
 
 - **Empty** — both tabs already had an onboarding empty-state ("Aucun
   budget défini." / "Aucune enveloppe pour ce mois"). Preserved.
@@ -88,7 +88,7 @@ Ordered by visibility.
   `t('settings.errors.saveFailed')`. The initial fetch falls back to
   `DEFAULTS`, so a background failure never blocks the page.
 
-## Profile (`pages/Profile.tsx`)
+## Profilee (`pages/Profilee.tsx`)
 
 - **Empty / Loading** — not applicable: the page is a form seeded from
   the `me` cache (populated at app boot by the auth probe).

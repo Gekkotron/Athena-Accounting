@@ -18,7 +18,7 @@ on port 4173, the smoke script should:
    populated when an account filter is active.
 3. Inline-edit one transaction's category, refresh the page, expect
    the new category to survive (localStorage persistence).
-4. Click **Réinitialiser la démo** in the banner — expect the toast
+4. Click **Reset the demo** in the banner — expect the toast
    "Démo réinitialisée." and the edit to be gone.
 5. Attempt to open the PDF imports flow — expect the
    `DemoUnavailableModal` (or the French demoStub message) instead of
@@ -45,6 +45,6 @@ port 4173, then runs `npx playwright test`.
 - [ ] `VITE_DEMO=1 npm run build:demo && npx serve dist-demo` opens the
       app locally without network calls to `/api/*`.
 - [ ] Every top-level nav (Dashboard, Transactions, Budgets, Rules
-      children, Comptes children, Données children, Réglages, Profil)
+      children, Accounts children, Data children, Settings, Profile)
       renders without a raw error.
-- [ ] Réinitialiser button flushes local edits.
+- [ ] Reset button flushes local edits.

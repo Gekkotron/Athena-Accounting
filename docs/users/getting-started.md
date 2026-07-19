@@ -5,11 +5,11 @@ sidebar_position: 2
 
 # Getting started
 
-:::tip Essayez avant d'installer
-Une démo interactive tourne dans votre navigateur — pas de compte,
-pas d'installation. Toutes les données restent en local (localStorage)
-et un bouton **Réinitialiser la démo** remet le jeu de données d'origine.
-[Ouvrir la démo →](./demo)
+:::tip Try before you install
+An interactive demo runs in your browser — no account, no install.
+All data stays local (localStorage), and a **Reset the demo** button
+restores the original dataset.
+[Open the demo →](./demo)
 :::
 
 Athena ships in two flavours from the same codebase. Pick the one that
@@ -153,7 +153,7 @@ and running it over the existing app — the data directory is untouched.
 
 Once you're logged in:
 
-1. **Create an account.** *Comptes → Ajouter*. Give it a name,
+1. **Create an account.** *Accounts → Add*. Give it a name,
    currency, opening balance, and opening date. Every reported balance
    is computed as `opening_balance + SUM(amount WHERE date >= opening_date)`,
    so getting the opening pair right matters. If you're not sure of
@@ -169,7 +169,7 @@ Once you're logged in:
    insights panel.
 
 4. **Categorize a few transactions.** *Tri → click a keyword →
-   "Générer une règle"*. Every future transaction matching that
+   "Generate a rule"*. Every future transaction matching that
    keyword will be categorised automatically. See
    **[Categorization](categorization.md)** for the details.
 

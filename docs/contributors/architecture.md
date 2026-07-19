@@ -83,7 +83,7 @@ Follow one operation end-to-end so the layers become concrete.
    search).
 6. **Categorization pass** — each candidate is run through the user's
    rule set (`backend/src/domain/rules/`). Matches get a `category_id`;
-   non-matches stay `NULL` and land in the Tri tab.
+   non-matches stay `NULL` and land in the Sort tab.
 7. **Deduplication + insert** — the backend computes a content
    signature for each candidate and asks Postgres to insert with an
    `ON CONFLICT` clause on the signature. New rows land; duplicates

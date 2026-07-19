@@ -32,7 +32,7 @@ password nor a reversible representation is ever stored.
 
 **First-run anti-takeover.** Onboarding creates the first user account and
 then locks the endpoint — subsequent visitors cannot register a new
-administrator over the top of yours. Add extra users from the Réglages
+administrator over the top of yours. Add extra users from the Settings
 page once you're signed in.
 
 **Desktop path.** The Tauri build runs with `AUTH_MODE=none`: no cookies,
@@ -53,10 +53,10 @@ port defaults.
 
 **MCP endpoint.** `/api/mcp/rpc` is the one route intended to accept
 remote calls from a model runtime (Claude Desktop, Cursor, etc.). It is
-gated by a per-user bearer token you mint from Réglages → MCP; every token
+gated by a per-user bearer token you mint from Settings → MCP; every token
 is encrypted at rest using `pgcrypto` and the request/response envelope is
 encrypted with the same key so an inspector on the wire only sees ciphertext.
-Revoking a token from Réglages invalidates it immediately.
+Revoking a token from Settings invalidates it immediately.
 
 ## Backups are cleartext
 

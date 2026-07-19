@@ -107,7 +107,7 @@ WALKTHROUGH_SHOTS=1 npx playwright test e2e/walkthrough-screenshots.spec.ts
 ```
 
 Playwright's `webServer` boots the demo build automatically. Some
-walkthroughs (Enveloppes, Duplicates, Imports history, PDF
+walkthroughs (Envelopes, Duplicates, Imports history, PDF
 templates) render the `DemoUnavailableState` panel in this mode
 because the underlying endpoints are stubbed — that's expected and
 fine for demo-focused captures, wrong for the user-facing docs.

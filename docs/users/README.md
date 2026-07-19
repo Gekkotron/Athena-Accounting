@@ -13,7 +13,7 @@ You installed Athena or plan to. Start here.
   app, first-run flow per OS, where data lives, how to back up.
 - **[Importing](importing.md)** — OFX, French CSV, and PDF bank
   statements.
-- **[Categorization](categorization.md)** — rules, Tri tab, internal
+- **[Categorization](categorization.md)** — rules, Sort tab, internal
   transfer detection.
 - **[Dashboard](dashboard.md)** — charts, insights, Sankey, budgets.
 - **[Accounts & data](accounts-and-data.md)** — accounts, checkpoints,

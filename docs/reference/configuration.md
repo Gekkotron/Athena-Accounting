@@ -71,10 +71,10 @@ Comment out the `db` service's `ports:` block in `docker-compose.yml` if you
 don't need Postgres reachable from the host at all — the backend talks to
 it over the compose network regardless.
 
-## Per-user settings (Réglages page)
+## Per-user settings (Settings page)
 
 These persist in the `users.settings` JSON column and are edited from the
-Réglages page. They're per-user, not per-installation. The backend seeds the
+Settings page. They're per-user, not per-installation. The backend seeds the
 defaults on first save; the frontend paints these same defaults while the
 first fetch is in flight (source: `frontend/src/lib/settings.ts`).
 
@@ -83,7 +83,7 @@ first fetch is in flight (source: `frontend/src/lib/settings.ts`).
 | Default range (`dashboardRange`) | `3m` | `30d`, `3m`, `6m`, `12m`, `all` | Time window the Dashboard opens with on every load. The Range picker still overrides it inside a session. |
 | Default account scope (`dashboardChartScope`) | `all` | `all` or an account id | Which account(s) the Dashboard charts scope to on load. `all` aggregates every account. |
 | Dashed-line gap threshold (`chartGapThresholdDays`) | `6` | positive integer (days) | On the balance-over-time chart, gaps between consecutive points larger than this are drawn as a dashed line — a visual cue that data may be missing (e.g. a period with no imports). |
-| Duplicate similarity threshold (`duplicateSimilarityThreshold`) | `0` | integer 0–100 | Default filter on the "Possibles doublons" list under Data → Doublons. Groups whose label similarity is below this threshold are hidden. `0` shows every candidate group. |
+| Duplicate similarity threshold (`duplicateSimilarityThreshold`) | `0` | integer 0–100 | Default filter on the "Possibles doublons" list under Data → Duplicates. Groups whose label similarity is below this threshold are hidden. `0` shows every candidate group. |
 
 *See also:* [Getting started](/docs/users/getting-started) ·
 [Security and privacy](/docs/users/security-and-privacy)

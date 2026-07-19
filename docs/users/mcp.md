@@ -31,9 +31,9 @@ create, update, delete, and search your transactions.
 
 ## 1. Enable MCP access
 
-1. Open **Réglages** (the gear icon next to your username in the sidebar).
+1. Open **Settings** (the gear icon next to your username in the sidebar).
 2. In the **Accès MCP** section, toggle **Activer l'accès MCP**.
-3. Click **Générer un jeton**. The token is shown **once** — copy it now.
+3. Click **Generate a token**. The token is shown **once** — copy it now.
    You won't be able to see it again; if you lose it, generate a new one
    (this immediately invalidates the previous token).
 
@@ -150,20 +150,20 @@ Dates are `YYYY-MM-DD`.
 - The token is shown **once**, at generation time, and is never stored in
   plaintext server-side (the backend only keeps a key wrapped under a
   key derived from `SESSION_SECRET`).
-- You can revoke or regenerate the token at any time from **Réglages →
+- You can revoke or regenerate the token at any time from **Settings →
   Accès MCP** (clicking **Régénérer le jeton** / **Révoquer** immediately
   invalidates the previous token — any running MCP client using it will
   start failing authentication and needs the new token).
 - Rotating the backend's `SESSION_SECRET` invalidates every wrapped MCP
   key (the backend can no longer unwrap it), which effectively revokes
   all MCP tokens. After rotating `SESSION_SECRET`, generate a fresh token
-  in Réglages and update your MCP client configuration.
+  in Settings and update your MCP client configuration.
 
 ## Manual smoke test
 
 With the Athena backend running:
 
-1. Enable MCP access and generate a token in Réglages (see step 1 above).
+1. Enable MCP access and generate a token in Settings (see step 1 above).
 2. Build the server (`cd mcp && npm install && npm run build`).
 3. Configure your MCP client with the three env vars from step 3 above,
    pointing `command`/`args` at `mcp/dist/index.js`.

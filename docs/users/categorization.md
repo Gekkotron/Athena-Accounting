@@ -6,7 +6,7 @@ sidebar_position: 4
 # Categorization
 
 Athena categorizes transactions two ways: **rules** that run on every
-import, and **manual assignment** via the Tri (sorting) tab. Every
+import, and **manual assignment** via the Sort tab. Every
 transaction carries a **source** tag — `auto`, `default`, or `manual` —
 that decides who owns its category the next time rules are re-applied.
 This page walks through both paths, how transfer rules keep internal
@@ -15,7 +15,7 @@ categories" actually does.
 
 ## The rule engine
 
-Rules are keyword-to-category assignments configured in **Règles**. On
+Rules are keyword-to-category assignments configured in **Rules**. On
 every import Athena walks your enabled rules in priority order (highest
 first, ties broken by rule id) and stamps the first matching rule's
 category onto the transaction. Unmatched transactions fall into the
@@ -34,14 +34,14 @@ Matching is:
   catching a refund on your credit card, or a `carrefour` rule from
   catching a refund from Carrefour.
 
-Create rules from the **Règles** page: type one or several keywords
+Create rules from the **Rules** page: type one or several keywords
 (comma-separated), pick a category, set the match mode, sign
 constraint, and priority. Every keyword becomes its own rule pointing
 to the same category.
 
-## The Tri tab
+## The Sort tab
 
-The Tri tab is where you deal with everything the rules didn't catch.
+The Sort tab is where you deal with everything the rules didn't catch.
 Athena groups uncategorised transactions (and transactions that fell
 into `Divers`) by **normalised label** — so `CARREFOUR CITY 12/03` and
 `CARREFOUR MARKET 04/06` land in the same bucket — and sorts the
@@ -69,7 +69,7 @@ Uncheck the box to sort without leaving rules behind.
 
 ## Regenerating categories
 
-The **Recategorize** button (top-right on both **Règles** and **Tri**)
+The **Recategorize** button (top-right on both **Rules** and **Sort**)
 replays every enabled rule against every existing transaction. Use it
 after adding new rules, changing priorities, or importing history from
 before those rules existed.
@@ -103,13 +103,13 @@ category came from:
 
 - **`auto`** — assigned by the rule engine at import time.
 - **`default`** — fell through every rule and landed in `Divers`.
-- **`manual`** — you set the category, either from the Tri tab, from
+- **`manual`** — you set the category, either from the Sort tab, from
   a transaction's inline edit, or in the transaction modal.
 
 The source drives two behaviours:
 
 - **Editing.** Assigning a category on a transaction — inline in the
-  table, in the modal, or via the Tri tab — flips its source to
+  table, in the modal, or via the Sort tab — flips its source to
   `manual`. Retroactive rule re-application then leaves it alone.
 - **Re-importing.** Re-importing the same file is safe: dedup skips
   the rows that are already there (see [Importing](importing.md)), so

@@ -241,15 +241,15 @@ you've verified the restore — it's your last-resort recovery source.
 
 **Symptom.** A rule that worked for months suddenly misses new
 transactions from the same source. Their category stays blank in
-**Transactions** and the Tri queue picks them up.
+**Transactions** and the Sort queue picks them up.
 
 **Cause.** Your bank changed the memo format — a prefix moved, a
 merchant code shifted, or an OFX importer started keeping the raw
 tag where a PDF importer used to strip it. Rules match against the
 *normalised* memo, so even a small change breaks the match.
 
-**Fix.** Open **Rules → Tri**, find one of the miscategorised rows,
-and click **"règle depuis cette transaction"** — the form pre-fills
+**Fix.** Open **Rules → Sort**, find one of the miscategorised rows,
+and click **"rule from this transaction"** — the form pre-fills
 with the current normalised memo so you can widen the matcher (e.g.
 switch a `startsWith` to `contains`, or accept an extra optional
 suffix). Delete the stale rule once the new one covers the same span.
@@ -264,7 +264,7 @@ categorisation sweep, so your manual edit is overwritten. A manual
 category set on a transaction that a rule also matches is treated as
 "weaker" than the rule.
 
-**Fix.** In **Rules → Règles**, filter by the memo fragment; the
+**Fix.** In **Rules → Rules**, filter by the memo fragment; the
 offending rule surfaces at the top. Either narrow it (add an amount
 band, a bank-code prefix, or an exclusion) or delete it and add a more
 specific replacement. If you truly want your manual edit to stick,
@@ -306,14 +306,14 @@ rules).
 
 ### A category I use every month isn't in the budget view
 
-**Symptom.** You see a category on the dashboard, but the Plafonds
+**Symptom.** You see a category on the dashboard, but the Caps
 page doesn't list it — so you can't cap it.
 
 **Cause.** The budget view only shows categories that have at least
 one plafond set (past or present). A brand-new category that's never
 had a cap is invisible until you add one.
 
-**Fix.** Open **Budgets → Plafonds**, click **+ Ajouter un plafond**,
+**Fix.** Open **Budgets → Caps**, click **+ Add un plafond**,
 pick the category, and set a cap (even a placeholder of 0 works — the
 row will appear in future months and you can adjust from there).
 
@@ -328,7 +328,7 @@ by default on newly-created envelopes. Categories that only have a
 plafond (no envelope) never roll over — that's a plafond, not a
 sinking fund.
 
-**Fix.** Open **Budgets → Enveloppes**, edit the envelope, and toggle
+**Fix.** Open **Budgets → Envelopes**, edit the envelope, and toggle
 **"reporter le solde"**. The next month's opening balance will
 include the prior month's leftover. To backfill *this* month, add a
 one-off adjustment entry inside the envelope for the missing amount.
@@ -337,8 +337,8 @@ one-off adjustment entry inside the envelope for the missing amount.
 
 ### Forecast page says "no confirmed series"
 
-**Symptom.** You open **Récurrent → Prévision** and see an empty state
-telling you to confirm series first, even though the Détectés tab
+**Symptom.** You open **Recurring → Forecast** and see an empty state
+telling you to confirm series first, even though the Detected tab
 lists several.
 
 **Cause.** The forecast only projects **confirmed** series by design
@@ -346,31 +346,31 @@ lists several.
 6-month balance curve produces misleading projections. This is the
 default, not a bug.
 
-**Fix.** Open **Récurrent → Détectés**, review each row, and click
-**Confirmer** on the ones that are real recurring bills. The forecast
+**Fix.** Open **Recurring → Detected**, review each row, and click
+**Confirm** on the ones that are real recurring bills. The forecast
 picks them up immediately. If you *want* the guess-inclusive view for
-a quick sanity check, toggle **"inclure les séries détectées"**
-directly on the Prévision page — a checkbox appears when only
+a quick sanity check, toggle **"include detected series"**
+directly on the Forecast page — a checkbox appears when only
 detected series exist.
 
-### A monthly bill is missing from Détectés
+### A monthly bill is missing from Detected
 
 **Symptom.** You pay the same subscription every month, but Athena
-never surfaced it under **Récurrent → Détectés**.
+never surfaced it under **Recurring → Detected**.
 
 **Cause.** The detector needs at least three occurrences with a
 stable memo *and* a regular cadence. If the amount varies a lot (a
 variable-price utility bill), or the memo changes between charges
 (some card processors rotate a suffix), the detector skips it.
 
-**Fix.** Add the series manually: **Récurrent → Détectés → + Ajouter
+**Fix.** Add the series manually: **Recurring → Detected → + Add
 une série**, pick the account, a memo pattern, an amount range, and
-a cadence. Confirm it and it starts feeding Upcoming and Prévision on
+a cadence. Confirm it and it starts feeding Upcoming and Forecast on
 the next tick.
 
 ### Upcoming shows the same bill twice this month
 
-**Symptom.** **Récurrent → À venir** lists two entries for the same
+**Symptom.** **Recurring → Upcoming** lists two entries for the same
 recurring series in the current month.
 
 **Cause.** The month covers a "long" period between two occurrences
@@ -412,7 +412,7 @@ clients.
 truncated on paste, or was rotated in Athena and not updated in the
 client.
 
-**Fix.** In Athena, open **Réglages → MCP**, revoke and regenerate
+**Fix.** In Athena, open **Settings → MCP**, revoke and regenerate
 the token, copy it whole (they're long — mind the terminal wrap),
 paste into the client config, restart the client. Also check the
 `ATHENA_MCP_USER` matches your login username exactly (case matters).

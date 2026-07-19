@@ -20,7 +20,7 @@ You installed Athena (or plan to) and want to understand it.
   onboarding, your first ten minutes.
 - **[Importing](users/importing.md)** — OFX, French CSV, and PDF bank
   statements, including the interactive template wizard.
-- **[Categorization](users/categorization.md)** — rules, the Tri tab,
+- **[Categorization](users/categorization.md)** — rules, the Sort tab,
   internal transfer detection.
 - **[Dashboard](users/dashboard.md)** — balance chart, category donut,
   insights, Sankey, budgets.

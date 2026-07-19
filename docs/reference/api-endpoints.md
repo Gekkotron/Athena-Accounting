@@ -164,7 +164,7 @@ Auto-detect internal transfers by keyword + direction.
 | `PUT`    | `/api/transfer-rules/:id` | Partial update. |
 | `DELETE` | `/api/transfer-rules/:id` | Remove. |
 
-### Tri (categorize queue)
+### Sort (categorize queue)
 
 Bulk-categorize the long tail of un-categorized transactions.
 

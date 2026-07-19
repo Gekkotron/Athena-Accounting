@@ -20,7 +20,7 @@ Compose uses (the stock `postgres:16` image ships all three).
 
 ### `pg_trgm` — trigram-indexed full-text search
 
-The Tri tab groups uncategorised transactions by *similar label*, and
+The Sort tab groups uncategorised transactions by *similar label*, and
 the rule engine matches keywords against every label the user has ever
 imported. Both are hot paths over the full `transactions` table.
 
@@ -32,7 +32,7 @@ We keep two indexes on `transactions.normalized_label`:
   what powers the "same-label" grouping in Tri and the fuzzy suggest
   when creating a rule from a transaction.
 
-Without `pg_trgm`, the GIN index cannot be created and the Tri tab
+Without `pg_trgm`, the GIN index cannot be created and the Sort tab
 degrades to a full sequential scan on every keystroke.
 
 ### `unaccent` — accent folding
@@ -124,12 +124,12 @@ one leg of an internal transfer and link it to its mirror leg via
 
 Two mutually-exclusive budget models coexist:
 
-- **Plafonds mode** — `category_budgets` holds one recurring cap per
+- **Caps mode** — `category_budgets` holds one recurring cap per
   `(user, category, period)` optionally scoped to a single account.
   Uniqueness is enforced by two partial indexes: one on
   `(user_id, category_id, period) WHERE account_id IS NULL` (global)
   and one on `(user_id, category_id, period, account_id) WHERE account_id IS NOT NULL` (scoped).
-- **Enveloppe mode** — `envelope_assignments` allocates a per-month
+- **Envelope mode** — `envelope_assignments` allocates a per-month
   amount per category (unique on `(user, category, month)`).
   `envelope_category_settings` stores optional targets and
   overspend policy. `envelope_month_holds` implements the "reserve

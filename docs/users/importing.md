@@ -24,7 +24,7 @@ own one-line summary: inserted / skipped / needs-template / errored.
 
 ## Before you import
 
-Create the destination account first (*Comptes → Ajouter*). The
+Create the destination account first (*Accounts → Add*). The
 opening balance and opening date are mandatory — every reported balance
 is computed as `opening_balance + SUM(amount WHERE date >= opening_date)`.
 
@@ -107,7 +107,7 @@ If you have two accounts and move money between them, both legs will
 show up in their respective imports as ordinary expenses / incomes.
 Athena's transfer detector links them via a shared `transfer_group_id`
 and excludes them from income/expense aggregates. Configure the
-keyword pairs in **Règles** (the transfer-rules UI is minimal; the
+keyword pairs in **Rules** (the transfer-rules UI is minimal; the
 API is at `/api/transfer-rules`). Once matched, the importer looks for
 the mirror leg in the counterpart account within ±7 days.
 
@@ -124,7 +124,7 @@ issue with a redacted sample statement.
 
 **"My template used to work and stopped."**
 Re-run the import — the auto-recovery re-train usually catches this.
-If it doesn't, delete the template (*Réglages → Modèles*) and paint a
+If it doesn't, delete the template (*Settings → Templates*) and paint a
 new one.
 
 **"A transaction I want was deduped."**

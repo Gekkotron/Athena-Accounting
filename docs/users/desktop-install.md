@@ -95,7 +95,7 @@ DB on an external drive).
 
 Two ways, use both:
 
-**1. Backup export from the UI.** *Réglages → Sauvegarde → Exporter*.
+**1. Backup export from the UI.** *Settings → Backup → Export*.
 This writes a single JSON file containing every account, transaction,
 checkpoint, split, rule, category, and budget. It's the same format the
 Docker install uses, so you can move a database between the two
@@ -124,7 +124,7 @@ scrapes it. Use a calendar reminder instead.
 ## MCP from the desktop app
 
 The MCP server is still available in desktop mode: the app writes its
-current port to `${DATA_DIR}/.mcp-port` on boot, and the *Réglages →
+current port to `${DATA_DIR}/.mcp-port` on boot, and the *Settings →
 MCP* screen offers a **Copy MCP config** button that produces a
 ready-to-paste snippet for Claude Desktop / Cursor / any other MCP
 client. See **[MCP access](mcp.md)** for the full walkthrough.
