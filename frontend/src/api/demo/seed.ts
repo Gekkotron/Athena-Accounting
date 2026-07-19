@@ -167,9 +167,17 @@ function buildTransactions(): Transaction[] {
     { year: 2026, month: 7 },
   ];
 
+  // Cap every generated transaction to SEED_TODAY. Without this the ledger
+  // contained future-dated July occurrences (Bouygues day 20, Netflix day
+  // 22, Épargne day 28, plus discretionary items in weeks 3–4) that made
+  // the balance and forecast disagree: startBalance already summed them
+  // in, but the historical chart line kept drawing past "today", and
+  // firstOccurrenceOnOrAfter treated them as "already seen" so the
+  // projection missed the next real occurrence in July.
   const push = (spec: TxSpec, year: number, month: number, weekBias: number) => {
     const day = Math.min(spec.day, MONTH_DAYS[month - 1]);
     const date = ymd(year, month, day);
+    if (date > SEED_TODAY) return;
     const acc = spec.accountId ?? ACC.Courant;
     const amt = fmt(spec.amount);
     const norm = normalize(spec.label);
@@ -297,11 +305,16 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
     { id: 12, label: 'Basic-Fit Abonnement',       amount:   -24.99, day: 27, categoryId: CAT.Loisirs,     essentialness: null },
   ];
 
-  // last_seen from July 2026 (last seed month); next_due = last_seen + 30d.
+  // lastSeenAt anchors the "last real occurrence in the ledger" — must
+  // NOT be in the future relative to SEED_TODAY, otherwise the forecast
+  // treats a not-yet-happened occurrence as already-seen and skips it.
+  // Day already passed this month → July's date; day still upcoming
+  // this month → June's date. nextDueAt is +30d from lastSeenAt.
+  const seedTodayDay = Number(SEED_TODAY.slice(-2));
   const list: RecurringSeries[] = [];
   for (const s of specs) {
-    const lastSeenAt = ymd(2026, 7, s.day);
-    const nextDueAt = ymd(2026, 8, s.day);
+    const lastSeenAt = s.day <= seedTodayDay ? ymd(2026, 7, s.day) : ymd(2026, 6, s.day);
+    const nextDueAt = s.day <= seedTodayDay ? ymd(2026, 8, s.day) : ymd(2026, 7, s.day);
     const firstSeenAt = ymd(2026, 2, s.day);
     const members = transactions.filter(
       (t) => t.rawLabel === s.label,
