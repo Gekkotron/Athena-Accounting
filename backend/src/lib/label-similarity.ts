@@ -14,6 +14,12 @@
 //   - Lowercase so "CARREFOUR" and "carrefour" match.
 //   - Drop tokens shorter than 2 chars — single letters (I, A) and single
 //     digits create noise.
+//   - Drop pure-digit tokens (dates, SEPA refs, order ids, card BINs).
+//     A recurring wire whose memo shape is "VIR <VENDOR> <ABBR>.<YYYYMMDD>.M<N>"
+//     rotates the YYYYMMDD reference every month; keeping it means each
+//     month lands in its own singleton cluster and the recurring detector
+//     never reaches MIN_OCCURRENCES. Merchant names identify a
+//     transaction, rotating numbers only add noise.
 //   - Drop a small set of banking boilerplate ("cb", "vir", "prlv", "carte",
 //     "paiement", …) so two card purchases don't score as similar just
 //     because both start with "CARTE 6015 PAIEMENT". Merchant names are what
@@ -26,12 +32,16 @@ const STOPWORDS = new Set([
   'perm', 'permanente', 'permanent',
 ]);
 
+const DIGITS_ONLY = /^[0-9]+$/;
+
 export function tokenize(label: string): Set<string> {
   return new Set(
     label
       .toLowerCase()
       .split(/[^a-z0-9]+/i)
-      .filter((t) => t.length >= 2 && !STOPWORDS.has(t)),
+      .filter(
+        (t) => t.length >= 2 && !STOPWORDS.has(t) && !DIGITS_ONLY.test(t),
+      ),
   );
 }
 

@@ -43,13 +43,29 @@ describe('jaccardTokenSimilarity', () => {
     expect(s).toBe(0);
   });
 
-  it('picks up coincidental-purchase overlap when merchants share tokens', () => {
-    // "6015" isn't a stopword — a shared card number pushes similarity up.
+  it('two different merchants that only share a card BIN do not cluster', () => {
+    // "6015" is now dropped as a pure-digit token (it's the card BIN, not
+    // a merchant identifier). CARTE/PAIEMENT are already stopwords. So
+    // {bureau, vallee} vs {crf, wittenheim} → 0 — which is the correct
+    // outcome: two different merchants on the same card should NOT be
+    // treated as similar just because the BIN matches.
     const s = jaccardTokenSimilarity('BUREAU VALLEE CARTE 6015 PAIEMENT', 'CRF WITTENHEIM CARTE 6015 PAIEMENT');
-    // With CARTE/PAIEMENT stripped, only "6015" is shared vs {bureau, vallee}
-    // and {crf, wittenheim}. Below 50%.
-    expect(s).toBeGreaterThan(0);
-    expect(s).toBeLessThan(0.5);
+    expect(s).toBe(0);
+  });
+
+  it('regression: recurring wire with rotating YYYYMMDD + monthly counter clusters (≥ 0.5)', () => {
+    // A common French SEPA memo shape: employer / vendor abbreviation +
+    // a YYYYMMDD reference + a monthly counter. Before dropping
+    // pure-digit tokens the pair scored 2/6 ≈ 0.33 — below the recurring
+    // detector's 0.5 threshold — so each month landed in its own
+    // singleton cluster and the pattern never surfaced as a detected
+    // series. After the fix the rotating date drops out, leaving
+    // {acme, pay, m042} vs {acme, pay, m043} → 2/4 = 0.5.
+    const s = jaccardTokenSimilarity(
+      'VIR ACME PAY.20240115.M042.',
+      'VIR ACME PAY.20240215.M043.',
+    );
+    expect(s).toBeGreaterThanOrEqual(0.5);
   });
 });
 
