@@ -122,33 +122,33 @@ export default function App() {
 
             {/* Règles hub */}
             <Route path="/rules" element={<HubLayout title={t('nav.items.rules')} tabs={RULES_TABS} />}>
-              <Route index element={<Navigate to="tri" replace />} />
-              <Route path="tri" element={<Tri />} />
-              <Route path="liste" element={<Rules />} />
+              <Route index element={<Navigate to="sort" replace />} />
+              <Route path="sort" element={<Tri />} />
+              <Route path="list" element={<Rules />} />
               <Route path="categories" element={<Categories />} />
             </Route>
 
             {/* Récurrent hub */}
             <Route path="/recurring" element={<HubLayout title={t('nav.items.recurrent')} tabs={RECURRENT_TABS} />}>
-              <Route index element={<Navigate to="detectes" replace />} />
-              <Route path="detectes" element={<DetectedTab />} />
-              <Route path="a-venir" element={<UpcomingTab />} />
-              <Route path="prevision" element={<ForecastTab />} />
+              <Route index element={<Navigate to="detected" replace />} />
+              <Route path="detected" element={<DetectedTab />} />
+              <Route path="upcoming" element={<UpcomingTab />} />
+              <Route path="forecast" element={<ForecastTab />} />
             </Route>
 
             {/* Comptes hub */}
             <Route path="/accounts" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
               <Route index element={<Accounts />} />
-              <Route path="motifs" element={<Patterns />} />
+              <Route path="patterns" element={<Patterns />} />
             </Route>
 
             {/* Données hub */}
             <Route path="/data" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
               <Route index element={<Navigate to="imports" replace />} />
               <Route path="imports" element={<Imports />} />
-              <Route path="doublons" element={<Duplicates />} />
-              <Route path="modeles" element={<PdfTemplates />} />
-              <Route path="sauvegarde" element={<Backup />} />
+              <Route path="duplicates" element={<Duplicates />} />
+              <Route path="pdf-templates" element={<PdfTemplates />} />
+              <Route path="backup" element={<Backup />} />
             </Route>
 
             <Route path="/profile" element={<Profile />} />
