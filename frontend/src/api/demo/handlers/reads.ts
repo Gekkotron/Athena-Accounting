@@ -423,9 +423,39 @@ function nextDueFrom(lastSeen: string, cadenceDays: number, today: string): stri
   return next;
 }
 
+// Majority-vote account across the transactions whose rawLabel matches
+// the series label. Returns null when there are no matches or an even
+// split. Recomputed at read time so stale localStorage snapshots (from
+// visits made before primaryAccountId existed on the type) and any
+// runtime state mutations both surface the current attribution — the
+// backend does the equivalent via a correlated subquery over the
+// recurring_series_transactions join.
+function computePrimaryAccountId(label: string, transactions: Transaction[]): number | null {
+  const counts = new Map<number, number>();
+  for (const t of transactions) {
+    if (t.rawLabel !== label) continue;
+    counts.set(t.accountId, (counts.get(t.accountId) ?? 0) + 1);
+  }
+  let best: number | null = null;
+  let bestCount = 0;
+  for (const [id, cnt] of counts) {
+    if (cnt > bestCount) {
+      bestCount = cnt;
+      best = id;
+    }
+  }
+  return best;
+}
+
 function handleRecurring(req: DemoRequest) {
   const state = getState();
-  const rows = state.recurring ?? [];
+  const transactions = txs();
+  // Always overwrite primaryAccountId from the current transactions so
+  // the value stays honest across schema bumps and old localStorage.
+  const rows = (state.recurring ?? []).map((r) => ({
+    ...r,
+    primaryAccountId: computePrimaryAccountId(r.label, transactions),
+  }));
   const upcomingRaw = req.query.upcoming;
 
   if (upcomingRaw !== undefined && upcomingRaw !== '') {
