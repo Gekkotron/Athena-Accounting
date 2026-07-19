@@ -55,18 +55,42 @@ jobs:
         working-directory: backend
         run: npm run test:coverage
 
+      - name: Compute today's UTC date (Codecov daily gate)
+        if: always()
+        id: codecov-day
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Codecov upload gate (backend, once per UTC day)
+        # Developer-plan quota is 250 uploads/month across both jobs, so
+        # active work days burn it in ~4 weeks. Cache key is per UTC date:
+        # first CI run of the day misses → upload runs → post-job save
+        # writes the marker. Every subsequent run that day hits and skips.
+        # Marker is written only when the upload succeeds (outcome check
+        # below) so a failed upload can be retried later the same day.
+        if: always()
+        id: codecov-gate
+        uses: actions/cache@v4
+        with:
+          path: .codecov-marker-backend
+          key: codecov-backend-${{ steps.codecov-day.outputs.date }}
+
       - name: Upload coverage to Codecov
         # Upload even when the test step failed — a partial coverage report
         # is better than a skipped baseline. If we skip, the NEXT healthy
         # commit posts a fake "coverage dropped" status against the last
         # frontend-only baseline.
-        if: always()
+        if: always() && steps.codecov-gate.outputs.cache-hit != 'true'
+        id: codecov-upload
         uses: codecov/codecov-action@v4
         with:
           files: backend/coverage/lcov.info
           flags: backend
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Record Codecov upload marker (backend)
+        if: always() && steps.codecov-upload.outcome == 'success'
+        run: date -u +%Y-%m-%dT%H:%M:%SZ > .codecov-marker-backend
 
   frontend-tests:
     name: Frontend tests + coverage
@@ -93,14 +117,37 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage
 
-      - name: Upload coverage to Codecov
+      - name: Compute today's UTC date (Codecov daily gate)
         if: always()
+        id: codecov-day
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Codecov upload gate (frontend, once per UTC day)
+        # See backend-tests for the rationale — same mechanism, distinct
+        # cache key so backend and frontend gate independently. Together
+        # they cap the workflow at 2 Codecov uploads per UTC day, which
+        # keeps the Developer-plan 250/month quota safely out of reach
+        # even on heavy pushing days.
+        if: always()
+        id: codecov-gate
+        uses: actions/cache@v4
+        with:
+          path: .codecov-marker-frontend
+          key: codecov-frontend-${{ steps.codecov-day.outputs.date }}
+
+      - name: Upload coverage to Codecov
+        if: always() && steps.codecov-gate.outputs.cache-hit != 'true'
+        id: codecov-upload
         uses: codecov/codecov-action@v4
         with:
           files: frontend/coverage/lcov.info
           flags: frontend
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Record Codecov upload marker (frontend)
+        if: always() && steps.codecov-upload.outcome == 'success'
+        run: date -u +%Y-%m-%dT%H:%M:%SZ > .codecov-marker-frontend
 
   frontend-e2e:
     name: Frontend e2e (browser-only demo)
