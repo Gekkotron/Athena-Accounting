@@ -28,9 +28,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Reconcile FR mirror of docs/users/mcp.md against latest EN version
-      FR has 178 lines vs EN 279 — the FR translation lags several major EN updates. Read both files side by side, diff structure section-by-section, and port every missing paragraph/subsection into the FR mirror at website/i18n/fr/docusaurus-plugin-content-docs/current/users/mcp.md. Keep existing FR terminology (jeton, chiffrement, serveur MCP, etc.) — don't retranslate content that's already correct.
-      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) `diff <(grep '^##' docs/users/mcp.md) <(grep '^##' website/i18n/fr/docusaurus-plugin-content-docs/current/users/mcp.md)` returns nothing; (c) FR code blocks / commands / env vars match EN verbatim.
 
 - [ ] Reconcile FR mirror of docs/users/getting-started.md against latest EN version
       FR has 139 lines vs EN 188. The EN version has drifted forward — likely new sections on the two-path install (Docker vs Desktop), update.sh callout, or the demo pointer. Port any missing sections into website/i18n/fr/docusaurus-plugin-content-docs/current/users/getting-started.md preserving existing FR terminology.
@@ -58,6 +55,9 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Reconcile FR mirror of docs/users/mcp.md against latest EN version
+      No content changes needed — FR mirror is already at full section-for-section parity with EN. The 178-vs-279-line delta is a wrapping-convention difference (FR keeps paragraphs on single lines; EN wraps at ~72 chars). Word count is actually higher in FR (2086 vs 1882 for EN). All headers (## Ce que c'est, ## 1–4, ## Référence des outils, ## Sécurité, ## Test de fumée manuel, ## Rapprocher un relevé and its 6 ### subsections), all bullets, the full Tools reference table, the Desktop (Tauri) port-file subsection (added in aa0c25d and mirrored in the FR bilingualize commit 6408140 the next day), and all code blocks / env var names match EN. Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural (16 headers in the same order at the same nesting), which the diff confirms.
 
 - [x] Fill in docs/contributors/database.md with real content
       Cover PostgreSQL extensions and their rationale (`pg_trgm` for trigram-indexed full-text search, `unaccent` for accent folding, `pgcrypto` for MCP payload encryption); key tables and their invariants (users, accounts, transactions with normalised full-text columns, rules, budgets, envelopes, checkpoints, imports audit); how migrations are authored and applied (files under `backend/src/db/migrations/`, lexicographic order, one transaction each, tracked in `schema_migrations`); deferrable triggers for transaction splits; and the running-balance column setup. Cross-link to docs/contributors/architecture.md for the higher-level context. Remove the "**Status:** draft — content coming." line and the "## Planned sections" block.
