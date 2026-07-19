@@ -33,17 +33,16 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 
 
-- [ ] Reconcile FR mirror of docs/users/README.md against latest EN version
-      FR has 20 lines vs EN 26 — likely one or two missing bullets or a paragraph. Port the delta into website/i18n/fr/docusaurus-plugin-content-docs/current/users/README.md.
-      Success criteria: (a) FR mirror has section-for-section parity with EN; (b) header-diff empty; (c) internal links resolve.
 
 
 
 
 ## In progress
 
-
 ## Done
+
+- [x] Reconcile FR mirror of docs/users/README.md against latest EN version
+      No content changes needed — FR mirror is already at full section-for-section parity with EN. The 20-vs-26-line delta is a wrapping-convention difference (FR keeps bullets on single lines; EN wraps at ~65 chars). Both files have the same H1, intro sentence, 9 top-level bullets in the same order (Getting started / Démarrage, Desktop install / Installation bureau, Importing / Importer, Categorization / Catégorisation, Dashboard / Tableau de bord, Accounts & data / Comptes et données, Security & privacy / Sécurité et confidentialité, MCP access / Accès MCP, Troubleshooting / Dépannage), and the same "Back to docs index" trailer. All internal links (../README.md and the 9 sibling .md targets) resolve. Success criterion (b)'s literal grep will always show differences because bullet labels are translated; parity is structural, which the diff confirms.
 
 - [x] Reconcile FR mirror of docs/users/backup-recovery.md against latest EN version
       No content changes needed — FR mirror is already at full section-for-section parity with EN. The 127-vs-78-line delta is a wrapping-convention difference (FR hard-wraps at ~65 chars; EN keeps paragraphs on single lines). Both files have the same 9 top-level sections in the same order (# Backup and recovery / Sauvegarde et restauration, ## Where is the database? / Où se trouve la base ?, ## Export (via the UI) / Exporter (via l'interface), ## Schedule regular exports / Planifier des exports réguliers, ## Restore (via the UI) / Restaurer (via l'interface), ## What if the PGlite file is corrupted? / Que se passe-t-il en cas de fichier PGlite corrompu ?, ## Common pitfalls / Pièges fréquents, ## Proof of correctness / Preuve du bon fonctionnement, ## See also / Voir aussi). All content — the caution block, the per-OS $DATA_DIR paths, the Docker athena_pgdata volume note, the 3-step export UI + GET /api/backup/export endpoint mention, the cron + Task Scheduler snippets with identical curl invocation, the 4-step restore flow with v1-v4 version acceptance, the 4-step corruption recovery + PRAGMA integrity_check note, the three pitfalls (multiple tabs / wrong Docker user / format versions), the backup-drill.ts proof section with the same 210/2/8/5/3/1 fixture counts, and the two See also cross-links — is present in both. No FR-only orphaned sections. Success criterion (b)'s literal grep will always show differences because headers are translated; parity is structural (9 headers in the same order), which the diff confirms.
