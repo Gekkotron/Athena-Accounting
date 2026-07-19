@@ -1,41 +1,263 @@
-.features {
+/* =============================================================================
+ * Homepage feature bento — mixed-size cards, Fraunces italic monograms.
+ *
+ * Grid shape (desktop, 4 columns):
+ *   ┌──────────────┬──────────────┐
+ *   │  IMPORTS (wide)             │  (span 4 wide, 1 row)
+ *   ├─────────┬─────────┬─────────┤
+ *   │  RULES  │  DASH   │ BUDGET  │  (span 2 + 2 + 2 doesn't fit — see below)
+ * On desktop we run 6 columns, wide cards = 6, narrow cards = 3:
+ *   [ IMPORTS  IMPORTS  IMPORTS ]  ← 6-col wide, but the "narrow" cards
+ *   [ RULES DASH BUDGET RECURRENT LOCAL LOCAL ]
+ * ---
+ * Actually simpler: define a 6-column grid. Wide = span 6. Narrow = span 3.
+ * So the layout becomes:
+ *   row 1: IMPORTS (span 6)
+ *   row 2: RULES (3) + DASH (3)
+ *   row 3: BUDGETS (3) + RECURRENT (3)
+ *   row 4: LOCAL (span 6)
+ * ============================================================================= */
+
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.25rem 1rem;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.sectionEyebrow {
+  font-family: var(--athena-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--athena-sage-300);
+  margin: 0 0 0.75rem;
+}
+
+.sectionHeading {
+  font-family: var(--athena-font-display);
+  color: var(--athena-ink-50);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  margin: 0;
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  position: relative;
+  padding: 1.75rem 1.75rem 1.5rem;
+  border: 1px solid var(--athena-ink-800);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(22, 26, 33, 0.75), rgba(17, 20, 26, 0.55));
+  transition:
+    border-color 220ms ease,
+    transform 220ms ease,
+    box-shadow 220ms ease;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: rgba(125, 211, 192, 0.35);
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 20px 40px -24px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(125, 211, 192, 0.08);
+}
+
+/* Subtle sage arc in the top-right corner of each card — like a corner mark
+   in a ledger. Visible on the wide cards, whisper-quiet on the narrow ones. */
+.card::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(125, 211, 192, 0.10), transparent 60%);
+  pointer-events: none;
+}
+
+.cardWide {
+  grid-column: span 6;
+  padding: 2.25rem 2.25rem 2rem;
+}
+
+.cardNarrow {
+  grid-column: span 3;
+}
+
+/* -- Card head: monogram + eyebrow ----------------------------------------- */
+
+.cardHead {
   display: flex;
   align-items: center;
-  padding: 4rem 0;
-  width: 100%;
+  gap: 0.85rem;
+  margin-bottom: 1.15rem;
 }
 
-/* Echoes the app's `.surface`: rounded, thin border, subtle inset shadow. */
-.featureCard {
-  padding: 1.5rem;
-  border-radius: 16px;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  background: var(--ifm-background-surface-color);
-  height: 100%;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.featureCard:hover {
-  border-color: var(--ifm-color-primary);
-  transform: translateY(-2px);
-}
-
-.featureCard h3 {
+/* The monogram — Fraunces italic, single letter, drop-cap energy. */
+.monogram {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--athena-ink-800);
+  border-radius: 10px;
+  background: rgba(11, 13, 17, 0.7);
+  color: var(--athena-sage-200);
   font-family: var(--athena-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.5rem;
+  letter-spacing: 0;
+  line-height: 1;
+  font-variation-settings: 'opsz' 144, 'SOFT' 100, 'WONK' 1;
+  transform: translateY(-1px);
+}
+
+.eyebrow {
+  font-family: var(--athena-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--athena-ink-400);
+  margin: 0;
+}
+
+/* -- Card body -------------------------------------------------------------- */
+
+.title {
+  font-family: var(--athena-font-display);
+  color: var(--athena-ink-50);
+  font-size: clamp(1.15rem, 1.6vw, 1.4rem);
+  font-weight: 500;
   letter-spacing: -0.01em;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  line-height: 1.2;
+  margin: 0 0 0.85rem;
+  font-variation-settings: 'opsz' 60, 'SOFT' 40;
 }
 
-.featureCard p {
-  color: var(--ifm-color-content-secondary);
-  margin-bottom: 0;
+.cardWide .title {
+  font-size: clamp(1.4rem, 2vw, 1.7rem);
+  max-width: 22ch;
 }
 
-[data-theme='dark'] .featureCard {
-  border-color: rgba(29, 34, 48, 0.7);
+.body {
+  color: var(--athena-ink-300);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.cardWide .body {
+  font-size: 1.02rem;
+  max-width: 60ch;
+}
+
+/* -- Detail chip strip (only on wide cards) -------------------------------- */
+
+.detail {
+  margin-top: 1.5rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--athena-ink-800);
+}
+
+.detailChips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+}
+
+.detailChips > span {
+  font-family: var(--athena-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--athena-ink-200);
+  padding: 0.26rem 0.6rem;
+  border: 1px solid var(--athena-ink-800);
+  border-radius: 999px;
   background: rgba(17, 20, 26, 0.6);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 12px 32px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* -- Responsive ------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cardWide,
+  .cardNarrow {
+    grid-column: span 2;
+  }
+  .cardWide {
+    padding: 1.75rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .cardWide,
+  .cardNarrow {
+    grid-column: span 1;
+  }
+  .card {
+    padding: 1.5rem 1.5rem 1.25rem;
+  }
+}
+
+/* Light-mode fallback — Athena's docs default to dark, but the site does
+   support the light toggle. Keep it legible. */
+html:not([data-theme='dark']) .card {
+  background: #ffffff;
+  border-color: #e5e5df;
+}
+html:not([data-theme='dark']) .card:hover {
+  border-color: var(--athena-sage-500);
+  box-shadow: 0 20px 40px -24px rgba(20, 40, 30, 0.15);
+}
+html:not([data-theme='dark']) .monogram {
+  background: #f2f2ec;
+  border-color: #e5e5df;
+  color: var(--athena-sage-700);
+}
+html:not([data-theme='dark']) .title {
+  color: #16413b;
+}
+html:not([data-theme='dark']) .body {
+  color: #4a5060;
+}
+html:not([data-theme='dark']) .eyebrow {
+  color: #8a8f9c;
+}
+html:not([data-theme='dark']) .detail {
+  border-top-color: #e5e5df;
+}
+html:not([data-theme='dark']) .detailChips > span {
+  background: #f7f7f2;
+  border-color: #e5e5df;
+  color: #4a5060;
+}
+html:not([data-theme='dark']) .sectionEyebrow {
+  color: var(--athena-sage-700);
+}
+html:not([data-theme='dark']) .sectionHeading {
+  color: #16413b;
 }

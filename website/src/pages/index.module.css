@@ -1,51 +1,581 @@
-/* Hero — mirrors the app's dark, atmospheric surfaces. */
-.heroBanner {
-  padding: 6rem 0 5rem;
-  text-align: center;
+/* =============================================================================
+ * Athena Accounting — landing page
+ *
+ * Aesthetic: editorial ledger. Ink-deep surfaces, sage accents, Fraunces
+ * variable-font flourish on the headline. Everything sits on a hairline
+ * grid; no rounded-glass, no gradient buttons, no illustration.
+ * ============================================================================= */
+
+/* -- Hero -------------------------------------------------------------------- */
+
+.hero {
   position: relative;
   overflow: hidden;
   background-color: var(--athena-ink-950);
-  background-image:
-    radial-gradient(1200px 800px at 15% -10%, rgba(125, 211, 192, 0.10), transparent 60%),
-    radial-gradient(900px 600px at 115% 110%, rgba(220, 120, 97, 0.06), transparent 60%);
-  color: var(--athena-ink-100);
   border-bottom: 1px solid var(--athena-ink-800);
+  padding: clamp(5rem, 12vw, 9rem) 0 clamp(3.5rem, 8vw, 6rem);
+  isolation: isolate;
 }
 
-/* Override Infima's default hero--primary sage wash — we want ink + accent,
-   not a solid sage rectangle. */
-.heroBanner.hero--primary {
-  --ifm-hero-background-color: var(--athena-ink-950);
-  --ifm-hero-text-color: var(--athena-ink-100);
+/* Warm radial washes — sage top-left, clay bottom-right. Positioned to
+   feel off-axis on purpose, not a symmetric halo. */
+.heroWashes {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    radial-gradient(1200px 800px at 15% -10%, rgba(125, 211, 192, 0.14), transparent 60%),
+    radial-gradient(900px 600px at 108% 115%, rgba(220, 120, 97, 0.09), transparent 60%),
+    radial-gradient(600px 400px at 90% -20%, rgba(52, 158, 139, 0.08), transparent 65%);
+  pointer-events: none;
 }
 
-.heroBanner :global(.hero__title) {
+/* Grain overlay — SVG feTurbulence baked as a data URI. Tiny and cache-
+   friendly; sits above the washes and below content. */
+.heroGrain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 240px 240px;
+}
+
+.heroInner {
+  position: relative;
+  text-align: center;
+  max-width: 860px;
+  padding: 0 1.25rem;
+}
+
+/* -- Preamble --------------------------------------------------------------- */
+
+.preamble {
+  font-family: var(--athena-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--athena-sage-300);
+  margin: 0 0 2rem;
+  display: inline-flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  opacity: 0;
+  animation: rise 900ms ease-out 100ms forwards;
+}
+
+.preambleDot {
+  color: var(--athena-ink-600);
+  font-family: var(--athena-font-sans);
+}
+
+/* -- Headline --------------------------------------------------------------- */
+
+.headline {
   font-family: var(--athena-font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
   color: var(--athena-ink-50);
-  font-size: clamp(2.25rem, 6vw, 3.75rem);
-  font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 0;
+  margin: 0 auto;
+  max-width: 20ch;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+  font-size: clamp(2.6rem, 6.5vw, 4.6rem);
 }
 
-.heroBanner :global(.hero__subtitle) {
+.headlineLine1,
+.headlineLine2 {
+  display: block;
+  opacity: 0;
+  animation: rise 1000ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.headlineLine1 {
+  animation-delay: 200ms;
+  font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 0;
+}
+
+/* The second line carries the Fraunces flourish — italic, higher SOFT,
+   a whisper of WONK. This is the "signature" moment on the page. */
+.headlineLine2 {
+  font-style: italic;
+  color: var(--athena-sage-200);
+  font-variation-settings: 'opsz' 144, 'SOFT' 100, 'WONK' 1;
+  animation-delay: 380ms;
+}
+
+/* -- Subhead ---------------------------------------------------------------- */
+
+.subhead {
   color: var(--athena-ink-300);
-  max-width: 42rem;
-  margin: 1rem auto 2rem;
-  font-size: 1.15rem;
+  max-width: 44rem;
+  margin: 1.75rem auto 2.5rem;
+  font-size: clamp(1.02rem, 1.6vw, 1.18rem);
+  line-height: 1.6;
+  opacity: 0;
+  animation: rise 900ms ease-out 520ms forwards;
+}
+
+/* -- CTAs ------------------------------------------------------------------- */
+
+.ctas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: rise 900ms ease-out 700ms forwards;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding-inline: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 10px 32px -14px rgba(125, 211, 192, 0.55);
+}
+
+.ctaPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 14px 40px -14px rgba(125, 211, 192, 0.7);
+}
+
+.ctaArrow {
+  font-family: var(--athena-font-mono);
+  transition: transform 200ms ease;
+  transform-origin: left center;
+}
+.ctaPrimary:hover .ctaArrow {
+  transform: translateX(3px);
+}
+
+.ctaGhost {
+  background: transparent;
+  border: 1px solid var(--athena-ink-700);
+  color: var(--athena-ink-100);
+  padding-inline: 1.4rem;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
+}
+.ctaGhost:hover {
+  border-color: var(--athena-sage-400);
+  background: rgba(125, 211, 192, 0.06);
+  color: var(--athena-ink-50);
+}
+
+.ctaTextLink {
+  color: var(--athena-ink-300);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid transparent;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+.ctaTextLink:hover {
+  color: var(--athena-sage-200);
+  border-bottom-color: var(--athena-sage-500);
+  text-decoration: none;
+}
+
+/* -- Trust chips ------------------------------------------------------------ */
+
+.chips {
+  list-style: none;
+  padding: 0;
+  margin: 3rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  align-items: center;
+  justify-content: center;
+  max-width: 44rem;
+  opacity: 0;
+  animation: rise 900ms ease-out 900ms forwards;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.38rem 0.85rem 0.38rem 0.65rem;
+  border: 1px solid var(--athena-ink-800);
+  border-radius: 999px;
+  background: rgba(17, 20, 26, 0.55);
+  color: var(--athena-ink-200);
+  font-family: var(--athena-font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.chipMark {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--athena-sage-400);
+  box-shadow: 0 0 0 3px rgba(82, 186, 166, 0.15);
+}
+
+/* -- Product shot ----------------------------------------------------------- */
+
+.productSection {
+  max-width: 1120px;
+  margin: -3.25rem auto 0;
+  padding: 0 1.25rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: rise 1000ms ease-out 1100ms forwards;
+}
+
+.productFrame {
+  position: relative;
+  padding: 12px;
+  border: 1px solid var(--athena-ink-800);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(29, 34, 48, 0.4), rgba(11, 13, 17, 0.4));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 40px 90px -30px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(125, 211, 192, 0.06);
+}
+
+/* An ambient sage glow behind the frame — the "specimen box" halo. */
+.productFrame::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background:
+    radial-gradient(50% 60% at 50% 0%, rgba(125, 211, 192, 0.16), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.productChrome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 10px;
+  border-bottom: 1px solid var(--athena-ink-800);
+  margin-bottom: 10px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--athena-ink-700);
+}
+.dot:nth-child(1) { background: #d9756a; }
+.dot:nth-child(2) { background: #d1a557; }
+.dot:nth-child(3) { background: var(--athena-sage-500); }
+
+.chromePath {
+  margin-left: auto;
+  font-family: var(--athena-font-mono);
+  font-size: 0.72rem;
+  color: var(--athena-ink-400);
+  letter-spacing: 0.04em;
+}
+
+.productImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--athena-ink-800);
+}
+
+.productCaption {
+  margin: 1.25rem auto 0;
+  text-align: center;
+  color: var(--athena-ink-400);
+  font-family: var(--athena-font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  max-width: 44rem;
+}
+
+/* -- Section divider (hairline + centered sage dot) ------------------------- */
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 6rem auto;
+  max-width: 1120px;
+  padding: 0 1.25rem;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--athena-ink-800) 20%,
+    var(--athena-ink-800) 80%,
+    transparent
+  );
+}
+
+.dividerDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--athena-sage-400);
+  box-shadow: 0 0 0 4px rgba(82, 186, 166, 0.12);
+}
+
+/* -- Ledger strip (numbered workflow) --------------------------------------- */
+
+.ledger {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.ledgerHeader {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.eyebrow {
+  font-family: var(--athena-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--athena-sage-300);
+  margin: 0 0 0.75rem;
+}
+
+.sectionHeading {
+  font-family: var(--athena-font-display);
+  color: var(--athena-ink-50);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  margin: 0;
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+}
+
+.ledgerList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+.ledgerStep {
+  padding: 2rem 1.5rem 2rem 1.75rem;
+  border-left: 1px solid var(--athena-ink-800);
+  position: relative;
+}
+.ledgerStep:first-child {
+  border-left: none;
+  padding-left: 0.5rem;
+}
+
+.ledgerStep::before {
+  content: '';
+  position: absolute;
+  top: 2rem;
+  left: -3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--athena-sage-500);
+  opacity: 0.85;
+}
+.ledgerStep:first-child::before {
+  display: none;
+}
+
+.ledgerN {
+  font-family: var(--athena-font-mono);
+  color: var(--athena-sage-300);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.9rem;
+}
+
+.ledgerTitle {
+  font-family: var(--athena-font-display);
+  color: var(--athena-ink-50);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.6rem;
+  font-variation-settings: 'opsz' 60, 'SOFT' 50;
+}
+
+.ledgerText {
+  color: var(--athena-ink-300);
+  font-size: 0.95rem;
   line-height: 1.55;
+  margin: 0;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 3rem 1.25rem;
-  }
+/* -- Closing CTA ------------------------------------------------------------ */
+
+.closing {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.25rem 6rem;
+  text-align: center;
 }
 
-.buttons {
+.closingInner {
+  padding-top: 1rem;
+}
+
+.closingHeading {
+  font-family: var(--athena-font-display);
+  color: var(--athena-ink-50);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.9rem, 3.8vw, 3rem);
+  line-height: 1.08;
+  margin: 0 auto 1.25rem;
+  max-width: 22ch;
+  font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 0;
+}
+
+.closingBody {
+  color: var(--athena-ink-300);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 40rem;
+  margin: 0 auto 2.25rem;
+}
+
+.closingCtas {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.signature {
+  font-family: var(--athena-font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--athena-ink-400);
+  margin: 0;
+}
+
+.signatureLink {
+  color: var(--athena-sage-300);
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms ease;
+}
+.signatureLink:hover {
+  border-bottom-color: currentColor;
+  text-decoration: none;
+}
+
+/* -- Utility --------------------------------------------------------------- */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- Motion ---------------------------------------------------------------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preamble,
+  .headlineLine1,
+  .headlineLine2,
+  .subhead,
+  .ctas,
+  .chips,
+  .productSection {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* -- Responsive ------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  .ledgerList {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ledgerStep:nth-child(3) {
+    border-left: none;
+    padding-left: 0.5rem;
+  }
+  .ledgerStep:nth-child(3)::before {
+    display: none;
+  }
+  .divider {
+    margin: 4rem auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero {
+    padding: 4.5rem 0 3rem;
+  }
+  .ledgerList {
+    grid-template-columns: 1fr;
+  }
+  .ledgerStep {
+    border-left: none !important;
+    padding-left: 0.5rem !important;
+  }
+  .ledgerStep::before {
+    display: none !important;
+  }
+  .productSection {
+    margin-top: -1.5rem;
+  }
+  .productFrame {
+    padding: 8px;
+  }
+  .chromePath {
+    display: none;
+  }
+  .subhead {
+    font-size: 1rem;
+  }
+  .preamble {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    gap: 0.5rem;
+  }
 }

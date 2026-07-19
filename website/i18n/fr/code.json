@@ -1,4 +1,216 @@
 {
+  "home.preamble.open": {
+    "message": "open source",
+    "description": "Hero preamble word 1"
+  },
+  "home.preamble.selfhosted": {
+    "message": "auto-hébergé",
+    "description": "Hero preamble word 2"
+  },
+  "home.preamble.single": {
+    "message": "mono-utilisateur",
+    "description": "Hero preamble word 3"
+  },
+  "home.headline.line1": {
+    "message": "Un livre de comptes pour un,",
+    "description": "Hero headline first line"
+  },
+  "home.headline.line2": {
+    "message": "sur votre propre machine.",
+    "description": "Hero headline second line, styled emphatic"
+  },
+  "home.subhead": {
+    "message": "Importez OFX, QFX, CSV et PDF. Catégorisez une fois, pour toujours. Fonctionne sur votre LAN — vos données bancaires ne quittent jamais votre réseau.",
+    "description": "Hero subhead paragraph"
+  },
+  "home.cta.demo": {
+    "message": "Essayer la démo",
+    "description": "Primary CTA — try the demo"
+  },
+  "home.cta.docs": {
+    "message": "Lire la doc",
+    "description": "Secondary CTA — read docs"
+  },
+  "home.cta.source": {
+    "message": "Voir le code source",
+    "description": "Tertiary CTA — view source"
+  },
+  "home.chip.local": {
+    "message": "Local uniquement",
+    "description": "Trust chip 1"
+  },
+  "home.chip.mit": {
+    "message": "Licence MIT",
+    "description": "Trust chip 2"
+  },
+  "home.chip.telemetry": {
+    "message": "Zéro télémétrie",
+    "description": "Trust chip 3"
+  },
+  "home.chip.onecmd": {
+    "message": "Une seule commande",
+    "description": "Trust chip 4"
+  },
+  "home.product.headingSr": {
+    "message": "Capture d'écran du produit",
+    "description": "SR-only heading above the dashboard screenshot"
+  },
+  "home.product.alt": {
+    "message": "Tableau de bord Athena Accounting : courbe de solde, camembert par catégorie, diagramme de Sankey, aperçus mensuels.",
+    "description": "Alt text for the dashboard screenshot"
+  },
+  "home.product.caption": {
+    "message": "Tableau de bord — un mois réel : courbe de solde, camembert par catégorie, Sankey mensuel.",
+    "description": "Caption below the dashboard screenshot"
+  },
+  "home.ledger.eyebrow": {
+    "message": "Le déroulé",
+    "description": "Eyebrow above the workflow section title"
+  },
+  "home.ledger.title": {
+    "message": "En quatre mouvements.",
+    "description": "Workflow section title"
+  },
+  "home.step1.title": {
+    "message": "Importer",
+    "description": "Workflow step 1 title"
+  },
+  "home.step1.body": {
+    "message": "Les relevés bancaires entrent. OFX, QFX, CSV et PDF — avec un assistant de modèle interactif pour chaque nouvelle banque PDF.",
+    "description": "Workflow step 1 body"
+  },
+  "home.step2.title": {
+    "message": "Catégoriser",
+    "description": "Workflow step 2 title"
+  },
+  "home.step2.body": {
+    "message": "Les règles et la file Tri transforment les libellés bruts en signal structuré, avec détection des virements internes.",
+    "description": "Workflow step 2 body"
+  },
+  "home.step3.title": {
+    "message": "Budgéter",
+    "description": "Workflow step 3 title"
+  },
+  "home.step3.body": {
+    "message": "Les plafonds limitent chaque catégorie. Les enveloppes reportent le reliquat. Les deux vivent sur la même page.",
+    "description": "Workflow step 3 body"
+  },
+  "home.step4.title": {
+    "message": "Prévoir",
+    "description": "Workflow step 4 title"
+  },
+  "home.step4.body": {
+    "message": "Les charges récurrentes alimentent une projection de solde à six mois. Seules les séries confirmées comptent — par conception.",
+    "description": "Workflow step 4 body"
+  },
+  "home.closing.title": {
+    "message": "Installez-le une fois. Possédez votre livre de comptes pour toujours.",
+    "description": "Closing CTA heading"
+  },
+  "home.closing.body": {
+    "message": "Athena tourne sur un Raspberry Pi, un mini-PC de rechange, ou votre portable. Aucun compte à créer, aucun forfait à mettre à niveau, aucun serveur qui puisse être éteint.",
+    "description": "Closing CTA body"
+  },
+  "home.closing.cta1": {
+    "message": "Installer Athena",
+    "description": "Closing primary CTA"
+  },
+  "home.closing.cta2": {
+    "message": "Voir la démo d'abord",
+    "description": "Closing secondary CTA"
+  },
+  "home.signature": {
+    "message": "Construit par {author} · Fonctionne sur votre LAN · Sous licence MIT · Zéro télémétrie, jamais.",
+    "description": "Signature line at the bottom of the closing block"
+  },
+  "home.meta.title": {
+    "message": "Athena Accounting — un livre de comptes privé et auto-hébergé",
+    "description": "HTML <title> for the homepage"
+  },
+  "home.meta.description": {
+    "message": "Une application de comptabilité personnelle auto-hébergée. Imports OFX, QFX, CSV, PDF. Local uniquement, licence MIT, zéro télémétrie.",
+    "description": "HTML meta description for the homepage"
+  },
+  "feat.section.eyebrow": {
+    "message": "La nomenclature",
+    "description": "Eyebrow above the feature grid section title"
+  },
+  "feat.section.title": {
+    "message": "Tout ce qu'est Athena, sur une seule page.",
+    "description": "Feature grid section title"
+  },
+  "feat.imports.eyebrow": {
+    "message": "Imports",
+    "description": "Feature card eyebrow — imports"
+  },
+  "feat.imports.title": {
+    "message": "Tous les formats que votre banque envoie encore",
+    "description": "Feature card title — imports"
+  },
+  "feat.imports.body": {
+    "message": "OFX et QFX s'importent en silence. Les CSV auto-détectent leur séparateur et leur ligne d'en-tête. Les PDF passent une fois par un assistant de modèle interactif — chaque relevé suivant dans cette mise en page s'importe tout seul.",
+    "description": "Feature card body — imports"
+  },
+  "feat.rules.eyebrow": {
+    "message": "Règles & Tri",
+    "description": "Feature card eyebrow — rules"
+  },
+  "feat.rules.title": {
+    "message": "Catégoriser une fois, pour toujours",
+    "description": "Feature card title — rules"
+  },
+  "feat.rules.body": {
+    "message": "Matching insensible aux accents et à la casse, une file Tri en masse pour la longue traîne, et détection des virements internes qui relie les deux jambes.",
+    "description": "Feature card body — rules"
+  },
+  "feat.dashboard.eyebrow": {
+    "message": "Tableaux de bord",
+    "description": "Feature card eyebrow — dashboard"
+  },
+  "feat.dashboard.title": {
+    "message": "Des graphiques qui se lisent",
+    "description": "Feature card title — dashboard"
+  },
+  "feat.dashboard.body": {
+    "message": "Courbe de solde, camembert par catégorie, Sankey mensuel, et un panneau d'aperçus qui met en évidence là où l'argent dérive — avec des chiffres tabulaires.",
+    "description": "Feature card body — dashboard"
+  },
+  "feat.budgets.eyebrow": {
+    "message": "Budgets",
+    "description": "Feature card eyebrow — budgets"
+  },
+  "feat.budgets.title": {
+    "message": "Plafonds et enveloppes",
+    "description": "Feature card title — budgets"
+  },
+  "feat.budgets.body": {
+    "message": "Deux modèles sur la même page. Les plafonds limitent chaque catégorie mois par mois. Les enveloppes reportent le reliquat, façon caisse d'épargne.",
+    "description": "Feature card body — budgets"
+  },
+  "feat.recurrent.eyebrow": {
+    "message": "Récurrent",
+    "description": "Feature card eyebrow — recurring"
+  },
+  "feat.recurrent.title": {
+    "message": "Six mois d'avance",
+    "description": "Feature card title — recurring"
+  },
+  "feat.recurrent.body": {
+    "message": "Les charges récurrentes sont détectées, confirmées par vous, puis projetées à six mois — seules les séries confirmées comptent, pour qu'une mauvaise détection ne pollue jamais la courbe.",
+    "description": "Feature card body — recurring"
+  },
+  "feat.local.eyebrow": {
+    "message": "Local uniquement",
+    "description": "Feature card eyebrow — local-only"
+  },
+  "feat.local.title": {
+    "message": "Fonctionne sur votre machine, et uniquement la vôtre",
+    "description": "Feature card title — local-only"
+  },
+  "feat.local.body": {
+    "message": "Docker Compose ou une application desktop native. Aucun service hébergé. Aucune inscription. Aucune télémétrie. Aucun tiers ne voit jamais vos données. Un serveur MCP local optionnel permet à un LLM que vous exécutez déjà d'agir sur votre livre de comptes — six outils, stdio, aucun réseau.",
+    "description": "Feature card body — local-only"
+  },
   "theme.ErrorPageContent.title": {
     "message": "Cette page a planté.",
     "description": "The title of the fallback page when the page crashed"
