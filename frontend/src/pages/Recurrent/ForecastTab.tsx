@@ -138,32 +138,19 @@ export function ForecastTab(): JSX.Element {
     );
   }
 
-  if (contributingCount === 0) {
-    const hasDetectedButNoConfirmed = activeSeries.length > 0 && !includeDetected;
-    return (
-      <EmptyState
-        title={hasDetectedButNoConfirmed
-          ? "Aucune série confirmée pour l'instant."
-          : "Aucune série récurrente pour projeter le solde."}
-        hint={
-          hasDetectedButNoConfirmed
-            ? "La projection n'utilise que les séries que vous avez confirmées, pour éviter que des détections approximatives ne faussent le résultat. Ouvrez l'onglet Détectés et confirmez vos vraies séries récurrentes — ou activez « inclure les séries détectées » ci-dessous pour projeter avec l'ensemble."
-            : "Confirmez d'abord vos séries récurrentes depuis l'onglet Détectés — la projection utilise leurs cadences et montants pour extrapoler la trajectoire de votre solde."
-        }
-        action={
-          hasDetectedButNoConfirmed ? (
-            <button
-              type="button"
-              className="btn-ghost text-xs"
-              onClick={() => setIncludeDetected(true)}
-            >
-              Inclure les séries détectées
-            </button>
-          ) : undefined
-        }
-      />
-    );
-  }
+  // Empty-state decisions are made per-scope so the user is never
+  // stranded on a "select another account" dead end without the
+  // account selector still being reachable. The toolbar renders
+  // unconditionally below; only the chart body / tile row swap out.
+  const allUserSeries = (seriesQ.data?.recurring ?? []).filter((s) => s.status !== 'dismissed');
+  const emptyKind: null | 'scope' | 'unconfirmed' | 'none' =
+    contributingCount > 0
+      ? null
+      : scope !== 'all' && allUserSeries.length > 0
+        ? 'scope'
+        : activeSeries.length > 0 && !includeDetected
+          ? 'unconfirmed'
+          : 'none';
 
   return (
     <div className="flex flex-col gap-6">
@@ -196,36 +183,80 @@ export function ForecastTab(): JSX.Element {
           </div>
         </div>
         <div className="text-[11px] text-ink-500 mb-3">
-          Projection basée sur {contributingCount} série{contributingCount > 1 ? 's' : ''}{' '}
-          {includeDetected ? 'active' : 'confirmée'}{contributingCount > 1 ? 's' : ''}.
+          {emptyKind === null
+            ? `Projection basée sur ${contributingCount} série${contributingCount > 1 ? 's' : ''} ${includeDetected ? 'active' : 'confirmée'}${contributingCount > 1 ? 's' : ''}.`
+            : emptyKind === 'scope'
+              ? "Aucune série récurrente ne concerne principalement ce compte."
+              : emptyKind === 'unconfirmed'
+                ? "Aucune série confirmée pour l'instant."
+                : "Aucune série récurrente pour projeter le solde."}
         </div>
         {timeseriesQ.error ? (
           <ErrorState variant="inline" error={timeseriesQ.error} onRetry={() => void timeseriesQ.refetch()} />
-        ) : (
+        ) : emptyKind === null ? (
           <BalanceChart
             points={scopedHistoricalPoints}
             projection={forecastPoints}
             currency={currency}
             alignEndTo={startBalance}
           />
+        ) : (
+          <EmptyState
+            variant="inline"
+            title={
+              emptyKind === 'scope'
+                ? 'Aucune série sur ce compte'
+                : emptyKind === 'unconfirmed'
+                  ? "Aucune série confirmée pour l'instant."
+                  : 'Aucune série récurrente pour projeter le solde.'
+            }
+            hint={
+              emptyKind === 'scope'
+                ? "La projection ne montre que les séries récurrentes attribuées à ce compte. Sélectionnez « Tous les comptes » ci-dessus pour retrouver une projection combinée, ou choisissez le compte sur lequel votre salaire et vos prélèvements atterrissent."
+                : emptyKind === 'unconfirmed'
+                  ? "La projection n'utilise que les séries que vous avez confirmées, pour éviter que des détections approximatives ne faussent le résultat. Ouvrez l'onglet Détectés et confirmez vos vraies séries récurrentes — ou activez « inclure les séries détectées » ci-dessus pour projeter avec l'ensemble."
+                  : "Confirmez d'abord vos séries récurrentes depuis l'onglet Détectés — la projection utilise leurs cadences et montants pour extrapoler la trajectoire de votre solde."
+            }
+            action={
+              emptyKind === 'scope' ? (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => setScope('all')}
+                >
+                  Voir tous les comptes
+                </button>
+              ) : emptyKind === 'unconfirmed' ? (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => setIncludeDetected(true)}
+                >
+                  Inclure les séries détectées
+                </button>
+              ) : undefined
+            }
+          />
         )}
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="surface-soft px-4 py-3">
-          <div className="label">Solde prévu à J+{horizon}</div>
-          <div className={`display text-xl mt-0.5 tabular-nums ${amountSignClass(projectedEndBalance)}`}>
-            {formatAmount(projectedEndBalance, currency)}
+      {emptyKind === null && (
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="surface-soft px-4 py-3">
+            <div className="label">Solde prévu à J+{horizon}</div>
+            <div className={`display text-xl mt-0.5 tabular-nums ${amountSignClass(projectedEndBalance)}`}>
+              {formatAmount(projectedEndBalance, currency)}
+            </div>
           </div>
-        </div>
-        <div className="surface-soft px-4 py-3">
-          <div className="label">Variation prévue</div>
-          <div className={`display text-xl mt-0.5 tabular-nums ${amountSignClass(variation)}`}>
-            {variation >= 0 ? '+' : ''}
-            {formatAmount(variation, currency)}
+          <div className="surface-soft px-4 py-3">
+            <div className="label">Variation prévue</div>
+            <div className={`display text-xl mt-0.5 tabular-nums ${amountSignClass(variation)}`}>
+              {variation >= 0 ? '+' : ''}
+              {formatAmount(variation, currency)}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <div className="text-right">
         <button
