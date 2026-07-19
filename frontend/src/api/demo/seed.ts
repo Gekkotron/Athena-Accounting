@@ -12,6 +12,7 @@ import type {
   BalanceCheckpoint,
   Budget,
   Category,
+  RecurringSeries,
   Rule,
   Transaction,
   TransferRule,
@@ -239,6 +240,60 @@ function buildCheckpoints(txs: Transaction[]): BalanceCheckpoint[] {
   ];
 }
 
+// Pre-computed recurring series matching the seed's RECURRING template.
+// Real detection would find these too; hard-coding lets the demo render a
+// populated Récurrent page on first visit without waiting for a
+// regenerate call. Member IDs are omitted (memberCount only) because the
+// pure-frontend demo doesn't need the join graph.
+function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
+  const now = SEED_TODAY;
+  const specs: Array<{
+    id: number;
+    label: string;
+    amount: number;
+    day: number;
+    categoryId: number | null;
+    essentialness: 'essential' | 'discretionary' | null;
+  }> = [
+    { id: 1, label: 'Virement Salaire', amount: 2500.0, day: 1, categoryId: CAT.Salaire, essentialness: 'essential' },
+    { id: 2, label: 'Prélèvement Loyer', amount: -850.0, day: 5, categoryId: CAT.Logement, essentialness: 'essential' },
+    { id: 3, label: 'EDF Facture Électricité', amount: -78.4, day: 10, categoryId: CAT.Energie, essentialness: 'essential' },
+    { id: 4, label: 'FreeBox Internet', amount: -29.99, day: 15, categoryId: null, essentialness: null },
+    { id: 5, label: 'Bouygues Mobile', amount: -19.99, day: 20, categoryId: null, essentialness: null },
+  ];
+
+  // last_seen from July 2026 (last seed month); next_due = last_seen + 30d.
+  const list: RecurringSeries[] = [];
+  for (const s of specs) {
+    const lastSeenAt = ymd(2026, 7, s.day);
+    const nextDueAt = ymd(2026, 8, s.day);
+    const firstSeenAt = ymd(2026, 2, s.day);
+    const members = transactions.filter(
+      (t) => t.rawLabel === s.label,
+    );
+    list.push({
+      id: s.id,
+      label: s.label,
+      cadenceDays: 30,
+      avgAmount: (s.amount < 0 ? '-' : '') + Math.abs(s.amount).toFixed(2),
+      amountStddev: '0.00',
+      categoryId: s.categoryId,
+      firstSeenAt,
+      lastSeenAt,
+      nextDueAt,
+      // Salaire + Loyer + EDF are already confirmed to show the confirmed
+      // state in the demo; FreeBox / Bouygues stay at 'detected' so users
+      // can try the Confirmer button.
+      status: s.essentialness === 'essential' ? 'confirmed' : 'detected',
+      essentialness: s.essentialness,
+      createdAt: firstSeenAt + 'T09:00:00.000Z',
+      updatedAt: now + 'T09:00:00.000Z',
+      memberCount: members.length,
+    });
+  }
+  return list;
+}
+
 // buildSeedState() must return a fresh object graph on every call.
 // Mutations via store.setState() would otherwise leak back into the
 // module-level constants below and survive reset().
@@ -249,6 +304,7 @@ function clone<T>(v: T): T {
 export function buildSeedState(): DemoState {
   const transactions = buildTransactions();
   const balanceCheckpoints = buildCheckpoints(transactions);
+  const recurring = buildRecurringSeries(transactions);
   return {
     v: DEMO_SCHEMA_VERSION,
     accounts: clone(accounts),
@@ -258,6 +314,7 @@ export function buildSeedState(): DemoState {
     budgets: clone(budgets),
     transactions,
     balanceCheckpoints,
+    recurring,
     settings: {
       locale: 'fr',
       currency: 'EUR',

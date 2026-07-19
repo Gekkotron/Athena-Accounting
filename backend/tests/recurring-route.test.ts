@@ -174,6 +174,80 @@ describe.skipIf(!RUN)('/api/recurring', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('GET ?upcoming=N filters by computed next_due_at and sorts ascending', async () => {
+    // Two series with very different last_seen dates. Compute cadence-
+    // stepped nextDue at read time and confirm only in-window rows come
+    // back, ordered ascending.
+    await seedMonthlySpotify(6); // last seed date: 2026-06-15
+    // Add a second recurring pattern with a very recent last-seen so it
+    // fires soon in the upcoming window.
+    const soonDate = new Date();
+    soonDate.setUTCDate(soonDate.getUTCDate() - 2); // 2 days ago
+    const soonIso = soonDate.toISOString().slice(0, 10);
+    const soonRows = [];
+    for (let i = 3; i >= 0; i--) {
+      const d = new Date(soonDate);
+      d.setUTCDate(d.getUTCDate() - i * 30);
+      const iso = d.toISOString().slice(0, 10);
+      soonRows.push({
+        userId, accountId, date: iso, amount: '-15.00',
+        rawLabel: 'NETFLIX', normalizedLabel: 'netflix', dedupKey: `netflix-${iso}`,
+      });
+    }
+    await db.insert(schema.transactions).values(soonRows);
+    await app.inject({ method: 'POST', url: '/api/recurring/regenerate', headers: { cookie } });
+
+    // Wide horizon — both series should appear, sorted ascending, and
+    // each next_due_at must be recomputed to a date at or after today.
+    const res = await app.inject({
+      method: 'GET', url: '/api/recurring?upcoming=180', headers: { cookie },
+    });
+    expect(res.statusCode).toBe(200);
+    const rows = res.json().recurring;
+    const labels = rows.map((r: { label: string }) => r.label);
+    expect(labels).toContain('SPOTIFY');
+    expect(labels).toContain('NETFLIX');
+    const todayIso = new Date().toISOString().slice(0, 10);
+    for (let i = 0; i < rows.length; i++) {
+      expect(rows[i].nextDueAt >= todayIso).toBe(true);
+      if (i > 0) {
+        expect(rows[i].nextDueAt >= rows[i - 1].nextDueAt).toBe(true);
+      }
+    }
+  });
+
+  it('GET ?upcoming caps at 180 days server-side', async () => {
+    // Both endpoints (with and without cap) should behave identically
+    // for a huge horizon since 180 >= NETFLIX cadence.
+    await seedMonthlySpotify(6);
+    await app.inject({ method: 'POST', url: '/api/recurring/regenerate', headers: { cookie } });
+
+    const req = await app.inject({
+      method: 'GET', url: '/api/recurring?upcoming=99999', headers: { cookie },
+    });
+    // Silently capped, not 400 — response degrades gracefully.
+    expect(req.statusCode).toBe(200);
+  });
+
+  it('GET ?upcoming rejects non-positive values with 400', async () => {
+    const res = await app.inject({
+      method: 'GET', url: '/api/recurring?upcoming=0', headers: { cookie },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('GET without ?upcoming preserves the monthly-equivalent ordering', async () => {
+    await seedMonthlySpotify(6);
+    await app.inject({ method: 'POST', url: '/api/recurring/regenerate', headers: { cookie } });
+    const res = await app.inject({
+      method: 'GET', url: '/api/recurring', headers: { cookie },
+    });
+    const rows = res.json().recurring;
+    // Without ?upcoming, next_due_at is the raw stored column (last_seen
+    // + cadence_days from detection time) — the query didn't recompute.
+    expect(rows[0].nextDueAt).toBe('2026-07-15');
+  });
+
   it('GET orders by monthly-equivalent amount descending', async () => {
     // Two series: a monthly 100€ and a weekly 30€.
     // Monthly-equivalent: 100 (monthly) vs 30 * 30/7 ≈ 128.6 (weekly).

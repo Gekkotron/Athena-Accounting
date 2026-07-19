@@ -10,6 +10,7 @@ export const SettingsSchema = z
       .optional(),
     chartGapThresholdDays: z.number().int().min(1).max(60).optional(),
     duplicateSimilarityThreshold: z.number().int().min(0).max(100).optional(),
+    showForecast: z.boolean().optional(),
   })
   .strict();
 
@@ -20,6 +21,7 @@ export type FullSettings = {
   dashboardChartScope: DashboardChartScope;
   chartGapThresholdDays: number;
   duplicateSimilarityThreshold: number;
+  showForecast: boolean;
 };
 
 // Merges DEFAULTS <- stored (unvalidated JSONB) <- patch. `stored` is

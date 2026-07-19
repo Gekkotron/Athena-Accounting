@@ -390,6 +390,69 @@ function handleAccountCheckpoints(req: DemoRequest) {
 }
 
 // ---------------------------------------------------------------------------
+// Recurring series — Récurrent page
+// ---------------------------------------------------------------------------
+
+// Add `daysCount` days to an ISO YYYY-MM-DD, UTC-safe.
+function addDaysIso(iso: string, daysCount: number): string {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  const t = Date.UTC(y, m - 1, d) + daysCount * 86_400_000;
+  const dt = new Date(t);
+  const pad = (n: number) => (n < 10 ? '0' + n : String(n));
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
+function todayIso(): string {
+  // Demo mode uses the seeded SEED_TODAY when present so upcoming/forecast
+  // views render with the same anchor the transaction seed uses.
+  const state = getState();
+  const s = state.settings as { seedTodayForDemo?: string };
+  return s.seedTodayForDemo ?? new Date().toISOString().slice(0, 10);
+}
+
+// Recompute next_due_at at read time when ?upcoming=N is set. Walks
+// forward from last_seen_at in cadence-day steps until the next date is
+// strictly ≥ today. Mirrors the backend logic in routes/recurring.ts.
+function nextDueFrom(lastSeen: string, cadenceDays: number, today: string): string {
+  let next = lastSeen;
+  // Guard against infinite loops on bad data.
+  for (let i = 0; i < 5000; i++) {
+    if (next >= today) return next;
+    next = addDaysIso(next, cadenceDays);
+  }
+  return next;
+}
+
+function handleRecurring(req: DemoRequest) {
+  const state = getState();
+  const rows = state.recurring ?? [];
+  const upcomingRaw = req.query.upcoming;
+
+  if (upcomingRaw !== undefined && upcomingRaw !== '') {
+    const raw = Number(upcomingRaw);
+    if (!Number.isFinite(raw) || raw <= 0) return { recurring: [] };
+    const horizon = Math.min(180, Math.floor(raw));
+    const today = todayIso();
+    const cutoff = addDaysIso(today, horizon);
+    const withNext = rows.map((r) => ({
+      ...r,
+      nextDueAt: nextDueFrom(r.lastSeenAt, r.cadenceDays, today),
+    }));
+    const filtered = withNext.filter((r) => r.nextDueAt <= cutoff);
+    filtered.sort((a, b) => a.nextDueAt.localeCompare(b.nextDueAt));
+    return { recurring: filtered };
+  }
+
+  // Default: ordered by ABS(monthly-equivalent) desc, matching the backend.
+  const sorted = [...rows].sort((a, b) => {
+    const eqA = Math.abs(Number(a.avgAmount) * (30 / a.cadenceDays));
+    const eqB = Math.abs(Number(b.avgAmount) * (30 / b.cadenceDays));
+    return eqB - eqA;
+  });
+  return { recurring: sorted };
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -410,4 +473,5 @@ export function registerReadHandlers(): void {
   registerHandler('GET', '/api/reports/budget', handleReportsBudget);
   registerHandler('GET', '/api/tri/groups', handleTriGroups);
   registerHandler('GET', '/api/accounts/:accountId/balance-checkpoints', handleAccountCheckpoints);
+  registerHandler('GET', '/api/recurring', handleRecurring);
 }

@@ -10,6 +10,7 @@
       "transactions": "Transactions",
       "budgets": "Budgets",
       "rules": "Rules",
+      "recurrent": "Recurring",
       "accounts": "Accounts",
       "data": "Data"
     },
@@ -18,6 +19,11 @@
         "sort": "Sort",
         "list": "Rules",
         "categories": "Categories"
+      },
+      "recurrent": {
+        "detected": "Detected",
+        "upcoming": "Upcoming",
+        "forecast": "Forecast"
       },
       "accounts": {
         "list": "Accounts",

@@ -42,6 +42,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       dashboardChartScope: 'all',
       chartGapThresholdDays: 6,
       duplicateSimilarityThreshold: 0,
+      showForecast: false,
     });
   });
 
@@ -56,6 +57,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       dashboardChartScope: 'all',
       chartGapThresholdDays: 10,
       duplicateSimilarityThreshold: 0,
+      showForecast: false,
     });
   });
 

@@ -9,6 +9,8 @@ import { listCheckpoints } from '../../api/checkpoints';
 import { formatAmount, amountSignClass } from '../../lib/format';
 import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
+import { projectBalance } from '../../lib/recurring-forecast';
+import type { RecurringSeries } from '../../api/types';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
@@ -47,7 +49,7 @@ export function Dashboard(): JSX.Element {
   // Page-wide period and chart scope. Both seeded from user settings on
   // mount; in-session changes are ephemeral (no writeback). To make a
   // change stick, edit Réglages.
-  const { settings, isReady } = useSettings();
+  const { settings, isReady, patch: patchSettings } = useSettings();
   const [range, setRange] = useState<RangeKey>(settings.dashboardRange);
   const [chartScope, setChartScope] = useState<'all' | number>(settings.dashboardChartScope);
   // If settings arrive after the initial render (first paint used DEFAULTS),
@@ -96,6 +98,45 @@ export function Dashboard(): JSX.Element {
     if (!rangeFromDate) return scoped;
     return scoped.filter((p) => p.bucket >= rangeFromDate);
   }, [seriesQ.data, chartScope, rangeFromDate]);
+
+  // Recurring series drive the optional forecast overlay on the Trend
+  // chart. Query is unconditional but its result is only consumed when
+  // `settings.showForecast` is on — invalidations across the app already
+  // cascade to this cache.
+  const recurringQ = useQuery({
+    queryKey: ['recurring'],
+    queryFn: () => api<{ recurring: RecurringSeries[] }>('/api/recurring'),
+    enabled: settings.showForecast,
+  });
+
+  const forecastProjection = useMemo(() => {
+    if (!settings.showForecast) return undefined;
+    const rows = recurringQ.data?.recurring ?? [];
+    if (rows.length === 0) return undefined;
+    // Anchor the projection to today's total for the current scope.
+    let startBalance = 0;
+    const balanceCurrency = chartCurrency;
+    if (chartScope === 'all') {
+      startBalance = Number(
+        balanceQ.data?.perCurrency?.find((c) => c.currency === balanceCurrency)?.total ?? 0,
+      );
+    } else {
+      const acc = accounts.find((a) => a.id === chartScope);
+      startBalance = Number(acc?.currentBalance ?? acc?.openingBalance ?? 0);
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    // Cap at 180 days ahead so the overlay stays bounded regardless of
+    // how the range picker was set.
+    const HORIZON = 180;
+    const forecast = projectBalance({
+      startBalance,
+      series: rows,
+      horizonDays: HORIZON,
+      startDate: today,
+    });
+    // Drop index 0 (today) — the historical line already ends there.
+    return forecast.slice(1).map((p) => ({ date: p.date, value: p.projectedBalance }));
+  }, [settings.showForecast, recurringQ.data, chartScope, chartCurrency, accounts, balanceQ.data]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -165,6 +206,18 @@ export function Dashboard(): JSX.Element {
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
+              <label
+                className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none"
+                title="Prolonge la courbe avec une projection en pointillé basée sur les séries récurrentes actives."
+              >
+                <input
+                  type="checkbox"
+                  checked={settings.showForecast}
+                  onChange={(e) => patchSettings({ showForecast: e.target.checked })}
+                  className="accent-sage-500"
+                />
+                Voir la projection
+              </label>
               <AccountSelect
                 value={chartScope}
                 onChange={setChartScope}
@@ -182,6 +235,7 @@ export function Dashboard(): JSX.Element {
               currency={chartCurrency}
               checkpoints={chartCheckpoints}
               gapThresholdDays={settings.chartGapThresholdDays}
+              projection={forecastProjection}
             />
           ) : (
             <LoadingBlock variant="inline" height="min-h-40" />

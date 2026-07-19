@@ -10,6 +10,7 @@
       "transactions": "Transactions",
       "budgets": "Budgets",
       "rules": "Règles",
+      "recurrent": "Récurrent",
       "accounts": "Comptes",
       "data": "Données"
     },
@@ -18,6 +19,11 @@
         "sort": "Tri",
         "list": "Règles",
         "categories": "Catégories"
+      },
+      "recurrent": {
+        "detected": "Détectés",
+        "upcoming": "À venir",
+        "forecast": "Prévision"
       },
       "accounts": {
         "list": "Comptes",

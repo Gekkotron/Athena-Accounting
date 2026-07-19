@@ -51,6 +51,16 @@ const nav: NavSection[] = [
           { to: '/regles/categories', labelKey: 'nav.children.rules.categories' },
         ],
       },
+      {
+        to: '/recurrent',
+        labelKey: 'nav.items.recurrent',
+        icon: 'recurrent',
+        children: [
+          { to: '/recurrent/detectes', labelKey: 'nav.children.recurrent.detected' },
+          { to: '/recurrent/a-venir', labelKey: 'nav.children.recurrent.upcoming' },
+          { to: '/recurrent/prevision', labelKey: 'nav.children.recurrent.forecast' },
+        ],
+      },
     ],
   },
   {

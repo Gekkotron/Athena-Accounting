@@ -10,6 +10,10 @@ export interface Settings {
   dashboardChartScope: DashboardChartScope;
   chartGapThresholdDays: number;
   duplicateSimilarityThreshold: number;
+  // Récurrent overlay on the Dashboard's Trend chart. When on, the chart
+  // extends past today with a dashed projected line derived from active
+  // recurring series.
+  showForecast: boolean;
 }
 
 export const DEFAULTS: Settings = {
@@ -17,4 +21,5 @@ export const DEFAULTS: Settings = {
   dashboardChartScope: 'all',
   chartGapThresholdDays: 6,
   duplicateSimilarityThreshold: 0,
+  showForecast: false,
 };

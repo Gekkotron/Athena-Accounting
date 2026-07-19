@@ -9,7 +9,7 @@
 // so bulk mutations don't storm the disk. Subscribers are notified on
 // every setState, unbatched.
 
-import type { Account, Budget, Category, Rule, TransferRule } from '../types';
+import type { Account, Budget, Category, RecurringSeries, Rule, TransferRule } from '../types';
 
 export const DEMO_SCHEMA_VERSION = 1;
 const STORAGE_KEY = 'athena_demo_state';
@@ -26,6 +26,10 @@ export interface DemoState {
   // narrow the type at the call site once the seed lands (Task 2).
   transactions: unknown[];
   balanceCheckpoints: unknown[];
+  // Detected recurring series (Récurrent feature). Optional so
+  // localStorage snapshots written before this key existed still hydrate;
+  // handlers default missing/undefined to [].
+  recurring?: RecurringSeries[];
   settings: Record<string, unknown>;
 }
 
@@ -51,6 +55,7 @@ function emptyState(): DemoState {
     budgets: [],
     transactions: [],
     balanceCheckpoints: [],
+    recurring: [],
     settings: {},
   };
 }

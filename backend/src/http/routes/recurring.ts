@@ -5,6 +5,7 @@ import { db } from '../../db/client.js';
 import { recurringSeries, recurringSeriesTransactions } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
+import { addDays } from '../../domain/transfers/matching.js';
 
 const UpdateBody = z.object({
   status: z.enum(['detected', 'confirmed', 'dismissed']).optional(),
@@ -13,11 +14,49 @@ const UpdateBody = z.object({
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 
+// Cap the upcoming horizon server-side so an accidental unbounded
+// request (e.g. ?upcoming=999999) can't force a full walk over every
+// series' cadence chain.
+const UPCOMING_MAX_DAYS = 180;
+
+const ListQuery = z.object({
+  // Positive integer; the server caps silently at UPCOMING_MAX_DAYS so a
+  // request like ?upcoming=99999 degrades gracefully to the 180-day
+  // window instead of erroring. Non-integer / zero / negative still 400.
+  upcoming: z.coerce.number().int().positive().optional(),
+});
+
+function todayIso(): string {
+  const d = new Date();
+  const pad = (n: number) => (n < 10 ? '0' + n : String(n));
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+// Walk `lastSeen` forward in cadence-day steps until reaching or passing
+// today. Guarded loop bound because a corrupt row (cadenceDays=0) would
+// otherwise spin forever — the CHECK constraint prevents this at the DB
+// level but defence-in-depth is cheap.
+function computeNextDue(lastSeen: string, cadenceDays: number, today: string): string {
+  if (cadenceDays <= 0) return lastSeen;
+  let next = lastSeen;
+  for (let i = 0; i < 5000; i++) {
+    if (next >= today) return next;
+    next = addDays(next, cadenceDays);
+  }
+  return next;
+}
+
 export async function recurringRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
-  app.get('/api/recurring', async (req) => {
+  app.get('/api/recurring', async (req, reply) => {
     const uid = userId(req);
+
+    const queryParsed = ListQuery.safeParse(req.query);
+    if (!queryParsed.success) {
+      return reply.code(400).send({ error: 'invalid query', issues: queryParsed.error.issues });
+    }
+    const requestedHorizon = queryParsed.data.upcoming;
 
     // memberCount comes from a correlated subquery over the join table
     // so the payload matches PLAN.md's shape ("includes member-
@@ -51,6 +90,23 @@ export async function recurringRoutes(app: FastifyInstance): Promise<void> {
         // subscription).
         desc(sql<number>`ABS(${recurringSeries.avgAmount}::numeric * 30.0 / ${recurringSeries.cadenceDays}::numeric)`),
       );
+
+    if (requestedHorizon !== undefined) {
+      // Cap silently — clients can request a larger value than the
+      // server allows and the response degrades gracefully to the max
+      // horizon. Alternative was to 400; PLAN.md's "capped at 180
+      // server-side" phrasing implies a soft cap.
+      const horizon = Math.min(UPCOMING_MAX_DAYS, requestedHorizon);
+      const today = todayIso();
+      const cutoff = addDays(today, horizon);
+      const withNext = rows.map((r) => ({
+        ...r,
+        nextDueAt: computeNextDue(r.lastSeenAt, r.cadenceDays, today),
+      }));
+      const filtered = withNext.filter((r) => r.nextDueAt <= cutoff);
+      filtered.sort((a, b) => a.nextDueAt.localeCompare(b.nextDueAt));
+      return { recurring: filtered };
+    }
 
     return { recurring: rows };
   });

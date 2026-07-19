@@ -241,6 +241,26 @@ export interface EnvelopeReportRow {
   monthsToTarget: number | null;
 }
 
+export type RecurringStatus = 'detected' | 'confirmed' | 'dismissed';
+export type RecurringEssentialness = 'essential' | 'discretionary';
+
+export interface RecurringSeries {
+  id: number;
+  label: string;
+  cadenceDays: number;
+  avgAmount: string;
+  amountStddev: string;
+  categoryId: number | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  nextDueAt: string;
+  status: RecurringStatus;
+  essentialness: RecurringEssentialness | null;
+  createdAt: string;
+  updatedAt: string;
+  memberCount: number;
+}
+
 export interface EnvelopeReport {
   month: string;
   pool: {

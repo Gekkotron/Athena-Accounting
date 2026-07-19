@@ -15,6 +15,11 @@ interface Props {
   // dotted, signalling missing data. Default 6 keeps weekends + short quiet
   // stretches solid.
   gapThresholdDays?: number;
+  // Optional forward projection appended to the historical line. Each
+  // entry is a { date, value } sample; the projection extends the X-axis
+  // and renders every projection-side segment in a dashed variant so the
+  // uncertainty is visually distinct from the historical solid line.
+  projection?: Array<{ date: string; value: number }>;
 }
 
 interface HoverState {
@@ -56,7 +61,7 @@ function isoDate(ms: number): string {
 // a stray click, not a zoom request.
 const MIN_ZOOM_WIDTH_VB = 10;
 
-export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6 }: Props): JSX.Element {
+export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection }: Props): JSX.Element {
   const { t } = useTranslation('charts');
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -64,7 +69,21 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   const [drag, setDrag] = useState<DragState | null>(null);
   const [zoom, setZoom] = useState<ZoomState | null>(null);
 
-  const data = useMemo(() => buildAggregatedSeries(points, currency), [points, currency]);
+  const { data, projectionStartIdx } = useMemo(() => {
+    const historical = buildAggregatedSeries(points, currency);
+    // Projection points render as a forward continuation of the last
+    // historical value. Filtered to strictly forward-dated samples so a
+    // stray past date can't disturb the historical segmentation.
+    const anchorDate = historical.length > 0 ? historical[historical.length - 1]!.date : '';
+    const forward = (projection ?? []).filter((p) => p.date > anchorDate).sort((a, b) => a.date.localeCompare(b.date));
+    if (forward.length === 0) {
+      return { data: historical, projectionStartIdx: historical.length };
+    }
+    return {
+      data: [...historical, ...forward],
+      projectionStartIdx: historical.length,
+    };
+  }, [points, currency, projection]);
 
   if (data.length < 2) {
     return (
@@ -103,17 +122,23 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
 
   const marks = buildCheckpointMarks(data, checkpoints, xScale);
 
-  const path = data
+  // Area fill covers only the historical portion — the projection stays
+  // stroke-only so the "uncertain" region reads visually different from
+  // the filled "measured" region.
+  const historicalLastIdx = Math.max(0, projectionStartIdx - 1);
+  const historicalPath = data
+    .slice(0, projectionStartIdx)
     .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScaleAt(i).toFixed(1)} ${yScale(d.value).toFixed(1)}`)
     .join(' ');
-
-  const areaPath = `${path} L ${xScaleAt(data.length - 1).toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xScaleAt(0).toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`;
+  const areaPath = projectionStartIdx > 0
+    ? `${historicalPath} L ${xScaleAt(historicalLastIdx).toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xScaleAt(0).toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`
+    : '';
 
   // Split the stroked line into runs of consecutive segments sharing the same
   // "dashed" verdict. A segment is dashed when the two data points bracket a
-  // gap of more than `gapThresholdDays` — telling the user that we have no
-  // data for that stretch (missed import, ingestion gap, …). The area path
-  // stays continuous — the dotted stroke alone communicates the uncertainty.
+  // gap of more than `gapThresholdDays` (missing data) OR when the segment
+  // enters the projection window (uncertain forward extension). Both cases
+  // read the same visually.
   const segments: { d: string; dashed: boolean }[] = [];
   {
     let runStart = 0;
@@ -122,7 +147,8 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
       const gap = Math.round(
         (Date.parse(data[i]!.date) - Date.parse(data[i - 1]!.date)) / 86_400_000,
       );
-      const dashed = gap > gapThresholdDays;
+      const isProjection = i >= projectionStartIdx;
+      const dashed = isProjection || gap > gapThresholdDays;
       if (runDashed === null) {
         runDashed = dashed;
         continue;
@@ -158,7 +184,6 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   );
 
   const zeroY = yScale(0);
-  const last = data[data.length - 1]!;
 
   const getViewBoxX = (clientX: number): number => {
     const svg = svgRef.current;
@@ -412,9 +437,19 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
             );
           })}
 
-          {/* end marker */}
-          <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="3.5" fill="#7dd3c0" />
-          <circle cx={xScaleAt(data.length - 1)} cy={yScale(last.value)} r="7" fill="#7dd3c0" opacity="0.18" />
+          {/* end marker — anchored at the last HISTORICAL point when a
+              projection is present, so the dot always marks "here's the
+              measured now" rather than the tip of the uncertain extension. */}
+          {(() => {
+            const endIdx = Math.max(0, projectionStartIdx - 1);
+            const endPoint = data[endIdx]!;
+            return (
+              <>
+                <circle cx={xScaleAt(endIdx)} cy={yScale(endPoint.value)} r="3.5" fill="#7dd3c0" />
+                <circle cx={xScaleAt(endIdx)} cy={yScale(endPoint.value)} r="7" fill="#7dd3c0" opacity="0.18" />
+              </>
+            );
+          })()}
 
           {/* hover guide + highlighted dot */}
           {hover !== null && drag === null && (

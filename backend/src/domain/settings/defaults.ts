@@ -8,6 +8,9 @@ export const DEFAULTS = {
   dashboardChartScope: 'all',
   chartGapThresholdDays: 6,
   duplicateSimilarityThreshold: 0,
+  // Récurrent → Dashboard Trend chart projection overlay. Off by default
+  // so existing users see the same chart until they opt in.
+  showForecast: false,
 } as const;
 
 export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';

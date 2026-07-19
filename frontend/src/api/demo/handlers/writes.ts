@@ -7,6 +7,9 @@ import type {
   Account,
   Budget,
   Category,
+  RecurringEssentialness,
+  RecurringSeries,
+  RecurringStatus,
   Rule,
   Transaction,
   TransferRule,
@@ -372,6 +375,48 @@ function handleBackupExport(): DemoState {
 }
 
 // ---------------------------------------------------------------------------
+// Recurring series — PUT /:id and POST /regenerate
+// ---------------------------------------------------------------------------
+
+interface RecurringPatchBody {
+  status?: RecurringStatus;
+  essentialness?: RecurringEssentialness | null;
+}
+
+function handleRecurringUpdate(req: DemoRequest) {
+  const id = Number(req.query.id);
+  const patch = (req.body ?? {}) as RecurringPatchBody;
+  let updated: RecurringSeries | null = null;
+  setState((s) => {
+    const list = s.recurring ?? [];
+    const idx = list.findIndex((r) => r.id === id);
+    if (idx < 0) return;
+    const before = list[idx]!;
+    const next: RecurringSeries = {
+      ...before,
+      ...(patch.status !== undefined ? { status: patch.status } : {}),
+      ...(patch.essentialness !== undefined ? { essentialness: patch.essentialness } : {}),
+      updatedAt: new Date().toISOString(),
+    };
+    list[idx] = next;
+    s.recurring = list;
+    updated = next;
+  });
+  if (!updated) return { error: 'not found' };
+  return { recurring: updated };
+}
+
+function handleRecurringRegenerate() {
+  // Demo has no real detector — regenerate is a no-op that reports the
+  // current count. Keeping the endpoint live means the "Régénérer"
+  // button works without triggering the demoMissingHandler modal.
+  const rows = getState().recurring ?? [];
+  const detected = rows.filter((r) => r.status === 'detected').length;
+  const refreshed = rows.filter((r) => r.status !== 'detected').length;
+  return { ok: true, detected, refreshed };
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -409,4 +454,7 @@ export function registerWriteHandlers(): void {
   registerHandler('POST',   '/api/recategorize', handleRecategorize);
   registerHandler('PATCH',  '/api/settings', handleSettingsPatch);
   registerHandler('GET',    '/api/backup/export', handleBackupExport);
+
+  registerHandler('PUT',    '/api/recurring/:id', handleRecurringUpdate);
+  registerHandler('POST',   '/api/recurring/regenerate', handleRecurringRegenerate);
 }

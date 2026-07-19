@@ -17,6 +17,9 @@ import { Categories } from './pages/Rules/Categories';
 import { Plafonds } from './pages/Budgets/Plafonds';
 import { Enveloppes } from './pages/Budgets/Enveloppes/Enveloppes';
 import { Rules } from './pages/Rules';
+import { DetectedTab } from './pages/Recurrent/DetectedTab';
+import { UpcomingTab } from './pages/Recurrent/UpcomingTab';
+import { ForecastTab } from './pages/Recurrent/ForecastTab';
 import { Accounts } from './pages/Accounts';
 import { Patterns } from './pages/Accounts/Patterns';
 import { Imports } from './pages/Data/Imports';
@@ -39,6 +42,12 @@ export default function App() {
     { to: '/regles/tri', label: t('nav.children.rules.sort') },
     { to: '/regles/liste', label: t('nav.children.rules.list') },
     { to: '/regles/categories', label: t('nav.children.rules.categories') },
+  ];
+
+  const RECURRENT_TABS: HubTab[] = [
+    { to: '/recurrent/detectes', label: t('nav.children.recurrent.detected') },
+    { to: '/recurrent/a-venir', label: t('nav.children.recurrent.upcoming') },
+    { to: '/recurrent/prevision', label: t('nav.children.recurrent.forecast') },
   ];
 
   const COMPTES_TABS: HubTab[] = [
@@ -117,6 +126,14 @@ export default function App() {
               <Route path="tri" element={<Tri />} />
               <Route path="liste" element={<Rules />} />
               <Route path="categories" element={<Categories />} />
+            </Route>
+
+            {/* Récurrent hub */}
+            <Route path="/recurrent" element={<HubLayout title={t('nav.items.recurrent')} tabs={RECURRENT_TABS} />}>
+              <Route index element={<Navigate to="detectes" replace />} />
+              <Route path="detectes" element={<DetectedTab />} />
+              <Route path="a-venir" element={<UpcomingTab />} />
+              <Route path="prevision" element={<ForecastTab />} />
             </Route>
 
             {/* Comptes hub */}

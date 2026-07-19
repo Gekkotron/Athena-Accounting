@@ -76,6 +76,17 @@ export function IconBudgets({ className, size = 16 }: IconProps) {
   );
 }
 
+export function IconRecurrent({ className, size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M4 8a4 4 0 0 1 7-2.6" />
+      <path d="M11 3v2.4h-2.4" />
+      <path d="M12 8a4 4 0 0 1-7 2.6" />
+      <path d="M5 13v-2.4h2.4" />
+    </svg>
+  );
+}
+
 export const navIcons = {
   dashboard: IconDashboard,
   transactions: IconTransactions,
@@ -83,5 +94,6 @@ export const navIcons = {
   rules: IconRules,
   accounts: IconAccounts,
   imports: IconImports,
+  recurrent: IconRecurrent,
 } as const;
 export type NavIconName = keyof typeof navIcons;
