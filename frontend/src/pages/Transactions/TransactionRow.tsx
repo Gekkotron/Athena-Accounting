@@ -1,27 +1,10 @@
-import { useMemo } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 
-export function TransactionRow({
-  tx,
-  account,
-  categories,
-  selected,
-  onToggleSelect,
-  onUpdateCategory,
-  onUpdateNotes,
-  onEdit,
-  onDelete,
-  expanded,
-  onToggleExpanded,
-  showBalance,
-  isEndOfDay,
-  checkpoint,
-  checkpointPending,
-  onToggleCheckpoint,
-}: {
+export type TransactionRowProps = {
   tx: Transaction;
   account: Account | undefined;
   categories: Category[];
@@ -38,12 +21,35 @@ export function TransactionRow({
   checkpoint: BalanceCheckpoint | undefined;
   checkpointPending: boolean;
   onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
-}) {
+};
+
+export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProps>(
+  function TransactionRow(
+    {
+      tx,
+      account,
+      categories,
+      selected,
+      onToggleSelect,
+      onUpdateCategory,
+      onUpdateNotes,
+      onEdit,
+      onDelete,
+      expanded,
+      onToggleExpanded,
+      showBalance,
+      isEndOfDay,
+      checkpoint,
+      checkpointPending,
+      onToggleCheckpoint,
+    },
+    ref,
+  ) {
   const { t } = useTranslation(['transactions', 'common']);
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   return (
     <>
-      <tr className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''}`}>
+      <tr ref={ref} className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''}`}>
         <td className="px-2 py-2.5 text-center">
           <input
             type="checkbox"
@@ -195,4 +201,5 @@ export function TransactionRow({
         })}
     </>
   );
-}
+  },
+);

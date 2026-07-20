@@ -26,6 +26,8 @@ export function TransactionsTable({
   checkpointByDate,
   pendingCheckpointDate,
   onToggleCheckpoint,
+  firstRowRef,
+  multiSelectRef,
 }: {
   transactions: Transaction[];
   categories: Category[];
@@ -46,6 +48,11 @@ export function TransactionsTable({
   checkpointByDate: Map<string, BalanceCheckpoint>;
   pendingCheckpointDate: string | null;
   onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
+  // Tour anchors — attached to the first data row and the multi-select
+  // checkbox column header respectively. Optional so standalone unit tests
+  // can render the table without wiring the tour system.
+  firstRowRef?: (el: HTMLTableRowElement | null) => void;
+  multiSelectRef?: (el: HTMLElement | null) => void;
 }) {
   const { t } = useTranslation(['transactions', 'common']);
   const visibleSelected = transactions.filter((tx) => selectedIds.has(tx.id)).length;
@@ -65,7 +72,7 @@ export function TransactionsTable({
         <table className="w-full text-sm">
           <thead className="text-left">
             <tr className="border-b border-ink-800/70">
-              <th className="px-2 py-3 text-center">
+              <th ref={multiSelectRef} className="px-2 py-3 text-center">
                 <input
                   ref={headerCheckbox}
                   type="checkbox"
@@ -94,9 +101,10 @@ export function TransactionsTable({
                 </td>
               </tr>
             ) : (
-              transactions.map((tx) => (
+              transactions.map((tx, idx) => (
                 <TransactionRow
                   key={tx.id}
+                  ref={idx === 0 ? firstRowRef : undefined}
                   tx={tx}
                   account={accountById.get(tx.accountId)}
                   categories={categories}

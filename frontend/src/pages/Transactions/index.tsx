@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -101,27 +101,15 @@ export function Transactions() {
     requireData: () => (txQ.data?.transactions?.length ?? 0) > 0,
   });
   const searchAnchor = useTourAnchor('transactions:search');
-  // FiltersBar / TransactionsTable / TransactionRow are anchor-agnostic
-  // children — the row map and the header checkbox both live two
-  // component levels down (TransactionsTable -> TransactionRow), so a
-  // precise first-row / header-checkbox ref isn't reachable from here
-  // without threading a ref prop through those children. Both anchors are
-  // therefore registered on the same wrapping <div> around the whole
-  // table (see below); the tour still lands on the transactions list, just
-  // less pin-point than a literal first-row / header-cell highlight.
+  // rowAnchor targets the first data row (threaded into TransactionsTable
+  // as `firstRowRef`, attached only when idx === 0 in the row map);
+  // multiAnchor targets the multi-select checkbox column header (threaded
+  // in as `multiSelectRef`, attached to the header <th>). Each anchor
+  // lands on its own distinct element so the transactions tour's row /
+  // multi-select steps visibly move the coach-mark, instead of both
+  // pointing at the same wrapper.
   const rowAnchor = useTourAnchor('transactions:row');
   const multiAnchor = useTourAnchor('transactions:multi-select');
-  // Combined ref callback for the table wrapper — memoized so its identity
-  // stays stable across renders (a fresh inline function would make React
-  // detach + reattach on every render, and each attach bumps TourContext's
-  // anchorVersion, causing an infinite render loop).
-  const tableAnchorRef = useCallback(
-    (el: HTMLElement | null) => {
-      rowAnchor(el);
-      multiAnchor(el);
-    },
-    [rowAnchor, multiAnchor],
-  );
 
   const checkpointsQ = useQuery({
     queryKey: ['balance-checkpoints', filters.accountId],
@@ -384,7 +372,6 @@ export function Transactions() {
           onRetry={() => void txQ.refetch()}
         />
       ) : (
-      <div ref={tableAnchorRef}>
         <TransactionsTable
           transactions={txs}
           categories={categories}
@@ -414,8 +401,9 @@ export function Transactions() {
             setDeleteError(null);
             setDeletingTx(tx);
           }}
+          firstRowRef={rowAnchor}
+          multiSelectRef={multiAnchor}
         />
-      </div>
       )}
 
       <div className="flex items-center justify-between text-sm text-ink-400">
