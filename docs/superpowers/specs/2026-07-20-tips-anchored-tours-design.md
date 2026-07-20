@@ -11,11 +11,19 @@ Replace the current tips system with a **per-page guided tour** made of small
 anchored bubbles that point at the exact UI element they describe.
 
 For each of the seven main pages (Dashboard, Accounts, Imports, Transactions,
-Rules, Budgets, Data), the first visit auto-opens a short walkthrough of
-1–3 steps; each step is a bubble anchored to a specific control or widget on
-the page, with `Précédent` / `Suivant` / `Passer` controls and a step counter.
-Once the tour is completed or skipped, dismissal is persisted server-side per
-user, and a small `?` icon next to the page title lets the user replay it.
+Rules, Budgets, Data), the first visit auto-opens a short walkthrough of up
+to five steps; each step is a bubble anchored to a specific control or widget
+on the page, with `Précédent` / `Suivant` / `Passer` controls and a step
+counter. Once the tour is completed or skipped, dismissal is persisted
+server-side per user, and a small `?` icon next to the page title lets the
+user replay it.
+
+Some tours are **data-gated**: they only auto-start once the page has enough
+data to make each step meaningful. For example, the Dashboard tour describes
+the balance curve, the category donut, and the cash-flow Sankey — all empty
+until at least one transaction exists, at which point every widget the tour
+points to is populated. The gate is a per-tour predicate; the `?` replay
+icon bypasses it (an explicit user request always shows the tour).
 
 Only one tour runs at a time. Navigating away mid-tour aborts (does not
 persist). There is no modal welcome tour — new users learn each page in
@@ -75,6 +83,7 @@ export type PageId =
 
 export type AnchorId =
   | 'dashboard:balance' | 'dashboard:curve' | 'dashboard:donut'
+  | 'dashboard:insights' | 'dashboard:sankey'
   | 'accounts:add-button' | 'accounts:starting-balance'
   | 'imports:dropzone'
   | 'transactions:search' | 'transactions:row' | 'transactions:multi-select'
@@ -268,7 +277,9 @@ The current `sections` and `welcome` blocks are removed and replaced with:
     "dashboard": [
       { "title": "Solde global", "body": "Somme des soldes de tous vos comptes, argent bloqué inclus." },
       { "title": "Courbe du solde", "body": "L'évolution jour par jour. Les losanges sont vos points de contrôle." },
-      { "title": "Dépenses par catégorie", "body": "Cliquez sur une part du donut pour filtrer les transactions." }
+      { "title": "Dépenses par catégorie", "body": "Cliquez sur une part du donut pour filtrer les transactions." },
+      { "title": "Insights", "body": "Les alertes automatiques : catégories en dépassement, dépenses inhabituelles, budgets à ajuster." },
+      { "title": "Flux de trésorerie", "body": "Le Sankey retrace d'où vient l'argent et où il va sur la période affichée." }
     ],
     "accounts": [
       { "title": "Ajouter un compte", "body": "Courant, livret, PEA… Le solde de départ est obligatoire — tous les calculs partent de là." },
@@ -314,9 +325,11 @@ concise imperative tone as the current section tips.
 ```ts
 export const TOURS: Record<PageId, TourStep[]> = {
   dashboard: [
-    { anchor: 'dashboard:balance', placement: 'bottom-start' },
-    { anchor: 'dashboard:curve',   placement: 'top' },
-    { anchor: 'dashboard:donut',   placement: 'left' },
+    { anchor: 'dashboard:balance',  placement: 'bottom-start' },
+    { anchor: 'dashboard:curve',    placement: 'top' },
+    { anchor: 'dashboard:donut',    placement: 'left' },
+    { anchor: 'dashboard:insights', placement: 'right' },
+    { anchor: 'dashboard:sankey',   placement: 'top' },
   ],
   accounts: [
     { anchor: 'accounts:add-button',       placement: 'bottom-end' },
@@ -340,20 +353,56 @@ export const TOURS: Record<PageId, TourStep[]> = {
 Structure (`TOURS`) and copy (`tips.json`) split follows the existing pattern
 established by `sectionTip()` in `frontend/src/tips/content.ts`.
 
+**Soft ceiling of 5 steps per tour.** A guideline, not a code constraint —
+enforced by review, not by the type system. Beyond 5 steps a tour stops
+feeling like a coach-mark and starts feeling like a course; if a page ever
+needs more, it's a signal to split the page or the tour instead.
+
 ## Trigger, persistence, and interaction
 
 ### Auto-start on first visit
 
-Each page component calls `useAutoStartTour('<pageId>')` once. The hook runs
-one effect that:
+Each page component calls `useAutoStartTour('<pageId>', opts?)` once. The
+hook runs one effect that:
 
 1. Waits for `TipsContext.ready === true`.
 2. Checks `!isDismissed('tour:<pageId>')`.
 3. Checks `TourContext.activePageId === null`.
-4. If all pass, calls `startTour(pageId)`.
+4. If `opts.requireData` is provided, checks that it returns `true`.
+5. If all pass, calls `startTour(pageId)`.
 
-Effect deps are stable — navigating away and back re-runs the effect, but
-step 2 short-circuits once the tour is dismissed.
+Effect deps are `[ready, dismissed, requireData?()]` — navigating away and
+back re-runs the effect, but step 2 short-circuits once the tour is
+dismissed. If `requireData` returns `false`, the effect stays subscribed
+and re-fires when its inputs change; the tour will kick in the moment the
+data threshold is crossed.
+
+### Data gating (per-tour)
+
+Some tours describe widgets that are empty without user data — auto-showing
+them on a blank slate would point at nothing. The `useAutoStartTour` hook
+accepts an optional `requireData` predicate; the tour auto-starts only once
+it returns `true`.
+
+Concrete assignments (v1):
+
+| Tour | `requireData` |
+|---|---|
+| `dashboard` | at least one transaction exists on the current page range (reuse the existing `!rootEmpty` signal at `frontend/src/pages/Dashboard/index.tsx:195`) |
+| `transactions` | at least one transaction row exists |
+| `budgets` | at least one budget row is defined |
+| `accounts`, `imports`, `rules`, `data` | none — these pages exist *to* create data, auto-start is appropriate on an empty slate |
+
+The predicate reads from the page's already-loaded data (React Query cache
+or props), so no extra fetches. If the predicate throws, treat as `false`
+(fail closed: no auto-start).
+
+**Replay bypasses the gate.** When the user clicks the `?` icon,
+`TourReplayIcon` calls `undismiss` + `startTour` directly — `requireData` is
+not consulted. Rationale: the user has explicitly asked for the tour;
+respect the request even on an empty dataset. Steps whose anchors aren't
+mounted will fall through the 2 s anchor-missing timeout described in
+§ Anchors.
 
 ### Persistence ids
 
@@ -408,6 +457,7 @@ rollout adds branching without safety benefit.
 - `frontend/src/hooks/useAutoStartTour.ts`
 - `frontend/src/tips/__tests__/tours.test.ts`
 - `frontend/src/contexts/__tests__/TourContext.test.tsx`
+- `frontend/src/hooks/__tests__/useAutoStartTour.test.tsx`
 - `frontend/src/components/__tests__/TourBubble.test.tsx`
 - `frontend/src/components/__tests__/TourReplayIcon.test.tsx`
 
@@ -479,6 +529,14 @@ the desired "here's what's new" behaviour.
   - `abortTour` clears without dismissing.
   - Starting a new tour while one runs aborts the first (no persistence
     event on the abort).
+- `hooks/__tests__/useAutoStartTour.test.tsx`
+  - Auto-starts when `ready` + `!dismissed` + no active tour + no
+    `requireData` predicate.
+  - Does NOT auto-start when `requireData` returns `false`; auto-starts on
+    the next render once it flips to `true`.
+  - Treats a throwing `requireData` as `false` (no auto-start, no crash).
+  - Never auto-starts once the tour is dismissed, regardless of
+    `requireData`.
 
 ### Component
 
