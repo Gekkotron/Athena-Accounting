@@ -5,6 +5,15 @@ import { formatAmountCompact, formatDateShort } from '../../lib/format';
 import { buildAggregatedSeries } from './series';
 import { buildCheckpointMarks, type Checkpoint } from './checkpoints';
 import { BalanceTooltip } from './BalanceTooltip';
+import {
+  MIN_ZOOM_WIDTH_VB,
+  mergeHistoricalAndProjection,
+  computeYRange,
+  computeActiveWindow,
+  buildSegments,
+  buildAreaPath,
+  buildAxisTicks,
+} from './lib';
 
 interface Props {
   points: BalancePoint[];
@@ -56,18 +65,6 @@ interface ZoomState {
   endMs: number;
 }
 
-function isoDate(ms: number): string {
-  const d = new Date(ms);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-// A drag narrower than this (in viewBox units, out of 1000) is treated as
-// a stray click, not a zoom request.
-const MIN_ZOOM_WIDTH_VB = 10;
-
 export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection, alignEndTo }: Props): JSX.Element {
   const { t } = useTranslation('charts');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,34 +73,15 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   const [drag, setDrag] = useState<DragState | null>(null);
   const [zoom, setZoom] = useState<ZoomState | null>(null);
 
-  const { data, projectionStartIdx } = useMemo(() => {
-    const raw = buildAggregatedSeries(points, currency);
-    // If the caller passes an authoritative end value, shift the whole
-    // historical curve by (alignEndTo - lastValue). This paper-over fixes
-    // the case where /api/reports/timeseries under-counts accounts that
-    // had no activity in the window and their opening balance never gets
-    // carried forward into the aggregate — without this the historical
-    // line ends far below what /api/reports/balance says is the current
-    // total, and the projection anchors introduce a huge visual jump.
-    const shift =
-      alignEndTo !== undefined && raw.length > 0
-        ? alignEndTo - raw[raw.length - 1]!.value
-        : 0;
-    const historical =
-      shift === 0 ? raw : raw.map((p) => ({ date: p.date, value: p.value + shift }));
-    // Projection points render as a forward continuation of the last
-    // historical value. Filtered to strictly forward-dated samples so a
-    // stray past date can't disturb the historical segmentation.
-    const anchorDate = historical.length > 0 ? historical[historical.length - 1]!.date : '';
-    const forward = (projection ?? []).filter((p) => p.date > anchorDate).sort((a, b) => a.date.localeCompare(b.date));
-    if (forward.length === 0) {
-      return { data: historical, projectionStartIdx: historical.length };
-    }
-    return {
-      data: [...historical, ...forward],
-      projectionStartIdx: historical.length,
-    };
-  }, [points, currency, projection, alignEndTo]);
+  const { data, projectionStartIdx } = useMemo(
+    () =>
+      mergeHistoricalAndProjection({
+        raw: buildAggregatedSeries(points, currency),
+        alignEndTo,
+        projection,
+      }),
+    [points, currency, projection, alignEndTo],
+  );
 
   if (data.length < 2) {
     return (
@@ -119,20 +97,13 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   const innerW = w - pad.left - pad.right;
   const innerH = h - pad.top - pad.bottom;
 
-  const ys = data.map((d) => d.value);
-  const minY = Math.min(...ys, 0);
-  const maxY = Math.max(...ys, 0);
-  const range = maxY - minY || 1;
+  const { minY, maxY, range } = computeYRange(data);
 
   // Time-based X scale — maps a calendar date to a viewBox X. Under an
   // active zoom, the scale narrows to just the zoom window so that window
   // spans the full plot width; out-of-window buckets fall outside
   // [pad.left, w - pad.right] and get clipped by <clipPath id="chart-clip">.
-  const dataFirstMs = Date.parse(data[0]!.date);
-  const dataLastMs = Date.parse(data[data.length - 1]!.date);
-  const activeFirstMs = zoom?.startMs ?? dataFirstMs;
-  const activeLastMs = zoom?.endMs ?? dataLastMs;
-  const xSpan = Math.max(1, activeLastMs - activeFirstMs);
+  const { activeFirstMs, activeLastMs, xSpan } = computeActiveWindow(data, zoom);
   const xScale = (date: string) => pad.left + ((Date.parse(date) - activeFirstMs) / xSpan) * innerW;
   const xScaleAt = (i: number) => xScale(data[i]!.date);
   const yScale = (v: number) => pad.top + innerH - ((v - minY) / range) * innerH;
@@ -142,66 +113,17 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
 
   const marks = buildCheckpointMarks(data, checkpoints, xScale);
 
-  // Area fill covers only the historical portion — the projection stays
-  // stroke-only so the "uncertain" region reads visually different from
-  // the filled "measured" region.
-  const historicalLastIdx = Math.max(0, projectionStartIdx - 1);
-  const historicalPath = data
-    .slice(0, projectionStartIdx)
-    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScaleAt(i).toFixed(1)} ${yScale(d.value).toFixed(1)}`)
-    .join(' ');
-  const areaPath = projectionStartIdx > 0
-    ? `${historicalPath} L ${xScaleAt(historicalLastIdx).toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${xScaleAt(0).toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`
-    : '';
+  const { areaPath } = buildAreaPath({ data, projectionStartIdx, xScaleAt, yScale, pad, innerH });
 
-  // Split the stroked line into runs of consecutive segments sharing the same
-  // "dashed" verdict. A segment is dashed when the two data points bracket a
-  // gap of more than `gapThresholdDays` (missing data) OR when the segment
-  // enters the projection window (uncertain forward extension). Both cases
-  // read the same visually.
-  const segments: { d: string; dashed: boolean }[] = [];
-  {
-    let runStart = 0;
-    let runDashed: boolean | null = null;
-    for (let i = 1; i < data.length; i++) {
-      const gap = Math.round(
-        (Date.parse(data[i]!.date) - Date.parse(data[i - 1]!.date)) / 86_400_000,
-      );
-      const isProjection = i >= projectionStartIdx;
-      const dashed = isProjection || gap > gapThresholdDays;
-      if (runDashed === null) {
-        runDashed = dashed;
-        continue;
-      }
-      if (dashed !== runDashed) {
-        segments.push({
-          d: data
-            .slice(runStart, i)
-            .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScaleAt(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
-            .join(' '),
-          dashed: runDashed,
-        });
-        runStart = i - 1;
-        runDashed = dashed;
-      }
-    }
-    segments.push({
-      d: data
-        .slice(runStart)
-        .map((p, k) => `${k === 0 ? 'M' : 'L'} ${xScaleAt(runStart + k).toFixed(1)} ${yScale(p.value).toFixed(1)}`)
-        .join(' '),
-      dashed: runDashed ?? false,
-    });
-  }
+  const segments = buildSegments({ data, projectionStartIdx, gapThresholdDays, xScaleAt, yScale });
 
-  const ticks = 4;
-  const tickValues = Array.from({ length: ticks + 1 }, (_, i) => minY + (range * i) / ticks);
-  // Evenly-spaced calendar ticks — computed by time on the ACTIVE window,
-  // so a zoomed-in view relabels the axis for that window.
-  const xTickCount = Math.min(6, Math.max(2, data.length));
-  const xTicks: string[] = Array.from({ length: xTickCount }, (_, i) =>
-    isoDate(activeFirstMs + (i * xSpan) / (xTickCount - 1)),
-  );
+  const { tickValues, xTicks } = buildAxisTicks({
+    minY,
+    range,
+    activeFirstMs,
+    xSpan,
+    dataLength: data.length,
+  });
 
   const zeroY = yScale(0);
 
