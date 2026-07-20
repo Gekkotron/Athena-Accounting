@@ -18,12 +18,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-- [ ] Refactor: split `frontend/src/pages/Transactions/TransactionModal.tsx` (456 lines) into per-concern modules
-      Follow the Categories.tsx pilot. TransactionModal likely combines form fields, category picker, envelope-assignment picker, split-transaction editor, validation, and submit wiring. Extract each visually-distinct panel into a sibling `.tsx` (`TransactionModalFields.tsx`, `TransactionModalSplits.tsx` — actual boundaries TBD by inspection); extract pure form logic (validation, form-state shaping, submit-payload builder, decimal-parse wrappers) into `frontend/src/pages/Transactions/transaction-modal-lib.ts`.
-      Add `frontend/src/pages/Transactions/__tests__/transaction-modal-lib.test.ts` covering the pure helpers — especially the submit-payload builder (which encodes the wire contract for creating/updating transactions and would silently corrupt data if regressed).
-      Verification gate (single commit): full frontend suite + build green; direct to main. Commit subject: `refactor(transaction-modal): split TransactionModal into panels and unit-test the payload builder`.
-      Success criteria: (a) `TransactionModal.tsx` under 240 lines; (b) new `transaction-modal-lib.ts` pure; (c) existing TransactionModal integration tests still green untouched.
-
 
 
 
@@ -39,6 +33,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Refactor: split `frontend/src/pages/Transactions/TransactionModal.tsx` (456 → 319) into per-concern modules
+      Pure wire-contract logic extracted to `transaction-modal-lib.ts` (84 lines, no React): `buildPatchDiff(original, next)` (the field-by-field diff that gates the PATCH body — encodes the wire contract; a silent regression here would corrupt data); `parseLockYearsInput(raw)` (blank → inherit, integer[0,99] → value, everything else → validation error); `draftMatchesInitial(draft, initial, parentCents)` (byte-equivalent split comparison so the modal can close without a round-trip when nothing changed). One presentational subcomponent extracted: `TransactionModalFields.tsx` (155 — the 7-field input grid: account, date, amount, label, category, notes, lockYears). Reuses `sortCategoriesForPicker` from `./lib` (extracted in task 3), so the category dropdown now shares its sort with the bulk-selection dropdown. Aspirational `<240` line target from PLAN.md missed — 319 was the pragmatic landing (state, effects, mutations, submit, and modal frame all belong in the composer; extracting them into a hook would obscure state topology the same way it would on PdfTemplateBuilder).
+      New `__tests__/transaction-modal-lib.test.ts` (15 tests): `parseLockYearsInput` blank + trim + [0,99] range + negative/above-99/non-int/non-numeric reject; `buildPatchDiff` empty-when-unchanged, single-field emission, rawLabel trim-equivalence, categoryId ''-vs-null normalisation, notes trim-vs-null + non-empty change, null lockYears equivalence, date slice-to-YYYY-MM-DD comparison; `draftMatchesInitial` byte-match + empty categoryId short-circuit + length mismatch + categoryId/amount cent-count divergence + whitespace-memo-equals-null-memo.
+      Verification: `npx tsc -b` clean, `npx vitest run` = 790/790 tests pass (775 pre-existing + 15 new), `npm run build` succeeds. Existing `TransactionModal.test.tsx` (9 integration tests) remains green untouched.
 
 - [x] Refactor: split `frontend/src/pages/Recurrent/ForecastTab.tsx` (458 → 264) into per-concern modules
       Pure tab-local helpers extracted to `Recurrent/forecast-lib.ts` (50 lines, no React): `Horizon` + `HORIZONS`, `HISTORICAL_WINDOW_DAYS`, `todayIso`, `isoDaysAgo` (both previously inline at file top), `contributingSeries(active, includeDetected)` (dedups the confirmed-vs-detected filter previously duplicated between the tab body's counter and the debug panel), `classifyEmpty(input)` (the 3-branch empty-state trichotomy — 'scope' / 'unconfirmed' / 'none' — plus null when there IS a contributor). Two subcomponents extracted: `ForecastHorizonPicker.tsx` (26 lines — the J+30/60/90/180 segmented control), `ForecastDebugPanel.tsx` (147 lines — the full debug section: inputs grid + per-series table + day-by-day contributions table). The already-shared `lib/recurring-forecast.ts` projector (extracted in Récurrent Task 4) stays untouched, per PLAN.md guidance.

@@ -4,8 +4,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseDecimal, parseUserDate } from '../../lib/format';
-import { formatCategoryPath } from '../../lib/categories';
 import { SplitEditor, type DraftSplit, parseMagnitudeCents, fromInitial } from './SplitEditor';
+import { TransactionModalFields } from './TransactionModalFields';
+import {
+  buildPatchDiff,
+  draftMatchesInitial,
+  parseLockYearsInput,
+  type TxPatch,
+} from './transaction-modal-lib';
 
 export function TransactionModal({
   open,
@@ -23,9 +29,9 @@ export function TransactionModal({
 }) {
   const { t } = useTranslation(['transactions', 'common']);
   const qc = useQueryClient();
-  // We hold the date in the FRENCH textual form (JJ/MM/AAAA) and parse to
-  // ISO only at submit time. This lets the user paste "14/07/2025"
-  // straight from a bank statement without fighting the picker.
+  // Date is held in the FRENCH textual form (JJ/MM/AAAA) and parsed to ISO
+  // only at submit time. Lets the user paste "14/07/2025" straight from a
+  // bank statement without fighting the picker.
   const isEdit = !!transaction;
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
@@ -41,16 +47,12 @@ export function TransactionModal({
   const [rawLabel, setRawLabel] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
-  // Empty string = no per-tx override; the transaction inherits the account
-  // default (which itself may be null = never locked). Any digit here means
-  // this transaction locks for N years from ITS OWN date — the Natixis-style
-  // rolling-lock semantics.
+  // Empty = inherit account default; any digit = this tx locks for N years
+  // from ITS OWN date (Natixis-style rolling-lock).
   const [lockYearsInput, setLockYearsInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [splitsDraft, setSplitsDraft] = useState<DraftSplit[]>([]);
 
-  // Re-seed defaults / draft from the target transaction whenever the modal
-  // opens or the target changes.
   useEffect(() => {
     if (!open) return;
     if (transaction) {
@@ -69,12 +71,10 @@ export function TransactionModal({
       setRawLabel('');
       setCategoryId('');
       setNotes('');
-      // Field stays BLANK by default. On a PEA (single-clock envelope) the
-      // user wants each deposit to inherit the account-wide unlock date
-      // (openingDate + N years), which happens automatically when
-      // tx.lockYears is null. On a term-deposit-style account (Natixis) the
-      // user types the year count per deposit — pre-filling would silently
-      // switch PEA semantics to rolling-lock, which is wrong.
+      // Blank on create so PEA (single-clock envelope) semantics kick in:
+      // deposits inherit openingDate + N years. On a Natixis-style account
+      // the user types a per-deposit year count; pre-filling would silently
+      // switch PEA semantics to rolling-lock.
       setLockYearsInput('');
       setSplitsDraft([]);
     }
@@ -138,9 +138,8 @@ export function TransactionModal({
           if (r.categoryId === '') {
             throw new Error('invariant: persistSplits reached with empty categoryId (splitsInvalid guard failed)');
           }
-          const categoryIdForPayload = r.categoryId;
           return {
-            categoryId: categoryIdForPayload,
+            categoryId: r.categoryId,
             amount: ((cents * sign) / 100).toFixed(2),
             memo: r.memo.trim() ? r.memo : null,
           };
@@ -170,21 +169,10 @@ export function TransactionModal({
   });
 
   const update = useMutation({
-    mutationFn: async (input: {
-      id: number;
-      patch: Partial<{
-        accountId: number;
-        date: string;
-        amount: string;
-        rawLabel: string;
-        categoryId: number | null;
-        notes: string | null;
-        lockYears: number | null;
-      }>;
-    }) => {
-      // Skip the PATCH when the parent transaction has no field changes —
-      // splits alone might be what changed, and we still want to hit
-      // persistSplits below. Without this, an empty PATCH body would 400.
+    mutationFn: async (input: { id: number; patch: TxPatch }) => {
+      // Skip the PATCH when the parent has no field changes — splits alone
+      // might be what changed, and we still want to hit persistSplits below.
+      // An empty PATCH body would 400.
       if (Object.keys(input.patch).length > 0) {
         await api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
           method: 'PATCH', json: input.patch,
@@ -219,60 +207,26 @@ export function TransactionModal({
       setError(t('modal.errors.labelRequired'));
       return;
     }
-    const lockRaw = lockYearsInput.trim();
-    let lockYears: number | null = null;
-    if (lockRaw !== '') {
-      const n = Number(lockRaw);
-      if (!Number.isInteger(n) || n < 0 || n > 99) {
-        setError(t('modal.errors.invalidLockYears'));
-        return;
-      }
-      lockYears = n;
+    const lockParsed = parseLockYearsInput(lockYearsInput);
+    if (!lockParsed.ok) {
+      setError(t('modal.errors.invalidLockYears'));
+      return;
     }
 
     if (isEdit && transaction) {
-      // Diff against the original so the PATCH only sends fields that changed.
-      const patch: Partial<{
-        accountId: number;
-        date: string;
-        amount: string;
-        rawLabel: string;
-        categoryId: number | null;
-        notes: string | null;
-        lockYears: number | null;
-      }> = {};
-      if (accountId !== transaction.accountId) patch.accountId = accountId;
-      if (isoDate !== transaction.date.slice(0, 10)) patch.date = isoDate;
-      if (cleanedAmount !== transaction.amount) patch.amount = cleanedAmount;
-      if (rawLabel.trim() !== transaction.rawLabel) patch.rawLabel = rawLabel.trim();
-      if ((categoryId || null) !== transaction.categoryId) {
-        patch.categoryId = categoryId || null;
-      }
-      const cleanedNotes = notes.trim() || null;
-      if (cleanedNotes !== transaction.notes) patch.notes = cleanedNotes;
-      if (lockYears !== (transaction.lockYears ?? null)) {
-        patch.lockYears = lockYears;
-      }
-
-      // Split changes must go through the mutation even when no parent field
-      // moved — otherwise adding a ventilation to an untouched transaction
-      // would silently close the modal without persisting.
-      const initialSplits = transaction.splits;
-      const sign = parentCents < 0 ? -1 : 1;
-      const draftMatchesInitial =
-        initialSplits.length === splitsDraft.length &&
-        splitsDraft.every((r, i) => {
-          const init = initialSplits[i];
-          if (r.categoryId === '') return false;
-          if (init.categoryId !== r.categoryId) return false;
-          const draftSignedCents = (parseMagnitudeCents(r.amountMagnitude) ?? 0) * sign;
-          const initCents = Math.round(Number(init.amount) * 100);
-          if (draftSignedCents !== initCents) return false;
-          const draftMemo = r.memo.trim() || null;
-          const initMemo = init.memo && init.memo.trim() ? init.memo : null;
-          return draftMemo === initMemo;
-        });
-      if (Object.keys(patch).length === 0 && draftMatchesInitial) {
+      const patch = buildPatchDiff(transaction, {
+        accountId,
+        isoDate,
+        amount: cleanedAmount,
+        rawLabel,
+        categoryId,
+        notes,
+        lockYears: lockParsed.value,
+      });
+      // Splits go through update even if no parent field moved — otherwise
+      // adding a ventilation to an untouched transaction would silently
+      // close the modal without persisting.
+      if (Object.keys(patch).length === 0 && draftMatchesInitial(splitsDraft, transaction.splits, parentCents)) {
         onClose();
         return;
       }
@@ -285,16 +239,12 @@ export function TransactionModal({
         rawLabel: rawLabel.trim(),
         categoryId: categoryId || null,
         notes: notes.trim() || null,
-        lockYears,
+        lockYears: lockParsed.value,
       });
     }
   };
 
-  // Pre-fill lock years when the user switches account mid-modal to a
-  // different one — but only in create mode, and only if they haven't
-  // already typed a custom value.
   const selectedAccount = accountId ? accounts.find((a) => a.id === accountId) : undefined;
-
   const pending = create.isPending || update.isPending;
 
   return (
@@ -316,113 +266,26 @@ export function TransactionModal({
           {isEdit ? t('modal.header.editHint') : t('modal.header.createHint')}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className="label mb-1.5 block">{t('modal.labels.account')}</label>
-            <select
-              className="input"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
-              required
-            >
-              <option value="">—</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label mb-1.5 block">{t('modal.labels.date')}</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="input font-mono"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              placeholder={t('modal.placeholders.date')}
-              required
-              autoComplete="off"
-            />
-            <div className="text-[11px] text-ink-500 mt-1">
-              {t('modal.hints.dateFormat')}
-            </div>
-          </div>
-          <div>
-            <label className="label mb-1.5 block">{t('modal.labels.amount')}</label>
-            <input
-              className="input font-mono"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={t('modal.placeholders.amount')}
-              required
-            />
-            <div className="text-[11px] text-ink-500 mt-1">
-              {t('modal.hints.amountSign')}
-            </div>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="label mb-1.5 block">{t('modal.labels.label')}</label>
-            <input
-              className="input"
-              value={rawLabel}
-              onChange={(e) => setRawLabel(e.target.value)}
-              placeholder={t('modal.placeholders.label')}
-              required
-            />
-          </div>
-          <div>
-            <label className="label mb-1.5 block">{t('modal.labels.categoryOptional')}</label>
-            <select
-              className="input"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
-            >
-              <option value="">{t('modal.options.categoryAuto')}</option>
-              {[...categories]
-                .sort((a, b) => {
-                  const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
-                  const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
-                  return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-                })
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {formatCategoryPath(c, byId)}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <div>
-            <label className="label mb-1.5 block">{t('modal.labels.notes')}</label>
-            <input
-              className="input"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="…"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label
-              className="label mb-1.5 block"
-              title={t('modal.hints.lockYearsTooltip')}
-            >
-              {t('modal.labels.lockYears')} <span className="text-ink-500 font-normal">{t('modal.labels.optional')}</span>
-            </label>
-            <input
-              inputMode="numeric"
-              className="input font-mono"
-              value={lockYearsInput}
-              onChange={(e) => setLockYearsInput(e.target.value)}
-              placeholder="—"
-            />
-            <div className="text-[11px] text-ink-500 mt-1">
-              {selectedAccount?.lockYears == null
-                ? t('modal.hints.lockYearsNoAccountLock')
-                : t('modal.hints.lockYearsWithAccountLock', { years: selectedAccount.lockYears })}
-            </div>
-          </div>
-        </div>
+        <TransactionModalFields
+          accounts={accounts}
+          categories={categories}
+          categoryById={byId}
+          accountId={accountId}
+          onAccountIdChange={setAccountId}
+          date={date}
+          onDateChange={setDate}
+          amount={amount}
+          onAmountChange={setAmount}
+          rawLabel={rawLabel}
+          onRawLabelChange={setRawLabel}
+          categoryId={categoryId}
+          onCategoryIdChange={setCategoryId}
+          notes={notes}
+          onNotesChange={setNotes}
+          lockYearsInput={lockYearsInput}
+          onLockYearsInputChange={setLockYearsInput}
+          selectedAccountLockYears={selectedAccount?.lockYears ?? null}
+        />
 
         <SplitEditor
           parentAmountMagnitude={parentAmountMagnitude}
