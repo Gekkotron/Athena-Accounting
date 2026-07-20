@@ -1,64 +1,45 @@
 {
-  "sections": {
+  "tours": {
     "dashboard": {
-      "title": "Welcome to the dashboard",
-      "body": "Here you can see your account balances, the balance curve, and your spending by category. Click a category in the donut chart to filter transactions."
-    },
-    "imports": {
-      "title": "Import your statements",
-      "body": "Drop an OFX, CSV, or PDF file. The first time a bank's PDF is imported, a wizard asks you to mark the amount/date/description zones — later imports are automatic."
-    },
-    "transactions": {
-      "title": "Search, fix, split",
-      "body": "Search ignores accents and case. You can split a transaction into several sub-lines, edit a category inline, or select multiple transactions to delete them all at once."
-    },
-    "rules": {
-      "title": "Automatic categorization",
-      "body": "Rules apply to new imports and can be re-applied retroactively without overwriting your manual categories. From the Sort tab, you can create a rule from a keyword in one click."
-    },
-    "budgets": {
-      "title": "Monthly budget tracking",
-      "body": "For each expense category, set a planned amount and track the variance in real time. Categories over budget turn red."
+      "0": { "title": "Total balance", "body": "The sum of every account's balance, locked funds included." },
+      "1": { "title": "Balance curve", "body": "Day-by-day evolution. The diamonds are your reconciliation checkpoints." },
+      "2": { "title": "Spending by category", "body": "Click a donut slice to filter transactions by that category." },
+      "3": { "title": "Insights", "body": "Automatic alerts: over-budget categories, unusual spending, budgets that could use a tweak." },
+      "4": { "title": "Cash flow", "body": "The Sankey traces where money came from and where it went over the visible period." }
     },
     "accounts": {
-      "title": "Your accounts",
-      "body": "Add a checking account, savings account, PEA… The opening balance is required: every balance is computed from there. Locked funds (PEA, term deposit) are kept separate from the available amount."
+      "0": { "title": "Add an account", "body": "Checking, savings, brokerage… The starting balance is required — every calculation starts from there." },
+      "1": { "title": "Locked funds", "body": "For accounts like brokerage or term deposits, tick 'locked' to isolate them from your available balance." }
+    },
+    "imports": {
+      "0": { "title": "Drop a file", "body": "OFX, CSV, or PDF. The first time a bank's PDF is imported, an assistant asks you to point at the amount, date, and label zones." }
+    },
+    "transactions": {
+      "0": { "title": "Search", "body": "Search ignores accents and case." },
+      "1": { "title": "Split a transaction", "body": "Open a transaction to break it into several sub-lines, or edit a category inline." },
+      "2": { "title": "Multi-select", "body": "Tick several rows to delete them at once." }
+    },
+    "rules": {
+      "0": { "title": "Sorting rules", "body": "Rules apply to new imports and can be re-applied retroactively without overwriting your manual categories." },
+      "1": { "title": "Sort tab", "body": "Create a rule from a keyword in one click." }
+    },
+    "budgets": {
+      "0": { "title": "Monthly budget", "body": "Set a target amount per category. Over-budget categories turn red." }
     },
     "data": {
-      "title": "Backup and restore",
-      "body": "Export a full backup (accounts, transactions, checkpoints, splits) and re-import it on another install or to restore."
+      "0": { "title": "Full backup", "body": "Export accounts, transactions, checkpoints, and splits to one file. Re-import on another install to restore." }
     }
   },
-  "welcome": {
+  "tour": {
     "stepCounter": "Step {{step}} / {{total}}",
     "buttons": {
-      "skip": "Skip",
+      "prev": "Previous",
       "next": "Next",
-      "finish": "Finish"
+      "finish": "Finish",
+      "skip": "Skip"
     },
-    "steps": {
-      "0": {
-        "title": "Welcome to Athena",
-        "body": "Athena is a self-hosted personal accounting app. Your banking data never leaves your network."
-      },
-      "1": {
-        "title": "Create your accounts",
-        "body": "Start by adding your bank accounts under \"Accounts\". The opening balance and opening date are the basis for every calculation."
-      },
-      "2": {
-        "title": "Import your statements",
-        "body": "From \"Data › Imports\", drop your OFX, CSV, or PDF files. Duplicates are detected automatically."
-      },
-      "3": {
-        "title": "Analyze your spending",
-        "body": "The dashboard shows your balance and spending by category. You can then set monthly budgets if you'd like."
-      }
-    }
-  },
-  "sectionTip": {
-    "hideAriaLabel": "Hide this tip"
-  },
-  "sectionTipHelpIcon": {
-    "showAriaLabel": "Show this section's tip again"
+    "closeAriaLabel": "Close tour",
+    "replayIconAriaLabel": "Replay this page's tour",
+    "mobilePointsTo": "↑ points to the described element"
   }
 }

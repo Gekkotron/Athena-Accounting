@@ -1,46 +1,52 @@
 import { describe, it, expect } from 'vitest';
-import { TIP_IDS, sectionTip, welcomeStep, WELCOME_STEP_COUNT, type SectionTipId } from '../content';
+import { TIP_IDS } from '../content';
 import i18n from '../../i18n';
 import { pinLocale } from '../../test/i18n';
+import { PAGE_IDS, TOURS } from '../tours';
 
 pinLocale('tips');
 
-describe('tips content registry', () => {
-  it('TIP_IDS has all 8 ids in the frozen order', () => {
+describe('tips content registry (v2)', () => {
+  it('TIP_IDS has one `tour:<pageId>` per PageId, in PAGE_IDS order', () => {
     expect([...TIP_IDS]).toEqual([
-      'welcome_tour',
-      'section:dashboard',
-      'section:imports',
-      'section:transactions',
-      'section:rules',
-      'section:budgets',
-      'section:accounts',
-      'section:data',
+      'tour:dashboard',
+      'tour:accounts',
+      'tour:imports',
+      'tour:transactions',
+      'tour:rules',
+      'tour:budgets',
+      'tour:data',
     ]);
+    expect(TIP_IDS.length).toBe(PAGE_IDS.length);
   });
 
-  it('sectionTip() resolves a non-empty {title, body} for every section id', () => {
+  it('every tour step resolves a non-empty {title, body} in French', () => {
     const t = i18n.getFixedT('fr', 'tips');
-    const sectionIds = TIP_IDS.filter((id) => id !== 'welcome_tour') as SectionTipId[];
-    for (const id of sectionIds) {
-      const copy = sectionTip(id, t);
-      expect(copy.title.length).toBeGreaterThan(0);
-      expect(copy.body.length).toBeGreaterThan(0);
-      // Lookups must actually resolve — a missing key falls back to the key
-      // string itself (containing a '.'), which would never happen for
-      // real prose copy.
-      expect(copy.title).not.toContain('.');
+    for (const pageId of PAGE_IDS) {
+      TOURS[pageId].forEach((_step, idx) => {
+        const title = t(`tours.${pageId}.${idx}.title`);
+        const body = t(`tours.${pageId}.${idx}.body`);
+        expect(typeof title).toBe('string');
+        expect(title.length).toBeGreaterThan(0);
+        expect(title).not.toContain('tours.'); // missing-key fallback would contain the key path
+        expect(typeof body).toBe('string');
+        expect(body.length).toBeGreaterThan(0);
+        expect(body).not.toContain('tours.');
+      });
     }
   });
 
-  it('WELCOME_STEP_COUNT is 3–4 and welcomeStep() resolves every index', () => {
-    expect(WELCOME_STEP_COUNT).toBeGreaterThanOrEqual(3);
-    expect(WELCOME_STEP_COUNT).toBeLessThanOrEqual(4);
-    const t = i18n.getFixedT('fr', 'tips');
-    for (let i = 0; i < WELCOME_STEP_COUNT; i++) {
-      const step = welcomeStep(i, t);
-      expect(step.title.length).toBeGreaterThan(0);
-      expect(step.body.length).toBeGreaterThan(0);
+  it('every tour step resolves a non-empty {title, body} in English', () => {
+    const t = i18n.getFixedT('en', 'tips');
+    for (const pageId of PAGE_IDS) {
+      TOURS[pageId].forEach((_step, idx) => {
+        const title = t(`tours.${pageId}.${idx}.title`);
+        const body = t(`tours.${pageId}.${idx}.body`);
+        expect(title.length).toBeGreaterThan(0);
+        expect(title).not.toContain('tours.');
+        expect(body.length).toBeGreaterThan(0);
+        expect(body).not.toContain('tours.');
+      });
     }
   });
 });

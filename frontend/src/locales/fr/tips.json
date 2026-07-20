@@ -1,64 +1,45 @@
 {
-  "sections": {
+  "tours": {
     "dashboard": {
-      "title": "Bienvenue sur le tableau de bord",
-      "body": "Vous y voyez le solde de vos comptes, la courbe du solde et vos dépenses par catégorie. Cliquez sur une catégorie du donut pour filtrer les transactions."
-    },
-    "imports": {
-      "title": "Importer vos relevés",
-      "body": "Glissez un fichier OFX, CSV ou PDF. La première fois qu'un PDF d'une banque est importé, un assistant vous demande de désigner les zones montant/date/libellé — les imports suivants sont automatiques."
-    },
-    "transactions": {
-      "title": "Rechercher, corriger, ventiler",
-      "body": "La recherche ignore les accents et la casse. Vous pouvez ventiler une transaction en plusieurs sous-lignes, éditer une catégorie en ligne, ou sélectionner plusieurs transactions pour les supprimer d'un coup."
-    },
-    "rules": {
-      "title": "Catégorisation automatique",
-      "body": "Les règles s'appliquent aux nouveaux imports et peuvent être ré-appliquées rétroactivement sans écraser vos catégories manuelles. Depuis l'onglet Tri, vous pouvez créer une règle à partir d'un mot-clé en un clic."
-    },
-    "budgets": {
-      "title": "Suivi de budget mensuel",
-      "body": "Pour chaque catégorie de dépenses, définissez un montant prévu et suivez l'écart en temps réel. Les catégories en dépassement passent au rouge."
+      "0": { "title": "Solde global", "body": "Somme des soldes de tous vos comptes, argent bloqué inclus." },
+      "1": { "title": "Courbe du solde", "body": "L'évolution jour par jour. Les losanges sont vos points de contrôle." },
+      "2": { "title": "Dépenses par catégorie", "body": "Cliquez sur une part du donut pour filtrer les transactions." },
+      "3": { "title": "Insights", "body": "Les alertes automatiques : catégories en dépassement, dépenses inhabituelles, budgets à ajuster." },
+      "4": { "title": "Flux de trésorerie", "body": "Le Sankey retrace d'où vient l'argent et où il va sur la période affichée." }
     },
     "accounts": {
-      "title": "Vos comptes",
-      "body": "Ajoutez un compte courant, un livret, un PEA… Le solde de départ est obligatoire : tous les soldes sont calculés à partir de là. L'argent bloqué (PEA, dépôt à terme) est isolé du montant disponible."
+      "0": { "title": "Ajouter un compte", "body": "Courant, livret, PEA… Le solde de départ est obligatoire — tous les calculs partent de là." },
+      "1": { "title": "Argent bloqué", "body": "PEA, dépôt à terme : cochez « bloqué » pour l'isoler du montant disponible." }
+    },
+    "imports": {
+      "0": { "title": "Glissez un fichier", "body": "OFX, CSV ou PDF. La première fois qu'un PDF d'une banque arrive, un assistant vous demande de désigner les zones montant/date/libellé." }
+    },
+    "transactions": {
+      "0": { "title": "Recherche", "body": "La recherche ignore les accents et la casse." },
+      "1": { "title": "Ventiler une transaction", "body": "Ouvrez une transaction pour la découper en plusieurs sous-lignes, ou éditez une catégorie en ligne." },
+      "2": { "title": "Sélection multiple", "body": "Cochez plusieurs lignes pour les supprimer d'un coup." }
+    },
+    "rules": {
+      "0": { "title": "Règles de tri", "body": "Les règles s'appliquent aux nouveaux imports et peuvent être ré-appliquées rétroactivement sans écraser vos catégories manuelles." },
+      "1": { "title": "Onglet Tri", "body": "Créez une règle à partir d'un mot-clé en un clic." }
+    },
+    "budgets": {
+      "0": { "title": "Budget mensuel", "body": "Définissez un montant prévu par catégorie. Les dépassements passent au rouge." }
     },
     "data": {
-      "title": "Sauvegarde et restauration",
-      "body": "Exportez un backup complet (comptes, transactions, checkpoints, ventilations) et ré-importez-le sur une autre installation ou pour restaurer."
+      "0": { "title": "Sauvegarde complète", "body": "Exportez comptes, transactions, checkpoints et ventilations en un fichier. Ré-importez sur une autre installation pour restaurer." }
     }
   },
-  "welcome": {
+  "tour": {
     "stepCounter": "Étape {{step}} / {{total}}",
     "buttons": {
-      "skip": "Passer",
+      "prev": "Précédent",
       "next": "Suivant",
-      "finish": "Terminer"
+      "finish": "Terminer",
+      "skip": "Passer"
     },
-    "steps": {
-      "0": {
-        "title": "Bienvenue dans Athena",
-        "body": "Athena est un logiciel de comptabilité personnel auto-hébergé. Vos données bancaires ne quittent pas votre réseau."
-      },
-      "1": {
-        "title": "Créez vos comptes",
-        "body": "Commencez par ajouter vos comptes bancaires dans « Comptes ». Le solde de départ et la date d'ouverture servent de base à tous les calculs."
-      },
-      "2": {
-        "title": "Importez vos relevés",
-        "body": "Depuis « Données › Imports », glissez vos fichiers OFX, CSV ou PDF. Les doublons sont détectés automatiquement."
-      },
-      "3": {
-        "title": "Analysez vos dépenses",
-        "body": "Le tableau de bord affiche votre solde et vos dépenses par catégorie. Définissez ensuite des budgets mensuels si vous le souhaitez."
-      }
-    }
-  },
-  "sectionTip": {
-    "hideAriaLabel": "Masquer ce conseil"
-  },
-  "sectionTipHelpIcon": {
-    "showAriaLabel": "Réafficher le conseil de cette section"
+    "closeAriaLabel": "Fermer la visite",
+    "replayIconAriaLabel": "Rejouer la visite de cette page",
+    "mobilePointsTo": "↑ pointe vers l'élément décrit"
   }
 }
