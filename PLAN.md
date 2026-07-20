@@ -18,12 +18,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-- [ ] Refactor: split `frontend/src/api/demo/handlers/writes.ts` (460 lines) into per-endpoint modules
-      Mirror of the demo-reads task. Target: `frontend/src/api/demo/handlers/writes/{index,mutators,<group>.ts}` — group by resource (transactions, accounts, categories, envelopes, recurring, settings, imports, etc.). `index.ts` becomes the registration composer; shared store-mutation helpers (id generation, updated-at stamping, cascade rules) move to a sibling.
-      Add `frontend/src/api/demo/handlers/__tests__/writes-helpers.test.ts` covering the extracted pure helpers only.
-      Verification gate (single commit): full frontend suite green; both `VITE_DEMO=1 npm --prefix frontend run build` and plain build green; direct to main. Commit subject: `refactor(demo-writes): split demo writes handlers into per-resource modules and unit-test shared helpers`.
-      Success criteria: (a) no single per-resource file over ~200 lines; (b) `index.ts` composer under ~80 lines; (c) both demo and non-demo builds green.
-
 - [ ] Refactor: split `frontend/src/pages/Recurrent/ForecastTab.tsx` (458 lines) into per-concern modules
       Follow the Categories.tsx pilot (commit 70f12df). ForecastTab owns horizon picker, account scope picker, chart wiring, and two stat tiles. Extract each visually-distinct fragment (horizon control, scope control, stat-tile pair) into a sibling `.tsx` where it earns its keep; extract any pure computation local to this tab (variation formatting, horizon→date mapping, stat-tile derivation) into `frontend/src/pages/Recurrent/forecast-lib.ts`. Do NOT touch the already-shared `lib/recurring-forecast.ts` projector — it is already extracted and unit-tested (see Récurrent Task 4 in Done).
       Add `frontend/src/pages/Recurrent/__tests__/forecast-lib.test.ts` covering any newly-extracted pure helpers.
@@ -51,6 +45,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Refactor: split `frontend/src/api/demo/handlers/writes.ts` (460 → 10 files, largest 83) into per-resource modules
+      Old flat `handlers/writes.ts` replaced by `handlers/writes/` folder mirroring the reads split: `index.ts` (23 — composer calls 8 register* siblings), `lib.ts` (19 — pure `nextId` + `matchesRule`, no imports from `demo/index.ts` so tests never trigger the register-cascade deadlock), `accounts.ts` (60), `transactions.ts` (75), `categories.ts` (50), `rules.ts` (83 — combines rules + transferRules since both are similar-shaped CRUD), `budgets.ts` (44), `tri.ts` (65 — tri-assign + recategorize, both use the shared rule matcher from lib), `settings.ts` (21 — settings PATCH + backup export), `recurring.ts` (46 — PUT + regenerate no-op). Handler map unchanged: every method+path the app previously registered still gets registered by the composer.
+      New `__tests__/writes-helpers.test.ts` (9 tests): `nextId` empty-list default + max+1 + gap-preservation; `matchesRule` disabled-rule short-circuit + substring case-insensitive on normalizedLabel + regex case-insensitive on rawLabel + invalid regex non-throwing false + signConstraint negative/positive/any all boundary cases including zero.
+      Verification: `npx tsc -b` clean, `npx vitest run` = 766/766 tests pass (757 pre-existing + 9 new), plain `npm run build` and `VITE_DEMO=1 npm run build` both succeed.
 
 - [x] Refactor: split `backend/src/domain/imports/pdf/index.ts` (467 → 117) into per-stage modules
       Old flat `pdf/index.ts` split by top-level entry point: `index.ts` (117 — `importPdf` + `ImportPdfResult` type + re-exports of the extracted public API), `park-draft.ts` (72 — the `parkDraft` helper that renders pages + inserts the draft row + kicks off the OCR job when needed), `ocr-job.ts` (60 — the exported `runOcrJob` used by both `parkDraft` and `domain/imports/photo`), `apply-and-import.ts` (139 — `applyTemplateAndImport` including anchor derivation + template upsert), `preview.ts` (41 — the read-only `previewTemplate`), `hydrate.ts` (49 — `hydrateDraftPages` reused by apply-and-import + preview, plus a shared `draftExpiredError` factory that both entry points throw), `diagnose.ts` (28 — pure `flattenItems` + `diagnoseStaleTemplate`). Public API unchanged: `importPdf`, `runOcrJob`, `applyTemplateAndImport`, `previewTemplate`, `ImportPdfResult`, `ApplyTemplateImportedResult`, `PreviewTemplateResult`, `RenderedPage`, `PdfTextItem` all still importable from `domain/imports/pdf/index.js`. External callers (`routes/imports.ts`, `domain/imports/photo/index.ts`) require no changes.
