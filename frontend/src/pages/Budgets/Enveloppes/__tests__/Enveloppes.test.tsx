@@ -24,7 +24,7 @@ const report = {
 function wrap(children: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={qc}>
-    <MemoryRouter initialEntries={['/budgets/enveloppes?month=2026-07']}>
+    <MemoryRouter initialEntries={['/budgets/envelopes?month=2026-07']}>
       {children}
     </MemoryRouter>
   </QueryClientProvider>;

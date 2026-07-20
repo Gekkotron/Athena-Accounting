@@ -39,7 +39,7 @@ export function BudgetEnvelopeSection(): JSX.Element | null {
           <div className="label">{t('envelopeTile.header')}</div>
           <div className="text-sm text-ink-400 capitalize">{new Date(month + '-01').toLocaleDateString(locale, { month: 'long', year: 'numeric' })}</div>
         </div>
-        <Link className="text-sage-300 text-sm hover:underline" to={`/budgets/enveloppes?month=${month}`}>
+        <Link className="text-sage-300 text-sm hover:underline" to={`/budgets/envelopes?month=${month}`}>
           {t('envelopeTile.actions.viewAll')}
         </Link>
       </div>
@@ -60,7 +60,7 @@ export function BudgetEnvelopeSection(): JSX.Element | null {
         </div>
         <div>
           <div className="label">{t('envelopeTile.stats.overBudget')}</div>
-          <Link to={`/budgets/enveloppes?month=${month}`}
+          <Link to={`/budgets/envelopes?month=${month}`}
                 className={`text-xl inline-flex items-center gap-1 ${overspentCount > 0 ? 'text-clay-300' : 'text-ink-400'}`}>
             {t('envelopeTile.stats.overBudgetCount', { count: overspentCount })}
             {overspentCount > 0 && <span aria-hidden>⚠</span>}
