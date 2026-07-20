@@ -18,7 +18,7 @@ import { startDraftSweeper } from './domain/imports/pdf/draft-sweeper.js';
 import { rulesRoutes } from './http/routes/rules.js';
 import { transferRulesRoutes } from './http/routes/transfer-rules.js';
 import { transactionsRoutes } from './http/routes/transactions/index.js';
-import { reportsRoutes } from './http/routes/reports.js';
+import { reportsRoutes } from './http/routes/reports/index.js';
 import { triRoutes } from './http/routes/tri.js';
 import { backupRoutes } from './http/routes/backup/index.js';
 import { pdfTemplatesRoutes } from './http/routes/pdf-templates.js';
