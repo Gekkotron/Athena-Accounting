@@ -3,12 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Enveloppes } from '../Enveloppes';
+import { withTips } from '../../../../test/renderWithProviders';
 import { pinLocale } from '../../../../test/i18n';
 
 vi.mock('../../../../api/client', () => ({ api: vi.fn() }));
 import { api } from '../../../../api/client';
 
-pinLocale('budgets');
+pinLocale('budgets', 'tips');
 
 const report = {
   month: '2026-07',
@@ -25,7 +26,7 @@ function wrap(children: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={qc}>
     <MemoryRouter initialEntries={['/budgets/envelopes?month=2026-07']}>
-      {children}
+      {withTips(children as React.ReactElement)}
     </MemoryRouter>
   </QueryClientProvider>;
 }

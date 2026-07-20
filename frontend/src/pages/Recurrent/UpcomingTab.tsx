@@ -6,6 +6,9 @@ import type { Category, RecurringSeries } from '../../api/types';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { amountSignClass, formatAmount } from '../../lib/format';
 import { resolveCategoryColor } from '../../lib/categories';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 // UTC-safe ISO day math — matches the backend and the demo handler.
 function addDaysIso(iso: string, days: number): string {
@@ -94,6 +97,10 @@ export function UpcomingTab(): JSX.Element {
     return { lateRows: late, futureByDay: sortedDays };
   }, [seriesQ.data, today]);
 
+  useAutoStartTour('recurring-upcoming');
+  const listAnchor = useTourAnchor('recurring-upcoming:list');
+  const monthNavAnchor = useTourAnchor('recurring-upcoming:month-nav');
+
   if (seriesQ.isLoading || catQ.isLoading) return <LoadingBlock />;
   if (seriesQ.error) {
     return <ErrorState error={seriesQ.error} onRetry={() => void seriesQ.refetch()} />;
@@ -117,7 +124,12 @@ export function UpcomingTab(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="relative flex flex-col gap-6">
+      <span ref={listAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
+      <span ref={monthNavAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
+      <div className="flex justify-end">
+        <TourReplayIcon pageId="recurring-upcoming" />
+      </div>
       {lateRows.length > 0 && (
         <section className="surface p-4 md:p-5 border-clay-800/60">
           <header className="display text-base text-clay-200 pb-3 mb-3 border-b border-clay-900/40">

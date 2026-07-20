@@ -23,6 +23,9 @@ import { CategoryColorPicker } from './CategoryColorPicker';
 import { CategoryTableRow } from './CategoryTableRow';
 import { DragGhost } from './DragGhost';
 import { buildOwnTotalsByCat, rolledUpTotal } from './categoriesTotals';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 export function Categories() {
   const { t } = useTranslation(['rules', 'common']);
@@ -167,10 +170,19 @@ export function Categories() {
 
   const ownTotalsByCat = useMemo(() => buildOwnTotalsByCat(report), [report]);
 
+  useAutoStartTour('rules-categories');
+  const listAnchor = useTourAnchor('rules-categories:list');
+  const createAnchor = useTourAnchor('rules-categories:create');
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="relative flex flex-col gap-8">
+      <span ref={listAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
+      <span ref={createAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
       <div>
-        <h1 className="page-title">{t('categories.title')}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="page-title">{t('categories.title')}</h1>
+          <TourReplayIcon pageId="rules-categories" />
+        </div>
         <p className="page-subtitle max-w-2xl">
           <Trans i18nKey="rules:categories.subtitle">
             The <span className="display-italic">“kind”</span> feeds the sign guard rail: a category set to “Revenu” never applies to a negative amount. Sub-categories inherit their parent's type.

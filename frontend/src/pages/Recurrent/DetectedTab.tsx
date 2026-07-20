@@ -11,6 +11,9 @@ import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBloc
 import { amountSignClass, formatAmount, formatDate } from '../../lib/format';
 import { resolveCategoryColor } from '../../lib/categories';
 import { cadenceLabel, monthlyEquivalent, monthlyEquivalentTotal } from './lib';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 interface UpdatePatch {
   status?: RecurringStatus;
@@ -78,6 +81,10 @@ export function DetectedTab(): JSX.Element {
     [seriesQ.data],
   );
 
+  useAutoStartTour('recurring-detected');
+  const listAnchor = useTourAnchor('recurring-detected:list');
+  const confirmAnchor = useTourAnchor('recurring-detected:confirm');
+
   if (seriesQ.isLoading || catQ.isLoading) return <LoadingBlock />;
   if (seriesQ.error) {
     return <ErrorState error={seriesQ.error} onRetry={() => void seriesQ.refetch()} />;
@@ -104,7 +111,12 @@ export function DetectedTab(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="relative flex flex-col gap-6">
+      <span ref={listAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
+      <span ref={confirmAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
+      <div className="flex justify-end">
+        <TourReplayIcon pageId="recurring-detected" />
+      </div>
       <div className="flex items-center justify-between">
         <p className="text-sm text-ink-400 max-w-2xl">
           Séries récurrentes détectées dans vos transactions des 12 derniers mois. Confirmez celles qui correspondent à un vrai abonnement, ignorez le reste.

@@ -12,6 +12,9 @@ import { SettingsModal } from './SettingsModal';
 import { UnbudgetedInline } from './UnbudgetedInline';
 import { distributePoolAcrossEnvelopes } from '../envelope-math';
 import { ErrorState, LoadingBlock } from '../../../components/StateBlocks';
+import { useAutoStartTour } from '../../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../../components/TourReplayIcon';
 
 function currentMonthYm(): string {
   // Use client TZ; users see their local month, matching the transactions page.
@@ -44,6 +47,10 @@ export function Enveloppes(): JSX.Element {
   const [holdOpen, setHoldOpen] = useState(false);
   const [settingsRow, setSettingsRow] = useState<EnvelopeReportRow | null>(null);
 
+  useAutoStartTour('budgets-envelopes');
+  const overviewAnchor = useTourAnchor('budgets-envelopes:overview');
+  const holdAnchor = useTourAnchor('budgets-envelopes:hold');
+
   const rows = reportQ.data?.rows ?? [];
   const pool = reportQ.data?.pool;
 
@@ -64,9 +71,14 @@ export function Enveloppes(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex items-center gap-4">
+      <header className="relative flex items-center gap-4">
+        <span ref={overviewAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
+        <span ref={holdAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, -1))} aria-label={t('envelopes.prevMonth')}>‹</button>
-        <h1 className="display text-2xl w-64 text-center">{formatMonthLabel(month, i18n.language)}</h1>
+        <div className="flex items-center justify-center gap-2 w-64">
+          <h1 className="display text-2xl">{formatMonthLabel(month, i18n.language)}</h1>
+          <TourReplayIcon pageId="budgets-envelopes" />
+        </div>
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, +1))} aria-label={t('envelopes.nextMonth')}>›</button>
       </header>
 

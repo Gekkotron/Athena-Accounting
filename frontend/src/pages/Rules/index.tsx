@@ -10,6 +10,9 @@ import { GroupedView } from './GroupedView';
 import { RuleCreateForm } from './RuleCreateForm';
 import type { GroupedEntry } from './types';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 type View = 'grouped' | 'flat';
 
@@ -94,6 +97,10 @@ export function Rules() {
     },
   });
 
+  useAutoStartTour('rules-list');
+  const overviewAnchor = useTourAnchor('rules-list:overview');
+  const reapplyAnchor = useTourAnchor('rules-list:reapply');
+
   const cats = catQ.data?.categories ?? [];
   const rules = rulesQ.data?.rules ?? [];
   const byId = useMemo(
@@ -132,10 +139,15 @@ export function Rules() {
   }, [rules, cats, byId]);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="relative flex flex-col gap-8">
+      <span ref={overviewAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
+      <span ref={reapplyAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('title')}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">{t('title')}</h1>
+            <TourReplayIcon pageId="rules-list" />
+          </div>
           <p className="page-subtitle max-w-2xl">
             <Trans i18nKey="rules:subtitle">
               Matching <span className="display-italic">is accent/case-insensitive</span>. "Whole word" prevents "paye" from matching "payweb".

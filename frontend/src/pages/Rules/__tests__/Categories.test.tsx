@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { Categories } from '../Categories';
+import { withTips } from '../../../test/renderWithProviders';
 import { pinLocale } from '../../../test/i18n';
 
 // Categories renders French strings by default (the app's current UI
@@ -11,7 +13,7 @@ import { pinLocale } from '../../../test/i18n';
 // common:close) for both locales so `useTranslation` never suspends
 // mid-render, then pin the active language to French so the existing
 // French-literal assertions below keep matching real rendered text.
-pinLocale('rules', 'charts');
+pinLocale('rules', 'charts', 'tips');
 
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
@@ -36,12 +38,20 @@ vi.mock('@dnd-kit/core', async () => {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}><Categories /></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>{withTips(<Categories />)}</MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 function withProviders({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>{withTips(<>{children}</>)}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 const cat = (id: number, name: string, kind: 'expense' | 'income' | 'neutral' = 'expense', overrides: any = {}) =>

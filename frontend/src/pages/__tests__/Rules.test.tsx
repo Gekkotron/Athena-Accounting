@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Rules } from '../Rules';
+import { withTips } from '../../test/renderWithProviders';
 import { pinLocale } from '../../test/i18n';
 
 // The Rules page renders French strings by default and reuses the shared
@@ -11,7 +12,7 @@ import { pinLocale } from '../../test/i18n';
 // namespaces for both locales, pinned to French, so `useTranslation` never
 // suspends mid-render and the existing French-literal assertions below keep
 // matching real rendered text.
-pinLocale('rules');
+pinLocale('rules', 'tips');
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
@@ -25,7 +26,7 @@ function renderRules() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <Rules />
+        {withTips(<Rules />)}
       </MemoryRouter>
     </QueryClientProvider>,
   );

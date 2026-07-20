@@ -28,6 +28,38 @@
     },
     "data": {
       "0": { "title": "Sauvegarde complète", "body": "Exportez comptes, transactions, checkpoints et ventilations en un fichier. Ré-importez sur une autre installation pour restaurer." }
+    },
+    "budgets-envelopes": {
+      "0": { "title": "Enveloppes mensuelles", "body": "Réservez une part de votre solde par catégorie. Le solde restant est ce qu'il vous reste à dépenser ce mois-ci." },
+      "1": { "title": "Mise de côté", "body": "Un « hold » gèle une somme dans une enveloppe le temps d'un projet, sans quitter votre compte courant." }
+    },
+    "rules-list": {
+      "0": { "title": "Toutes vos règles", "body": "Chaque règle catégorise automatiquement les transactions correspondantes. Elles s'appliquent aux prochains imports." },
+      "1": { "title": "Ré-appliquer", "body": "Relance les règles sur l'historique existant. Les catégories que vous avez posées manuellement ne sont jamais écrasées." }
+    },
+    "rules-categories": {
+      "0": { "title": "Vos catégories", "body": "Renommez, fusionnez ou supprimez les catégories utilisées dans vos règles et vos transactions." },
+      "1": { "title": "Créer une catégorie", "body": "Ajoutez une catégorie personnalisée pour affiner votre suivi." }
+    },
+    "recurring-detected": {
+      "0": { "title": "Séries détectées", "body": "Athena repère automatiquement les transactions récurrentes (abonnements, salaires, loyers) dans vos imports." },
+      "1": { "title": "Valider ou ignorer", "body": "Confirmez une série pour la suivre, ou ignorez-la si ce n'est pas récurrent." }
+    },
+    "recurring-upcoming": {
+      "0": { "title": "Prochaines échéances", "body": "Les transactions récurrentes attendues dans les jours qui viennent, groupées par date." },
+      "1": { "title": "Changer de mois", "body": "Naviguez d'un mois à l'autre pour anticiper les prélèvements à venir." }
+    },
+    "recurring-forecast": {
+      "0": { "title": "Projection", "body": "L'évolution attendue de votre solde en tenant compte de vos séries récurrentes actives." },
+      "1": { "title": "Périmètre", "body": "Ajustez le compte, la période et les séries inclues pour affiner la projection." }
+    },
+    "data-duplicates": {
+      "0": { "title": "Doublons candidats", "body": "Les paires de transactions qui se ressemblent — même montant, même date, libellés proches." },
+      "1": { "title": "Fusionner ou ignorer", "body": "Fusionnez pour garder une seule ligne, ou marquez comme distinctes si ce sont deux vraies transactions." }
+    },
+    "data-pdf-templates": {
+      "0": { "title": "Vos gabarits PDF", "body": "Chaque banque a son gabarit : la position des zones montant/date/libellé dans le PDF." },
+      "1": { "title": "Ajouter un gabarit", "body": "Importez un PDF pour créer un nouveau gabarit — l'assistant vous demande de désigner les zones une seule fois." }
     }
   },
   "tour": {

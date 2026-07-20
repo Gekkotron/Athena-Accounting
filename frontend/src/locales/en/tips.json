@@ -28,6 +28,38 @@
     },
     "data": {
       "0": { "title": "Full backup", "body": "Export accounts, transactions, checkpoints, and splits to one file. Re-import on another install to restore." }
+    },
+    "budgets-envelopes": {
+      "0": { "title": "Monthly envelopes", "body": "Set aside a share of your balance per category. The remaining balance is what's left to spend this month." },
+      "1": { "title": "Holds", "body": "A hold freezes an amount inside an envelope for the duration of a project, without leaving your checking account." }
+    },
+    "rules-list": {
+      "0": { "title": "All your rules", "body": "Each rule automatically categorizes matching transactions. They apply to upcoming imports." },
+      "1": { "title": "Re-apply", "body": "Re-runs the rules over existing history. Categories you set manually are never overwritten." }
+    },
+    "rules-categories": {
+      "0": { "title": "Your categories", "body": "Rename, merge, or delete the categories used by your rules and transactions." },
+      "1": { "title": "Create a category", "body": "Add a custom category to refine your tracking." }
+    },
+    "recurring-detected": {
+      "0": { "title": "Detected series", "body": "Athena automatically spots recurring transactions (subscriptions, salaries, rent) in your imports." },
+      "1": { "title": "Confirm or dismiss", "body": "Confirm a series to track it, or dismiss it if it isn't actually recurring." }
+    },
+    "recurring-upcoming": {
+      "0": { "title": "Upcoming due dates", "body": "Recurring transactions expected in the coming days, grouped by date." },
+      "1": { "title": "Switch months", "body": "Navigate from month to month to anticipate upcoming charges." }
+    },
+    "recurring-forecast": {
+      "0": { "title": "Forecast", "body": "The expected trajectory of your balance, factoring in your active recurring series." },
+      "1": { "title": "Scope", "body": "Adjust the account, period, and included series to refine the forecast." }
+    },
+    "data-duplicates": {
+      "0": { "title": "Candidate duplicates", "body": "Pairs of transactions that look alike — same amount, same date, similar labels." },
+      "1": { "title": "Merge or dismiss", "body": "Merge to keep a single row, or mark as distinct if these are two genuine transactions." }
+    },
+    "data-pdf-templates": {
+      "0": { "title": "Your PDF templates", "body": "Each bank has its own template: where the amount/date/label zones sit on the PDF." },
+      "1": { "title": "Add a template", "body": "Import a PDF to create a new template — the assistant asks you to point out the zones just once." }
     }
   },
   "tour": {

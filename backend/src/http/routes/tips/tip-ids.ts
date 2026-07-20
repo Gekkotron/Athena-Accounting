@@ -13,6 +13,14 @@ export const TIP_IDS = [
   'tour:rules',
   'tour:budgets',
   'tour:data',
+  'tour:budgets-envelopes',
+  'tour:rules-list',
+  'tour:rules-categories',
+  'tour:recurring-detected',
+  'tour:recurring-upcoming',
+  'tour:recurring-forecast',
+  'tour:data-duplicates',
+  'tour:data-pdf-templates',
 ] as const;
 
 export type TipId = typeof TIP_IDS[number];

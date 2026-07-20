@@ -17,6 +17,9 @@ import {
 } from './forecast-lib';
 import { ForecastHorizonPicker } from './ForecastHorizonPicker';
 import { ForecastDebugPanel } from './ForecastDebugPanel';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 export function ForecastTab(): JSX.Element {
   const [horizon, setHorizon] = useState<Horizon>(60);
@@ -115,6 +118,10 @@ export function ForecastTab(): JSX.Element {
     : startBalance;
   const variation = projectedEndBalance - startBalance;
 
+  useAutoStartTour('recurring-forecast');
+  const chartAnchor = useTourAnchor('recurring-forecast:chart');
+  const scopeAnchor = useTourAnchor('recurring-forecast:scope');
+
   if (accountsQ.isLoading || balanceQ.isLoading || timeseriesQ.isLoading || seriesQ.isLoading) {
     return <LoadingBlock />;
   }
@@ -140,7 +147,12 @@ export function ForecastTab(): JSX.Element {
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="relative flex flex-col gap-6">
+      <span ref={chartAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
+      <span ref={scopeAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
+      <div className="flex justify-end">
+        <TourReplayIcon pageId="recurring-forecast" />
+      </div>
       <section className="surface p-4 md:p-5">
         <div className="mb-4 flex items-center gap-3 flex-wrap">
           <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">

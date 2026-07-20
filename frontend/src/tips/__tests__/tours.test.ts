@@ -13,12 +13,25 @@ const EXPECTED_ANCHORS: AnchorId[] = [
   'rules:list', 'rules:tri-tab',
   'budgets:category-row',
   'data:export',
+  'budgets-envelopes:overview', 'budgets-envelopes:hold',
+  'rules-list:overview', 'rules-list:reapply',
+  'rules-categories:list', 'rules-categories:create',
+  'recurring-detected:list', 'recurring-detected:confirm',
+  'recurring-upcoming:list', 'recurring-upcoming:month-nav',
+  'recurring-forecast:chart', 'recurring-forecast:scope',
+  'data-duplicates:list', 'data-duplicates:action',
+  'data-pdf-templates:list', 'data-pdf-templates:import',
 ];
 
 describe('tours registry', () => {
   it('exports every PageId exactly once', () => {
     expect([...PAGE_IDS].sort()).toEqual(
-      ['accounts', 'budgets', 'dashboard', 'data', 'imports', 'rules', 'transactions'],
+      [
+        'accounts', 'budgets', 'budgets-envelopes', 'dashboard', 'data',
+        'data-duplicates', 'data-pdf-templates', 'imports',
+        'recurring-detected', 'recurring-forecast', 'recurring-upcoming',
+        'rules', 'rules-categories', 'rules-list', 'transactions',
+      ],
     );
   });
 

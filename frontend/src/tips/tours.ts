@@ -10,7 +10,15 @@ export type PageId =
   | 'transactions'
   | 'rules'
   | 'budgets'
-  | 'data';
+  | 'data'
+  | 'budgets-envelopes'
+  | 'rules-list'
+  | 'rules-categories'
+  | 'recurring-detected'
+  | 'recurring-upcoming'
+  | 'recurring-forecast'
+  | 'data-duplicates'
+  | 'data-pdf-templates';
 
 export const PAGE_IDS: readonly PageId[] = [
   'dashboard',
@@ -20,6 +28,14 @@ export const PAGE_IDS: readonly PageId[] = [
   'rules',
   'budgets',
   'data',
+  'budgets-envelopes',
+  'rules-list',
+  'rules-categories',
+  'recurring-detected',
+  'recurring-upcoming',
+  'recurring-forecast',
+  'data-duplicates',
+  'data-pdf-templates',
 ] as const;
 
 export type AnchorId =
@@ -30,7 +46,15 @@ export type AnchorId =
   | 'transactions:search' | 'transactions:row' | 'transactions:multi-select'
   | 'rules:list' | 'rules:tri-tab'
   | 'budgets:category-row'
-  | 'data:export';
+  | 'data:export'
+  | 'budgets-envelopes:overview' | 'budgets-envelopes:hold'
+  | 'rules-list:overview' | 'rules-list:reapply'
+  | 'rules-categories:list' | 'rules-categories:create'
+  | 'recurring-detected:list' | 'recurring-detected:confirm'
+  | 'recurring-upcoming:list' | 'recurring-upcoming:month-nav'
+  | 'recurring-forecast:chart' | 'recurring-forecast:scope'
+  | 'data-duplicates:list' | 'data-duplicates:action'
+  | 'data-pdf-templates:list' | 'data-pdf-templates:import';
 
 export type Placement =
   | 'top' | 'bottom' | 'left' | 'right'
@@ -84,5 +108,37 @@ export const TOURS: Record<PageId, TourStep[]> = {
   ],
   data: [
     { anchor: 'data:export', placement: 'bottom-start' },
+  ],
+  'budgets-envelopes': [
+    { anchor: 'budgets-envelopes:overview', placement: 'bottom-end' },
+    { anchor: 'budgets-envelopes:hold',     placement: 'bottom-end' },
+  ],
+  'rules-list': [
+    { anchor: 'rules-list:overview', placement: 'bottom-end' },
+    { anchor: 'rules-list:reapply',  placement: 'bottom-end' },
+  ],
+  'rules-categories': [
+    { anchor: 'rules-categories:list',   placement: 'bottom-end' },
+    { anchor: 'rules-categories:create', placement: 'bottom-end' },
+  ],
+  'recurring-detected': [
+    { anchor: 'recurring-detected:list',    placement: 'bottom-end' },
+    { anchor: 'recurring-detected:confirm', placement: 'bottom-end' },
+  ],
+  'recurring-upcoming': [
+    { anchor: 'recurring-upcoming:list',      placement: 'bottom-end' },
+    { anchor: 'recurring-upcoming:month-nav', placement: 'bottom-end' },
+  ],
+  'recurring-forecast': [
+    { anchor: 'recurring-forecast:chart', placement: 'bottom-end' },
+    { anchor: 'recurring-forecast:scope', placement: 'bottom-end' },
+  ],
+  'data-duplicates': [
+    { anchor: 'data-duplicates:list',   placement: 'bottom-end' },
+    { anchor: 'data-duplicates:action', placement: 'bottom-end' },
+  ],
+  'data-pdf-templates': [
+    { anchor: 'data-pdf-templates:list',   placement: 'bottom-end' },
+    { anchor: 'data-pdf-templates:import', placement: 'bottom-end' },
   ],
 };

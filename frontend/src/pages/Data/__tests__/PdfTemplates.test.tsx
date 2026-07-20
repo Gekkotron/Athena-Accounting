@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { PdfTemplates } from '../PdfTemplates';
+import { withTips } from '../../../test/renderWithProviders';
 import { pinLocale } from '../../../test/i18n';
 
 vi.mock('../../../api/client', async () => {
@@ -19,14 +21,14 @@ vi.mock('../../../api/pdf-templates', async () => {
 // suspends mid-render, then pin the active language to French so the
 // existing French-literal assertion below keeps matching real rendered
 // text.
-pinLocale('imports');
+pinLocale('imports', 'tips');
 
 describe('PdfTemplates route', () => {
   it('renders the PdfTemplatesPanel', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <PdfTemplates />
+        <MemoryRouter>{withTips(<PdfTemplates />)}</MemoryRouter>
       </QueryClientProvider>,
     );
     expect(await screen.findByText('Templates PDF')).toBeInTheDocument();

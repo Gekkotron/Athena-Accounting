@@ -16,6 +16,14 @@ describe('tips content registry (v2)', () => {
       'tour:rules',
       'tour:budgets',
       'tour:data',
+      'tour:budgets-envelopes',
+      'tour:rules-list',
+      'tour:rules-categories',
+      'tour:recurring-detected',
+      'tour:recurring-upcoming',
+      'tour:recurring-forecast',
+      'tour:data-duplicates',
+      'tour:data-pdf-templates',
     ]);
     expect(TIP_IDS.length).toBe(PAGE_IDS.length);
   });
