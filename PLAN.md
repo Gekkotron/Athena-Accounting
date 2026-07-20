@@ -18,8 +18,60 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
+- [ ] Refactor: split `frontend/src/components/BalanceChart/index.tsx` (542 lines) into per-concern modules
+      Follow the same pilot pattern (commits 017a1ea/70f12df/e01d841, design at `docs/superpowers/specs/2026-07-20-large-file-refactor-design.md`). BalanceChart mixes data aggregation, scale/tick math, gradient/marker rendering, and — since Récurrent Task 4 — projection-window merging. Extract every pure computation (series aggregation, x/y scale helpers, gap-detection, projection merge, tick formatters) into `frontend/src/components/BalanceChart/lib.ts`; if useful presentational fragments exist (axis, tooltip, legend, marker), promote each into a sibling `.tsx`.
+      Add a focused unit test at `frontend/src/components/BalanceChart/__tests__/lib.test.ts` covering the extracted pure helpers — particularly the projection-merge boundary (historical→projection transition, dashed-segment gating, end-of-line marker anchoring described in Récurrent Task 4). The existing 28 BalanceChart tests must remain green untouched.
+      Verification gate (single commit): full frontend test suite + `npm --prefix frontend run build` green; direct to main. Commit subject: `refactor(balance-chart): split BalanceChart into pure lib + presentational siblings and unit-test the helpers`.
+      Success criteria: (a) `BalanceChart/index.tsx` under 250 lines; (b) `lib.ts` pure and independently testable; (c) all 28 existing BalanceChart tests + new helper tests green; (d) build clean.
 
+- [ ] Refactor: split `frontend/src/pages/Transactions/index.tsx` (519 lines) into per-concern modules
+      Same pilot pattern. `Transactions/index.tsx` is a page composer that owns filters, sorting, selection state, pagination, and table wiring. Keep `index.tsx` as the top-level page (data hooks + JSX composition); extract each pure derivation (filter predicate builder, sort comparator, selection reducer, URL-query serializer) into `frontend/src/pages/Transactions/lib.ts`; if row/toolbar/filter-bar/empty-state fragments are distinct, promote each into a sibling `.tsx`.
+      Add `frontend/src/pages/Transactions/__tests__/lib.test.ts` covering the pure helpers — filter builder against representative filter combos, comparator stability under ties, URL-query round-trip. `TransactionModal.tsx` is a separate follow-up task, do not touch it here.
+      Verification gate (single commit): full frontend suite + build green; direct to main. Commit subject: `refactor(transactions-page): split Transactions/index.tsx into subcomponents and unit-test filter/sort/query helpers`.
+      Success criteria: (a) `Transactions/index.tsx` under 260 lines; (b) `lib.ts` is pure; (c) existing Transactions page tests still green untouched; (d) build clean.
 
+- [ ] Refactor: split `frontend/src/api/demo/handlers/reads.ts` (507 lines) into per-endpoint modules
+      Follow the envelopes pilot pattern (commit 017a1ea). The demo mode reads file registers many `GET` handlers over the fake store; each handler is largely independent. Target directory: `frontend/src/api/demo/handlers/reads/{index,serializers,filters,<group>.ts}` — group by resource (transactions, accounts, categories, envelopes, recurring, reports, imports, settings, etc.). `index.ts` becomes the registration composer that installs each per-group handler set; shared serializers/filters/store-query helpers move to sibling files.
+      Add `frontend/src/api/demo/handlers/__tests__/reads-helpers.test.ts` covering the extracted pure helpers (any serializer, filter, or store-query utility) — do not try to unit-test the handler wiring; existing demo tests continue to guard that.
+      Verification gate (single commit): full frontend suite green; both `VITE_DEMO=1 npm --prefix frontend run build` and plain `npm --prefix frontend run build` succeed; direct to main. Commit subject: `refactor(demo-reads): split demo reads handlers into per-resource modules and unit-test shared helpers`.
+      Success criteria: (a) no single per-resource file over ~200 lines; (b) `index.ts` composer under ~80 lines; (c) both demo and non-demo frontend builds green.
+
+- [ ] Refactor: split `backend/src/http/routes/accounts.ts` (487 lines) into per-concern modules
+      Follow the reports/envelopes pilot (commits e01d841/017a1ea) exactly. Target directory: `backend/src/http/routes/accounts/{index,schemas,helpers,<handler>.ts}`. `index.ts` becomes the `accountsRoutes(app)` composer wiring handlers under `preHandler: requireAuth`; Zod schemas move to `schemas.ts`; any shared SQL fragment or ownership-check helper moves to `helpers.ts` or `sql-fragments.ts`; each HTTP handler gets its own file.
+      Update `backend/src/buildServer.ts` to import `./http/routes/accounts/index.js` (NodeNext + explicit `.js` extension, matching how transactions/backup are already imported); delete the old `routes/accounts.ts` file, do not turn it into a barrel re-export.
+      Add `backend/tests/accounts-<slug>.test.ts` for whatever pure logic gets extracted (ownership check, computed balance derivation, response shaping) — narrow, boundary-focused, mirroring `reports-period-math.test.ts` style. The existing `accounts-route.test.ts` remains untouched and continues to exercise handlers end-to-end.
+      Verification gate (single commit): `npm --prefix backend test` fully green under `DB_DRIVER=pglite RUN_DB_TESTS=1`; `npm --prefix backend run build` (tsc + copy-migrations) succeeds; direct to main. Commit subject: `refactor(accounts): split accounts.ts into per-handler modules and unit-test extracted helpers`.
+      Success criteria: (a) no per-handler file over ~120 lines; (b) old `routes/accounts.ts` deleted; (c) buildServer.ts import updated; (d) full backend suite + build green in the same commit.
+
+- [ ] Refactor: further-split `backend/src/http/routes/transactions/index.ts` (477 lines) into per-handler modules
+      This is already a folder from prior work — the composer file itself has grown too large. Inspect the current contents: any handlers still inlined in `index.ts` should be promoted into their own sibling file (`transactions/<verb-resource>.ts`); any pure helpers (query builders, filter compilation, response shapers) should move to `transactions/helpers.ts` or `transactions/query-builder.ts` if not already there. `index.ts` should end up as the composer + `preHandler` wiring only.
+      Add `backend/tests/transactions-<slug>.test.ts` covering any newly-extracted pure helpers — boundary cases, empty-input, one representative happy-path. Existing `transactions-route.test.ts` (842 lines per the audit) continues to guard the full HTTP surface untouched.
+      Verification gate (single commit): full backend suite green under `DB_DRIVER=pglite RUN_DB_TESTS=1`; `npm --prefix backend run build` succeeds; direct to main. Commit subject: `refactor(transactions-route): promote inlined handlers into per-endpoint modules and unit-test helpers`.
+      Success criteria: (a) `transactions/index.ts` under 200 lines; (b) no sibling handler file over ~180 lines; (c) full backend suite + build green.
+
+- [ ] Refactor: split `backend/src/domain/imports/pdf/index.ts` (467 lines) into per-stage modules
+      Same pilot pattern applied to a domain module (not a route). Read the file to identify pipeline stages (likely: text extraction, OCR fallback, layout analysis, transaction-row detection, amount/date parsing, output shaping — actual stages TBD by inspection). Extract each cohesive stage into its own sibling file under `backend/src/domain/imports/pdf/`; keep `index.ts` as the pipeline composer exporting the top-level entry point.
+      Add `backend/tests/pdf-import-<stage>.test.ts` for whichever stages are pure and testable in isolation — reuse the existing PDF-import fixture set to avoid drift. Existing PDF-import integration tests continue to protect the full pipeline untouched.
+      Verification gate (single commit): full backend suite green under `DB_DRIVER=pglite RUN_DB_TESTS=1`; `npm --prefix backend run build` succeeds; direct to main. Commit subject: `refactor(pdf-import): split pdf/index.ts into per-stage modules and unit-test extracted stages`.
+      Success criteria: (a) `pdf/index.ts` under 200 lines; (b) each per-stage file under ~200 lines; (c) full backend suite + build green.
+
+- [ ] Refactor: split `frontend/src/api/demo/handlers/writes.ts` (460 lines) into per-endpoint modules
+      Mirror of the demo-reads task. Target: `frontend/src/api/demo/handlers/writes/{index,mutators,<group>.ts}` — group by resource (transactions, accounts, categories, envelopes, recurring, settings, imports, etc.). `index.ts` becomes the registration composer; shared store-mutation helpers (id generation, updated-at stamping, cascade rules) move to a sibling.
+      Add `frontend/src/api/demo/handlers/__tests__/writes-helpers.test.ts` covering the extracted pure helpers only.
+      Verification gate (single commit): full frontend suite green; both `VITE_DEMO=1 npm --prefix frontend run build` and plain build green; direct to main. Commit subject: `refactor(demo-writes): split demo writes handlers into per-resource modules and unit-test shared helpers`.
+      Success criteria: (a) no single per-resource file over ~200 lines; (b) `index.ts` composer under ~80 lines; (c) both demo and non-demo builds green.
+
+- [ ] Refactor: split `frontend/src/pages/Recurrent/ForecastTab.tsx` (458 lines) into per-concern modules
+      Follow the Categories.tsx pilot (commit 70f12df). ForecastTab owns horizon picker, account scope picker, chart wiring, and two stat tiles. Extract each visually-distinct fragment (horizon control, scope control, stat-tile pair) into a sibling `.tsx` where it earns its keep; extract any pure computation local to this tab (variation formatting, horizon→date mapping, stat-tile derivation) into `frontend/src/pages/Recurrent/forecast-lib.ts`. Do NOT touch the already-shared `lib/recurring-forecast.ts` projector — it is already extracted and unit-tested (see Récurrent Task 4 in Done).
+      Add `frontend/src/pages/Recurrent/__tests__/forecast-lib.test.ts` covering any newly-extracted pure helpers.
+      Verification gate (single commit): full frontend suite + build green; direct to main. Commit subject: `refactor(recurrent-forecast): split ForecastTab into subcomponents and unit-test tab-local helpers`.
+      Success criteria: (a) `ForecastTab.tsx` under 250 lines; (b) new `forecast-lib.ts` pure; (c) existing Recurrent page tests + BalanceChart tests still green untouched.
+
+- [ ] Refactor: split `frontend/src/pages/Transactions/TransactionModal.tsx` (456 lines) into per-concern modules
+      Follow the Categories.tsx pilot. TransactionModal likely combines form fields, category picker, envelope-assignment picker, split-transaction editor, validation, and submit wiring. Extract each visually-distinct panel into a sibling `.tsx` (`TransactionModalFields.tsx`, `TransactionModalSplits.tsx` — actual boundaries TBD by inspection); extract pure form logic (validation, form-state shaping, submit-payload builder, decimal-parse wrappers) into `frontend/src/pages/Transactions/transaction-modal-lib.ts`.
+      Add `frontend/src/pages/Transactions/__tests__/transaction-modal-lib.test.ts` covering the pure helpers — especially the submit-payload builder (which encodes the wire contract for creating/updating transactions and would silently corrupt data if regressed).
+      Verification gate (single commit): full frontend suite + build green; direct to main. Commit subject: `refactor(transaction-modal): split TransactionModal into panels and unit-test the payload builder`.
+      Success criteria: (a) `TransactionModal.tsx` under 240 lines; (b) new `transaction-modal-lib.ts` pure; (c) existing TransactionModal integration tests still green untouched.
 
 
 
@@ -36,6 +88,14 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Refactor: split `frontend/src/components/PdfTemplateBuilder/index.tsx` (551 → 406) into per-concern modules
+      Pure helpers extracted to `PdfTemplateBuilder/lib.ts` (146 lines, no React imports): `buildZones`, `buildReferenceRects`, `isAmountReady`, `isReadyToSubmit`, plus shared types (`Canvas`, `ColumnLabels`, `ReferenceRect`, `ZonesInput`). Four presentational subcomponents extracted as siblings: `HeaderStep.tsx` (46), `ColumnStep.tsx` (64 — reused for both the date and description paint-only steps, deduplicating two near-identical inline blocks), `PreviewSection.tsx` (121 — button + hint/error blocks + both editable-OCR and read-only preview table variants), `StepNavigation.tsx` (50 — footer prev/next/submit with `nextDisabled` computed in the parent so navigation stays presentational).
+      `index.tsx` stays the composer (state, refs, effects, handlers, orchestration). Aspirational `<250` line target from PLAN.md was not hit — the component owns 15 pieces of state, 4 handlers, and 2 effects, and pulling those into a custom hook would obscure the state topology in a way the pilot precedent (Categories.tsx landing at 250) did not require. Landing at 406 with every sibling under 200 was the pragmatic stopping point.
+      New unit test `PdfTemplateBuilder/__tests__/lib.test.ts` covers all four exported helpers (16 assertions grouped into 18 test cases): `buildZones` happy-paths for pair and signed modes, null-returns on each missing rect, `pageAnchor`/`otherAnchors` omission-vs-emission, non-mutation of input arrays, `rowsStartY` carry-through; `buildReferenceRects` current-canvas hiding + null-rect skipping + signed-mode column exclusivity; `isAmountReady` mode-specific readiness; `isReadyToSubmit` whitespace-only label rejection + missing-rect gating.
+      Verification: `npx tsc -b` clean, `npx vitest run` = 695/695 tests pass (677 pre-existing + 18 new lib), `npm run build` succeeds.
+
+
 
 - [x] Récurrent — Task 4: Prévision tab + Dashboard forecast overlay
       Shared projection helper at `frontend/src/lib/recurring-forecast.ts` — pure `projectBalance({ startBalance, series, horizonDays, startDate })` that walks each non-dismissed series, places its first occurrence at or after `startDate`, then steps by `cadenceDays` daily until horizon. Returns `{ date, projectedBalance, contributions[] }[]`. 8 unit tests at `frontend/src/lib/__tests__/recurring-forecast.test.ts` covering the Spotify smoke, mixed cadences (weekly cafe + monthly rent + monthly salary), dismissed exclusion, degenerate inputs.
