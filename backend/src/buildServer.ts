@@ -9,7 +9,7 @@ import { authPlugin } from './http/plugins/auth.js';
 import { onboardingRoutes } from './http/routes/onboarding.js';
 import { authRoutes } from './http/routes/auth.js';
 import { mcpRpcRoutes } from './http/routes/mcp/index.js';
-import { accountsRoutes } from './http/routes/accounts.js';
+import { accountsRoutes } from './http/routes/accounts/index.js';
 import { patternRoutes } from './http/routes/account-patterns.js';
 import { importsRoutes } from './http/routes/imports.js';
 import { importsPreviewRoutes } from './http/routes/imports-preview.js';
