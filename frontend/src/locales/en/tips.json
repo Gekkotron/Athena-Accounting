@@ -1,7 +1,7 @@
 {
   "tours": {
     "dashboard": {
-      "0": { "title": "Total balance", "body": "The sum of every account's balance, locked funds included." },
+      "0": { "title": "Total balance", "body": "The sum of every account's balance, locked and invested funds included." },
       "1": { "title": "Insights", "body": "Automatic alerts: over-budget categories, unusual spending, budgets that could use a tweak." },
       "2": { "title": "Balance curve", "body": "Day-by-day evolution. The diamonds are your reconciliation checkpoints." },
       "3": { "title": "Spending by category", "body": "Click a donut slice to filter transactions by that category." },

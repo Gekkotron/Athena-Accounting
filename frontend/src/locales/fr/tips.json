@@ -1,7 +1,7 @@
 {
   "tours": {
     "dashboard": {
-      "0": { "title": "Solde global", "body": "Somme des soldes de tous vos comptes, argent bloqué inclus." },
+      "0": { "title": "Solde global", "body": "Somme des soldes de tous vos comptes, argent bloqué et placé inclus." },
       "1": { "title": "Insights", "body": "Les alertes automatiques : catégories en dépassement, dépenses inhabituelles, budgets à ajuster." },
       "2": { "title": "Courbe du solde", "body": "L'évolution jour par jour. Les losanges sont vos points de contrôle." },
       "3": { "title": "Dépenses par catégorie", "body": "Cliquez sur une part du donut pour filtrer les transactions." },
