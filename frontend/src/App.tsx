@@ -21,7 +21,6 @@ import { DetectedTab } from './pages/Recurrent/DetectedTab';
 import { UpcomingTab } from './pages/Recurrent/UpcomingTab';
 import { ForecastTab } from './pages/Recurrent/ForecastTab';
 import { Accounts } from './pages/Accounts';
-import { Patterns } from './pages/Accounts/Patterns';
 import { Imports } from './pages/Data/Imports';
 import { Duplicates } from './pages/Data/Duplicates';
 import { PdfTemplates } from './pages/Data/PdfTemplates';
@@ -48,11 +47,6 @@ export default function App() {
     { to: '/recurring/detected', label: t('nav.children.recurrent.detected') },
     { to: '/recurring/upcoming', label: t('nav.children.recurrent.upcoming') },
     { to: '/recurring/forecast', label: t('nav.children.recurrent.forecast') },
-  ];
-
-  const COMPTES_TABS: HubTab[] = [
-    { to: '/accounts', label: t('nav.children.accounts.list'), end: true },
-    { to: '/accounts/patterns', label: t('nav.children.accounts.patterns') },
   ];
 
   const DONNEES_TABS: HubTab[] = [
@@ -136,11 +130,7 @@ export default function App() {
               <Route path="forecast" element={<ForecastTab />} />
             </Route>
 
-            {/* Comptes hub */}
-            <Route path="/accounts" element={<HubLayout title={t('nav.items.accounts')} tabs={COMPTES_TABS} />}>
-              <Route index element={<Accounts />} />
-              <Route path="patterns" element={<Patterns />} />
-            </Route>
+            <Route path="/accounts" element={<Accounts />} />
 
             {/* Données hub */}
             <Route path="/data" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>

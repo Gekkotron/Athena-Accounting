@@ -71,10 +71,6 @@ const nav: NavSection[] = [
         labelKey: 'nav.items.accounts',
         end: true,
         icon: 'accounts',
-        children: [
-          { to: '/accounts', labelKey: 'nav.children.accounts.list', end: true },
-          { to: '/accounts/patterns', labelKey: 'nav.children.accounts.patterns' },
-        ],
       },
       {
         to: '/data',

@@ -23,6 +23,7 @@ import { SectionTip } from '../../components/SectionTip';
 import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
 import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
+import { AccountPatternsPanel } from './AccountPatternsPanel';
 import { MergeModal } from './MergeModal';
 import type { MergeResult } from '../../api/accounts';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
@@ -252,6 +253,7 @@ export function Accounts() {
                             setConfirmDelete(a);
                           }}
                         />
+                        <AccountPatternsPanel accountId={a.id} />
                       </div>
                     );
                   }

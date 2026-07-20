@@ -25,10 +25,6 @@
         "upcoming": "Upcoming",
         "forecast": "Forecast"
       },
-      "accounts": {
-        "list": "Accounts",
-        "patterns": "File patterns"
-      },
       "data": {
         "imports": "Imports",
         "duplicates": "Duplicates",

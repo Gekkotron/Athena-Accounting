@@ -65,9 +65,9 @@ beforeEach(() => {
   apiMock.mockReset();
 });
 
-// Filename-pattern assertions now live at
-// pages/Accounts/__tests__/Patterns.test.tsx (PatternsSection was extracted
-// to the /accounts/patterns route in Task 7).
+// Filename-pattern assertions live at
+// pages/Accounts/__tests__/AccountPatternsPanel.test.tsx; the panel is
+// mounted inline under the per-account edit view.
 describe('Accounts page (characterization)', () => {
   it('renders the account list', async () => {
     seedRoutes({

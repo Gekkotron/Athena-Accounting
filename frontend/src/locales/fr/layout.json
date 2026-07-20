@@ -25,10 +25,6 @@
         "upcoming": "À venir",
         "forecast": "Prévision"
       },
-      "accounts": {
-        "list": "Comptes",
-        "patterns": "Motifs de fichier"
-      },
       "data": {
         "imports": "Imports",
         "duplicates": "Doublons",

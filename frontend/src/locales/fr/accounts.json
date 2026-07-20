@@ -92,12 +92,13 @@
     }
   },
   "patterns": {
-    "sectionTitle": "Fichier → compte",
+    "sectionTitle": "Motifs de nom de fichier",
+    "sectionHint": "À l'import, les fichiers dont le nom contient l'un de ces motifs seront automatiquement rattachés à ce compte.",
     "patternLabel": "Motif",
-    "accountLabel": "Compte",
+    "patternPlaceholder": "ex. releve_courant",
     "priorityLabel": "Priorité",
+    "priorityInline": "prio {{value}}",
     "addButton": "Ajouter",
-    "emptyState": "Aucun motif configuré.",
     "deleteButton": "supprimer"
   }
 }

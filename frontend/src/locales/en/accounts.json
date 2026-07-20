@@ -92,12 +92,13 @@
     }
   },
   "patterns": {
-    "sectionTitle": "File → account",
+    "sectionTitle": "Filename patterns",
+    "sectionHint": "On import, files whose name contains any of these substrings will be attached to this account automatically.",
     "patternLabel": "Pattern",
-    "accountLabel": "Account",
+    "patternPlaceholder": "e.g. checking_statement",
     "priorityLabel": "Priority",
+    "priorityInline": "prio {{value}}",
     "addButton": "Add",
-    "emptyState": "No pattern configured.",
     "deleteButton": "delete"
   }
 }
