@@ -82,14 +82,21 @@ export function TourBubble(): JSX.Element | null {
     refs.setReference(anchor ?? null);
   }, [anchor, refs, anchorVersion]);
 
-  // Scroll anchor into view on step change. No anchor means no active step
-  // to scroll to (covers both the initial app-boot render and mobile, where
-  // `anchor` is only ever set once a tour step actually resolves one).
+  // Scroll anchor into a comfortable viewport slot on step change. Bubbles
+  // use `bottom-*` placements, so we want the anchor near the TOP of the
+  // viewport with room below for the bubble. Scroll when the anchor is
+  // off-screen OR sitting past the top 35% of the viewport — otherwise a
+  // marker at the bottom edge (technically "in view") leaves the bubble
+  // hanging at the corner with the section content the tour describes
+  // still below the fold.
   useEffect(() => {
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
-    const off = rect.top < 0 || rect.bottom > window.innerHeight;
-    if (off) anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const needsScroll =
+      rect.top < 0 ||
+      rect.bottom > window.innerHeight ||
+      rect.top > window.innerHeight * 0.35;
+    if (needsScroll) anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [stepIdx, anchor]);
 
   // Esc is handled by the local onKeyDown below; useRole's output (role
