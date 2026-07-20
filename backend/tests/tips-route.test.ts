@@ -45,7 +45,7 @@ describe.skipIf(!RUN)('/api/tips', () => {
   it('POST /dismiss known id → 204, subsequent GET reflects it', async () => {
     const post = await app.inject({
       method: 'POST', url: '/api/tips/dismiss', headers: { cookie },
-      payload: { id: 'welcome_tour' },
+      payload: { id: 'tour:dashboard' },
     });
     expect(post.statusCode).toBe(204);
 
@@ -53,8 +53,8 @@ describe.skipIf(!RUN)('/api/tips', () => {
       method: 'GET', url: '/api/tips/dismissed', headers: { cookie },
     });
     const dismissed = get.json().dismissed as Record<string, string>;
-    expect(Object.keys(dismissed)).toEqual(['welcome_tour']);
-    expect(new Date(dismissed.welcome_tour).getTime())
+    expect(Object.keys(dismissed)).toEqual(['tour:dashboard']);
+    expect(new Date(dismissed['tour:dashboard']!).getTime())
       .toBeGreaterThan(Date.now() - 60_000);
   });
 
@@ -75,11 +75,11 @@ describe.skipIf(!RUN)('/api/tips', () => {
   it('POST /undismiss removes the key', async () => {
     await app.inject({
       method: 'POST', url: '/api/tips/dismiss', headers: { cookie },
-      payload: { id: 'section:dashboard' },
+      payload: { id: 'tour:dashboard' },
     });
     const un = await app.inject({
       method: 'POST', url: '/api/tips/undismiss', headers: { cookie },
-      payload: { id: 'section:dashboard' },
+      payload: { id: 'tour:dashboard' },
     });
     expect(un.statusCode).toBe(204);
 
@@ -100,11 +100,11 @@ describe.skipIf(!RUN)('/api/tips', () => {
   it('POST /reset clears the blob', async () => {
     await app.inject({
       method: 'POST', url: '/api/tips/dismiss', headers: { cookie },
-      payload: { id: 'welcome_tour' },
+      payload: { id: 'tour:dashboard' },
     });
     await app.inject({
       method: 'POST', url: '/api/tips/dismiss', headers: { cookie },
-      payload: { id: 'section:budgets' },
+      payload: { id: 'tour:budgets' },
     });
     const reset = await app.inject({
       method: 'POST', url: '/api/tips/reset', headers: { cookie },
@@ -127,7 +127,7 @@ describe.skipIf(!RUN)('/api/tips', () => {
       ['POST', '/api/tips/undismiss'],
       ['POST', '/api/tips/reset'],
     ] as const) {
-      const r = await app.inject({ method, url, payload: { id: 'welcome_tour' } });
+      const r = await app.inject({ method, url, payload: { id: 'tour:dashboard' } });
       expect(r.statusCode).toBe(401);
     }
   });
