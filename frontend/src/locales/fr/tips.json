@@ -16,7 +16,7 @@
     },
     "transactions": {
       "0": { "title": "Recherche", "body": "La recherche ignore les accents et la casse." },
-      "1": { "title": "Sélection multiple", "body": "Cochez plusieurs lignes pour les supprimer d'un coup." },
+      "1": { "title": "Sélection multiple", "body": "Cochez plusieurs lignes pour changer leur catégorie ou les supprimer d'un coup." },
       "2": { "title": "Ventiler une transaction", "body": "Ouvrez une transaction pour la découper en plusieurs sous-lignes, ou éditez une catégorie en ligne." }
     },
     "rules": {

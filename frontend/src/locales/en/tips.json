@@ -16,7 +16,7 @@
     },
     "transactions": {
       "0": { "title": "Search", "body": "Search ignores accents and case." },
-      "1": { "title": "Multi-select", "body": "Tick several rows to delete them at once." },
+      "1": { "title": "Multi-select", "body": "Tick several rows to change their category or delete them at once." },
       "2": { "title": "Split a transaction", "body": "Open a transaction to break it into several sub-lines, or edit a category inline." }
     },
     "rules": {
