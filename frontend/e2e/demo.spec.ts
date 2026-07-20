@@ -10,12 +10,13 @@ import { test, expect, type Page } from '@playwright/test';
 // controls to keep this suite resistant to markup churn.
 
 async function dismissWelcomeTour(page: Page): Promise<void> {
-  // WelcomeTour renders on '/' for anyone who hasn't dismissed it; in demo
-  // mode /api/tips/dismissed isn't stubbed so it always appears once the
-  // TipsProvider's initial fetch settles (~one tick). Wait for the dialog,
-  // press Escape, then wait for it to detach so subsequent clicks aren't
-  // intercepted by the backdrop.
-  const tour = page.getByRole('dialog', { name: /Athena|Bienvenue/i });
+  // The dashboard tour renders on '/' for anyone who hasn't dismissed it;
+  // in demo mode /api/tips/dismissed isn't stubbed so it always appears
+  // once the TipsProvider's initial fetch settles (~one tick). Its step 0
+  // is titled "Solde global" (fr) / "Total balance" (en). Wait for the
+  // dialog, press Escape, then wait for it to detach so subsequent
+  // clicks aren't intercepted by the backdrop.
+  const tour = page.getByRole('dialog', { name: /Solde global|Total balance/i });
   await tour.waitFor({ state: 'visible', timeout: 10_000 });
   await page.keyboard.press('Escape');
   await tour.waitFor({ state: 'hidden' });
