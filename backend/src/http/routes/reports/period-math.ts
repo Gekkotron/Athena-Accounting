@@ -113,8 +113,13 @@ export function annotateBudgetRow(input: {
   // Round to nearest whole unit then add a 10% margin (also rounded)
   // so suggestions land on tidy round amounts (e.g. 49.68 → 50 → 55).
   const proposedValue = Math.round(Math.round(medianValue) * 1.1);
+  // Suppress when the rounded proposal renders identically to the
+  // current limit — otherwise the card reads "Adjust to 36,00 €" while
+  // the limit is already 36,00 €, which is useless noise.
+  const differsFromLimit = proposedValue.toFixed(2) !== limit.toFixed(2);
   const suggestedLimit = history !== null
     && proposedValue > 0
+    && differsFromLimit
     && (overCount >= 3 || underHalfCount >= 3)
     ? proposedValue.toFixed(2)
     : null;

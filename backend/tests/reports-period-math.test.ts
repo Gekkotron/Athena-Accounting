@@ -170,4 +170,15 @@ describe('annotateBudgetRow', () => {
     });
     expect(out.suggestedLimit).toBeNull();
   });
+
+  it('suggestedLimit is null when the rounded proposal equals the current limit', () => {
+    // history [5,5,17,49,49,50] sorted; median = (17+49)/2 = 33
+    // round(33)*1.1 = 36.3 → round = 36 = limit. overCount=3 (49,49,50)
+    // would otherwise trigger the suggestion.
+    const out = annotateBudgetRow({
+      spent: 20, limit: 36, elapsedDays: 10, windowDays: 31,
+      periodEndExclusive, now, historyValuesNum: [5, 5, 17, 49, 49, 50],
+    });
+    expect(out.suggestedLimit).toBeNull();
+  });
 });
