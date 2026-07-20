@@ -27,7 +27,7 @@ import { settingsRoutes } from './http/routes/settings.js';
 import { tipsRoutes } from './http/routes/tips/index.js';
 import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
-import { envelopesRoutes } from './http/routes/envelopes.js';
+import { envelopesRoutes } from './http/routes/envelopes/index.js';
 import { reconcileRoutes } from './http/routes/reconcile.js';
 import { recurringRoutes } from './http/routes/recurring.js';
 import { metricsPlugin } from './http/plugins/metrics.js';
