@@ -2,9 +2,9 @@
   "tours": {
     "dashboard": {
       "0": { "title": "Total balance", "body": "The sum of every account's balance, locked funds included." },
-      "1": { "title": "Balance curve", "body": "Day-by-day evolution. The diamonds are your reconciliation checkpoints." },
-      "2": { "title": "Spending by category", "body": "Click a donut slice to filter transactions by that category." },
-      "3": { "title": "Insights", "body": "Automatic alerts: over-budget categories, unusual spending, budgets that could use a tweak." },
+      "1": { "title": "Insights", "body": "Automatic alerts: over-budget categories, unusual spending, budgets that could use a tweak." },
+      "2": { "title": "Balance curve", "body": "Day-by-day evolution. The diamonds are your reconciliation checkpoints." },
+      "3": { "title": "Spending by category", "body": "Click a donut slice to filter transactions by that category." },
       "4": { "title": "Cash flow", "body": "The Sankey traces where money came from and where it went over the visible period." }
     },
     "accounts": {
@@ -16,8 +16,8 @@
     },
     "transactions": {
       "0": { "title": "Search", "body": "Search ignores accents and case." },
-      "1": { "title": "Split a transaction", "body": "Open a transaction to break it into several sub-lines, or edit a category inline." },
-      "2": { "title": "Multi-select", "body": "Tick several rows to delete them at once." }
+      "1": { "title": "Multi-select", "body": "Tick several rows to delete them at once." },
+      "2": { "title": "Split a transaction", "body": "Open a transaction to break it into several sub-lines, or edit a category inline." }
     },
     "rules": {
       "0": { "title": "Sorting rules", "body": "Rules apply to new imports and can be re-applied retroactively without overwriting your manual categories." },

@@ -2,9 +2,9 @@
   "tours": {
     "dashboard": {
       "0": { "title": "Solde global", "body": "Somme des soldes de tous vos comptes, argent bloqué inclus." },
-      "1": { "title": "Courbe du solde", "body": "L'évolution jour par jour. Les losanges sont vos points de contrôle." },
-      "2": { "title": "Dépenses par catégorie", "body": "Cliquez sur une part du donut pour filtrer les transactions." },
-      "3": { "title": "Insights", "body": "Les alertes automatiques : catégories en dépassement, dépenses inhabituelles, budgets à ajuster." },
+      "1": { "title": "Insights", "body": "Les alertes automatiques : catégories en dépassement, dépenses inhabituelles, budgets à ajuster." },
+      "2": { "title": "Courbe du solde", "body": "L'évolution jour par jour. Les losanges sont vos points de contrôle." },
+      "3": { "title": "Dépenses par catégorie", "body": "Cliquez sur une part du donut pour filtrer les transactions." },
       "4": { "title": "Flux de trésorerie", "body": "Le Sankey retrace d'où vient l'argent et où il va sur la période affichée." }
     },
     "accounts": {
@@ -16,8 +16,8 @@
     },
     "transactions": {
       "0": { "title": "Recherche", "body": "La recherche ignore les accents et la casse." },
-      "1": { "title": "Ventiler une transaction", "body": "Ouvrez une transaction pour la découper en plusieurs sous-lignes, ou éditez une catégorie en ligne." },
-      "2": { "title": "Sélection multiple", "body": "Cochez plusieurs lignes pour les supprimer d'un coup." }
+      "1": { "title": "Sélection multiple", "body": "Cochez plusieurs lignes pour les supprimer d'un coup." },
+      "2": { "title": "Ventiler une transaction", "body": "Ouvrez une transaction pour la découper en plusieurs sous-lignes, ou éditez une catégorie en ligne." }
     },
     "rules": {
       "0": { "title": "Règles de tri", "body": "Les règles s'appliquent aux nouveaux imports et peuvent être ré-appliquées rétroactivement sans écraser vos catégories manuelles." },

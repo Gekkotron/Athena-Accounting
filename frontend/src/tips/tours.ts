@@ -58,9 +58,9 @@ export const TOURS: Record<PageId, TourStep[]> = {
     // TourBubble's shift/size middleware, the bubble always stays fully
     // in-viewport even on narrow displays.
     { anchor: 'dashboard:balance',  placement: 'bottom-end' },
+    { anchor: 'dashboard:insights', placement: 'bottom-end' },
     { anchor: 'dashboard:curve',    placement: 'bottom-end' },
     { anchor: 'dashboard:donut',    placement: 'bottom-end' },
-    { anchor: 'dashboard:insights', placement: 'bottom-end' },
     { anchor: 'dashboard:sankey',   placement: 'bottom-end' },
   ],
   accounts: [
@@ -72,8 +72,8 @@ export const TOURS: Record<PageId, TourStep[]> = {
   ],
   transactions: [
     { anchor: 'transactions:search',       placement: 'bottom-start' },
-    { anchor: 'transactions:row',          placement: 'bottom-start' },
     { anchor: 'transactions:multi-select', placement: 'bottom-start' },
+    { anchor: 'transactions:row',          placement: 'bottom-start' },
   ],
   rules: [
     { anchor: 'rules:list',    placement: 'bottom-start' },
