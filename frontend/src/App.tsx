@@ -6,7 +6,8 @@ import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
 import { PrivacyProvider } from './contexts/PrivacyContext';
 import { TipsProvider } from './contexts/TipsContext';
-import { WelcomeTour } from './components/WelcomeTour';
+import { TourProvider } from './contexts/TourContext';
+import { TourBubble } from './components/TourBubble';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
 import { Login } from './pages/Login';
@@ -104,8 +105,9 @@ export default function App() {
   return (
     <PrivacyProvider>
       <TipsProvider>
-        <WelcomeTour />
-        <Routes>
+        <TourProvider>
+          <TourBubble />
+          <Routes>
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route element={<Layout user={user} />}>
             <Route index element={<Dashboard />} />
@@ -146,7 +148,8 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-        </Routes>
+          </Routes>
+        </TourProvider>
       </TipsProvider>
     </PrivacyProvider>
   );

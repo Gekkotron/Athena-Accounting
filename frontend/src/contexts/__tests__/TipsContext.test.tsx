@@ -19,12 +19,12 @@ describe('TipsProvider', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ dismissed: { welcome_tour: '2026-07-16T00:00:00.000Z' } }),
+      text: async () => JSON.stringify({ dismissed: { 'tour:dashboard': '2026-07-16T00:00:00.000Z' } }),
     });
     const { result } = renderHook(() => useTips(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.isDismissed('welcome_tour')).toBe(true);
-    expect(result.current.isDismissed('section:dashboard')).toBe(false);
+    expect(result.current.isDismissed('tour:dashboard')).toBe(true);
+    expect(result.current.isDismissed('tour:accounts')).toBe(false);
   });
 
   it('dismiss() optimistically updates then POSTs', async () => {
@@ -35,9 +35,9 @@ describe('TipsProvider', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     await act(async () => {
-      await result.current.dismiss('section:budgets');
+      await result.current.dismiss('tour:budgets');
     });
-    expect(result.current.isDismissed('section:budgets')).toBe(true);
+    expect(result.current.isDismissed('tour:budgets')).toBe(true);
     expect(fetchMock).toHaveBeenLastCalledWith(
       '/api/tips/dismiss',
       expect.objectContaining({ method: 'POST' }),
@@ -52,16 +52,16 @@ describe('TipsProvider', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     await act(async () => {
-      await expect(result.current.dismiss('section:dashboard')).rejects.toBeTruthy();
+      await expect(result.current.dismiss('tour:dashboard')).rejects.toBeTruthy();
     });
-    expect(result.current.isDismissed('section:dashboard')).toBe(false);
+    expect(result.current.isDismissed('tour:dashboard')).toBe(false);
   });
 
   it('reset() clears state and POSTs /reset', async () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: true, status: 200,
-        text: async () => JSON.stringify({ dismissed: { welcome_tour: 'x', 'section:budgets': 'y' } }),
+        text: async () => JSON.stringify({ dismissed: { 'tour:dashboard': 'x', 'tour:budgets': 'y' } }),
       })
       .mockResolvedValueOnce({ ok: true, status: 204, text: async () => '' });
     const { result } = renderHook(() => useTips(), { wrapper });
