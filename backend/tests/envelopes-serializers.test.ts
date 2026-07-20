@@ -40,7 +40,7 @@ describe('serializeAssignment', () => {
       createdAt: new Date(), updatedAt: new Date(),
     };
     expect(serializeAssignment(row).month).toBe('2026-12');
-    expect(serializeAssignment(row).month).not.toContain('01');
+    expect(serializeAssignment(row).month).toMatch(/^\d{4}-\d{2}$/);
   });
 });
 
@@ -53,7 +53,6 @@ describe('serializeSettings', () => {
       targetDate: '2027-01-01',
       targetKind: 'save_by_date',
       overspendPolicy: 'rollover_negative',
-      createdAt: new Date(),
       updatedAt: new Date(),
     };
     expect(serializeSettings(row)).toEqual({
@@ -70,7 +69,7 @@ describe('serializeSettings', () => {
       userId: 1, categoryId: 3,
       targetAmount: null, targetDate: null, targetKind: null,
       overspendPolicy: 'reallocate_manual',
-      createdAt: new Date(), updatedAt: new Date(),
+      updatedAt: new Date(),
     };
     const s = serializeSettings(row);
     expect(s.targetAmount).toBeNull();
@@ -82,9 +81,9 @@ describe('serializeSettings', () => {
 describe('serializeHold', () => {
   it('slices first-of-month DATE into wire YYYY-MM', () => {
     const row: HoldRow = {
-      id: 1, userId: 1,
+      userId: 1,
       month: '2026-07-01', amount: '25.00',
-      createdAt: new Date(), updatedAt: new Date(),
+      updatedAt: new Date(),
     };
     expect(serializeHold(row)).toEqual({ month: '2026-07', amount: '25.00' });
   });

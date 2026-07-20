@@ -103,7 +103,15 @@ export function annotateBudgetRow(input: {
   const underHalfCount = limit > 0
     ? historyValuesNum.filter((v) => v < limit * 0.5).length
     : 0;
+  // Gate on `history !== null` (>= 2 non-zero completed periods) so a
+  // brand-new budget with an all-zero history never suggests "0.00" —
+  // the frontend's guard is `!= null`, so a "0.00" suggestion would
+  // render an "Ajuster à 0,00 €" button that the PUT positiveDecimal
+  // guard rejects with a 400. Also clamp to > 0 defensively in case the
+  // median itself rounds to zero even with qualifying history.
   const medianValue = median(historyValuesNum);
+  // Round to nearest whole unit then add a 10% margin (also rounded)
+  // so suggestions land on tidy round amounts (e.g. 49.68 → 50 → 55).
   const proposedValue = Math.round(Math.round(medianValue) * 1.1);
   const suggestedLimit = history !== null
     && proposedValue > 0
