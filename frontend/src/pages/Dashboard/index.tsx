@@ -47,7 +47,13 @@ export function Dashboard(): JSX.Element {
   const rootLoading = accountsQ.isLoading || balanceQ.isLoading;
   const rootEmpty = !rootLoading && !rootErr && accounts.length === 0;
 
-  useAutoStartTour('dashboard', { requireData: () => !rootEmpty });
+  // Truthy only once accounts have actually arrived — !rootEmpty is also
+  // true while accountsQ is still loading (rootLoading gates rootEmpty),
+  // which let the tour auto-start against a page whose anchors haven't
+  // mounted yet on a fresh visit. Checking accounts.length directly still
+  // lets the tour fire the moment the first account is created, since
+  // React Query re-renders this component on cache updates.
+  useAutoStartTour('dashboard', { requireData: () => accounts.length > 0 });
   const balanceAnchor = useTourAnchor('dashboard:balance');
   const curveAnchor = useTourAnchor('dashboard:curve');
   const donutAnchor = useTourAnchor('dashboard:donut');

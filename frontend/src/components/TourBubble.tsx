@@ -8,7 +8,6 @@ import {
   shift,
   arrow,
   FloatingArrow,
-  useDismiss,
   useInteractions,
   useRole,
   type Placement,
@@ -57,20 +56,22 @@ export function TourBubble(): JSX.Element | null {
     refs.setReference(anchor ?? null);
   }, [anchor, refs, anchorVersion]);
 
-  // Scroll anchor into view on step change (skip the very first step to
-  // avoid a page-load jump).
-  const firstRenderRef = useRef(true);
+  // Scroll anchor into view on step change. No anchor means no active step
+  // to scroll to (covers both the initial app-boot render and mobile, where
+  // `anchor` is only ever set once a tour step actually resolves one).
   useEffect(() => {
-    if (firstRenderRef.current) { firstRenderRef.current = false; return; }
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
     const off = rect.top < 0 || rect.bottom > window.innerHeight;
     if (off) anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [stepIdx, anchor]);
 
-  const dismiss = useDismiss(context, { escapeKey: true, outsidePress: false });
+  // Esc is handled by the local onKeyDown below; useRole's output (role
+  // + aria-* wiring for the dialog/reference pairing) is the only useful
+  // part of useInteractions here — useDismiss was previously registered
+  // but inert, since useFloating has no onOpenChange for it to invoke.
   const role = useRole(context, { role: 'dialog' });
-  const { getFloatingProps } = useInteractions([dismiss, role]);
+  const { getFloatingProps } = useInteractions([role]);
 
   // Focus the bubble on step change / open.
   const bubbleRef = useRef<HTMLDivElement | null>(null);

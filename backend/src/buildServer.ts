@@ -106,11 +106,15 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   // from every user's dismissed_tips jsonb. One-shot at boot. Failures are
   // logged and swallowed — the app still functions with a stale blob (the
   // client ignores unknown keys), so a transient DB hiccup shouldn't block
-  // start-up.
-  runOrphanCleanup().then(
-    (stats) => app.log.info({ ...stats }, 'tips: orphan-key sweep complete'),
-    (err) => app.log.warn({ err }, 'tips: orphan-key sweep failed'),
-  );
+  // start-up. Skipped under the test suite: every integration test calls
+  // build(...), and a fire-and-forget sweep racing test teardown could
+  // touch fixture rows out of band.
+  if (env.NODE_ENV !== 'test') {
+    runOrphanCleanup().then(
+      (stats) => app.log.info({ ...stats }, 'tips: orphan-key sweep complete'),
+      (err) => app.log.warn({ err }, 'tips: orphan-key sweep failed'),
+    );
+  }
 
   return app;
 }
