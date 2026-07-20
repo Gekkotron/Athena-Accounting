@@ -6,12 +6,13 @@ import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { SectionTip } from '../../components/SectionTip';
 import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
-import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { TransactionsTable } from './TransactionsTable';
 import { FiltersBar } from './FiltersBar';
 import { TransactionModal } from './TransactionModal';
 import { parseAmountQuery } from './parseAmountQuery';
+import { BulkSelectionBar } from './BulkSelectionBar';
+import { readIntParam, truncate, sortCategoriesForPicker, toggleInSet } from './lib';
 import { listCheckpoints, createCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 import { ErrorState } from '../../components/StateBlocks';
 
@@ -19,14 +20,6 @@ export type { Filters } from './filters';
 import type { Filters } from './filters';
 
 const PAGE = 50;
-
-// URL-param → positive-int-or-undefined, shared across the initial reads.
-function readIntParam(sp: URLSearchParams, key: string): number | undefined {
-  const v = sp.get(key);
-  if (!v) return undefined;
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : undefined;
-}
 
 export function Transactions() {
   const { t, i18n } = useTranslation(['transactions', 'common']);
@@ -209,12 +202,7 @@ export function Transactions() {
   const categories = categoriesQ.data?.categories ?? [];
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c] as const)), [categories]);
   const sortedCategories = useMemo(
-    () =>
-      [...categories].sort((a, b) => {
-        const pa = a.parentId != null ? catById.get(a.parentId)?.name ?? '' : a.name;
-        const pb = b.parentId != null ? catById.get(b.parentId)?.name ?? '' : b.name;
-        return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-      }),
+    () => sortCategoriesForPicker(categories, catById),
     [categories, catById],
   );
   const txs = txQ.data?.transactions ?? [];
@@ -301,49 +289,22 @@ export function Transactions() {
       )}
 
       {selectedIds.size > 0 && (
-        <div className="rounded-lg border border-sage-800/40 bg-sage-900/15 px-4 py-2 flex items-center justify-between gap-3 text-sm">
-          <span className="text-ink-100">
-            <span className="font-mono">{selectedIds.size}</span>{' '}
-            {t('selection.suffix', { count: selectedIds.size })}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              className="text-[11px] text-ink-500 hover:text-ink-100 transition"
-              onClick={() => setSelectedIds(new Set())}
-            >
-              {t('selection.clear')}
-            </button>
-            <select
-              className="input-sm"
-              value={bulkSelectValue}
-              disabled={bulkCategorize.isPending}
-              aria-label={t('selection.changeCategoryAriaLabel')}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!v) return;
-                setBulkSelectValue('');
-                bulkCategorize.mutate({
-                  ids: Array.from(selectedIds),
-                  categoryId: v === 'none' ? null : Number(v),
-                });
-              }}
-            >
-              <option value="" disabled>{t('selection.categoryPlaceholder')}</option>
-              <option value="none">{t('selection.categoryNone')}</option>
-              {sortedCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {formatCategoryPath(c, catById)}
-                </option>
-              ))}
-            </select>
-            <button
-              className="btn-secondary !py-1.5 !px-3 text-clay-300 hover:text-clay-200 border-clay-800/60 hover:border-clay-700"
-              onClick={() => { setBulkDeleteError(null); setConfirmBulkDelete(true); }}
-            >
-              {t('delete', { ns: 'common' })}
-            </button>
-          </div>
-        </div>
+        <BulkSelectionBar
+          selectedIds={selectedIds}
+          onClearSelection={() => setSelectedIds(new Set())}
+          bulkSelectValue={bulkSelectValue}
+          onBulkSelectValueChange={setBulkSelectValue}
+          isBulkCategorizePending={bulkCategorize.isPending}
+          onBulkCategorize={(categoryId) =>
+            bulkCategorize.mutate({ ids: Array.from(selectedIds), categoryId })
+          }
+          sortedCategories={sortedCategories}
+          catById={catById}
+          onStartBulkDelete={() => {
+            setBulkDeleteError(null);
+            setConfirmBulkDelete(true);
+          }}
+        />
       )}
 
       {bulkCategorizeNotice && (
@@ -407,33 +368,18 @@ export function Transactions() {
         setFilters={setFilters}
         setOffset={setOffset}
         selectedIds={selectedIds}
-        onToggleSelect={(id, checked) => {
-          setSelectedIds((s) => {
-            const next = new Set(s);
-            if (checked) next.add(id); else next.delete(id);
-            return next;
-          });
-        }}
+        onToggleSelect={(id, checked) => setSelectedIds((s) => toggleInSet(s, id, checked))}
         onToggleSelectAll={(checked) => {
           setSelectedIds((s) => {
-            const next = new Set(s);
-            for (const t of txs) {
-              if (checked) next.add(t.id); else next.delete(t.id);
-            }
+            let next = s;
+            for (const t of txs) next = toggleInSet(next, t.id, checked);
             return next;
           });
         }}
         onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
         onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
         expandedIds={expandedIds}
-        onToggleExpanded={(id) => {
-          setExpandedIds((s) => {
-            const next = new Set(s);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-          });
-        }}
+        onToggleExpanded={(id) => setExpandedIds((s) => toggleInSet(s, id, !s.has(id)))}
         onEdit={(tx) => setModalTx(tx)}
         onDelete={(tx) => {
           setDeleteError(null);
@@ -514,6 +460,3 @@ export function Transactions() {
   );
 }
 
-function truncate(s: string, n: number): string {
-  return s.length <= n ? s : s.slice(0, n - 1) + '…';
-}

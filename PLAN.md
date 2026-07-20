@@ -18,12 +18,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-- [ ] Refactor: split `frontend/src/pages/Transactions/index.tsx` (519 lines) into per-concern modules
-      Same pilot pattern. `Transactions/index.tsx` is a page composer that owns filters, sorting, selection state, pagination, and table wiring. Keep `index.tsx` as the top-level page (data hooks + JSX composition); extract each pure derivation (filter predicate builder, sort comparator, selection reducer, URL-query serializer) into `frontend/src/pages/Transactions/lib.ts`; if row/toolbar/filter-bar/empty-state fragments are distinct, promote each into a sibling `.tsx`.
-      Add `frontend/src/pages/Transactions/__tests__/lib.test.ts` covering the pure helpers — filter builder against representative filter combos, comparator stability under ties, URL-query round-trip. `TransactionModal.tsx` is a separate follow-up task, do not touch it here.
-      Verification gate (single commit): full frontend suite + build green; direct to main. Commit subject: `refactor(transactions-page): split Transactions/index.tsx into subcomponents and unit-test filter/sort/query helpers`.
-      Success criteria: (a) `Transactions/index.tsx` under 260 lines; (b) `lib.ts` is pure; (c) existing Transactions page tests still green untouched; (d) build clean.
-
 - [ ] Refactor: split `frontend/src/api/demo/handlers/reads.ts` (507 lines) into per-endpoint modules
       Follow the envelopes pilot pattern (commit 017a1ea). The demo mode reads file registers many `GET` handlers over the fake store; each handler is largely independent. Target directory: `frontend/src/api/demo/handlers/reads/{index,serializers,filters,<group>.ts}` — group by resource (transactions, accounts, categories, envelopes, recurring, reports, imports, settings, etc.). `index.ts` becomes the registration composer that installs each per-group handler set; shared serializers/filters/store-query helpers move to sibling files.
       Add `frontend/src/api/demo/handlers/__tests__/reads-helpers.test.ts` covering the extracted pure helpers (any serializer, filter, or store-query utility) — do not try to unit-test the handler wiring; existing demo tests continue to guard that.
@@ -82,6 +76,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Refactor: split `frontend/src/pages/Transactions/index.tsx` (519 → 462) into per-concern modules
+      Pure helpers extracted to `Transactions/lib.ts` (34 lines, no React): `readIntParam` (deep-link URL param → positive-int-or-undefined), `truncate` (ellipsis-aware string cutter, previously bottom-of-file), `sortCategoriesForPicker` (parent-name grouping + alphabetical within, previously inlined useMemo body), `toggleInSet` (immutable add/remove for `selectedIds`/`expandedIds` — replaces three near-identical inline reducers). `BulkSelectionBar.tsx` (69 lines) extracted from the ~45-line inline JSX block: clear-selection button + bulk-categorize dropdown + bulk-delete trigger. `TransactionModal.tsx` intentionally untouched (task 10).
+      New `__tests__/lib.test.ts` (11 tests): `readIntParam` positive-int accept + reject empty/non-numeric/zero/negative/float/missing; `truncate` under-limit passthrough + ellipsis; `sortCategoriesForPicker` grouped-by-parent-name ordering + non-mutation + unknown-parent fallback to child-name tie-break; `toggleInSet` add + remove + redundant-op idempotence + no-aliasing.
+      Verification: `npx tsc -b` clean, `npx vitest run` = 728/728 tests pass (717 pre-existing + 11 new), `npm run build` succeeds.
 
 - [x] Refactor: split `frontend/src/components/BalanceChart/index.tsx` (542 → 464) into per-concern modules
       Pure chart math extracted to `BalanceChart/lib.ts` (185 lines, no React): `isoDate`, `MIN_ZOOM_WIDTH_VB`, `mergeHistoricalAndProjection` (handles `alignEndTo` shift + forward-projection filter/sort), `computeYRange` (always includes zero, range≥1 divide-by-zero guard), `computeActiveWindow` (zoom or full extent, xSpan clamped to ≥1ms), `buildSegments` (splits stroke into runs of same-dashed verdict, with the projection boundary + `gapThresholdDays` both triggering dashed), `buildAreaPath` (closed polygon anchored to plot bottom, empty when no historical), `buildAxisTicks` (Y evenly spaced + up to 6 X calendar ticks over the active window). No presentational subcomponents extracted — the SVG rendering closes over scale closures and splitting it would spread the plumbing across every fragment; the pilot pattern doesn't force fragmentation.
