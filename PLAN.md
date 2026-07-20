@@ -18,12 +18,6 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 
 ## Backlog
 
-- [ ] Refactor: split `frontend/src/pages/Recurrent/ForecastTab.tsx` (458 lines) into per-concern modules
-      Follow the Categories.tsx pilot (commit 70f12df). ForecastTab owns horizon picker, account scope picker, chart wiring, and two stat tiles. Extract each visually-distinct fragment (horizon control, scope control, stat-tile pair) into a sibling `.tsx` where it earns its keep; extract any pure computation local to this tab (variation formatting, horizon→date mapping, stat-tile derivation) into `frontend/src/pages/Recurrent/forecast-lib.ts`. Do NOT touch the already-shared `lib/recurring-forecast.ts` projector — it is already extracted and unit-tested (see Récurrent Task 4 in Done).
-      Add `frontend/src/pages/Recurrent/__tests__/forecast-lib.test.ts` covering any newly-extracted pure helpers.
-      Verification gate (single commit): full frontend suite + build green; direct to main. Commit subject: `refactor(recurrent-forecast): split ForecastTab into subcomponents and unit-test tab-local helpers`.
-      Success criteria: (a) `ForecastTab.tsx` under 250 lines; (b) new `forecast-lib.ts` pure; (c) existing Recurrent page tests + BalanceChart tests still green untouched.
-
 - [ ] Refactor: split `frontend/src/pages/Transactions/TransactionModal.tsx` (456 lines) into per-concern modules
       Follow the Categories.tsx pilot. TransactionModal likely combines form fields, category picker, envelope-assignment picker, split-transaction editor, validation, and submit wiring. Extract each visually-distinct panel into a sibling `.tsx` (`TransactionModalFields.tsx`, `TransactionModalSplits.tsx` — actual boundaries TBD by inspection); extract pure form logic (validation, form-state shaping, submit-payload builder, decimal-parse wrappers) into `frontend/src/pages/Transactions/transaction-modal-lib.ts`.
       Add `frontend/src/pages/Transactions/__tests__/transaction-modal-lib.test.ts` covering the pure helpers — especially the submit-payload builder (which encodes the wire contract for creating/updating transactions and would silently corrupt data if regressed).
@@ -45,6 +39,11 @@ Goal: ship a Tauri desktop app (Mac/Windows/Linux) alongside the current Docker 
 ## In progress
 
 ## Done
+
+- [x] Refactor: split `frontend/src/pages/Recurrent/ForecastTab.tsx` (458 → 264) into per-concern modules
+      Pure tab-local helpers extracted to `Recurrent/forecast-lib.ts` (50 lines, no React): `Horizon` + `HORIZONS`, `HISTORICAL_WINDOW_DAYS`, `todayIso`, `isoDaysAgo` (both previously inline at file top), `contributingSeries(active, includeDetected)` (dedups the confirmed-vs-detected filter previously duplicated between the tab body's counter and the debug panel), `classifyEmpty(input)` (the 3-branch empty-state trichotomy — 'scope' / 'unconfirmed' / 'none' — plus null when there IS a contributor). Two subcomponents extracted: `ForecastHorizonPicker.tsx` (26 lines — the J+30/60/90/180 segmented control), `ForecastDebugPanel.tsx` (147 lines — the full debug section: inputs grid + per-series table + day-by-day contributions table). The already-shared `lib/recurring-forecast.ts` projector (extracted in Récurrent Task 4) stays untouched, per PLAN.md guidance.
+      New `__tests__/forecast-lib.test.ts` (9 tests): `HORIZONS` ordering; `todayIso`/`isoDaysAgo` shape + ordering; `contributingSeries` includeDetected=false keeps only confirmed + includeDetected=true keeps all active; `classifyEmpty` returns null on contributor presence + 'scope' when scope-narrowed with other user series existing + 'unconfirmed' when active exists but detected opt-out + 'none' fallback (no user series + includeDetected-but-empty).
+      Verification: `npx tsc -b` clean, `npx vitest run` = 775/775 tests pass (766 pre-existing + 9 new), `npm run build` succeeds. Existing Recurrent page tests and the 28 BalanceChart tests remain green untouched.
 
 - [x] Refactor: split `frontend/src/api/demo/handlers/writes.ts` (460 → 10 files, largest 83) into per-resource modules
       Old flat `handlers/writes.ts` replaced by `handlers/writes/` folder mirroring the reads split: `index.ts` (23 — composer calls 8 register* siblings), `lib.ts` (19 — pure `nextId` + `matchesRule`, no imports from `demo/index.ts` so tests never trigger the register-cascade deadlock), `accounts.ts` (60), `transactions.ts` (75), `categories.ts` (50), `rules.ts` (83 — combines rules + transferRules since both are similar-shaped CRUD), `budgets.ts` (44), `tri.ts` (65 — tri-assign + recategorize, both use the shared rule matcher from lib), `settings.ts` (21 — settings PATCH + backup export), `recurring.ts` (46 — PUT + regenerate no-op). Handler map unchanged: every method+path the app previously registered still gets registered by the composer.
