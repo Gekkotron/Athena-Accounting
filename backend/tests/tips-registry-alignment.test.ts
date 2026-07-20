@@ -1,35 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { TIP_IDS } from '../src/http/routes/tips/tip-ids.js';
+import { TIP_IDS as backendTipIds } from '../src/http/routes/tips/tip-ids.js';
 
-// This test guarantees that the frontend and backend agree on the set
-// and order of tip ids. If they drift, either side would happily let
-// through a malformed value; the frontend would then try to dismiss a
-// tip the backend rejects (400), or vice versa.
+// Import frontend TIP_IDS dynamically to avoid module resolution issues
+// during backend tests. The dynamic import ensures we get the actual
+// runtime value regardless of how it's constructed.
+let frontendTipIds: readonly string[] = [];
+
 describe('tips TIP_IDS backend/frontend alignment', () => {
-  it('frontend TIP_IDS array equals backend TIP_IDS array', () => {
-    const frontendPath = resolve(
-      __dirname,
-      '..',
-      '..',
-      'frontend',
-      'src',
-      'tips',
-      'content.ts',
-    );
-    const src = readFileSync(frontendPath, 'utf-8');
+  it('frontend TIP_IDS array equals backend TIP_IDS array', async () => {
+    // Dynamically import the frontend module during test execution
+    const frontendContent = await import('../../frontend/src/tips/content.js');
+    frontendTipIds = frontendContent.TIP_IDS;
 
-    // Extract the array literal between `export const TIP_IDS = [` and `] as const;`
-    const match = src.match(/export const TIP_IDS\s*=\s*\[([\s\S]*?)\]\s*as const;/);
-    expect(match, 'TIP_IDS export not found in frontend/src/tips/content.ts').not.toBeNull();
-
-    const items = match![1]
-      .split(/,/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0)
-      .map((s) => s.replace(/^['"]|['"]$/g, ''));
-
-    expect(items).toEqual([...TIP_IDS]);
+    expect([...frontendTipIds]).toEqual([...backendTipIds]);
   });
 });

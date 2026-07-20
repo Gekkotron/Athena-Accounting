@@ -25,6 +25,7 @@ import { pdfTemplatesRoutes } from './http/routes/pdf-templates.js';
 import { balanceCheckpointsRoutes } from './http/routes/balance-checkpoints.js';
 import { settingsRoutes } from './http/routes/settings.js';
 import { tipsRoutes } from './http/routes/tips/index.js';
+import { runOrphanCleanup } from './http/routes/tips/cleanup.js';
 import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
 import { budgetsRoutes } from './http/routes/budgets.js';
 import { envelopesRoutes } from './http/routes/envelopes/index.js';
@@ -100,6 +101,16 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   }
 
   startDraftSweeper(app);
+
+  // v2 orphan-key sweep: strip pre-v2 tip ids ('welcome_tour', 'section:*')
+  // from every user's dismissed_tips jsonb. One-shot at boot. Failures are
+  // logged and swallowed — the app still functions with a stale blob (the
+  // client ignores unknown keys), so a transient DB hiccup shouldn't block
+  // start-up.
+  runOrphanCleanup().then(
+    (stats) => app.log.info({ ...stats }, 'tips: orphan-key sweep complete'),
+    (err) => app.log.warn({ err }, 'tips: orphan-key sweep failed'),
+  );
 
   return app;
 }
