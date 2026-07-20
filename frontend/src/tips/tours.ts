@@ -51,16 +51,17 @@ export function tipIdFor(pageId: PageId): `tour:${PageId}` {
 
 export const TOURS: Record<PageId, TourStep[]> = {
   dashboard: [
-    { anchor: 'dashboard:balance',  placement: 'bottom-start' },
-    // Placements standardise on bottom-start for anchors attached to full
-    // sections/cards: bubble hangs off the anchor's top-left corner and stays
-    // visible in the viewport when combined with TourBubble's shift/size
-    // middleware. Horizontal placements (left/right) misbehave when the anchor
-    // wrapper is nearly viewport-wide.
-    { anchor: 'dashboard:curve',    placement: 'bottom-start' },
-    { anchor: 'dashboard:donut',    placement: 'bottom-start' },
-    { anchor: 'dashboard:insights', placement: 'bottom-start' },
-    { anchor: 'dashboard:sankey',   placement: 'bottom-start' },
+    // Dashboard anchors are zero-size markers pinned at each section's
+    // top-right (right-4, top-4); `bottom-end` hangs the bubble below-right,
+    // aligned with the section's right edge. The arrow points up at the
+    // marker so it visually reads as "this whole section". Combined with
+    // TourBubble's shift/size middleware, the bubble always stays fully
+    // in-viewport even on narrow displays.
+    { anchor: 'dashboard:balance',  placement: 'bottom-end' },
+    { anchor: 'dashboard:curve',    placement: 'bottom-end' },
+    { anchor: 'dashboard:donut',    placement: 'bottom-end' },
+    { anchor: 'dashboard:insights', placement: 'bottom-end' },
+    { anchor: 'dashboard:sankey',   placement: 'bottom-end' },
   ],
   accounts: [
     { anchor: 'accounts:add-button',       placement: 'bottom-end' },

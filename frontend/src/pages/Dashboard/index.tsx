@@ -192,7 +192,7 @@ export function Dashboard(): JSX.Element {
           <span
             ref={balanceAnchor}
             aria-hidden
-            className="pointer-events-none absolute left-4 top-4 h-1 w-1"
+            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
           />
           <DashboardHero primary={primary} />
         </div>
@@ -219,7 +219,7 @@ export function Dashboard(): JSX.Element {
           <span
             ref={insightsAnchor}
             aria-hidden
-            className="pointer-events-none absolute left-4 top-4 h-1 w-1"
+            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
           />
           <InsightsSection currency={primary.currency} />
         </div>
@@ -232,9 +232,14 @@ export function Dashboard(): JSX.Element {
           mirrors the same control cluster for visibility. Persistent
           defaults live in Réglages; in-session changes are ephemeral. */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <section className="surface p-5 md:p-6">
+        <section className="surface p-5 md:p-6 relative">
+          <span
+            ref={curveAnchor}
+            aria-hidden
+            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
+          />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <span ref={curveAnchor} className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <label
@@ -276,9 +281,14 @@ export function Dashboard(): JSX.Element {
 
       {/* Category breakdown — donut */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <section className="surface p-5 md:p-6">
+        <section className="surface p-5 md:p-6 relative">
+          <span
+            ref={donutAnchor}
+            aria-hidden
+            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
+          />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <span ref={donutAnchor} className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <AccountSelect
@@ -305,7 +315,7 @@ export function Dashboard(): JSX.Element {
           <span
             ref={sankeyAnchor}
             aria-hidden
-            className="pointer-events-none absolute left-4 top-4 h-1 w-1"
+            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
           />
           <SankeySection
             range={range}
