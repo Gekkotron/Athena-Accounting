@@ -65,3 +65,17 @@ appends an HTML comment on the checkbox line:
 You can also add `<!-- blocked: reason -->` on an in-progress task to have the
 planner surface it in the next planning session. Both comments are stripped
 from the task's title before dispatch.
+
+# Verify before pushing
+
+Always run the unit tests before pushing to `main` — the repo has heavy CI
+(backend + frontend + Playwright e2e) and every failed run wastes ~10 min and
+a runner slot. From the repo root:
+
+- Backend: `cd backend && npx vitest run` (DB-integration files skip cleanly
+  without `RUN_DB_TESTS=1`, so this is safe on a laptop).
+- Frontend: `cd frontend && npx vitest run`.
+
+If either suite fails locally, fix or investigate before `git push`. Tests
+that need the OrbStack Postgres container will be skipped locally — CI runs
+them, so read the CI logs when a suite passes locally but red on the run.
