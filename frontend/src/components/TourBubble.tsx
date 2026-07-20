@@ -6,6 +6,7 @@ import {
   offset,
   flip,
   shift,
+  size,
   arrow,
   FloatingArrow,
   useInteractions,
@@ -46,7 +47,32 @@ export function TourBubble(): JSX.Element | null {
   const { refs, floatingStyles, context } = useFloating({
     open: activePageId != null && anchor != null && !isMobile,
     placement: desiredPlacement,
-    middleware: [offset(10), flip(), shift({ padding: 8 }), arrow({ element: arrowRef })],
+    // Positioning contract, defense-in-depth against wide/tall anchor wrappers:
+    //   offset(10)     — breathing room between anchor and bubble.
+    //   flip()         — flip to the opposite placement when the preferred
+    //                    side has no room (viewport-clipping).
+    //   shift(12)      — nudge the bubble along the cross axis to keep it in
+    //                    the viewport; 12 px padding on all sides.
+    //   size(...)      — cap maxWidth to what actually fits (never above
+    //                    320 px, never below 200 px — jsdom returns 0-size
+    //                    rects, so the Math.max floor keeps tests stable).
+    //   arrow(ref)     — feeds the pointer arrow at the bubble's edge.
+    // hide() is intentionally NOT here — the TourContext 2 s missing-anchor
+    // fallback covers the "anchor never mounts" case; a briefly-off-screen
+    // anchor is better served by keeping the bubble visible until the user
+    // scrolls back.
+    middleware: [
+      offset(10),
+      flip(),
+      shift({ padding: 12 }),
+      size({
+        padding: 12,
+        apply({ availableWidth, elements }) {
+          elements.floating.style.maxWidth = `${Math.max(200, Math.min(320, availableWidth))}px`;
+        },
+      }),
+      arrow({ element: arrowRef }),
+    ],
     whileElementsMounted: autoUpdate,
   });
 
@@ -190,7 +216,7 @@ export function TourBubble(): JSX.Element | null {
         tabIndex: -1,
         onKeyDown,
       })}
-      className="z-40 max-w-[320px] rounded-xl border border-ink-800 bg-ink-900 p-3 shadow-2xl outline-none"
+      className="z-40 rounded-xl border border-ink-800 bg-ink-900 p-3 shadow-2xl outline-none"
     >
       {content}
       {buttonRow}
