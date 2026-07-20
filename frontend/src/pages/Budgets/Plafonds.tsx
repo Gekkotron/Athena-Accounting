@@ -7,8 +7,9 @@ import { api, ApiError } from '../../api/client';
 import type { Account, BudgetPeriod, Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
 import { groupCategories } from '../../lib/categories';
-import { SectionTip } from '../../components/SectionTip';
-import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
@@ -56,6 +57,10 @@ export function Plafonds(): JSX.Element {
   };
 
   const { budgets, create, update, remove } = useBudgets();
+  useAutoStartTour('budgets', {
+    requireData: () => (budgets?.length ?? 0) > 0,
+  });
+  const catRowAnchor = useTourAnchor('budgets:category-row');
   const report = useBudgetReport({
     period,
     month: period === 'monthly' ? monthOrYear : undefined,
@@ -126,14 +131,29 @@ export function Plafonds(): JSX.Element {
     onError: (err) => setMutationError(mutationErrorMessage(err, t)),
   });
 
+  // The row list below is built from several push sites (root row, slim
+  // parent header, child rows, orphaned rows) rather than a single flat
+  // `.map`, so there's no single index to test against. `firstRowRef()`
+  // tracks a running "have we anchored yet" flag across the whole render
+  // and hands the real `catRowAnchor` callback to only the very first
+  // row-like node it's asked about — whichever branch that turns out to
+  // be — so every other row gets `undefined` and no extra DOM wrapper is
+  // introduced (BudgetRow forwards its ref straight to the rendered <li>,
+  // and existing tests rely on rows being direct, adjacent <li> siblings).
+  let firstCategoryRowAssigned = false;
+  const firstRowRef = (): typeof catRowAnchor | undefined => {
+    if (firstCategoryRowAssigned) return undefined;
+    firstCategoryRowAssigned = true;
+    return catRowAnchor;
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <SectionTip id="section:budgets" />
       <div className="grid grid-cols-3 items-center gap-3">
         <div className="justify-self-start">
           <div className="flex items-center gap-2">
             <h1 className="display text-2xl text-ink-50">{t('header.title')}</h1>
-            <SectionTipHelpIcon id="section:budgets" />
+            <TourReplayIcon pageId="budgets" />
           </div>
           <p className="text-sm text-ink-400 mt-1">
             {t('header.subtitle')}
@@ -196,6 +216,7 @@ export function Plafonds(): JSX.Element {
               nodes.push(
                 <BudgetRow
                   key={`root-${r.id}-${rootRow.id}`}
+                  ref={firstRowRef()}
                   row={rootRow}
                   depth={0}
                   budgetId={budgetId}
@@ -217,7 +238,7 @@ export function Plafonds(): JSX.Element {
             } else {
               // Parent has no budget of its own but has budgeted children — slim header.
               nodes.push(
-                <li key={`header-${r.id}`} data-role="budget-row" data-depth={0} className="px-4 py-2 text-sm text-ink-500">
+                <li key={`header-${r.id}`} ref={firstRowRef()} data-role="budget-row" data-depth={0} className="px-4 py-2 text-sm text-ink-500">
                   {r.name}
                 </li>,
               );
@@ -229,6 +250,7 @@ export function Plafonds(): JSX.Element {
               nodes.push(
                 <BudgetRow
                   key={`child-${c.id}-${row.id}`}
+                  ref={firstRowRef()}
                   row={row}
                   depth={1}
                   budgetId={budgetId}
@@ -258,6 +280,7 @@ export function Plafonds(): JSX.Element {
               const nodes = [
                 <BudgetRow
                   key={`orphan-${r.categoryId}-${r.id}`}
+                  ref={firstRowRef()}
                   row={r}
                   depth={0}
                   budgetId={budgetId}

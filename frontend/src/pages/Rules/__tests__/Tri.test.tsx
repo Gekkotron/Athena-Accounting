@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { Tri } from '../Tri';
 import { withTips } from '../../../test/renderWithProviders';
 import { pinLocale } from '../../../test/i18n';
@@ -33,7 +34,11 @@ const group = (label: string, count: number, category_id: number | null = null) 
 
 function renderTri() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{withTips(<Tri />)}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>{withTips(<Tri />)}</MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 beforeEach(() => { apiMock.mockReset(); });

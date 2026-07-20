@@ -19,8 +19,9 @@ import {
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { SectionTip } from '../../components/SectionTip';
-import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
 import { AccountPatternsPanel } from './AccountPatternsPanel';
@@ -37,6 +38,10 @@ export function Accounts() {
   });
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useAutoStartTour('accounts'); // no requireData — page exists to create data
+  const addBtnAnchor = useTourAnchor('accounts:add-button');
+  const startingBalAnchor = useTourAnchor('accounts:starting-balance');
 
   const create = useMutation({
     mutationFn: (input: AccountFormValues) =>
@@ -185,12 +190,11 @@ export function Accounts() {
 
   return (
     <div className="flex flex-col gap-8">
-      <SectionTip id="section:accounts" />
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="page-title">{t('title')}</h1>
-            <SectionTipHelpIcon id="section:accounts" />
+            <TourReplayIcon pageId="accounts" />
           </div>
           <p className="page-subtitle">
             <Trans i18nKey="accounts:subtitle">
@@ -198,21 +202,23 @@ export function Accounts() {
             </Trans>
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
+        <button ref={addBtnAnchor} className="btn-primary" onClick={() => setShowForm((s) => !s)}>
           {showForm ? t('cancel', { ns: 'common' }) : t('newAccount')}
         </button>
       </div>
 
       {showForm && (
-        <AccountForm
-          mode="create"
-          error={error}
-          submitting={create.isPending}
-          onSubmit={(values) => {
-            setError(null);
-            create.mutate(values);
-          }}
-        />
+        <div ref={startingBalAnchor}>
+          <AccountForm
+            mode="create"
+            error={error}
+            submitting={create.isPending}
+            onSubmit={(values) => {
+              setError(null);
+              create.mutate(values);
+            }}
+          />
+        </div>
       )}
 
       <section>

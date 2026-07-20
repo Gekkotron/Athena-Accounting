@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
-import { SectionTip } from '../../components/SectionTip';
-import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { formatAmount, amountSignClass } from '../../lib/format';
@@ -45,6 +46,13 @@ export function Dashboard(): JSX.Element {
   const rootErr = accountsQ.error ?? balanceQ.error;
   const rootLoading = accountsQ.isLoading || balanceQ.isLoading;
   const rootEmpty = !rootLoading && !rootErr && accounts.length === 0;
+
+  useAutoStartTour('dashboard', { requireData: () => !rootEmpty });
+  const balanceAnchor = useTourAnchor('dashboard:balance');
+  const curveAnchor = useTourAnchor('dashboard:curve');
+  const donutAnchor = useTourAnchor('dashboard:donut');
+  const insightsAnchor = useTourAnchor('dashboard:insights');
+  const sankeyAnchor = useTourAnchor('dashboard:sankey');
 
   // Page-wide period and chart scope. Both seeded from user settings on
   // mount; in-session changes are ephemeral (no writeback). To make a
@@ -144,11 +152,10 @@ export function Dashboard(): JSX.Element {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="page-title">{t('title')}</h1>
-            <SectionTipHelpIcon id="section:dashboard" />
+            <TourReplayIcon pageId="dashboard" />
           </div>
         </div>
       </div>
-      <SectionTip id="section:dashboard" />
 
       {rootErr && (
         <ErrorState
@@ -174,7 +181,11 @@ export function Dashboard(): JSX.Element {
         />
       )}
 
-      {!rootErr && !rootEmpty && <DashboardHero primary={primary} />}
+      {!rootErr && !rootEmpty && (
+        <div ref={balanceAnchor}>
+          <DashboardHero primary={primary} />
+        </div>
+      )}
 
       {/* Sections below are hidden while the root queries are erroring or empty
           — no point showing a wall of skeletons behind a top-level error. */}
@@ -192,7 +203,11 @@ export function Dashboard(): JSX.Element {
       )}
 
       {!rootErr && !rootEmpty && primary && <MoyennesMensuellesSection currency={primary.currency} />}
-      {!rootErr && !rootEmpty && primary && <InsightsSection currency={primary.currency} />}
+      {!rootErr && !rootEmpty && primary && (
+        <div ref={insightsAnchor}>
+          <InsightsSection currency={primary.currency} />
+        </div>
+      )}
       {!rootErr && !rootEmpty && <BudgetEnvelopeSection />}
 
       {/* Time series — the account scope and period picker sit in the card
@@ -201,7 +216,7 @@ export function Dashboard(): JSX.Element {
           mirrors the same control cluster for visibility. Persistent
           defaults live in Réglages; in-session changes are ephemeral. */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <section className="surface p-5 md:p-6">
+        <section ref={curveAnchor} className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
             <div className="flex-1 h-px bg-ink-800" />
@@ -245,7 +260,7 @@ export function Dashboard(): JSX.Element {
 
       {/* Category breakdown — donut */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <section className="surface p-5 md:p-6">
+        <section ref={donutAnchor} className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
             <div className="flex-1 h-px bg-ink-800" />
@@ -270,15 +285,17 @@ export function Dashboard(): JSX.Element {
 
       {/* Cash-flow Sankey — follows the page range and account scope */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <SankeySection
-          range={range}
-          onRangeChange={setRange}
-          currency={chartCurrency}
-          accountId={chartScope}
-          accounts={accounts}
-          onAccountChange={setChartScope}
-          primaryCurrency={primary?.currency}
-        />
+        <div ref={sankeyAnchor}>
+          <SankeySection
+            range={range}
+            onRangeChange={setRange}
+            currency={chartCurrency}
+            accountId={chartScope}
+            accounts={accounts}
+            onAccountChange={setChartScope}
+            primaryCurrency={primary?.currency}
+          />
+        </div>
       )}
     </div>
   );

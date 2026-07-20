@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
-import { SectionTip } from '../../components/SectionTip';
-import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { TransactionsTable } from './TransactionsTable';
 import { FiltersBar } from './FiltersBar';
@@ -95,6 +96,32 @@ export function Transactions() {
         query: { ...filters, limit: PAGE, offset },
       }),
   });
+
+  useAutoStartTour('transactions', {
+    requireData: () => (txQ.data?.transactions?.length ?? 0) > 0,
+  });
+  const searchAnchor = useTourAnchor('transactions:search');
+  // FiltersBar / TransactionsTable / TransactionRow are anchor-agnostic
+  // children — the row map and the header checkbox both live two
+  // component levels down (TransactionsTable -> TransactionRow), so a
+  // precise first-row / header-checkbox ref isn't reachable from here
+  // without threading a ref prop through those children. Both anchors are
+  // therefore registered on the same wrapping <div> around the whole
+  // table (see below); the tour still lands on the transactions list, just
+  // less pin-point than a literal first-row / header-cell highlight.
+  const rowAnchor = useTourAnchor('transactions:row');
+  const multiAnchor = useTourAnchor('transactions:multi-select');
+  // Combined ref callback for the table wrapper — memoized so its identity
+  // stays stable across renders (a fresh inline function would make React
+  // detach + reattach on every render, and each attach bumps TourContext's
+  // anchorVersion, causing an infinite render loop).
+  const tableAnchorRef = useCallback(
+    (el: HTMLElement | null) => {
+      rowAnchor(el);
+      multiAnchor(el);
+    },
+    [rowAnchor, multiAnchor],
+  );
 
   const checkpointsQ = useQuery({
     queryKey: ['balance-checkpoints', filters.accountId],
@@ -229,12 +256,11 @@ export function Transactions() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionTip id="section:transactions" />
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="page-title">{t('title')}</h1>
-            <SectionTipHelpIcon id="section:transactions" />
+            <TourReplayIcon pageId="transactions" />
           </div>
           <p className="page-subtitle">
             {t('subtitle', { count: total, formatted: total.toLocaleString(locale) })}
@@ -253,19 +279,21 @@ export function Transactions() {
         </div>
       </div>
 
-      <FiltersBar
-        filters={filters}
-        searchInput={searchInput}
-        accounts={accounts}
-        categories={categories}
-        showAdvanced={showFilters}
-        onToggleAdvanced={() => setShowFilters((s) => !s)}
-        onFilterChange={(patch) => {
-          setOffset(0);
-          setFilters((f) => ({ ...f, ...patch }));
-        }}
-        onSearchInputChange={onSearchChange}
-      />
+      <div ref={searchAnchor}>
+        <FiltersBar
+          filters={filters}
+          searchInput={searchInput}
+          accounts={accounts}
+          categories={categories}
+          showAdvanced={showFilters}
+          onToggleAdvanced={() => setShowFilters((s) => !s)}
+          onFilterChange={(patch) => {
+            setOffset(0);
+            setFilters((f) => ({ ...f, ...patch }));
+          }}
+          onSearchInputChange={onSearchChange}
+        />
+      </div>
 
       {filters.sourceFileId != null && (
         <div className="rounded-lg border border-sage-800/40 bg-sage-900/10 px-3 py-2 flex items-center justify-between gap-3 text-xs">
@@ -356,36 +384,38 @@ export function Transactions() {
           onRetry={() => void txQ.refetch()}
         />
       ) : (
-      <TransactionsTable
-        transactions={txs}
-        categories={categories}
-        accountById={accountById}
-        checkpointByDate={checkpointByDate}
-        pendingCheckpointDate={pendingCheckpointDate}
-        onToggleCheckpoint={onToggleCheckpoint}
-        isLoading={txQ.isLoading}
-        filters={filters}
-        setFilters={setFilters}
-        setOffset={setOffset}
-        selectedIds={selectedIds}
-        onToggleSelect={(id, checked) => setSelectedIds((s) => toggleInSet(s, id, checked))}
-        onToggleSelectAll={(checked) => {
-          setSelectedIds((s) => {
-            let next = s;
-            for (const t of txs) next = toggleInSet(next, t.id, checked);
-            return next;
-          });
-        }}
-        onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
-        onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
-        expandedIds={expandedIds}
-        onToggleExpanded={(id) => setExpandedIds((s) => toggleInSet(s, id, !s.has(id)))}
-        onEdit={(tx) => setModalTx(tx)}
-        onDelete={(tx) => {
-          setDeleteError(null);
-          setDeletingTx(tx);
-        }}
-      />
+      <div ref={tableAnchorRef}>
+        <TransactionsTable
+          transactions={txs}
+          categories={categories}
+          accountById={accountById}
+          checkpointByDate={checkpointByDate}
+          pendingCheckpointDate={pendingCheckpointDate}
+          onToggleCheckpoint={onToggleCheckpoint}
+          isLoading={txQ.isLoading}
+          filters={filters}
+          setFilters={setFilters}
+          setOffset={setOffset}
+          selectedIds={selectedIds}
+          onToggleSelect={(id, checked) => setSelectedIds((s) => toggleInSet(s, id, checked))}
+          onToggleSelectAll={(checked) => {
+            setSelectedIds((s) => {
+              let next = s;
+              for (const t of txs) next = toggleInSet(next, t.id, checked);
+              return next;
+            });
+          }}
+          onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
+          onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
+          expandedIds={expandedIds}
+          onToggleExpanded={(id) => setExpandedIds((s) => toggleInSet(s, id, !s.has(id)))}
+          onEdit={(tx) => setModalTx(tx)}
+          onDelete={(tx) => {
+            setDeleteError(null);
+            setDeletingTx(tx);
+          }}
+        />
+      </div>
       )}
 
       <div className="flex items-center justify-between text-sm text-ink-400">

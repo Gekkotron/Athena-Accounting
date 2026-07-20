@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { BudgetReportRow } from '../../api/types';
@@ -98,13 +98,13 @@ function trendClause(r: BudgetReportRow, t: TFunction): JSX.Element | null {
   );
 }
 
-export function BudgetRow(props: {
+export const BudgetRow = forwardRef<HTMLLIElement, {
   row: BudgetReportRow;
   depth: 0 | 1;
   budgetId: number | undefined;
   onSave: (id: number, limit: string) => void;
   onDelete: (id: number) => void;
-}): JSX.Element {
+}>(function BudgetRow(props, ref): JSX.Element {
   const { t } = useTranslation(['budgets', 'common']);
   const { row: r, depth, budgetId, onSave, onDelete } = props;
   const pct = Math.min(Math.max(r.pct, 0), 100);
@@ -115,6 +115,7 @@ export function BudgetRow(props: {
 
   return (
     <li
+      ref={ref}
       data-role="budget-row"
       data-depth={depth}
       className={`surface p-4 ${depth === 1 ? 'border-l-2 border-l-sage-500/40' : ''}`}
@@ -171,4 +172,4 @@ export function BudgetRow(props: {
       </div>
     </li>
   );
-}
+});

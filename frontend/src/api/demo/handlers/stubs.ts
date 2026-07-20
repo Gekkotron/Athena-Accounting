@@ -60,9 +60,9 @@ export function registerStubHandlers(): void {
   registerHandler('POST',   '/api/settings/mcp/token', stub);
   registerHandler('DELETE', '/api/settings/mcp/token', stub);
 
-  // Tips (welcome tour, section hints) — TipsContext posts to these on
-  // every dismissal and rolls back optimistically on failure, so a plain
-  // 501 would keep the WelcomeTour modal stuck open. Storing dismissals
+  // Tips (per-page guided tours) — TipsContext posts to these on every
+  // dismissal and rolls back optimistically on failure, so a plain 501
+  // would keep the tour's popover stuck open. Storing dismissals
   // in an in-memory Map is enough for session-scoped UX without touching
   // the persisted DemoState — a page reload replays the tour, which is
   // the intended behavior in a demo.

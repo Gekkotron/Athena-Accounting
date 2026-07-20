@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { Settings } from '../Settings';
 import { withTips } from '../../test/renderWithProviders';
 import { pinLocale } from '../../test/i18n';
@@ -28,7 +29,11 @@ vi.mock('../../api/client', () => ({ api: vi.fn().mockResolvedValue({ accounts: 
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{withTips(<Settings />)}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{withTips(<Settings />)}</MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 describe('Settings — Accès MCP', () => {

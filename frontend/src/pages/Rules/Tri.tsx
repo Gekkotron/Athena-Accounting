@@ -6,8 +6,9 @@ import type { Category, TriGroup } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { SectionTip } from '../../components/SectionTip';
-import { SectionTipHelpIcon } from '../../components/SectionTipHelpIcon';
+import { useAutoStartTour } from '../../hooks/useAutoStartTour';
+import { useTourAnchor } from '../../hooks/useTourAnchor';
+import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 export function Tri() {
   const { t } = useTranslation(['rules', 'common']);
@@ -24,6 +25,15 @@ export function Tri() {
     queryKey: ['categories'],
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
+
+  useAutoStartTour('rules');
+  const rulesListAnchor = useTourAnchor('rules:list');
+  // HubLayout renders its tab nav next to <Outlet/>, outside this page's own
+  // JSX tree (confirmed by grepping HubLayout.tsx), so the "Tri" tab element
+  // itself is unreachable from here. Fallback: anchor the tri-tab step to
+  // the top of this page's own body — the coach-mark still lands on the
+  // Sort page, just anchored to its content rather than its tab.
+  const triTabAnchor = useTourAnchor('rules:tri-tab');
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [perGroupCategory, setPerGroupCategory] = useState<Map<string, number>>(new Map());
@@ -101,13 +111,12 @@ export function Tri() {
   ).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <SectionTip id="section:rules" />
+    <div ref={triTabAnchor} className="flex flex-col gap-6">
       <div className="page-header">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="page-title">{t('tri.title')}</h1>
-            <SectionTipHelpIcon id="section:rules" />
+            <TourReplayIcon pageId="rules" />
           </div>
           <p className="page-subtitle">
             <span className="font-mono">{processed} / {total}</span>{' '}
@@ -198,7 +207,7 @@ export function Tri() {
         </div>
       </div>
 
-      <div className="surface overflow-hidden">
+      <div ref={rulesListAnchor} className="surface overflow-hidden">
         <div className="table-scroll">
           <table className="w-full text-sm">
             <thead className="text-left">

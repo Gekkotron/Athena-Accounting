@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { Backup } from '../Backup';
 import { withTips } from '../../../test/renderWithProviders';
 import { pinLocale } from '../../../test/i18n';
@@ -16,7 +17,7 @@ describe('Backup route', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        {withTips(<Backup />)}
+        <MemoryRouter>{withTips(<Backup />)}</MemoryRouter>
       </QueryClientProvider>,
     );
     expect(screen.getByText('Sauvegarde complète')).toBeInTheDocument();
