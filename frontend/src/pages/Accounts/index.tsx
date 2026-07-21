@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTour } from '../../contexts/TourContext';
 import {
   DndContext,
   closestCenter,
@@ -42,6 +43,15 @@ export function Accounts() {
   useAutoStartTour('accounts'); // no requireData — page exists to create data
   const addBtnAnchor = useTourAnchor('accounts:add-button');
   const startingBalAnchor = useTourAnchor('accounts:starting-balance');
+
+  // Step 2 of the accounts tour points at the starting-balance field, which
+  // only exists once AccountForm is mounted. Open the form when the tour
+  // advances to that step; otherwise the anchor never registers and the
+  // TourContext 2 s fallback silently finishes the tour.
+  const { activePageId, stepIdx } = useTour();
+  useEffect(() => {
+    if (activePageId === 'accounts' && stepIdx === 1) setShowForm(true);
+  }, [activePageId, stepIdx]);
 
   const create = useMutation({
     mutationFn: (input: AccountFormValues) =>
