@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
-import { InfoTip } from './InfoTip';
+import { InfoTip } from '../InfoTip';
 import type { ReferenceRect } from './lib';
 
 interface Props {

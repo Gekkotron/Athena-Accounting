@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
-import { InfoTip } from './InfoTip';
+import { InfoTip } from '../InfoTip';
 import { ExtractedTextPanel } from './ExtractedTextPanel';
 import { AnchorPickerPanel } from './AnchorPickerPanel';
 import { PAINT_COLOR } from './constants';

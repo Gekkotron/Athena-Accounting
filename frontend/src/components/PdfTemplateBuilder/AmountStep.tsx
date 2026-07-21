@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { ZoneCanvas, type PageRect } from './ZoneCanvas.js';
-import { InfoTip } from './InfoTip';
+import { InfoTip } from '../InfoTip';
 import { PAINT_COLOR, type AmountMode } from './constants';
 import type { PdfImportNeedsTemplate } from '../../api/pdf-templates.js';
 
