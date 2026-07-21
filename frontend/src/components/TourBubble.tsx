@@ -197,7 +197,7 @@ export function TourBubble(): JSX.Element | null {
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className="fixed inset-x-2 bottom-2 z-40 max-w-[calc(100vw-1rem)] rounded-xl border border-ink-800 bg-ink-900 p-3 shadow-2xl outline-none"
+        className="fixed inset-x-2 bottom-2 z-40 max-w-[calc(100vw-1rem)] rounded-xl border border-ink-600 bg-ink-800 p-3 shadow-2xl ring-1 ring-ink-950/50 outline-none"
       >
         <div className="mb-2 text-xs text-ink-500">{mobilePointsTo}</div>
         {content}
@@ -223,11 +223,17 @@ export function TourBubble(): JSX.Element | null {
         tabIndex: -1,
         onKeyDown,
       })}
-      className="z-40 rounded-xl border border-ink-800 bg-ink-900 p-3 shadow-2xl outline-none"
+      className="z-40 rounded-xl border border-ink-600 bg-ink-800 p-3 shadow-2xl ring-1 ring-ink-950/50 outline-none"
     >
       {content}
       {buttonRow}
-      <FloatingArrow ref={arrowRef} context={context} className="fill-ink-900" tipRadius={2} />
+      <FloatingArrow
+        ref={arrowRef}
+        context={context}
+        className="fill-ink-800 [&>path:first-of-type]:stroke-ink-600"
+        strokeWidth={1}
+        tipRadius={2}
+      />
     </div>,
     document.body,
   );
