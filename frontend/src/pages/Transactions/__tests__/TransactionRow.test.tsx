@@ -247,43 +247,53 @@ describe('TransactionRow running-balance cell', () => {
   });
 });
 
-describe('TransactionRow checkpoint checkbox', () => {
+describe('TransactionRow checkpoint pin', () => {
   const txWithBalance: Transaction = { ...t, runningBalance: '70.00' };
   const cpLabel = /valider le solde/i;
 
-  it('shows an unchecked checkbox on the end-of-day row when no checkpoint exists', () => {
+  it('shows an unpressed pin button on the end-of-day row when no checkpoint exists', () => {
     renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true });
-    const cb = screen.getByRole('checkbox', { name: cpLabel });
-    expect(cb).not.toBeChecked();
+    const btn = screen.getByRole('button', { name: cpLabel });
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('shows a checked checkbox when a checkpoint exists for the date', () => {
+  it('shows a pressed pin button when a checkpoint exists for the date', () => {
     const checkpoint: BalanceCheckpoint = {
       id: 3, accountId: 1, checkpointDate: '2026-06-15', expectedAmount: '70.00', note: null, createdAt: '2026-06-15T00:00:00Z',
     };
     renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpoint });
-    expect(screen.getByRole('checkbox', { name: cpLabel })).toBeChecked();
+    expect(screen.getByRole('button', { name: cpLabel })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('calls onToggleCheckpoint(tx, true) when ticked', async () => {
+  it('calls onToggleCheckpoint(tx, true) when clicked from empty state', async () => {
     const user = userEvent.setup();
     const { onToggleCheckpoint } = renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true });
-    await user.click(screen.getByRole('checkbox', { name: cpLabel }));
+    await user.click(screen.getByRole('button', { name: cpLabel }));
     expect(onToggleCheckpoint).toHaveBeenCalledWith(txWithBalance, true);
   });
 
-  it('disables the checkbox while its mutation is pending', () => {
+  it('calls onToggleCheckpoint(tx, false) when clicked while a checkpoint is set', async () => {
+    const user = userEvent.setup();
+    const checkpoint: BalanceCheckpoint = {
+      id: 3, accountId: 1, checkpointDate: '2026-06-15', expectedAmount: '70.00', note: null, createdAt: '2026-06-15T00:00:00Z',
+    };
+    const { onToggleCheckpoint } = renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpoint });
+    await user.click(screen.getByRole('button', { name: cpLabel }));
+    expect(onToggleCheckpoint).toHaveBeenCalledWith(txWithBalance, false);
+  });
+
+  it('disables the pin button while its mutation is pending', () => {
     renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpointPending: true });
-    expect(screen.getByRole('checkbox', { name: cpLabel })).toBeDisabled();
+    expect(screen.getByRole('button', { name: cpLabel })).toBeDisabled();
   });
 
   it('is absent on a non-end-of-day row', () => {
     renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: false });
-    expect(screen.queryByRole('checkbox', { name: cpLabel })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: cpLabel })).not.toBeInTheDocument();
   });
 
   it('is absent when the row has no running balance', () => {
     renderRow({ tx: t, showBalance: true, isEndOfDay: true }); // t has no runningBalance
-    expect(screen.queryByRole('checkbox', { name: cpLabel })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: cpLabel })).not.toBeInTheDocument();
   });
 });

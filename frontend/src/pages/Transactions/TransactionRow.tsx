@@ -137,15 +137,29 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
           <td className="px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums text-ink-300">
             <span className="inline-flex items-center justify-end gap-2">
               {isEndOfDay && tx.runningBalance != null && (
-                <input
-                  type="checkbox"
-                  className="align-middle accent-sage-300"
-                  checked={checkpoint != null}
+                <button
+                  type="button"
+                  onClick={() => onToggleCheckpoint(tx, !(checkpoint != null))}
                   disabled={checkpointPending}
-                  onChange={(e) => onToggleCheckpoint(tx, e.target.checked)}
+                  aria-pressed={checkpoint != null}
                   aria-label={t('row.checkpointAriaLabel', { date: formatDate(tx.date) })}
                   title={t('row.checkpointTitle')}
-                />
+                  className={`inline-flex items-center rounded p-0.5 transition disabled:opacity-40 disabled:cursor-wait ${
+                    checkpoint != null
+                      ? 'text-sage-300 hover:text-sage-200'
+                      : 'text-ink-600 hover:text-sage-300 hover:bg-ink-900'
+                  }`}
+                >
+                  {checkpoint != null ? (
+                    <svg width="11" height="13" viewBox="0 0 12 14" fill="currentColor" aria-hidden>
+                      <path d="M2 1h8v11.2L6 9.6 2 12.2z" />
+                    </svg>
+                  ) : (
+                    <svg width="11" height="13" viewBox="0 0 12 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" aria-hidden>
+                      <path d="M2.5 1.5h7v9.7L6 9.05 2.5 11.2z" />
+                    </svg>
+                  )}
+                </button>
               )}
               <span>{tx.runningBalance != null ? formatAmount(tx.runningBalance, account?.currency ?? 'EUR') : '—'}</span>
             </span>
