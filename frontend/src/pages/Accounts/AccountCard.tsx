@@ -35,13 +35,13 @@ export function AccountCard({
   return (
     <div ref={setNodeRef} style={style} className="surface p-5 relative group">
       {/* Reserve room on the right for the absolute-positioned drag handle
-          + modifier cluster (top-3 right-3) so the currency badge doesn't
-          drift underneath it. Cluster is ~127px wide (drag + "modifier"
-          + kebab menu), so we reserve pr-36 (144px) to leave a comfortable
-          gap between the badge and the drag dots. */}
-      <div className="flex items-baseline justify-between gap-3 pr-36">
-        <div className="text-sm font-medium text-ink-100 truncate">{a.name}</div>
-        <span className="badge">{a.currency}</span>
+          + modifier cluster (top-3 right-3). Cluster is ~127px wide, so we
+          reserve pr-36 (144px). The currency badge sits inline right after
+          the account name (min-w-0 on the name lets it truncate before it
+          shoves the badge). */}
+      <div className="flex items-baseline gap-2 pr-36">
+        <div className="text-sm font-medium text-ink-100 truncate min-w-0">{a.name}</div>
+        <span className="badge shrink-0">{a.currency}</span>
       </div>
       <div className="label mt-0.5">{a.type}</div>
       <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
