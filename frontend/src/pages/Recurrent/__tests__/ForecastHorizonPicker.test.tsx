@@ -20,14 +20,14 @@ describe('ForecastHorizonPicker', () => {
   });
 
   it('calls onChange with the clicked horizon', () => {
-    const onChange = vi.fn<[Horizon], void>();
+    const onChange = vi.fn<(v: Horizon) => void>();
     render(<ForecastHorizonPicker value={30} onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'J+180' }));
     expect(onChange).toHaveBeenCalledWith(180);
   });
 
   it('lets the user step through every horizon in sequence', () => {
-    const onChange = vi.fn<[Horizon], void>();
+    const onChange = vi.fn<(v: Horizon) => void>();
     render(<ForecastHorizonPicker value={30} onChange={onChange} />);
     for (const h of HORIZONS) {
       fireEvent.click(screen.getByRole('button', { name: `J+${h}` }));
