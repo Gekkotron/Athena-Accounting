@@ -5,6 +5,7 @@ import type { Filters } from './filters';
 import { Th } from './Th';
 import { TransactionRow } from './TransactionRow';
 import { endOfDayRowIds } from './endOfDay';
+import { InfoTip } from '../../components/InfoTip';
 
 export function TransactionsTable({
   transactions,
@@ -89,7 +90,14 @@ export function TransactionsTable({
               <th className="px-4 py-3 label font-normal">{t('table.columns.category')}</th>
               <th className="px-4 py-3 label font-normal hidden md:table-cell">{t('table.columns.notes')}</th>
               <Th sort="amount" filters={filters} setFilters={setFilters} setOffset={setOffset} align="right">{t('table.columns.amount')}</Th>
-              {showBalance && <th className="px-4 py-3 label font-normal text-right">{t('table.columns.balance')}</th>}
+              {showBalance && (
+                <th className="px-4 py-3 label font-normal text-right">
+                  <span className="inline-flex items-center justify-end gap-1.5">
+                    {t('table.columns.balance')}
+                    <InfoTip text={t('table.balanceInfoTip')} />
+                  </span>
+                </th>
+              )}
               <th className="px-4 py-3"></th>
             </tr>
           </thead>

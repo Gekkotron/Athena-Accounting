@@ -54,6 +54,7 @@
       "amount": "Amount",
       "balance": "Balance"
     },
+    "balanceInfoTip": "Click the pin icon on any end-of-day row to freeze a reference balance. If the recomputed balance later drifts from that checkpoint, a transaction has been edited or dropped.",
     "empty": "No transactions."
   },
   "list": {

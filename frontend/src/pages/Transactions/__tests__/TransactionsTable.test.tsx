@@ -49,6 +49,7 @@ function renderTable(overrides: Partial<{
   isLoading: boolean;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
+  filters: Filters;
 }> = {}) {
   const setFilters = vi.fn();
   const setOffset = vi.fn();
@@ -66,7 +67,7 @@ function renderTable(overrides: Partial<{
       categories={cats}
       accountById={accountById}
       isLoading={overrides.isLoading ?? false}
-      filters={baseFilters}
+      filters={overrides.filters ?? baseFilters}
       setFilters={setFilters}
       setOffset={setOffset}
       selectedIds={new Set()}
@@ -124,5 +125,21 @@ describe('TransactionsTable', () => {
     const deleteButtons = screen.getAllByRole('button', { name: 'Supprimer' });
     await user.click(deleteButtons[1]!);
     expect(onDelete).toHaveBeenCalledWith(rows[1]);
+  });
+
+  it('renders the SOLDE info tip button when a single account is selected', () => {
+    renderTable({ filters: { ...baseFilters, accountId: 1 } });
+    const tip = screen.getByRole('button', {
+      name: /Cliquez sur l'icône épingle/,
+    });
+    expect(tip).toBeInTheDocument();
+    expect(tip).toHaveAttribute('title');
+  });
+
+  it('does not render the SOLDE info tip when no account is selected', () => {
+    renderTable();
+    expect(
+      screen.queryByRole('button', { name: /Cliquez sur l'icône épingle/ }),
+    ).not.toBeInTheDocument();
   });
 });

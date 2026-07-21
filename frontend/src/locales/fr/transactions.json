@@ -54,6 +54,7 @@
       "amount": "Montant",
       "balance": "Solde"
     },
+    "balanceInfoTip": "Cliquez sur l'icône épingle d'une ligne de fin de journée pour figer un solde de référence. Si le solde recalculé s'écarte plus tard de ce point de contrôle, une transaction a été modifiée ou oubliée.",
     "empty": "Aucune transaction."
   },
   "list": {
