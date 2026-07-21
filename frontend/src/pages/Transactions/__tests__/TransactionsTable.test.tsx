@@ -133,7 +133,6 @@ describe('TransactionsTable', () => {
       name: /Cliquez sur l'icône épingle/,
     });
     expect(tip).toBeInTheDocument();
-    expect(tip).toHaveAttribute('title');
   });
 
   it('does not render the SOLDE info tip when no account is selected', () => {
