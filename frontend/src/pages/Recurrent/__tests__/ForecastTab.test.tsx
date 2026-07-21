@@ -202,11 +202,10 @@ describe('ForecastTab', () => {
       recurring: [],
     });
     render(wrap(<ForecastTab />));
-    // ErrorState renders a retry button — assert by role so an i18n
-    // change to the button label doesn't break the test.
-    await waitFor(() => {
-      expect(screen.queryByTestId('balance-chart')).not.toBeInTheDocument();
-    });
-    expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+    // ErrorState renders a retry button under role="alert" — wait on the
+    // alert so we don't race the loading→error transition on slow CI.
+    const alert = await screen.findByRole('alert');
+    expect(alert.querySelector('button')).not.toBeNull();
+    expect(screen.queryByTestId('balance-chart')).not.toBeInTheDocument();
   });
 });
