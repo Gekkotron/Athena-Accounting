@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BalancePoint } from '../../api/types';
 import { formatAmountCompact, formatDateShort } from '../../lib/format';
@@ -6,7 +6,6 @@ import { buildAggregatedSeries } from './series';
 import { buildCheckpointMarks, type Checkpoint } from './checkpoints';
 import { BalanceTooltip } from './BalanceTooltip';
 import {
-  MIN_ZOOM_WIDTH_VB,
   mergeHistoricalAndProjection,
   computeYRange,
   computeActiveWindow,
@@ -14,6 +13,10 @@ import {
   buildAreaPath,
   buildAxisTicks,
 } from './lib';
+import {
+  useBalanceChartInteractions,
+  type ZoomState,
+} from './useBalanceChartInteractions';
 
 interface Props {
   points: BalancePoint[];
@@ -38,39 +41,8 @@ interface Props {
   alignEndTo?: number;
 }
 
-interface HoverState {
-  idx: number;
-  // viewBox X of the mouse itself (not the snapped bucket). Used to decide
-  // whether the mouse is close enough to a checkpoint to show its drift in
-  // the tooltip — under a time-based X, buckets near a checkpoint can still
-  // be far in pixels if the surrounding data is sparse.
-  mouseViewBoxX: number;
-  // Container-relative coordinates of the snapped data point, used to
-  // absolutely position the HTML tooltip so it tracks the point even when
-  // the SVG is scaled to fit different container widths.
-  x: number;
-  y: number;
-}
-
-// Active brush drag in viewBox coordinates. The rectangle is drawn between
-// `startVb` and `endVb`; on release, the range is committed as a zoom
-// window (or discarded if too narrow to be intentional).
-interface DragState {
-  startVb: number;
-  endVb: number;
-}
-
-interface ZoomState {
-  startMs: number;
-  endMs: number;
-}
-
 export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection, alignEndTo }: Props): JSX.Element {
   const { t } = useTranslation('charts');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [hover, setHover] = useState<HoverState | null>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
   const [zoom, setZoom] = useState<ZoomState | null>(null);
 
   const { data, projectionStartIdx } = useMemo(
@@ -82,14 +54,6 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
       }),
     [points, currency, projection, alignEndTo],
   );
-
-  if (data.length < 2) {
-    return (
-      <div className="text-sm text-ink-500 py-12 text-center font-display italic">
-        {t('balanceChart.notEnoughData')}
-      </div>
-    );
-  }
 
   const w = 1000;
   const h = height;
@@ -103,7 +67,10 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   // active zoom, the scale narrows to just the zoom window so that window
   // spans the full plot width; out-of-window buckets fall outside
   // [pad.left, w - pad.right] and get clipped by <clipPath id="chart-clip">.
-  const { activeFirstMs, activeLastMs, xSpan } = computeActiveWindow(data, zoom);
+  // Guarded on data.length so the empty-state branch below still gets
+  // consistent hook ordering (useBalanceChartInteractions runs on every path).
+  const { activeFirstMs, activeLastMs, xSpan } =
+    data.length > 0 ? computeActiveWindow(data, zoom) : { activeFirstMs: 0, activeLastMs: 1, xSpan: 1 };
   const xScale = (date: string) => pad.left + ((Date.parse(date) - activeFirstMs) / xSpan) * innerW;
   const xScaleAt = (i: number) => xScale(data[i]!.date);
   const yScale = (v: number) => pad.top + innerH - ((v - minY) / range) * innerH;
@@ -111,12 +78,29 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
   // a calendar zoom window.
   const vbToMs = (vb: number) => activeFirstMs + ((vb - pad.left) / innerW) * (activeLastMs - activeFirstMs);
 
+  const {
+    containerRef,
+    svgRef,
+    hover,
+    drag,
+    dragRect,
+    onMove,
+    onPointerDown,
+    onPointerUp,
+    onPointerLeave,
+  } = useBalanceChartInteractions({ data, xScaleAt, yScale, vbToMs, w, h, pad, setZoom });
+
+  if (data.length < 2) {
+    return (
+      <div className="text-sm text-ink-500 py-12 text-center font-display italic">
+        {t('balanceChart.notEnoughData')}
+      </div>
+    );
+  }
+
   const marks = buildCheckpointMarks(data, checkpoints, xScale);
-
   const { areaPath } = buildAreaPath({ data, projectionStartIdx, xScaleAt, yScale, pad, innerH });
-
   const segments = buildSegments({ data, projectionStartIdx, gapThresholdDays, xScaleAt, yScale });
-
   const { tickValues, xTicks } = buildAxisTicks({
     minY,
     range,
@@ -124,108 +108,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     xSpan,
     dataLength: data.length,
   });
-
   const zeroY = yScale(0);
-
-  const getViewBoxX = (clientX: number): number => {
-    const svg = svgRef.current;
-    if (!svg) return 0;
-    const rect = svg.getBoundingClientRect();
-    return ((clientX - rect.left) / rect.width) * w;
-  };
-
-  const inPlotArea = (vbX: number): boolean => vbX >= pad.left && vbX <= w - pad.right;
-
-  // Pointer down starts a brush drag when inside the plot area. Skipped on
-  // touch so the OS scroll gesture wins on mobile.
-  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (e.pointerType === 'touch') return;
-    const vbX = getViewBoxX(e.clientX);
-    if (!inPlotArea(vbX)) return;
-    setDrag({ startVb: vbX, endVb: vbX });
-    (e.currentTarget as SVGSVGElement).setPointerCapture?.(e.pointerId);
-  };
-
-  // Pointer move handler — updates the drag rect if a brush is active, and
-  // always keeps the hover tooltip anchored to the nearest data point.
-  const onMove = (e: React.MouseEvent<SVGSVGElement> | React.PointerEvent<SVGSVGElement>) => {
-    const svg = svgRef.current;
-    const container = containerRef.current;
-    if (!svg || !container) return;
-    const svgRect = svg.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    const xInViewBox = ((e.clientX - svgRect.left) / svgRect.width) * w;
-
-    if (drag !== null) {
-      // Clamp the drag endpoint to the plot area so a fling into the
-      // padding doesn't produce a useless zoom window.
-      const clamped = Math.max(pad.left, Math.min(w - pad.right, xInViewBox));
-      setDrag({ startVb: drag.startVb, endVb: clamped });
-      return; // suppress hover updates while dragging — tooltip would flicker
-    }
-
-    // Snap only to buckets currently in the active window (their X sits in
-    // the plot area). Under zoom, out-of-window buckets have X far outside
-    // and are visually clipped — tooltiping them would be surprising.
-    // Seed `closest` with the first in-plot bucket so a degenerate mouse
-    // coord (e.g. NaN from jsdom's zero-size layout in tests) still lands
-    // on something visible instead of dropping the tooltip.
-    let closest = -1;
-    for (let i = 0; i < data.length; i++) {
-      const cx = xScaleAt(i);
-      if (cx >= pad.left - 1 && cx <= w - pad.right + 1) { closest = i; break; }
-    }
-    if (closest < 0) {
-      setHover(null);
-      return;
-    }
-    let minDist = Math.abs(xScaleAt(closest) - xInViewBox);
-    for (let i = closest + 1; i < data.length; i++) {
-      const cx = xScaleAt(i);
-      if (cx < pad.left - 1 || cx > w - pad.right + 1) continue;
-      const dist = Math.abs(cx - xInViewBox);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = i;
-      }
-    }
-
-    const px = (xScaleAt(closest) / w) * svgRect.width;
-    const py = (yScale(data[closest]!.value) / h) * svgRect.height;
-
-    setHover({
-      idx: closest,
-      mouseViewBoxX: xInViewBox,
-      x: svgRect.left - containerRect.left + px,
-      y: svgRect.top - containerRect.top + py,
-    });
-  };
-
-  const commitZoomFromDrag = (d: DragState) => {
-    const width = Math.abs(d.endVb - d.startVb);
-    if (width < MIN_ZOOM_WIDTH_VB) return; // stray click — ignore
-    const a = vbToMs(d.startVb);
-    const b = vbToMs(d.endVb);
-    setZoom({ startMs: Math.min(a, b), endMs: Math.max(a, b) });
-  };
-
-  const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (drag !== null) {
-      commitZoomFromDrag(drag);
-      setDrag(null);
-    }
-    (e.currentTarget as SVGSVGElement).releasePointerCapture?.(e.pointerId);
-  };
-
-  const onPointerLeave = () => {
-    setHover(null);
-    // Keep `drag` active if the pointer is captured — the user can drag out
-    // and back in. Pointer capture ensures we still receive the eventual
-    // pointerup even when the pointer leaves the SVG bounds.
-  };
-
-  const onDoubleClick = () => setZoom(null);
 
   const hovered = hover !== null ? data[hover.idx] : null;
 
@@ -251,10 +134,6 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     return closest;
   })();
 
-  const dragRect = drag !== null && Math.abs(drag.endVb - drag.startVb) >= MIN_ZOOM_WIDTH_VB
-    ? { x: Math.min(drag.startVb, drag.endVb), width: Math.abs(drag.endVb - drag.startVb) }
-    : null;
-
   return (
     <div ref={containerRef} className="w-full relative">
       <svg
@@ -269,7 +148,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         onPointerMove={onMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
-        onDoubleClick={onDoubleClick}
+        onDoubleClick={() => setZoom(null)}
       >
         <defs>
           <linearGradient id="g-balance" x1="0" y1="0" x2="0" y2="1">
@@ -291,23 +170,8 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         {/* horizontal grid */}
         {tickValues.map((t, i) => (
           <g key={i}>
-            <line
-              x1={pad.left}
-              y1={yScale(t)}
-              x2={w - pad.right}
-              y2={yScale(t)}
-              stroke={t === 0 ? '#3a4252' : '#1d2230'}
-              strokeDasharray={t === 0 ? undefined : '2 6'}
-            />
-            <text
-              x={pad.left - 10}
-              y={yScale(t) + 4}
-              fill="#5b6478"
-              fontSize="11"
-              textAnchor="end"
-              fontFamily="JetBrains Mono Variable, monospace"
-              className="private"
-            >
+            <line x1={pad.left} y1={yScale(t)} x2={w - pad.right} y2={yScale(t)} stroke={t === 0 ? '#3a4252' : '#1d2230'} strokeDasharray={t === 0 ? undefined : '2 6'} />
+            <text x={pad.left - 10} y={yScale(t) + 4} fill="#5b6478" fontSize="11" textAnchor="end" fontFamily="JetBrains Mono Variable, monospace" className="private">
               {formatAmountCompact(t, currency)}
             </text>
           </g>
@@ -315,15 +179,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
 
         {/* x-axis labels — evenly spaced by calendar time on the active window. */}
         {xTicks.map((date, i) => (
-          <text
-            key={i}
-            x={xScale(date)}
-            y={h - 10}
-            fill="#5b6478"
-            fontSize="10"
-            textAnchor="middle"
-            fontFamily="JetBrains Mono Variable, monospace"
-          >
+          <text key={i} x={xScale(date)} y={h - 10} fill="#5b6478" fontSize="10" textAnchor="middle" fontFamily="JetBrains Mono Variable, monospace">
             {formatDateShort(date)}
           </text>
         ))}
@@ -333,16 +189,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         <g clipPath="url(#chart-clip)">
           <path d={areaPath} fill="url(#g-balance)" />
           {segments.map((s, i) => (
-            <path
-              key={i}
-              d={s.d}
-              fill="none"
-              stroke="#7dd3c0"
-              strokeWidth="1.75"
-              strokeDasharray={s.dashed ? '4 5' : undefined}
-              strokeLinecap={s.dashed ? 'round' : undefined}
-              filter={s.dashed ? undefined : 'url(#glow)'}
-            />
+            <path key={i} d={s.d} fill="none" stroke="#7dd3c0" strokeWidth="1.75" strokeDasharray={s.dashed ? '4 5' : undefined} strokeLinecap={s.dashed ? 'round' : undefined} filter={s.dashed ? undefined : 'url(#glow)'} />
           ))}
 
           {/* Balance checkpoints — diamond markers + optional drift guide */}
@@ -354,27 +201,11 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
             return (
               <g key={`cp-${m.date}`} pointerEvents="none">
                 {m.drift && (
-                  <line
-                    x1={m.cx}
-                    y1={cyExpected}
-                    x2={m.cx}
-                    y2={cyActual}
-                    stroke={color}
-                    strokeDasharray="3 3"
-                    strokeWidth="1"
-                    opacity="0.8"
-                  />
+                  <line x1={m.cx} y1={cyExpected} x2={m.cx} y2={cyActual} stroke={color} strokeDasharray="3 3" strokeWidth="1" opacity="0.8" />
                 )}
                 {/* Diamond = rotated 4-sided path centered on (m.cx, cyExpected) */}
-                <path
-                  d={`M ${m.cx} ${cyExpected - 5} L ${m.cx + 5} ${cyExpected} L ${m.cx} ${cyExpected + 5} L ${m.cx - 5} ${cyExpected} Z`}
-                  fill={fill}
-                  stroke={color}
-                  strokeWidth="2"
-                />
-                {m.drift && (
-                  <circle cx={m.cx} cy={cyActual} r="2" fill={color} />
-                )}
+                <path d={`M ${m.cx} ${cyExpected - 5} L ${m.cx + 5} ${cyExpected} L ${m.cx} ${cyExpected + 5} L ${m.cx - 5} ${cyExpected} Z`} fill={fill} stroke={color} strokeWidth="2" />
+                {m.drift && <circle cx={m.cx} cy={cyActual} r="2" fill={color} />}
               </g>
             );
           })}
@@ -396,37 +227,14 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           {/* hover guide + highlighted dot */}
           {hover !== null && drag === null && (
             <g pointerEvents="none">
-              <line
-                x1={xScaleAt(hover.idx)}
-                y1={pad.top}
-                x2={xScaleAt(hover.idx)}
-                y2={pad.top + innerH}
-                stroke="#5b6478"
-                strokeDasharray="3 4"
-                strokeWidth="1"
-              />
-              <circle
-                cx={xScaleAt(hover.idx)}
-                cy={yScale(data[hover.idx]!.value)}
-                r="5"
-                fill="#0b0d11"
-                stroke="#7dd3c0"
-                strokeWidth="2"
-              />
+              <line x1={xScaleAt(hover.idx)} y1={pad.top} x2={xScaleAt(hover.idx)} y2={pad.top + innerH} stroke="#5b6478" strokeDasharray="3 4" strokeWidth="1" />
+              <circle cx={xScaleAt(hover.idx)} cy={yScale(data[hover.idx]!.value)} r="5" fill="#0b0d11" stroke="#7dd3c0" strokeWidth="2" />
             </g>
           )}
 
           {/* Live brush selection */}
           {dragRect && (
-            <rect
-              x={dragRect.x}
-              y={pad.top}
-              width={dragRect.width}
-              height={innerH}
-              fill="#7dd3c0"
-              opacity="0.14"
-              pointerEvents="none"
-            />
+            <rect x={dragRect.x} y={pad.top} width={dragRect.width} height={innerH} fill="#7dd3c0" opacity="0.14" pointerEvents="none" />
           )}
         </g>
 
@@ -438,26 +246,13 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
       </svg>
 
       {zoom !== null && (
-        <button
-          type="button"
-          onClick={() => setZoom(null)}
-          className="absolute top-2 right-2 text-[11px] text-ink-300 hover:text-ink-50 bg-ink-900/85 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition"
-          title={t('balanceChart.zoomReset.title')}
-        >
+        <button type="button" onClick={() => setZoom(null)} className="absolute top-2 right-2 text-[11px] text-ink-300 hover:text-ink-50 bg-ink-900/85 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition" title={t('balanceChart.zoomReset.title')}>
           {t('balanceChart.zoomReset.button')}
         </button>
       )}
 
       {hover !== null && drag === null && hovered && (
-        <BalanceTooltip
-          hovered={hovered}
-          hoveredCheckpoint={hoveredCheckpoint}
-          currency={currency}
-          x={hover.x}
-          y={hover.y}
-          containerWidth={containerRef.current?.clientWidth ?? 1000}
-          previousValue={hover.idx > 0 ? data[hover.idx - 1]!.value : null}
-        />
+        <BalanceTooltip hovered={hovered} hoveredCheckpoint={hoveredCheckpoint} currency={currency} x={hover.x} y={hover.y} containerWidth={containerRef.current?.clientWidth ?? 1000} previousValue={hover.idx > 0 ? data[hover.idx - 1]!.value : null} />
       )}
     </div>
   );
