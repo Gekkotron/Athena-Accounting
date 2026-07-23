@@ -112,6 +112,26 @@ describe('Settings page', () => {
     expect(patchCalls[0]).toEqual(DEFAULTS);
   });
 
+  it('changing the "Transactions" default account sends a PATCH', async () => {
+    const patchCalls: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [{ id: 3, name: 'Courant', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2025-01-01' }] };
+      if (path === '/api/settings' && init?.method === 'PATCH') {
+        patchCalls.push(init.json);
+        return { settings: { ...DEFAULTS, ...init.json } };
+      }
+      if (path === '/api/settings') return { settings: DEFAULTS };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
+    const select = screen.getByLabelText(/compte affiché par défaut/i) as HTMLSelectElement;
+    await u.selectOptions(select, '3');
+    await waitFor(() => expect(patchCalls).toHaveLength(1));
+    expect(patchCalls[0]).toEqual({ transactionsDefaultAccount: 3 });
+  });
+
   it('does not leave the "Enregistré" chip visible when the PATCH fails', async () => {
     apiMock.mockImplementation(async (path: string, init?: any) => {
       if (path === '/api/accounts') return { accounts: [] };

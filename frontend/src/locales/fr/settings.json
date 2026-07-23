@@ -18,6 +18,12 @@
         "help": "Un écart supérieur à X jours entre deux points est tracé en pointillés."
       }
     },
+    "transactionsSection": {
+      "label": "Transactions",
+      "defaultAccountLabel": "Compte affiché par défaut",
+      "firstCheckingOption": "Premier compte courant",
+      "allAccountsOption": "Tous les comptes"
+    },
     "importsSection": {
       "label": "Imports",
       "duplicateThreshold": {

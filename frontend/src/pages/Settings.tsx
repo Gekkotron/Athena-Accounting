@@ -134,6 +134,44 @@ export function Settings(): JSX.Element {
         </section>
 
         <section className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
+          <div className="label">{t('settings.transactionsSection.label')}</div>
+
+          <div>
+            <label className="text-sm mb-2 block">
+              {t('settings.transactionsSection.defaultAccountLabel')}
+              {flashKey === 'transactionsDefaultAccount' && <SavedChip />}
+            </label>
+            <select
+              className="input"
+              aria-label={t('settings.transactionsSection.defaultAccountLabel')}
+              value={
+                settings.transactionsDefaultAccount === 'first-checking'
+                  ? 'first-checking'
+                  : settings.transactionsDefaultAccount === 'all'
+                    ? 'all'
+                    : String(settings.transactionsDefaultAccount)
+              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'first-checking' || v === 'all') {
+                  send('transactionsDefaultAccount', v);
+                } else {
+                  send('transactionsDefaultAccount', Number(v));
+                }
+              }}
+            >
+              <option value="first-checking">{t('settings.transactionsSection.firstCheckingOption')}</option>
+              <option value="all">{t('settings.transactionsSection.allAccountsOption')}</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.currency})
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
           <div className="label">{t('settings.importsSection.label')}</div>
           <NumberField
             label={t('settings.importsSection.duplicateThreshold.label')}

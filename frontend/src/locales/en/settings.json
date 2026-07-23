@@ -18,6 +18,12 @@
         "help": "A gap of more than X days between two points is drawn as a dashed line."
       }
     },
+    "transactionsSection": {
+      "label": "Transactions",
+      "defaultAccountLabel": "Default account on the Transactions page",
+      "firstCheckingOption": "First checking account",
+      "allAccountsOption": "All accounts"
+    },
     "importsSection": {
       "label": "Imports",
       "duplicateThreshold": {
