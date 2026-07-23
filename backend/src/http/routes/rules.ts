@@ -35,10 +35,12 @@ function isPgError(err: unknown): err is { code: string } {
 export async function rulesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
 
-  app.get('/api/rules', async () => {
+  app.get('/api/rules', async (req) => {
+    const uid = userId(req);
     const rows = await db
       .select()
       .from(rules)
+      .where(eq(rules.userId, uid))
       .orderBy(desc(rules.priority), rules.id);
     return { rules: rows };
   });
@@ -64,6 +66,7 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.put('/api/rules/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const parsed = UpdateBody.safeParse(req.body);
@@ -76,18 +79,19 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
     const [updated] = await db
       .update(rules)
       .set(parsed.data)
-      .where(eq(rules.id, id))
+      .where(and(eq(rules.id, id), eq(rules.userId, uid)))
       .returning();
     if (!updated) return reply.code(404).send({ error: 'not found' });
     return { rule: updated };
   });
 
   app.delete('/api/rules/:id', async (req, reply) => {
+    const uid = userId(req);
     const id = parseId(req, reply);
     if (id === null) return;
     const [deleted] = await db
       .delete(rules)
-      .where(eq(rules.id, id))
+      .where(and(eq(rules.id, id), eq(rules.userId, uid)))
       .returning({ id: rules.id });
     if (!deleted) return reply.code(404).send({ error: 'not found' });
     return { ok: true };

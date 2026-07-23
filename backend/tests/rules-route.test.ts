@@ -182,4 +182,45 @@ describe.skipIf(!RUN)('/api/rules', () => {
     const res = await app.inject({ method: 'GET', url: '/api/rules' });
     expect(res.statusCode).toBe(401);
   });
+
+  it("does not leak, mutate, or delete another user's rules (cross-user isolation)", async () => {
+    const { db } = await import('../src/db/client.js');
+    const { users, categories, rules } = await import('../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    // Second user with their own category + rule, inserted directly
+    // (onboarding refuses a second user after the first-run account exists).
+    const [otherUser] = await db.insert(users).values({
+      username: 'other-user-rules', passwordHash: 'x',
+    }).returning();
+    const [otherCat] = await db.insert(categories).values({
+      userId: otherUser!.id, name: 'Autre Rules', kind: 'expense',
+    }).returning();
+    const [otherRule] = await db.insert(rules).values({
+      userId: otherUser!.id, categoryId: otherCat!.id, keyword: 'secret-keyword',
+    }).returning();
+
+    // The first user must not see the other user's rule in their list.
+    const list = await app.inject({ method: 'GET', url: '/api/rules', headers: { cookie } });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().rules.some((r: { id: number }) => r.id === otherRule!.id)).toBe(false);
+
+    // And must not be able to update or delete it — 404, never 200.
+    const put = await app.inject({
+      method: 'PUT', url: `/api/rules/${otherRule!.id}`,
+      headers: { cookie }, payload: { keyword: 'hijacked' },
+    });
+    expect(put.statusCode).toBe(404);
+    const del = await app.inject({
+      method: 'DELETE', url: `/api/rules/${otherRule!.id}`, headers: { cookie },
+    });
+    expect(del.statusCode).toBe(404);
+
+    // The other user's rule is untouched.
+    const [still] = await db.select().from(rules).where(eq(rules.id, otherRule!.id));
+    expect(still?.keyword).toBe('secret-keyword');
+
+    // Cleanup — cascades to the category + rule.
+    await db.delete(users).where(eq(users.id, otherUser!.id));
+  });
 });
