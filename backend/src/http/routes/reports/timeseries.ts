@@ -50,19 +50,36 @@ export function registerTimeseriesRoute(app: FastifyInstance): void {
         WHERE a.user_id = ${uid}
         UNION ALL
         SELECT account_id, currency, 'tx' AS kind, bucket, delta FROM per_bucket
+      ),
+      with_cumulative AS (
+        SELECT
+          account_id,
+          currency,
+          bucket,
+          SUM(delta) AS delta,
+          SUM(SUM(delta)) OVER (
+            PARTITION BY account_id
+            ORDER BY bucket
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ) AS cumulative
+        FROM with_opening
+        GROUP BY account_id, currency, bucket
       )
+      -- Clip the opening bucket to the requested window AFTER the cumulative
+      -- sum runs, so the first surviving row's cumulative already includes
+      -- the opening balance instead of the client receiving a stray point
+      -- dated years before fromDate (accounts opened in 2020 answering a
+      -- 2026 range).
       SELECT
         account_id,
         currency,
         bucket,
-        SUM(delta)::text AS delta,
-        SUM(SUM(delta)) OVER (
-          PARTITION BY account_id
-          ORDER BY bucket
-          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-        )::text AS cumulative
-      FROM with_opening
-      GROUP BY account_id, currency, bucket
+        delta::text AS delta,
+        cumulative::text AS cumulative
+      FROM with_cumulative
+      WHERE 1 = 1
+        ${fromDate ? sql`AND bucket >= ${fromDate}` : sql``}
+        ${toDate ? sql`AND bucket <= ${toDate}` : sql``}
       ORDER BY account_id, bucket
     `);
 
