@@ -134,10 +134,13 @@ jobs:
 
       - name: Build Tauri app
         working-directory: desktop/src-tauri
-        # No code-signing keys wired up yet. `bundle.macOS.signingIdentity`
-        # is set to `null` in tauri.conf.json so the bundler skips signing
-        # entirely; setting APPLE_* env vars (even to empty strings) triggers
-        # `security import`, so we leave them unset.
+        # No Apple Developer ID yet. `bundle.macOS.signingIdentity` is set to
+        # `"-"` in tauri.conf.json so tauri runs `codesign -s -` (ad-hoc). This
+        # is what avoids the "app is damaged" Gatekeeper message on macOS 14+;
+        # without any signature the OS refuses to launch a quarantined app.
+        # Users still see the softer "unidentified developer" dialog on first
+        # launch — bypass via right-click → Open (docs/standalone-app-distribution.md).
+        # APPLE_* env vars stay unset (they trigger `security import`).
         run: tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.tauri_bundles }}
 
       - name: Collect installer artifact

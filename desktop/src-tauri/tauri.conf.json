@@ -30,7 +30,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": null
+      "signingIdentity": "-"
     }
   }
 }
