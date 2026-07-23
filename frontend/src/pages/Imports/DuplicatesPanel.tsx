@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../../api/client';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../api/client';
 import type { Account } from '../../api/types';
 import { getAccountName } from '../../lib/accounts';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
 import { DemoUnavailableState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { isDemoStubError } from '../../api/errorMessage';
+import { useDuplicatesMutations } from './useDuplicatesMutations';
 
 export function DuplicatesPanel(): JSX.Element {
   const { t } = useTranslation(['imports', 'common', 'transactions']);
-  const qc = useQueryClient();
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -36,77 +36,23 @@ export function DuplicatesPanel(): JSX.Element {
     refetchOnWindowFocus: true,
   });
 
-  // Mark every row in a doublons group as "not a duplicate". The group then
-  // disappears from the panel because BOOL_OR(NOT not_duplicate) goes false.
-  // If a NEW row with the same (account, date, amount) shows up later, the
-  // group re-appears so the user can re-evaluate.
-  const markNotDuplicateMut = useMutation({
-    mutationFn: (ids: number[]) =>
-      api<{ updated: number }>('/api/transactions/mark-not-duplicate', {
-        method: 'POST',
-        json: { ids },
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
-    },
-  });
-
   // Delete a single transaction directly from the doublons panel. Confirms inline
   // before firing to avoid an accidental click on the trash icon.
   const [confirmDeleteTxId, setConfirmDeleteTxId] = useState<number | null>(null);
   const [dupDeleteError, setDupDeleteError] = useState<string | null>(null);
-  const deleteTxMut = useMutation({
-    mutationFn: (id: number) =>
-      api<{ ok: true }>(`/api/transactions/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      qc.invalidateQueries({ queryKey: ['tri-groups'] });
-      setConfirmDeleteTxId(null);
-      setDupDeleteError(null);
-    },
-    onError: (err: ApiError) => setDupDeleteError(err.message),
-  });
-
   // Bulk selection across groups. Distinct from the per-group "Pas un doublon"
   // button (which acts on every row of a group) — the user picks specific rows
   // spanning groups and applies one action to all of them.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkError, setBulkError] = useState<string | null>(null);
 
-  const bulkDeleteMut = useMutation({
-    mutationFn: (ids: number[]) =>
-      api<{ deleted: number }>('/api/transactions/delete-bulk', {
-        method: 'POST',
-        json: { ids },
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      qc.invalidateQueries({ queryKey: ['tri-groups'] });
-      setSelectedIds(new Set());
-      setBulkError(null);
-    },
-    onError: (err: ApiError) => setBulkError(err.message),
-  });
-
-  const bulkMarkNotDupMut = useMutation({
-    mutationFn: (ids: number[]) =>
-      api<{ updated: number }>('/api/transactions/mark-not-duplicate', {
-        method: 'POST',
-        json: { ids },
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
-      setSelectedIds(new Set());
-      setBulkError(null);
-    },
-    onError: (err: ApiError) => setBulkError(err.message),
-  });
+  const { markNotDuplicateMut, deleteTxMut, bulkDeleteMut, bulkMarkNotDupMut } =
+    useDuplicatesMutations({
+      setConfirmDeleteTxId,
+      setDupDeleteError,
+      setSelectedIds,
+      setBulkError,
+    });
 
   const toggleSelect = (id: number, checked: boolean) =>
     setSelectedIds((s) => {
