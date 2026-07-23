@@ -1,28 +1,17 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import {
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
 import { kindLabel, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { resolveDrop } from './dragNest';
 import { CategoryColorPicker } from './CategoryColorPicker';
 import { CategoryTableRow } from './CategoryTableRow';
 import { DragGhost } from './DragGhost';
 import { buildOwnTotalsByCat, rolledUpTotal } from './categoriesTotals';
+import { useCategoriesDrag } from './useCategoriesDrag';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
@@ -89,52 +78,15 @@ export function Categories() {
     },
   });
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [colorPickerFor, setColorPickerFor] = useState<Category | null>(null);
 
-  const onDragStart = (e: DragStartEvent) => {
-    if (typeof e.active.id === 'number') setActiveDragId(e.active.id);
-  };
-
-  const onDragEnd = (e: DragEndEvent) => {
-    setActiveDragId(null);
-    const { active, over, delta, activatorEvent } = e;
-    if (typeof active.id !== 'number') return;
-
-    const activeCat = cats.find((c) => c.id === active.id);
-
-    // Promote (checked first): if the pointer ended up LEFT of the table's
-    // left edge, un-nest the child. Runs before the drop-target branch
-    // because closestCenter almost always picks some root row as `over` —
-    // guarding on `!over` would make this branch unreachable.
-    if (activeCat && activeCat.parentId != null && activatorEvent) {
-      const evt = activatorEvent as { clientX?: number };
-      const tableRect = tableRef.current?.getBoundingClientRect();
-      if (typeof evt.clientX === 'number' && tableRect) {
-        const endPointerX = evt.clientX + delta.x;
-        if (endPointerX < tableRect.left) {
-          updateCategory.mutate({ id: activeCat.id, patch: { parentId: null } });
-          return;
-        }
-      }
-    }
-
-    // Nest / re-parent: dropped onto a root row.
-    if (over && typeof over.id === 'number') {
-      const resolved = resolveDrop(active.id, over.id, cats);
-      if (resolved) {
-        updateCategory.mutate({ id: resolved.id, patch: { parentId: resolved.parentId } });
-      }
-    }
-  };
-
-  const onDragCancel = () => setActiveDragId(null);
+  const cats = catQ.data?.categories ?? [];
+  const { activeDragId, sensors, onDragStart, onDragEnd, onDragCancel } = useCategoriesDrag({
+    cats,
+    tableRef,
+    onReparent: (id, parentId) => updateCategory.mutate({ id, patch: { parentId } }),
+  });
 
   const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -163,7 +115,6 @@ export function Categories() {
     });
   };
 
-  const cats = catQ.data?.categories ?? [];
   const report = reportQ.data?.rows ?? [];
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
   const byId = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
