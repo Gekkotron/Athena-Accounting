@@ -12,7 +12,9 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:db": "bash scripts/test-db.sh",
-    "test:drill": "tsx scripts/backup-drill.ts"
+    "test:drill": "tsx scripts/backup-drill.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -37,15 +39,19 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.5",
     "@types/node": "^22.10.0",
     "@types/pdfkit": "^0.13.5",
     "@types/pg": "^8.11.10",
     "@vitest/coverage-v8": "^2.1.8",
     "drizzle-kit": "^0.28.1",
+    "eslint": "9.39.5",
     "form-data": "^4.0.6",
+    "globals": "15.15.0",
     "pdfkit": "^0.15.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
+    "typescript-eslint": "8.65.0",
     "vitest": "^2.1.8"
   },
   "engines": {
