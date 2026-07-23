@@ -15,5 +15,8 @@
     "expense": "Dépense",
     "income": "Revenu",
     "neutral": "Neutre"
+  },
+  "errors": {
+    "demoUnavailable": "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser."
   }
 }

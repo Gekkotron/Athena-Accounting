@@ -15,5 +15,8 @@
     "expense": "Expense",
     "income": "Income",
     "neutral": "Neutral"
+  },
+  "errors": {
+    "demoUnavailable": "This feature is not available in the demo. Install Athena to use it."
   }
 }

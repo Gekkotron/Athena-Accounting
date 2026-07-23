@@ -21,9 +21,10 @@ describe('demo stubs + errorMessage', () => {
     expect(caught).toBeInstanceOf(ApiError);
     expect((caught as ApiError).status).toBe(501);
     expect(isDemoStubError(caught)).toBe(true);
-    expect(errorMessage(caught, noopT)).toBe(
-      "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser.",
-    );
+    // Was a hard-coded French literal; now goes through i18n. The passthrough
+    // `noopT` returns the key, so this test locks in the routing rather than
+    // the copy — the actual French/English strings live in the locale JSONs.
+    expect(errorMessage(caught, noopT)).toBe('errors.demoUnavailable');
   });
 
   it('GET /api/pdf-templates is stubbed', async () => {

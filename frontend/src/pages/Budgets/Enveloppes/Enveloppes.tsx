@@ -11,6 +11,7 @@ import { HoldModal } from './HoldModal';
 import { SettingsModal } from './SettingsModal';
 import { UnbudgetedInline } from './UnbudgetedInline';
 import { distributePoolAcrossEnvelopes } from '../envelope-math';
+import { formatAmount } from '../../../lib/format';
 import { ErrorState, LoadingBlock } from '../../../components/StateBlocks';
 import { useAutoStartTour } from '../../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../../hooks/useTourAnchor';
@@ -94,7 +95,7 @@ export function Enveloppes(): JSX.Element {
 
       {poolNegative && (
         <div className="surface p-4 border border-clay-500/60 text-clay-200">
-          {t('envelopes.pool.negativeBanner', { amount: formatSignedAbs(pool!.available) })}
+          {t('envelopes.pool.negativeBanner', { amount: formatAmount(Math.abs(Number(pool!.available))) })}
         </div>
       )}
 
@@ -188,8 +189,4 @@ function formatMonthLabel(ym: string, lang: string): string {
   const [y, m] = ym.split('-').map(Number);
   const locale = lang.startsWith('en') ? 'en-US' : 'fr-FR';
   return new Date(y!, m! - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-}
-function formatSignedAbs(m: string): string {
-  const n = Math.abs(Number(m));
-  return n.toFixed(2).replace('.', ',') + ' €';
 }

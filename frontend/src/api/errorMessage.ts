@@ -61,7 +61,7 @@ export function isDemoStubError(err: unknown): boolean {
 
 export function errorMessage(err: unknown, t: TFunction): string {
   if (isDemoStubError(err)) {
-    return "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser.";
+    return t('errors.demoUnavailable', { ns: 'common' });
   }
   const { code, reason } = extractCodeAndReason(err);
   switch (code) {
