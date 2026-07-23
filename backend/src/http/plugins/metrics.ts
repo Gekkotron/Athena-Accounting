@@ -8,6 +8,8 @@ import {
   collectDefaultMetrics,
 } from 'prom-client';
 import { pool } from '../../db/client.js';
+import { env } from '../../env.js';
+import { bearerTokenMatches } from './metrics-auth.js';
 
 export interface MetricsBag {
   httpRequestsTotal: Counter<'method' | 'route' | 'status_class'>;
@@ -138,9 +140,25 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   });
 
+  // Prometheus scrapers can't drive a session cookie, so /metrics is gated
+  // by an optional bearer token instead of app.requireAuth. Without a token
+  // set we warn at startup rather than crash — LAN-only deployments may
+  // deliberately want an open scrape target — but the endpoint exposes
+  // cross-user aggregate counts and backup timestamps to any network
+  // client, so production deployments should always set METRICS_TOKEN.
+  const configuredToken = env.METRICS_TOKEN;
+  if (!configuredToken) {
+    app.log.warn(
+      '/metrics is unauthenticated — set METRICS_TOKEN to require a bearer token',
+    );
+  }
+
   app.get('/metrics', {
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
-  }, async (_req, reply) => {
+  }, async (req, reply) => {
+    if (configuredToken && !bearerTokenMatches(req.headers.authorization, configuredToken)) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
     reply.header('Content-Type', registry.contentType);
     return registry.metrics();
   });

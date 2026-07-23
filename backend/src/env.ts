@@ -25,6 +25,12 @@ const Env = z
     DATABASE_URL: z.string().url().optional(),
     PGLITE_PATH: z.string().optional(),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
+    // Optional bearer token for /metrics. When set, the endpoint requires
+    // `Authorization: Bearer <token>` and rejects everything else with 401.
+    // When empty, the endpoint stays open — a startup warning is logged so
+    // operators know to configure it before exposing the app beyond the LAN.
+    // Prometheus scrapers can pass the token via `bearer_token`/`bearer_token_file`.
+    METRICS_TOKEN: z.string().min(16).optional(),
     // Default false because self-hosted LAN deployments typically run over plain
     // HTTP. Set to true when running behind an HTTPS-terminating reverse proxy.
     COOKIE_SECURE: boolish.default(false),
