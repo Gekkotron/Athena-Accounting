@@ -12,7 +12,7 @@ import { computeDedupKey } from './dedup.js';
 import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { detectTransfers } from '../transfers/detector.js';
-import { runRecurringDetection } from '../../services/recurring-detect.js';
+import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 
 export type ImportFormat = 'ofx' | 'csv' | 'pdf';
 
@@ -69,7 +69,7 @@ export async function runImport(opts: {
 }): Promise<ImportResult> {
   const parsed = opts.prepared ?? parseFile(opts.buffer!, opts.format);
 
-  return await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [fileImport] = await tx
       .insert(fileImports)
       .values({
@@ -184,12 +184,6 @@ export async function runImport(opts: {
           .set({ categoryId: defaultId, categorySource: 'default' })
           .where(inArray(transactions.id, defaultBucket));
       }
-
-      // Refresh detected recurring series over the user's last 12
-      // months so the Récurrent page reflects the new import. Runs
-      // inside the same transaction so an import either lands with
-      // its detection artefacts or rolls back entirely.
-      await runRecurringDetection(tx, opts.userId);
     }
 
     return {
@@ -203,4 +197,17 @@ export async function runImport(opts: {
       dedupSkippedRows,
     };
   });
+
+  // Recurring-series detection was previously awaited inside the import
+  // transaction — clustering the last 12 months of transactions on PGlite
+  // (single-threaded WASM) can take many seconds on a 500-row import,
+  // during which the /api/imports request never responds and the UI stays
+  // stuck on the preview modal. Kick it off fire-and-forget instead; it
+  // gets its own transaction (runRecurringDetectionStandalone) and users
+  // can also trigger a refresh manually via POST /api/recurring/regenerate.
+  runRecurringDetectionStandalone(opts.userId).catch((err) => {
+    console.error('[imports] background recurring detection failed', err);
+  });
+
+  return result;
 }
