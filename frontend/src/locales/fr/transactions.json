@@ -129,7 +129,8 @@
       "invalidDate": "Date invalide. Format attendu : JJ/MM/AAAA (ex. 14/07/2025).",
       "invalidAmount": "Montant invalide. Format attendu : 338.50, -25,30, 1234, …",
       "labelRequired": "Le libellé est obligatoire.",
-      "invalidLockYears": "Blocage : entier entre 0 et 99, ou laisser vide."
+      "invalidLockYears": "Blocage : entier entre 0 et 99, ou laisser vide.",
+      "createdButSplitsFailed": "Transaction créée, mais l'enregistrement des ventilations a échoué ({{message}}). Ferme cette fenêtre puis rouvre la transaction depuis la liste pour ressayer."
     },
     "actions": {
       "create": "Créer la transaction",

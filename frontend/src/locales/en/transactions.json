@@ -129,7 +129,8 @@
       "invalidDate": "Invalid date. Expected format: DD/MM/YYYY (e.g. 14/07/2025).",
       "invalidAmount": "Invalid amount. Expected format: 338.50, -25.30, 1234, …",
       "labelRequired": "The label is required.",
-      "invalidLockYears": "Lock: an integer between 0 and 99, or leave empty."
+      "invalidLockYears": "Lock: an integer between 0 and 99, or leave empty.",
+      "createdButSplitsFailed": "Transaction created, but the splits could not be saved ({{message}}). Close this window and re-open the transaction from the list to retry."
     },
     "actions": {
       "create": "Create the transaction",

@@ -223,6 +223,40 @@ describe('TransactionModal', () => {
     expect(apiMock).not.toHaveBeenCalledWith('/api/transactions/1', expect.objectContaining({ method: 'PATCH' }));
   });
 
+  it('locks the create button when the parent POST succeeds but the splits PUT fails, so re-clicking cannot mint a duplicate', async () => {
+    apiMock
+      .mockResolvedValueOnce({ transaction: { id: 999 } })    // POST /api/transactions
+      .mockRejectedValueOnce(new Error('splits went boom')); // PUT /api/transactions/999/splits
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.selectOptions(fieldFor('Compte'), '1');
+    await user.clear(screen.getByPlaceholderText('JJ/MM/AAAA'));
+    await user.type(screen.getByPlaceholderText('JJ/MM/AAAA'), '15/06/2026');
+    await user.type(screen.getByPlaceholderText('-25,30'), '-100.00');
+    await user.type(screen.getByPlaceholderText('Carrefour Évry'), 'Amazon');
+
+    await user.click(screen.getByRole('button', { name: /Ventiler cette transaction/ }));
+    const [firstCategory, secondCategory] = screen.getAllByRole('combobox').slice(-2);
+    await user.selectOptions(firstCategory, '10');
+    await user.selectOptions(secondCategory, '10');
+
+    const submitBtn = screen.getByRole('button', { name: 'Créer la transaction' });
+    await user.click(submitBtn);
+
+    // The failure banner appears and the create button becomes disabled;
+    // clicking again would previously fire a second POST and duplicate.
+    await waitFor(() =>
+      expect(screen.getByText(/transaction créée/i)).toBeInTheDocument(),
+    );
+    expect(submitBtn).toBeDisabled();
+
+    await user.click(submitBtn);
+    // Exactly two API calls: the POST and the failed splits PUT — no third
+    // POST from the second click.
+    expect(apiMock).toHaveBeenCalledTimes(2);
+  });
+
   it('does not enable the submit button while remainder is non-zero', async () => {
     const user = userEvent.setup();
     renderModal();

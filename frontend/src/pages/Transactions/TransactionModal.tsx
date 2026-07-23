@@ -52,6 +52,11 @@ export function TransactionModal({
   const [lockYearsInput, setLockYearsInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [splitsDraft, setSplitsDraft] = useState<DraftSplit[]>([]);
+  // Parent POST succeeded but the follow-up splits PUT failed. Set once, the
+  // "Create" button is locked so re-clicking cannot mint a duplicate parent
+  // server-side; the user has to close and re-open the transaction from the
+  // list (the invalidate below has already refreshed it) to retry the splits.
+  const [createdTxIdOnFailure, setCreatedTxIdOnFailure] = useState<number | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -79,6 +84,7 @@ export function TransactionModal({
       setSplitsDraft([]);
     }
     setError(null);
+    setCreatedTxIdOnFailure(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, transaction]);
 
@@ -161,11 +167,24 @@ export function TransactionModal({
       const { transaction: tx } = await api<{ transaction: Transaction }>('/api/transactions', {
         method: 'POST', json: input,
       });
-      await persistSplits(tx.id);
+      try {
+        await persistSplits(tx.id);
+      } catch (err) {
+        // Parent already committed server-side. Refresh the list so the row
+        // shows up and remember the id — the onError handler uses it to
+        // switch the modal into a "close-only" mode so re-submitting cannot
+        // create a second parent transaction.
+        invalidate();
+        setCreatedTxIdOnFailure(tx.id);
+        throw err;
+      }
       return { transaction: tx };
     },
     onSuccess: () => { invalidate(); onClose(); },
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err: unknown) => {
+      const message = err instanceof ApiError || err instanceof Error ? err.message : String(err);
+      setError(message);
+    },
   });
 
   const update = useMutation({
@@ -297,17 +316,23 @@ export function TransactionModal({
           onChange={setSplitsDraft}
         />
 
-        {error && (
+        {(error || createdTxIdOnFailure != null) && (
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200 mt-4">
-            {error}
+            {createdTxIdOnFailure != null
+              ? t('modal.errors.createdButSplitsFailed', { message: error ?? '' })
+              : error}
           </div>
         )}
 
         <div className="flex justify-end gap-2 mt-6">
           <button type="button" className="btn-ghost" onClick={onClose} disabled={pending}>
-            {t('cancel', { ns: 'common' })}
+            {createdTxIdOnFailure != null ? t('close', { ns: 'common' }) : t('cancel', { ns: 'common' })}
           </button>
-          <button type="submit" className="btn-primary" disabled={pending || splitsInvalid}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={pending || splitsInvalid || createdTxIdOnFailure != null}
+          >
             {pending
               ? isEdit ? t('modal.actions.saving') : t('modal.actions.creating')
               : isEdit ? t('save', { ns: 'common' }) : t('modal.actions.create')}
