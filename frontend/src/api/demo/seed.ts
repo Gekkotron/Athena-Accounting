@@ -19,6 +19,7 @@ import type {
 } from '../types';
 import type { DemoState } from './store';
 import { DEMO_SCHEMA_VERSION } from './store';
+import { MONTH_DAYS, ymd, fmt, normalize, clone } from './seed-utils';
 
 const SEED_TODAY = '2026-07-18';
 
@@ -138,26 +139,6 @@ const DISCRETIONARY_TEMPLATE: Array<Omit<TxSpec, 'day'>> = [
   { label: 'Carrefour City',         amount:  -27.10, categoryId: CAT.Courses,    categorySource: 'auto' },
   { label: 'Boulangerie Martin',     amount:   -8.90, categoryId: CAT.Courses,    categorySource: 'manual' },
 ];
-
-const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-function pad(n: number): string {
-  return n < 10 ? '0' + n : '' + n;
-}
-function ymd(y: number, m: number, d: number): string {
-  return `${y}-${pad(m)}-${pad(d)}`;
-}
-function fmt(amount: number): string {
-  return (amount < 0 ? '-' : '') + Math.abs(amount).toFixed(2);
-}
-function normalize(label: string): string {
-  return label
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
 
 function buildTransactions(): Transaction[] {
   const list: Transaction[] = [];
@@ -357,12 +338,6 @@ function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
 }
 
 // buildSeedState() must return a fresh object graph on every call.
-// Mutations via store.setState() would otherwise leak back into the
-// module-level constants below and survive reset().
-function clone<T>(v: T): T {
-  return JSON.parse(JSON.stringify(v)) as T;
-}
-
 export function buildSeedState(): DemoState {
   const transactions = buildTransactions();
   const balanceCheckpoints = buildCheckpoints(transactions);
