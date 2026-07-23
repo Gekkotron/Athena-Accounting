@@ -67,7 +67,9 @@ export async function runImport(opts: {
   buffer?: Buffer;
   prepared?: ParsedTransaction[];
 }): Promise<ImportResult> {
+  const tStart = Date.now();
   const parsed = opts.prepared ?? parseFile(opts.buffer!, opts.format);
+  const tParsed = Date.now();
 
   const result = await db.transaction(async (tx) => {
     const [fileImport] = await tx
@@ -90,19 +92,23 @@ export async function runImport(opts: {
     const insertedIds: number[] = [];
     const dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }> = [];
 
-    for (const p of parsed) {
-      const normalizedLabel = normalizeLabel(p.rawLabel);
-      const dedupKey = computeDedupKey({
-        accountId: opts.accountId,
-        date: p.date,
-        amount: p.amount,
-        normalizedLabel,
-        fitid: p.fitid,
-      });
-
-      const result = await tx
-        .insert(transactions)
-        .values({
+    // Pre-compute normalization + dedup keys once, JS-side. Then send a single
+    // bulk INSERT with ON CONFLICT DO NOTHING RETURNING (id, dedup_key). This
+    // replaces a per-row loop that used to do N round-trips — on PGlite each
+    // round-trip is ~10-50ms, so a 500-row OFX takes 20+ seconds serialised
+    // vs sub-second bulk. The dedup-skip accounting still works: we match
+    // returned dedupKeys back to the input rows to identify what was skipped.
+    if (parsed.length > 0) {
+      const rowValues = parsed.map((p) => {
+        const normalizedLabel = normalizeLabel(p.rawLabel);
+        const dedupKey = computeDedupKey({
+          accountId: opts.accountId,
+          date: p.date,
+          amount: p.amount,
+          normalizedLabel,
+          fitid: p.fitid,
+        });
+        return {
           userId: opts.userId,
           accountId: opts.accountId,
           date: p.date,
@@ -113,18 +119,39 @@ export async function runImport(opts: {
           fitid: p.fitid,
           dedupKey,
           sourceFileId: fileImport.id,
-        })
+        };
+      });
+
+      const insertedRows = await tx
+        .insert(transactions)
+        .values(rowValues)
         .onConflictDoNothing({
           target: [transactions.accountId, transactions.dedupKey],
         })
-        .returning({ id: transactions.id });
+        .returning({ id: transactions.id, dedupKey: transactions.dedupKey });
 
-      if (result.length > 0 && result[0]) {
-        inserted++;
-        insertedIds.push(result[0].id);
-      } else {
-        skipped++;
-        dedupSkippedRows.push({ date: p.date, amount: p.amount, rawLabel: p.rawLabel });
+      // dedupKey → id for the rows that survived the ON CONFLICT DO NOTHING.
+      // Rows missing from this map are the dedup-skipped ones (either they
+      // conflict with an existing DB row or with an earlier input row that
+      // won the insert race in this same statement).
+      const insertedByKey = new Map<string, number>();
+      for (const r of insertedRows) insertedByKey.set(r.dedupKey, r.id);
+
+      for (let i = 0; i < parsed.length; i++) {
+        const p = parsed[i]!;
+        const key = rowValues[i]!.dedupKey;
+        const id = insertedByKey.get(key);
+        if (id !== undefined) {
+          inserted++;
+          insertedIds.push(id);
+          // Prevent the same dedupKey from being counted twice when the input
+          // itself has duplicates: the second occurrence has no matching id
+          // in the returned set once we consume it here.
+          insertedByKey.delete(key);
+        } else {
+          skipped++;
+          dedupSkippedRows.push({ date: p.date, amount: p.amount, rawLabel: p.rawLabel });
+        }
       }
     }
 
@@ -198,6 +225,14 @@ export async function runImport(opts: {
     };
   });
 
+  const tCommitted = Date.now();
+  console.log(
+    `[imports] runImport ${opts.filename} parsed=${parsed.length} ` +
+    `inserted=${result.insertedCount} skipped=${result.dedupSkipped} ` +
+    `parse=${tParsed - tStart}ms tx=${tCommitted - tParsed}ms ` +
+    `total=${tCommitted - tStart}ms`,
+  );
+
   // Recurring-series detection was previously awaited inside the import
   // transaction — clustering the last 12 months of transactions on PGlite
   // (single-threaded WASM) can take many seconds on a 500-row import,
@@ -205,9 +240,16 @@ export async function runImport(opts: {
   // stuck on the preview modal. Kick it off fire-and-forget instead; it
   // gets its own transaction (runRecurringDetectionStandalone) and users
   // can also trigger a refresh manually via POST /api/recurring/regenerate.
-  runRecurringDetectionStandalone(opts.userId).catch((err) => {
-    console.error('[imports] background recurring detection failed', err);
-  });
+  runRecurringDetectionStandalone(opts.userId)
+    .then((r) => {
+      console.log(
+        `[imports] recurring detection: detected=${r.detected} refreshed=${r.refreshed} ` +
+        `(elapsed ${Date.now() - tCommitted}ms)`,
+      );
+    })
+    .catch((err) => {
+      console.error('[imports] background recurring detection failed', err);
+    });
 
   return result;
 }
