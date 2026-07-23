@@ -2,21 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTour } from '../../contexts/TourContext';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  arrayMove,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -27,6 +14,7 @@ import { AccountCard } from './AccountCard';
 import { AccountForm, type AccountFormValues } from './AccountForm';
 import { AccountPatternsPanel } from './AccountPatternsPanel';
 import { MergeModal } from './MergeModal';
+import { useAccountsReorder } from './useAccountsReorder';
 import type { MergeResult } from '../../api/accounts';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
@@ -75,44 +63,7 @@ export function Accounts() {
     onError: (err: ApiError) => setEditError(err.message),
   });
 
-  const reorder = useMutation({
-    mutationFn: (ids: number[]) =>
-      api('/api/accounts/order', { method: 'PUT', json: { ids } }),
-    onMutate: async (ids) => {
-      // Optimistic update: rewrite the cached order immediately so the cards
-      // don't snap back-and-forth while the PUT round-trips.
-      await qc.cancelQueries({ queryKey: ['accounts'] });
-      const previous = qc.getQueryData<{ accounts: Account[] }>(['accounts']);
-      if (previous) {
-        const byId = new Map(previous.accounts.map((a) => [a.id, a] as const));
-        const reordered = ids.map((id) => byId.get(id)).filter((a): a is Account => !!a);
-        qc.setQueryData(['accounts'], { accounts: reordered });
-      }
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(['accounts'], context.previous);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-    },
-  });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  const onDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const list = accountsQ.data?.accounts ?? [];
-    const oldIndex = list.findIndex((a) => a.id === active.id);
-    const newIndex = list.findIndex((a) => a.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    const next = arrayMove(list, oldIndex, newIndex);
-    reorder.mutate(next.map((a) => a.id));
-  };
+  const { sensors, onDragEnd } = useAccountsReorder(accountsQ.data?.accounts ?? []);
 
   // One Set for expanded-drawer account ids. Rendering many cards at once, so a
   // Set keeps toggling O(log n) and avoids per-card boolean state.
