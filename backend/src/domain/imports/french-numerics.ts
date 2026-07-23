@@ -29,3 +29,52 @@ export function tryParseFrenchAmount(s: string): string | null {
     return r === '' ? null : r;
   } catch { return null; }
 }
+
+// Detect the decimal separator per value, so a mixed-locale CSV file
+// doesn't corrupt period-decimal amounts (e.g. "-950.00" was previously
+// 100×-ed by parseFrenchAmount stripping the dot as a thousands separator).
+//
+// Rules:
+//   - both `.` and `,`: the last one is the decimal separator
+//     ("1,234.56" → 1234.56;  "1.234,56" → 1234.56).
+//   - only `.` or only `,`: if there's exactly one and it's followed by
+//     1 or 2 digits, treat as decimal separator; otherwise thousands.
+//   - neither: pure integer.
+export function parseAmountAuto(s: string): string {
+  if (!s || !s.trim()) return '';
+  let v = s.replace(/[€$\s ]/g, '').trim();
+
+  const hasDot = v.includes('.');
+  const hasComma = v.includes(',');
+
+  if (hasDot && hasComma) {
+    if (v.lastIndexOf('.') > v.lastIndexOf(',')) {
+      v = v.replace(/,/g, '');           // US: 1,234.56
+    } else {
+      v = v.replace(/\./g, '').replace(',', '.');  // FR: 1.234,56
+    }
+  } else if (hasDot) {
+    const parts = v.split('.');
+    if (parts.length === 2 && /^\d{1,2}$/.test(parts[1]!)) {
+      // "950.00" — decimal point, leave untouched.
+    } else if (parts.slice(1).every((p) => /^\d{3}$/.test(p))) {
+      v = v.replace(/\./g, '');  // e.g. 12.345.678 → 12345678
+    } else {
+      throw new Error(`invalid amount: ${JSON.stringify(s)}`);
+    }
+  } else if (hasComma) {
+    const parts = v.split(',');
+    if (parts.length === 2 && /^\d{1,2}$/.test(parts[1]!)) {
+      v = v.replace(',', '.');           // FR: 950,00
+    } else if (parts.slice(1).every((p) => /^\d{3}$/.test(p))) {
+      v = v.replace(/,/g, '');
+    } else {
+      throw new Error(`invalid amount: ${JSON.stringify(s)}`);
+    }
+  }
+
+  if (!/^-?\d+(\.\d+)?$/.test(v)) {
+    throw new Error(`invalid amount: ${JSON.stringify(s)}`);
+  }
+  return Number(v).toFixed(2);
+}

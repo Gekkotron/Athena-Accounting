@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  parseAmountAuto,
   parseFrenchAmount,
   parseFrenchDate,
   tryParseFrenchAmount,
@@ -70,5 +71,44 @@ describe('parseFrenchAmount', () => {
     expect(tryParseFrenchAmount('   ')).toBeNull();
     expect(tryParseFrenchAmount('abc')).toBeNull();
     expect(tryParseFrenchAmount('12,34')).toBe('12.34');
+  });
+});
+
+describe('parseAmountAuto', () => {
+  it("returns '' for empty / whitespace-only input", () => {
+    expect(parseAmountAuto('')).toBe('');
+    expect(parseAmountAuto('   ')).toBe('');
+  });
+
+  it('treats a lone period followed by 1-2 digits as a decimal separator', () => {
+    expect(parseAmountAuto('-950.00')).toBe('-950.00');
+    expect(parseAmountAuto('950.5')).toBe('950.50');
+    expect(parseAmountAuto('42')).toBe('42.00');
+  });
+
+  it("uses the last separator's position when both '.' and ',' are present", () => {
+    expect(parseAmountAuto('1,234.56')).toBe('1234.56');
+    expect(parseAmountAuto('1.234,56')).toBe('1234.56');
+    expect(parseAmountAuto('12,345,678.90')).toBe('12345678.90');
+  });
+
+  it('handles French format (comma decimal) in the comma-delimited fallback too', () => {
+    expect(parseAmountAuto('950,00')).toBe('950.00');
+    expect(parseAmountAuto('-12,34')).toBe('-12.34');
+  });
+
+  it('treats period(s) followed by 3 digits as thousands separators', () => {
+    expect(parseAmountAuto('1.234')).toBe('1234.00');
+    expect(parseAmountAuto('12.345.678')).toBe('12345678.00');
+  });
+
+  it('strips currency symbols and spaces', () => {
+    expect(parseAmountAuto('-950.00 €')).toBe('-950.00');
+    expect(parseAmountAuto('$1,234.56')).toBe('1234.56');
+  });
+
+  it('throws on garbage no rule can rescue', () => {
+    expect(() => parseAmountAuto('abc')).toThrow(/invalid amount/);
+    expect(() => parseAmountAuto('1.2.3')).toThrow(/invalid amount/);
   });
 });

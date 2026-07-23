@@ -56,6 +56,36 @@ describe('parseFrenchCsv', () => {
     expect(rows[0]!.amount).toBe('42.00');
   });
 
+  it('parses period-decimal amounts in the comma-delimited fallback', () => {
+    // Previously parseFrenchAmount stripped the '.' as a thousands
+    // separator, turning "-950.00" into "-95000.00" and corrupting imports
+    // 100×. The per-value auto-detector fixes that without breaking the
+    // French path.
+    const csv = utf8([
+      'Date,Libellé,Montant',
+      '15/06/2026,A,-950.00',
+      '16/06/2026,B,"1,234.56"',
+      '17/06/2026,C,42',
+    ].join('\n'));
+    const rows = parseFrenchCsv(csv);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]!.amount).toBe('-950.00');
+    expect(rows[1]!.amount).toBe('1234.56');
+    expect(rows[2]!.amount).toBe('42.00');
+  });
+
+  it('keeps French decimal-comma amounts working in the semicolon path', () => {
+    const csv = utf8([
+      'Date;Libellé;Montant',
+      '15/06/2026;A;-950,00',
+      '16/06/2026;B;1.234,56',
+    ].join('\n'));
+    const rows = parseFrenchCsv(csv);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.amount).toBe('-950.00');
+    expect(rows[1]!.amount).toBe('1234.56');
+  });
+
   it('skips rows missing either date or label', () => {
     const csv = utf8([
       'Date;Libellé;Montant',

@@ -1,7 +1,7 @@
 import { parse } from 'csv-parse/sync';
 import iconv from 'iconv-lite';
 import type { ParsedTransaction } from './ofx-parser.js';
-import { parseFrenchDate, parseFrenchAmount } from './french-numerics.js';
+import { parseFrenchDate, parseFrenchAmount, parseAmountAuto } from './french-numerics.js';
 
 // French banks export CSV with:
 //   - separator ';'  (because the decimal is ',')
@@ -52,7 +52,11 @@ export function parseFrenchCsv(buf: Buffer): ParsedTransaction[] {
   const text = decodeBuffer(buf);
 
   // Try ';' first (the French convention). If that yields a single column, retry with ','.
+  // Track which delimiter succeeded — the amount parser depends on it because
+  // a comma-delimited file typically uses '.' as the decimal separator, while
+  // the semicolon-delimited (French) convention uses ','.
   let rows: Record<string, string>[];
+  let delimiter: ';' | ',' = ';';
   try {
     rows = parse(text, {
       delimiter: ';',
@@ -64,6 +68,7 @@ export function parseFrenchCsv(buf: Buffer): ParsedTransaction[] {
     });
     if (!rows.length || Object.keys(rows[0]!).length < 2) throw new Error('too few columns');
   } catch {
+    delimiter = ',';
     rows = parse(text, {
       delimiter: ',',
       columns: true,
@@ -75,6 +80,11 @@ export function parseFrenchCsv(buf: Buffer): ParsedTransaction[] {
   }
 
   if (!rows.length) return [];
+
+  // Semicolon path assumes French-style amounts (',' decimal). Comma path
+  // auto-detects per value so "-950.00" isn't mangled to "-95000.00" while
+  // still tolerating French rows in the same file.
+  const parseAmount = delimiter === ',' ? parseAmountAuto : parseFrenchAmount;
 
   const headers = Object.keys(rows[0]!);
   const dateCol = findHeader(headers, DATE_HEADERS);
@@ -103,15 +113,15 @@ export function parseFrenchCsv(buf: Buffer): ParsedTransaction[] {
 
     let amount: string;
     if (amountCol) {
-      amount = parseFrenchAmount(row[amountCol] ?? '');
+      amount = parseAmount(row[amountCol] ?? '');
     } else {
       const d = debitCol ? row[debitCol] : '';
       const c = creditCol ? row[creditCol] : '';
       if (d && d.trim()) {
-        const n = parseFrenchAmount(d);
+        const n = parseAmount(d);
         amount = n.startsWith('-') ? n : `-${n}`;
       } else if (c && c.trim()) {
-        amount = parseFrenchAmount(c);
+        amount = parseAmount(c);
       } else {
         continue;
       }
