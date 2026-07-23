@@ -121,6 +121,17 @@ jobs:
       - name: Install Tauri CLI
         run: npm install -g @tauri-apps/cli@^2.0.0
 
+      # The cargo cache above restores `desktop/src-tauri/target/`, which
+      # includes any bundle output from prior runs. When the version bumps,
+      # tauri produces a *new* installer alongside the stale one — and the
+      # "Collect installer artifact" glob (`*.exe`, `*.dmg`, `*.AppImage`)
+      # then picks whichever sorts first, which can be the stale file (e.g.
+      # `beta1` < `rc1` lexicographically). Wipe the bundle dir before every
+      # build so the glob only ever sees the artifact tauri just produced.
+      - name: Clean stale bundle output from cache
+        shell: bash
+        run: rm -rf "desktop/src-tauri/target/${{ matrix.tauri_target }}/release/bundle"
+
       - name: Build Tauri app
         working-directory: desktop/src-tauri
         # No code-signing keys wired up yet. `bundle.macOS.signingIdentity`
