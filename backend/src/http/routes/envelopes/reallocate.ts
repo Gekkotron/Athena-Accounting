@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../../db/client.js';
 import { envelopeAssignments } from '../../../db/schema.js';
@@ -31,31 +31,11 @@ export function registerReallocateRoute(app: FastifyInstance): void {
     }
 
     const result = await db.transaction(async (tx) => {
+      // Insert-then-add-on-conflict so two concurrent reallocations targeting
+      // a not-yet-existing (userId, categoryId, month) row can't both INSERT
+      // and race the unique index — the pattern used by assignments.ts.
       async function bumpBy(catId: number, delta: string) {
-        // Upsert: current amount is unknown; use SQL expression to add.
-        const [existing] = await tx
-          .select()
-          .from(envelopeAssignments)
-          .where(and(
-            eq(envelopeAssignments.userId, uid),
-            eq(envelopeAssignments.categoryId, catId),
-            eq(envelopeAssignments.month, month),
-          ));
-        if (existing) {
-          const [updated] = await tx
-            .update(envelopeAssignments)
-            .set({
-              amount: sql`${envelopeAssignments.amount} + ${delta}::numeric`,
-              updatedAt: new Date(),
-            })
-            .where(and(
-              eq(envelopeAssignments.id, existing.id),
-              eq(envelopeAssignments.userId, uid),
-            ))
-            .returning();
-          return updated!;
-        }
-        const [created] = await tx
+        const [row] = await tx
           .insert(envelopeAssignments)
           .values({
             userId: uid,
@@ -63,8 +43,15 @@ export function registerReallocateRoute(app: FastifyInstance): void {
             month,
             amount: delta,
           })
+          .onConflictDoUpdate({
+            target: [envelopeAssignments.userId, envelopeAssignments.categoryId, envelopeAssignments.month],
+            set: {
+              amount: sql`${envelopeAssignments.amount} + excluded.amount`,
+              updatedAt: new Date(),
+            },
+          })
           .returning();
-        return created!;
+        return row!;
       }
 
       const from = await bumpBy(fromCategoryId, `-${amount}`);
