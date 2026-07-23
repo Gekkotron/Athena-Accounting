@@ -48,7 +48,10 @@
     "creating": "Creating…",
     "createSubmit": "Create account",
     "deleteButton": "delete",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "errors": {
+      "invalidOpeningBalance": "Invalid opening balance (number with up to 2 decimal places, e.g. 1500.00)."
+    }
   },
   "checkpoints": {
     "errors": {

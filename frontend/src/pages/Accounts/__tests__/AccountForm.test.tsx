@@ -66,4 +66,33 @@ describe('AccountForm', () => {
     await user.click(screen.getByRole('button', { name: /créer le compte/i }));
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it('normalizes a French comma opening balance ("1500,00") to the canonical decimal', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<AccountForm mode="create" onSubmit={onSubmit} />);
+    await user.type(fieldFor(/^nom$/i), 'Livret');
+    const balanceInput = fieldFor(/solde d.ouverture/i) as HTMLInputElement;
+    await user.clear(balanceInput);
+    await user.type(balanceInput, '1500,00');
+    fireEvent.change(fieldFor(/date d.ouverture/i), { target: { value: '2026-05-01' } });
+    await user.click(screen.getByRole('button', { name: /créer le compte/i }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      openingBalance: '1500.00',
+    }));
+  });
+
+  it('blocks submit and surfaces an error when opening balance is unparseable', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<AccountForm mode="create" onSubmit={onSubmit} />);
+    await user.type(fieldFor(/^nom$/i), 'Livret');
+    const balanceInput = fieldFor(/solde d.ouverture/i) as HTMLInputElement;
+    await user.clear(balanceInput);
+    await user.type(balanceInput, 'abc');
+    fireEvent.change(fieldFor(/date d.ouverture/i), { target: { value: '2026-05-01' } });
+    await user.click(screen.getByRole('button', { name: /créer le compte/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText(/solde d.ouverture invalide/i)).toBeInTheDocument();
+  });
 });

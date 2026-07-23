@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { parseDecimal } from '../../lib/format';
 
 export interface AccountFormValues {
   name: string;
@@ -144,15 +145,30 @@ export function AccountForm({
     return Number.isFinite(n) && n >= 0 && n <= 99 ? Math.floor(n) : null;
   })();
 
-  const values: AccountFormValues = {
-    name, type, currency, openingBalance, openingDate,
-    lockYears: parsedLockYears,
+  // Normalize the openingBalance so French comma inputs ("1500,00") don't
+  // get 400ed by the backend zod regex.
+  const parsedOpeningBalance = parseDecimal(openingBalance);
+  const [openingBalanceError, setOpeningBalanceError] = useState<string | null>(null);
+
+  const buildValues = (): AccountFormValues | null => {
+    if (parsedOpeningBalance == null) {
+      setOpeningBalanceError(t('form.errors.invalidOpeningBalance'));
+      return null;
+    }
+    setOpeningBalanceError(null);
+    return {
+      name, type, currency,
+      openingBalance: parsedOpeningBalance,
+      openingDate,
+      lockYears: parsedLockYears,
+    };
   };
 
   if (mode === 'create') {
     const submit = (e: FormEvent) => {
       e.preventDefault();
-      onSubmit(values);
+      const v = buildValues();
+      if (v) onSubmit(v);
     };
 
     return (
@@ -172,9 +188,9 @@ export function AccountForm({
           setLockYearsInput={setLockYearsInput}
           mode="create"
         />
-        {error && (
+        {(error || openingBalanceError) && (
           <div className="sm:col-span-2 lg:col-span-6 rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
-            {error}
+            {openingBalanceError ?? error}
           </div>
         )}
         <div className="sm:col-span-2 lg:col-span-6">
@@ -205,9 +221,9 @@ export function AccountForm({
           mode="edit"
         />
       </div>
-      {error && (
+      {(error || openingBalanceError) && (
         <div className="rounded-md border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-xs text-clay-200">
-          {error}
+          {openingBalanceError ?? error}
         </div>
       )}
       <div className="flex items-center justify-between gap-2 pt-1">
@@ -222,7 +238,7 @@ export function AccountForm({
           <button className="btn-ghost" onClick={onCancel}>
             {t('cancel', { ns: 'common' })}
           </button>
-          <button className="btn-primary" onClick={() => onSubmit(values)} disabled={submitting}>
+          <button className="btn-primary" onClick={() => { const v = buildValues(); if (v) onSubmit(v); }} disabled={submitting}>
             {submitting ? t('form.saving') : t('save', { ns: 'common' })}
           </button>
         </div>

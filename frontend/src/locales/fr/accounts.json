@@ -48,7 +48,10 @@
     "creating": "Création…",
     "createSubmit": "Créer le compte",
     "deleteButton": "supprimer",
-    "saving": "Enregistrement…"
+    "saving": "Enregistrement…",
+    "errors": {
+      "invalidOpeningBalance": "Solde d'ouverture invalide (nombre à 2 décimales max, ex. 1500,00)."
+    }
   },
   "checkpoints": {
     "errors": {

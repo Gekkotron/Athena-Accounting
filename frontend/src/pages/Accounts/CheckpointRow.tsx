@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatAmount } from '../../lib/format';
+import { formatAmount, parseDecimal } from '../../lib/format';
 import type { BalanceCheckpoint } from '../../api/types';
 
 export function CheckpointRow({
@@ -25,8 +25,17 @@ export function CheckpointRow({
   const [noteDraft, setNoteDraft] = useState(cp.note ?? '');
 
   const commitAmount = () => {
-    if (amountDraft !== cp.expectedAmount && amountDraft.trim() !== '') {
-      onSave({ expectedAmount: amountDraft });
+    // Route the typed value through parseDecimal so French "1500,00" is
+    // normalized to the backend's canonical form before the PATCH; keep
+    // the draft mounted for correction when the input can't be parsed.
+    const parsed = parseDecimal(amountDraft);
+    if (parsed == null) {
+      setAmountDraft(cp.expectedAmount);
+      setEditingAmount(false);
+      return;
+    }
+    if (parsed !== cp.expectedAmount) {
+      onSave({ expectedAmount: parsed });
     }
     setEditingAmount(false);
   };

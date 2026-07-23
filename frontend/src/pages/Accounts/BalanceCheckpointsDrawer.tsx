@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../api/client';
 import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 import type { BalanceCheckpoint } from '../../api/types';
+import { parseDecimal } from '../../lib/format';
 import { CheckpointRow } from './CheckpointRow';
 
 // Translate a checkpoint-endpoint error into an actionable, localized
@@ -80,13 +81,22 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
   const [newNote, setNewNote] = useState('');
   const [mutationError, setMutationError] = useState<string | null>(null);
 
+  // Normalize the typed amount to the backend's decimal contract before
+  // POSTing. Without this the natural French "1500,00" hits the zod regex
+  // `^-?\d+(\.\d{1,2})?$` and comes back as a generic 400.
+  const parsedNewAmount = parseDecimal(newAmount);
+
   const create = useMutation({
-    mutationFn: () =>
-      createCheckpoint(accountId, {
+    mutationFn: () => {
+      if (parsedNewAmount == null) {
+        throw new ApiError(t('checkpoints.errors.invalidAmount'), 400, null);
+      }
+      return createCheckpoint(accountId, {
         checkpointDate: newDate,
-        expectedAmount: newAmount,
+        expectedAmount: parsedNewAmount,
         note: newNote || undefined,
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });
       setNewAmount('');
@@ -194,7 +204,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
         <button
           type="button"
           className="btn-sm"
-          disabled={!newAmount || create.isPending}
+          disabled={parsedNewAmount == null || create.isPending}
           onClick={() => create.mutate()}
         >
           {t('checkpoints.addButton')}

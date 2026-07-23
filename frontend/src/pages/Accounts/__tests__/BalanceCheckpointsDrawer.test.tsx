@@ -79,6 +79,11 @@ describe('BalanceCheckpointsDrawer', () => {
   });
 
   it('maps a 400 with an expectedAmount issue to an actionable French message', async () => {
+    // Truly unparseable input ("not-a-number") is now blocked client-side —
+    // covered by the "disables submit" test below. This case exists to lock
+    // in the mapping from a backend-supplied `expectedAmount` zod issue to
+    // the localized error string, so we send a value that passes the
+    // frontend guard but the (mocked) backend still rejects.
     listMock.mockResolvedValue({ checkpoints: [] });
     createMock.mockRejectedValueOnce(new ApiError('invalid input', 400, {
       error: 'invalid input',
@@ -88,10 +93,34 @@ describe('BalanceCheckpointsDrawer', () => {
     const user = userEvent.setup();
     renderDrawer();
     fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
-    await user.type(screen.getByLabelText(/montant attendu/i), 'not-a-number');
+    await user.type(screen.getByLabelText(/montant attendu/i), '100.00');
     await user.click(screen.getByRole('button', { name: '+ ajouter' }));
 
     expect(await screen.findByText(/montant invalide/i)).toBeInTheDocument();
+  });
+
+  it('disables the add button when the typed amount cannot be parsed as a decimal', async () => {
+    listMock.mockResolvedValue({ checkpoints: [] });
+    const user = userEvent.setup();
+    renderDrawer();
+    fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
+    await user.type(screen.getByLabelText(/montant attendu/i), 'not-a-number');
+    expect(screen.getByRole('button', { name: '+ ajouter' })).toBeDisabled();
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts a French comma amount and passes the canonical decimal to the API', async () => {
+    listMock.mockResolvedValue({ checkpoints: [] });
+    createMock.mockResolvedValueOnce({ checkpoint: { id: 1, checkpointDate: '2025-06-01', expectedAmount: '1500.00', note: null } });
+    const user = userEvent.setup();
+    renderDrawer();
+    fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
+    await user.type(screen.getByLabelText(/montant attendu/i), '1500,00');
+    await user.click(screen.getByRole('button', { name: '+ ajouter' }));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(createMock).toHaveBeenCalledWith(1, expect.objectContaining({
+      expectedAmount: '1500.00',
+    }));
   });
 
   it('maps a 400 with a note issue to a "note too long" message', async () => {
