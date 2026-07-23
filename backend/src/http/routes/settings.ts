@@ -6,9 +6,9 @@ import { userId } from '../plugins/auth.js';
 import { SettingsSchema, mergeSettings, type FullSettings } from '../../domain/settings/schema.js';
 
 // Load the stored JSONB for `uid`, coerce to a full settings object with
-// defaults filled in, and sanitise dashboardChartScope so a dangling or
-// cross-tenant account id becomes 'all'. The stored row is not rewritten —
-// only the response is filtered.
+// defaults filled in, and sanitise any account-id-shaped fields so a
+// dangling or cross-tenant id becomes 'all'. The stored row is not
+// rewritten — only the response is filtered.
 async function loadSettingsFor(uid: number): Promise<FullSettings> {
   const [row] = await db
     .select({ settings: userSettings.settings })
@@ -21,6 +21,13 @@ async function loadSettingsFor(uid: number): Promise<FullSettings> {
       .from(accounts)
       .where(and(eq(accounts.id, merged.dashboardChartScope), eq(accounts.userId, uid)));
     if (!acc) merged.dashboardChartScope = 'all';
+  }
+  if (typeof merged.transactionsDefaultAccount === 'number') {
+    const [acc] = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.id, merged.transactionsDefaultAccount), eq(accounts.userId, uid)));
+    if (!acc) merged.transactionsDefaultAccount = 'all';
   }
   return merged;
 }

@@ -11,7 +11,12 @@ export const DEFAULTS = {
   // Récurrent → Dashboard Trend chart projection overlay. Off by default
   // so existing users see the same chart until they opt in.
   showForecast: false,
+  // Transactions page pre-selects this account on load. 'first-checking'
+  // means: auto-pick the earliest `type: 'checking'` account. Users can
+  // pin a specific id or 'all' via Settings.
+  transactionsDefaultAccount: 'first-checking',
 } as const;
 
 export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | number;
+export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;

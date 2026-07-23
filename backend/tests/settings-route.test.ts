@@ -43,6 +43,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       chartGapThresholdDays: 6,
       duplicateSimilarityThreshold: 0,
       showForecast: false,
+      transactionsDefaultAccount: 'first-checking',
     });
   });
 
@@ -58,6 +59,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       chartGapThresholdDays: 10,
       duplicateSimilarityThreshold: 0,
       showForecast: false,
+      transactionsDefaultAccount: 'first-checking',
     });
   });
 
@@ -104,6 +106,21 @@ describe.skipIf(!RUN)('/api/settings', () => {
     await app.inject({ method: 'DELETE', url: `/api/accounts/${tmpId}`, headers: { cookie } });
     const get = await app.inject({ method: 'GET', url: '/api/settings', headers: { cookie } });
     expect(get.json().settings.dashboardChartScope).toBe('all');
+  });
+
+  it('PATCH transactionsDefaultAccount pointing to a deleted account sanitises to all on next GET', async () => {
+    const tmp = await app.inject({
+      method: 'POST', url: '/api/accounts', headers: { cookie },
+      payload: { name: 'ToDelete', type: 'current', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },
+    });
+    const tmpId = tmp.json().account.id;
+    await app.inject({
+      method: 'PATCH', url: '/api/settings', headers: { cookie },
+      payload: { transactionsDefaultAccount: tmpId },
+    });
+    await app.inject({ method: 'DELETE', url: `/api/accounts/${tmpId}`, headers: { cookie } });
+    const get = await app.inject({ method: 'GET', url: '/api/settings', headers: { cookie } });
+    expect(get.json().settings.transactionsDefaultAccount).toBe('all');
   });
 
   it('PATCH dashboardChartScope pointing to another user\'s account sanitises to all', async () => {

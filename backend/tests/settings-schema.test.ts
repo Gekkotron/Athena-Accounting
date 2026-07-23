@@ -34,4 +34,30 @@ describe('mergeSettings', () => {
     const out = mergeSettings({ chartGapThresholdDays: 9999 }, {});
     expect(out).toEqual(DEFAULTS);
   });
+
+  it('defaults transactionsDefaultAccount to "first-checking"', () => {
+    expect(mergeSettings({}, {}).transactionsDefaultAccount).toBe('first-checking');
+  });
+
+  it('accepts "all" for transactionsDefaultAccount', () => {
+    expect(
+      mergeSettings({ transactionsDefaultAccount: 'all' }, {}).transactionsDefaultAccount,
+    ).toBe('all');
+  });
+
+  it('accepts a positive integer for transactionsDefaultAccount', () => {
+    expect(
+      mergeSettings({ transactionsDefaultAccount: 7 }, {}).transactionsDefaultAccount,
+    ).toBe(7);
+  });
+
+  it('rejects 0 for transactionsDefaultAccount (falls back to defaults)', () => {
+    const out = mergeSettings({ transactionsDefaultAccount: 0 }, {});
+    expect(out.transactionsDefaultAccount).toBe('first-checking');
+  });
+
+  it('rejects an unknown string for transactionsDefaultAccount (falls back to defaults)', () => {
+    const out = mergeSettings({ transactionsDefaultAccount: 'unknown' }, {});
+    expect(out.transactionsDefaultAccount).toBe('first-checking');
+  });
 });

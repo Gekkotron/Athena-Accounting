@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { DEFAULTS } from './defaults.js';
-import type { DashboardRange, DashboardChartScope } from './defaults.js';
+import type {
+  DashboardRange,
+  DashboardChartScope,
+  TransactionsDefaultAccount,
+} from './defaults.js';
 
 export const SettingsSchema = z
   .object({
@@ -11,6 +15,13 @@ export const SettingsSchema = z
     chartGapThresholdDays: z.number().int().min(1).max(60).optional(),
     duplicateSimilarityThreshold: z.number().int().min(0).max(100).optional(),
     showForecast: z.boolean().optional(),
+    transactionsDefaultAccount: z
+      .union([
+        z.literal('all'),
+        z.literal('first-checking'),
+        z.number().int().positive(),
+      ])
+      .optional(),
   })
   .strict();
 
@@ -22,6 +33,7 @@ export type FullSettings = {
   chartGapThresholdDays: number;
   duplicateSimilarityThreshold: number;
   showForecast: boolean;
+  transactionsDefaultAccount: TransactionsDefaultAccount;
 };
 
 // Merges DEFAULTS <- stored (unvalidated JSONB) <- patch. `stored` is
