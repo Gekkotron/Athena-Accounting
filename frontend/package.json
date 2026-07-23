@@ -1,6 +1,6 @@
 {
   "name": "athena-frontend",
-  "version": "1.0.0-desktop-beta1",
+  "version": "1.0.0-desktop-rc1",
   "private": true,
   "type": "module",
   "scripts": {
