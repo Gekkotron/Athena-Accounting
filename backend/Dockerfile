@@ -25,10 +25,13 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --no-audit --no-fund
+# Drop root before executing user code. `node:20-alpine` ships a `node` user
+# (uid 1000) — chown the workdir so it can write to its own dist / node_modules.
+COPY --chown=node:node package.json package-lock.json* ./
+RUN npm install --omit=dev --no-audit --no-fund \
+  && chown -R node:node /app
+COPY --from=build --chown=node:node /app/dist ./dist
 
-COPY --from=build /app/dist ./dist
-
+USER node
 EXPOSE 3000
 CMD ["node", "dist/entry/server.js"]
