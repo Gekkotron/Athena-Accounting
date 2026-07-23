@@ -26,13 +26,18 @@ export function registerBudgetRoute(app: FastifyInstance): void {
     }
     const { period, accountId } = parsed.data;
 
-    // Resolve the period bounds and windowDays/elapsedDays.
+    // Resolve the period bounds and windowDays/elapsedDays. Default period
+    // uses UTC components so it agrees with elapsedIn's UTC comparison —
+    // otherwise, for local timezones ahead of UTC (Europe/Paris, etc.),
+    // the first hour or two of the new month reports the *previous* server-
+    // local month as the default while elapsedIn keys off the new UTC one,
+    // producing elapsedDays=0 for the returned month.
     const now = new Date();
     const [periodStart, periodEndExclusive, windowDays, elapsedDays, monthOut, yearOut] =
       (() => {
         if (period === 'monthly') {
           const m = parsed.data.month
-            ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            ?? `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
           const [y, mm] = m.split('-').map(Number);
           const start = new Date(Date.UTC(y!, mm! - 1, 1));
           const end = new Date(Date.UTC(y!, mm!, 1));
@@ -40,7 +45,7 @@ export function registerBudgetRoute(app: FastifyInstance): void {
           const eDays = elapsedIn(start, end, now);
           return [start, end, wDays, eDays, m, undefined] as const;
         } else {
-          const y = parsed.data.year ?? String(now.getFullYear());
+          const y = parsed.data.year ?? String(now.getUTCFullYear());
           const yn = Number(y);
           const start = new Date(Date.UTC(yn, 0, 1));
           const end = new Date(Date.UTC(yn + 1, 0, 1));
