@@ -1,21 +1,8 @@
-import type { FastifyReply, FastifyRequest } from 'fastify';
 import { inArray } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { transactionSplits } from '../../../db/schema.js';
-import { IdParam } from './schemas.js';
 
-export function isPgError(err: unknown): err is { code: string } {
-  return typeof err === 'object' && err !== null && 'code' in err && typeof (err as { code: unknown }).code === 'string';
-}
-
-export function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
-  const r = IdParam.safeParse(req.params);
-  if (!r.success) {
-    reply.code(400).send({ error: 'invalid id' });
-    return null;
-  }
-  return r.data.id;
-}
+export { isPgError, parseId } from '../../../lib/http.js';
 
 // Amount-search widening: "19" → [19.00, 19.99] (finds 19.72),
 // "55.5" → [55.50, 55.59] (finds 55.57), "19.72" → [19.72, 19.72] (exact).

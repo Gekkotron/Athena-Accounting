@@ -1,8 +1,9 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accounts, categories, categoryBudgets } from '../../db/schema.js';
+import { isPgError, parseId } from '../../lib/http.js';
 import { userId } from '../plugins/auth.js';
 
 const positiveDecimal = z
@@ -33,14 +34,6 @@ const UpdateBody = z.object({
   accountId: accountIdOpt,
 });
 
-const IdParam = z.object({ id: z.coerce.number().int().positive() });
-
-function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
-  const r = IdParam.safeParse(req.params);
-  if (!r.success) { reply.code(400).send({ error: 'invalid id' }); return null; }
-  return r.data.id;
-}
-
 function serialize(row: typeof categoryBudgets.$inferSelect) {
   return {
     id: row.id,
@@ -50,11 +43,6 @@ function serialize(row: typeof categoryBudgets.$inferSelect) {
     period: row.period,
     accountId: row.accountId,
   };
-}
-
-function isPgError(err: unknown): err is { code: string } {
-  return typeof err === 'object' && err !== null && 'code' in err
-    && typeof (err as { code: unknown }).code === 'string';
 }
 
 async function expenseCategoryOwned(uid: number, categoryId: number): Promise<boolean> {

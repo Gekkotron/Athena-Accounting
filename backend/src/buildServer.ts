@@ -3,8 +3,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import { ZodError } from 'zod';
 import { env } from './env.js';
 import { pool } from './db/client.js';
+import { HttpError, isPgError } from './lib/http.js';
 import { authPlugin } from './http/plugins/auth.js';
 import { onboardingRoutes } from './http/routes/onboarding.js';
 import { authRoutes } from './http/routes/auth.js';
@@ -38,6 +40,27 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
     ? false
     : (env.NODE_ENV === 'development' ? { transport: { target: 'pino-pretty' } } : true);
   const app = Fastify({ logger });
+
+  // Global error handler: bare `throw`s from route handlers land here instead
+  // of defaulting to a generic 500. Fastify's built-in validation errors and
+  // rate-limit responses still go through their own path — we only reshape
+  // the three unhandled categories that used to leak as "Internal Server Error".
+  app.setErrorHandler((err, req, reply) => {
+    if (err instanceof HttpError) {
+      return reply.code(err.status).send({ error: err.message, ...(err.extra ?? {}) });
+    }
+    if (err instanceof ZodError) {
+      return reply.code(400).send({ error: 'invalid input', issues: err.issues });
+    }
+    if (isPgError(err)) {
+      if (err.code === '23505') return reply.code(409).send({ error: 'conflict' });
+      if (err.code === '23503') return reply.code(400).send({ error: 'foreign key violation' });
+    }
+    // Anything else with a validation payload / statusCode already set by
+    // Fastify (validation, rate limit, 404 through setNotFoundHandler) — fall
+    // through to Fastify's default rendering, which honors reply.statusCode.
+    reply.send(err);
+  });
 
   app.get('/health', async () => {
     await pool.query('SELECT 1');

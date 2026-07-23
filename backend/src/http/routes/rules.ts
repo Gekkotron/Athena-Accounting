@@ -1,10 +1,11 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { rules } from '../../db/schema.js';
 import { isSafeRulePattern } from '../../domain/rules/matcher.js';
 import { recategorizeAll } from '../../domain/rules/recategorize.js';
+import { isPgError, parseId } from '../../lib/http.js';
 import { userId } from '../plugins/auth.js';
 
 const CreateBody = z.object({
@@ -28,21 +29,7 @@ function guardRegexPattern(body: { matchMode?: string; keyword?: string }): stri
   const check = isSafeRulePattern(body.keyword);
   return check.ok ? null : check.reason;
 }
-const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const RecatBody = z.object({ preserveManual: z.boolean().default(true) });
-
-function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
-  const r = IdParam.safeParse(req.params);
-  if (!r.success) {
-    reply.code(400).send({ error: 'invalid id' });
-    return null;
-  }
-  return r.data.id;
-}
-
-function isPgError(err: unknown): err is { code: string } {
-  return typeof err === 'object' && err !== null && 'code' in err && typeof (err as { code: unknown }).code === 'string';
-}
 
 export async function rulesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);

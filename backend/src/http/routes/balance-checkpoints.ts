@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accounts, balanceCheckpoints } from '../../db/schema.js';
+import { isPgError } from '../../lib/http.js';
 import { userId } from '../plugins/auth.js';
 
 const decimal = z
@@ -81,10 +82,6 @@ function serialize(row: typeof balanceCheckpoints.$inferSelect) {
     note: row.note,
     createdAt: row.createdAt,
   };
-}
-
-function isPgError(err: unknown): err is { code: string } {
-  return typeof err === 'object' && err !== null && 'code' in err && typeof (err as { code: unknown }).code === 'string';
 }
 
 export async function balanceCheckpointsRoutes(app: FastifyInstance): Promise<void> {

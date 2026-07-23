@@ -1,5 +1,6 @@
-import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+
+export { IdParam, parseId } from '../../../lib/http.js';
 
 export const signedDecimal = z
   .string()
@@ -11,11 +12,3 @@ export const monthStr = z
   .transform((s) => `${s}-01`);
 
 export const currency = z.string().regex(/^[A-Z]{3}$/, 'must be a 3-letter currency code');
-
-export const IdParam = z.object({ id: z.coerce.number().int().positive() });
-
-export function parseId(req: FastifyRequest, reply: FastifyReply): number | null {
-  const r = IdParam.safeParse(req.params);
-  if (!r.success) { reply.code(400).send({ error: 'invalid id' }); return null; }
-  return r.data.id;
-}
