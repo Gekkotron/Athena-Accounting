@@ -4,6 +4,7 @@
 
 export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | number;
+export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 
 export interface Settings {
   dashboardRange: DashboardRange;
@@ -14,6 +15,10 @@ export interface Settings {
   // extends past today with a dashed projected line derived from active
   // recurring series.
   showForecast: boolean;
+  // Transactions page pre-selects this account on load. 'first-checking'
+  // means: auto-pick the earliest `type: 'checking'` account. Users can
+  // pin a specific id or 'all' via Settings.
+  transactionsDefaultAccount: TransactionsDefaultAccount;
 }
 
 export const DEFAULTS: Settings = {
@@ -22,4 +27,5 @@ export const DEFAULTS: Settings = {
   chartGapThresholdDays: 6,
   duplicateSimilarityThreshold: 0,
   showForecast: false,
+  transactionsDefaultAccount: 'first-checking',
 };

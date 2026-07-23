@@ -45,6 +45,37 @@ beforeEach(async () => {
   apiMock.mockReset();
 });
 
+// Registers responses for /api/accounts, /api/categories, /api/settings,
+// and captures every /api/transactions query. `settingsOverride` overrides
+// individual fields on the returned settings object.
+function mockPage(
+  accounts: ReturnType<typeof acc>[],
+  settingsOverride: Partial<{ transactionsDefaultAccount: unknown }> = {},
+) {
+  const queries: Record<string, unknown>[] = [];
+  apiMock.mockImplementation(async (path: string, init?: any) => {
+    if (path === '/api/accounts') return { accounts };
+    if (path === '/api/categories') return { categories: [cat(10, 'Courses')] };
+    if (path === '/api/settings') return {
+      settings: {
+        dashboardRange: '3m',
+        dashboardChartScope: 'all',
+        chartGapThresholdDays: 6,
+        duplicateSimilarityThreshold: 0,
+        showForecast: false,
+        transactionsDefaultAccount: 'first-checking',
+        ...settingsOverride,
+      },
+    };
+    if (path === '/api/transactions') {
+      queries.push(init?.query ?? {});
+      return { transactions: [], pagination: { total: 0, limit: 50, offset: 0 } };
+    }
+    throw new Error(`unexpected: ${path}`);
+  });
+  return { queries };
+}
+
 const acc = (id: number, name: string, currency = 'EUR') => ({
   id, name, type: 'checking', currency,
   openingBalance: '0.00', openingDate: '2025-01-01',
@@ -67,6 +98,50 @@ const tx = (id: number, extras: Partial<any> = {}) => ({
 });
 
 describe('Transactions page (characterization)', () => {
+  it('pre-selects the earliest checking account when the default setting is "first-checking"', async () => {
+    const savings = { ...acc(5, 'Livret A'), type: 'savings' };
+    const checkingLow = acc(7, 'Compte courant');
+    const { queries } = mockPage([savings, checkingLow]);
+    renderTransactions();
+    await waitFor(() => expect(queries.length).toBeGreaterThan(0));
+    expect(queries[0]!.accountId).toBe(7);
+  });
+
+  it('sends no accountId when the default setting is "all"', async () => {
+    const { queries } = mockPage([acc(1, 'A'), acc(2, 'B')], {
+      transactionsDefaultAccount: 'all',
+    });
+    renderTransactions();
+    await waitFor(() => expect(queries.length).toBeGreaterThan(0));
+    expect(queries[0]!.accountId).toBeUndefined();
+  });
+
+  it('pre-selects a specific id when the setting is that id and the account exists', async () => {
+    const { queries } = mockPage([acc(1, 'A'), acc(2, 'B')], {
+      transactionsDefaultAccount: 2,
+    });
+    renderTransactions();
+    await waitFor(() => expect(queries.length).toBeGreaterThan(0));
+    expect(queries[0]!.accountId).toBe(2);
+  });
+
+  it('falls back to no pre-selection when the setting points to a deleted account', async () => {
+    const { queries } = mockPage([acc(1, 'A')], {
+      transactionsDefaultAccount: 99,
+    });
+    renderTransactions();
+    await waitFor(() => expect(queries.length).toBeGreaterThan(0));
+    expect(queries[0]!.accountId).toBeUndefined();
+  });
+
+  it('falls back to no pre-selection when "first-checking" is set but no checking account exists', async () => {
+    const savings = { ...acc(5, 'Livret A'), type: 'savings' };
+    const { queries } = mockPage([savings]);
+    renderTransactions();
+    await waitFor(() => expect(queries.length).toBeGreaterThan(0));
+    expect(queries[0]!.accountId).toBeUndefined();
+  });
+
   it('renders the transaction list with pagination controls', async () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };

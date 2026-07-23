@@ -16,6 +16,7 @@ import { BulkSelectionBar } from './BulkSelectionBar';
 import { readIntParam, truncate, sortCategoriesForPicker, toggleInSet } from './lib';
 import { listCheckpoints, createCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 import { ErrorState } from '../../components/StateBlocks';
+import { useSettings } from '../../lib/useSettings';
 
 export type { Filters } from './filters';
 import type { Filters } from './filters';
@@ -37,6 +38,12 @@ export function Transactions() {
     accountId: initialAccountId,
     sourceFileId: initialSourceFileId,
   });
+  const { settings, isReady: settingsReady } = useSettings();
+  // Track whether the initial account has been resolved. The URL param
+  // wins immediately; otherwise we wait for both /api/settings and
+  // /api/accounts before seeding. Gating the transactions query on this
+  // avoids a throwaway "all accounts" fetch on first render.
+  const [defaultResolved, setDefaultResolved] = useState(initialAccountId != null);
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
@@ -86,6 +93,32 @@ export function Transactions() {
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
 
+  // Seed filters.accountId once, when /api/settings and /api/accounts are
+  // both ready and the URL did not already provide an accountId. See
+  // docs/superpowers/specs/2026-07-23-default-transactions-account-design.md
+  // for resolution rules.
+  useEffect(() => {
+    if (defaultResolved) return;
+    if (!settingsReady || !accountsQ.data) return;
+    const accts = accountsQ.data.accounts;
+    const pref = settings.transactionsDefaultAccount;
+    let resolved: number | undefined;
+    if (pref === 'all') {
+      resolved = undefined;
+    } else if (pref === 'first-checking') {
+      const firstChecking = [...accts]
+        .filter((a) => a.type === 'checking')
+        .sort((a, b) => a.id - b.id)[0];
+      resolved = firstChecking?.id;
+    } else if (typeof pref === 'number') {
+      resolved = accts.some((a) => a.id === pref) ? pref : undefined;
+    }
+    if (resolved != null) {
+      setFilters((f) => ({ ...f, accountId: resolved }));
+    }
+    setDefaultResolved(true);
+  }, [defaultResolved, settingsReady, accountsQ.data, settings]);
+
   const txQ = useQuery({
     queryKey: ['transactions', filters, offset],
     queryFn: () =>
@@ -95,6 +128,7 @@ export function Transactions() {
       }>('/api/transactions', {
         query: { ...filters, limit: PAGE, offset },
       }),
+    enabled: defaultResolved,
   });
 
   useAutoStartTour('transactions', {
