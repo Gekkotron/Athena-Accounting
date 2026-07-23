@@ -21,6 +21,15 @@ coverage/
 .claude/settings.local.json
 .claude/*.lock
 
+# Athena-Orchestrator scratch: PLAN.md is the orchestrator's dispatch
+# queue (see CLAUDE.md "PLAN.md format contract"), TODO/STATUS are
+# operator-facing notes. All three carry internal task metadata and are
+# not part of the public product surface, so we untrack them at the
+# root — the orchestrator still finds PLAN.md via the filesystem path.
+/PLAN.md
+/TODO.md
+/STATUS.md
+
 # Desktop sidecar build artifacts (produced by desktop/scripts/build-sidecar.mjs)
 desktop/sidecar/node
 desktop/sidecar/entry.js

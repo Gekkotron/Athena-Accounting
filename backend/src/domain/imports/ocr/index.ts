@@ -22,6 +22,11 @@ export function readPngDims(buf: Buffer): { widthPx: number; heightPx: number } 
   return { widthPx: buf.readUInt32BE(16), heightPx: buf.readUInt32BE(20) };
 }
 
+// One-shot warning so the CDN fetch doesn't happen silently in an
+// otherwise-offline deployment. `let` so a test can reset via re-import if
+// ever needed.
+let warnedAboutMissingLangPath = false;
+
 export async function ocrPngPages(
   pngBase64Pages: string[],
   opts: {
@@ -32,7 +37,16 @@ export async function ocrPngPages(
   const lang = opts.lang ?? 'fra+eng';
   // In LAN-only/offline deploy, set OCR_LANG_PATH to a directory containing
   // fra.traineddata and eng.traineddata (both ~30 MB). Without it, tesseract.js
-  // fetches from a CDN on first use — acceptable for dev, breaks in prod.
+  // fetches from a CDN — the project ships an offline-privacy positioning, so
+  // fire a one-shot warning to stderr on first OCR invocation. See SECURITY.md
+  // ("Third-party network calls") for the operator-facing checklist.
+  if (!process.env.OCR_LANG_PATH && !warnedAboutMissingLangPath) {
+    warnedAboutMissingLangPath = true;
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[ocr] OCR_LANG_PATH is unset — tesseract.js will fetch fra.traineddata / eng.traineddata from a CDN on first use. Set OCR_LANG_PATH to keep OCR fully offline (see SECURITY.md).',
+    );
+  }
   const worker: Worker = await createWorker(
     lang,
     1,

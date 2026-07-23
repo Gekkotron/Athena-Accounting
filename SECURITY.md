@@ -52,3 +52,20 @@ Athena Accounting is designed as a **single-tenant, LAN-only** deployment
 The project is **not** intended to be reachable from the public internet
 without an authenticating reverse proxy (Tailscale, Cloudflare Access,
 nginx basic-auth, etc.) between it and the outside world.
+
+## Third-party network calls
+
+Athena is designed to run without egress to the public internet. The only
+subsystem that *can* reach out on its own is OCR:
+
+- **tesseract.js** downloads `fra.traineddata` / `eng.traineddata` (~30 MB
+  each) from a CDN the first time OCR runs, unless the `OCR_LANG_PATH`
+  env var is set to a local directory containing those files. The
+  backend logs a one-shot warning on startup-first OCR to stderr when
+  the variable is missing. To stay fully offline, download the files
+  once from tesseract-ocr's tessdata_fast release and point
+  `OCR_LANG_PATH` at their directory.
+
+Everything else — categorization, budgeting, imports, reports — is
+computed locally against your Postgres. No telemetry, no analytics, no
+LLM calls unless you explicitly wire the MCP endpoint yourself.

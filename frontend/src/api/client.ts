@@ -53,6 +53,22 @@ export async function api<T>(
     headers,
     body,
   });
+  const { data } = await readAndValidateResponse(res, path);
+  return data as T;
+}
+
+function safeParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+// Shared post-fetch error handler used by both api() and apiUpload(). Pulls
+// the backend's `{ error: "..." }` string when present, falls back to a
+// generic HTTP-status message, and fires the 401 hook.
+async function readAndValidateResponse(res: Response, path: string): Promise<{ text: string; data: unknown }> {
   const text = await res.text();
   const data = text ? safeParse(text) : null;
   if (!res.ok) {
@@ -63,15 +79,7 @@ export async function api<T>(
         : `HTTP ${res.status}`;
     throw new ApiError(message, res.status, data);
   }
-  return data as T;
-}
-
-function safeParse(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
+  return { text, data };
 }
 
 // Multipart upload helper for file imports.
@@ -95,15 +103,6 @@ export async function apiUpload<T>(
     credentials: 'include',
     body: form,
   });
-  const text = await res.text();
-  const data = text ? safeParse(text) : null;
-  if (!res.ok) {
-    if (res.status === 401) reportUnauthorized(path);
-    const message =
-      (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
-        ? (data as { error: string }).error
-        : `HTTP ${res.status}`;
-    throw new ApiError(message, res.status, data);
-  }
+  const { data } = await readAndValidateResponse(res, path);
   return data as T;
 }
