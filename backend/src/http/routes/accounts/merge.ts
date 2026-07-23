@@ -42,6 +42,20 @@ export function registerMerge(app: FastifyInstance): void {
       });
     }
 
+    // Merging accounts with different opening_date would silently drop
+    // transactions dated before the target's opening_date from every
+    // balance/timeseries query (they filter `t.date >= a.opening_date`).
+    // Harmonizing here is fragile — target may already have transactions
+    // dated before source.opening_date whose sum is baked into its own
+    // opening_balance — so refuse the merge and let the user align dates.
+    if (source.openingDate !== target.openingDate) {
+      return reply.code(409).send({
+        error: 'opening date mismatch',
+        sourceOpeningDate: source.openingDate,
+        targetOpeningDate: target.openingDate,
+      });
+    }
+
     const merged = await db.transaction(async (tx) => {
       // Step A — promote source's account-level lock_years to per-row for
       // transactions where the per-row value is null. Preserves lock intent

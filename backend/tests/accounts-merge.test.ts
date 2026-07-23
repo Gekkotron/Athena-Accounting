@@ -20,13 +20,14 @@ async function setupUser(username: string, password: string): Promise<string> {
 
 async function createAccount(
   cookie: string, name: string, currency: string, opening = '0',
+  openingDate = '2025-01-01',
 ): Promise<number> {
   const res = await app.inject({
     method: 'POST', url: '/api/accounts',
     headers: { cookie },
     payload: {
       name, type: 'checking', currency,
-      openingBalance: opening, openingDate: '2025-01-01',
+      openingBalance: opening, openingDate,
     },
   });
   return res.json().account.id;
@@ -85,6 +86,37 @@ describe.skipIf(!RUN)('POST /api/accounts/:sourceId/merge — validation', () =>
     expect(res.json().error).toMatch(/currency mismatch/);
     expect(res.json().sourceCurrency).toBe('EUR');
     expect(res.json().targetCurrency).toBe('USD');
+  });
+
+  it('409 on opening_date mismatch, and gap-dated transactions are not moved', async () => {
+    const { db } = await import('../src/db/client.js');
+    const { transactions } = await import('../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    const early = await createAccount(cookie, 'EarlySrc', 'EUR', '0', '2020-01-01');
+    const late = await createAccount(cookie, 'LateTgt', 'EUR', '0', '2023-01-01');
+
+    // Post a transaction in the gap (before target.opening_date).
+    const txRes = await app.inject({
+      method: 'POST', url: '/api/transactions',
+      headers: { cookie },
+      payload: { accountId: early, date: '2021-06-15', amount: '-42.00', rawLabel: 'gap' },
+    });
+    expect(txRes.statusCode).toBe(201);
+
+    const res = await app.inject({
+      method: 'POST', url: `/api/accounts/${early}/merge`,
+      headers: { cookie }, payload: { targetId: late },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatch(/opening date mismatch/);
+    expect(res.json().sourceOpeningDate).toBe('2020-01-01');
+    expect(res.json().targetOpeningDate).toBe('2023-01-01');
+
+    // Merge refused → the gap transaction is still on the source account.
+    const stillOnSource = await db.select().from(transactions).where(eq(transactions.accountId, early));
+    expect(stillOnSource.length).toBe(1);
+    expect(stillOnSource[0]?.rawLabel).toBe('gap');
   });
 
   it('404 when trying to merge another users account (non-enumeration)', async () => {
