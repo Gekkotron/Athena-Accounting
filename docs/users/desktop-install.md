@@ -34,15 +34,32 @@ the artifacts on the same release page.
 
 ### macOS
 
+The app is **ad-hoc code-signed** but not notarized by Apple (no Developer
+ID yet). That's enough for the signature to be valid, but macOS Sonoma
+(14) tightened Gatekeeper and macOS Sequoia / Tahoe (15/26) tightened it
+further — any browser-downloaded artifact carries a
+`com.apple.quarantine` extended attribute, and on those OS versions
+Gatekeeper refuses to launch ad-hoc-signed quarantined apps, with the
+misleading *"Athena Accounting est endommagé et ne peut pas être
+ouvert"* dialog. Right-click → Open no longer bypasses this.
+
+The one-shot cure is a single Terminal command that strips the quarantine
+attribute:
+
 1. Open the `.dmg` and drag **Athena Accounting** into `Applications`.
-2. The first launch shows *"Athena Accounting can't be opened because
-   Apple cannot check it for malicious software"* — the app is not yet
-   signed with an Apple Developer certificate. Dismiss the dialog, then
-   right-click the app in Finder → **Open** → **Open** in the follow-up
-   prompt. macOS remembers your choice; every subsequent launch is a
-   normal double-click.
-3. If Gatekeeper refuses even with right-click → Open, run once from a
-   terminal: `xattr -dr com.apple.quarantine "/Applications/Athena Accounting.app"`.
+2. Open **Terminal** and run:
+   ```bash
+   xattr -cr "/Applications/Athena Accounting.app"
+   ```
+3. Double-click the app in Finder. It launches normally from now on.
+
+If you're on an older macOS (12/13) that still accepts ad-hoc bundles,
+you may see the softer *"unidentified developer"* dialog instead — in
+that case, right-click the app → **Open** → confirm **Open** in the
+follow-up prompt and macOS will remember the choice.
+
+Once the project has an Apple Developer ID and notarizes releases, none
+of this will be needed.
 
 ### Windows
 
@@ -137,9 +154,11 @@ client. See **[MCP access](mcp.md)** for the full walkthrough.
 - **No LAN access.** The backend binds to `127.0.0.1` on a
   system-assigned port. Other devices on your network cannot reach it,
   by design.
-- **Unsigned binaries** on macOS and Windows. This will change once the
-  project has an Apple Developer account; in the meantime the
-  right-click-open / *Run anyway* workaround is a one-time cost.
+- **Unsigned / non-notarized binaries** on macOS (ad-hoc only) and
+  Windows. This will change once the project has an Apple Developer
+  account; in the meantime macOS users pay a one-shot `xattr -cr` cost
+  after install (see **First run → macOS** above), and Windows users
+  click through *Run anyway* in SmartScreen.
 - **Bundle size** is 50–80 MB per platform. The sidecar carries a full
   Node runtime plus a handful of native modules (sharp, canvas, argon2,
   PGlite, pdfjs, tesseract); a leaner bundle isn't worth the fragility.
