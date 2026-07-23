@@ -81,7 +81,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             desktop/src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock', 'desktop/src-tauri/Cargo.toml') }}
+          # Icons/tauri.conf.json included in the key: Tauri embeds the .ico
+          # into the Windows .exe via a resource file emitted by
+          # tauri-build's build.rs. If those inputs change but cargo restores
+          # a cached target/, the pre-built .exe keeps the OLD icon. Hashing
+          # them into the key forces a clean rebuild whenever bundle metadata
+          # (icons, product name, version, bundle config) shifts.
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock', 'desktop/src-tauri/Cargo.toml', 'desktop/src-tauri/tauri.conf.json', 'desktop/src-tauri/icons/**') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
