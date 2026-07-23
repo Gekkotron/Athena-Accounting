@@ -1,46 +1,26 @@
-export type CategoryKind = 'expense' | 'income' | 'neutral';
+// The highest-drift-risk entities (Account, Category, Transaction,
+// TransactionSplit, BalanceCheckpoint) now live in ../../../shared/ so the
+// backend routes and this file share one source of truth. Additions to
+// those entities go in the shared file. Everything else in this module is
+// still hand-rolled — task 13 of the 2026-07-23 audit tracks porting the
+// rest.
+import type { CategoryKind } from '../../../shared/api-contracts';
+export type {
+  Account,
+  BalanceCheckpoint,
+  Category,
+  CategoryKind,
+  CategorySource,
+  Transaction,
+  TransactionSplit,
+} from '../../../shared/api-contracts';
+
 export type SignConstraint = 'positive' | 'negative' | 'any';
 export type MatchMode = 'word' | 'substring' | 'regex';
-export type CategorySource = 'manual' | 'auto' | 'default' | 'llm';
 
 export interface User {
   id: number;
   username: string;
-}
-
-export interface Account {
-  id: number;
-  name: string;
-  type: string;
-  currency: string;
-  openingBalance: string;
-  openingDate: string;
-  currentBalance?: string;
-  // Total transactions tied to this account (all dates).
-  transactionCount?: number;
-  // Transactions on/after openingDate — these are the ones actually summed
-  // into currentBalance. If this is 0 but transactionCount > 0, the user has
-  // rows dated before opening_date that are being excluded.
-  countedTransactionCount?: number;
-  // User-controlled position in the accounts grid / dashboard. Lower first.
-  displayOrder?: number;
-  createdAt?: string;
-  // Default lock period in years. Applies to the opening balance and to
-  // any transaction whose own lockYears is null. Clocked from openingDate.
-  lockYears?: number | null;
-  // Sum of amounts (including opening balance) that are unlocked as of
-  // today. `blocked = currentBalance - availableBalance`.
-  availableBalance?: string;
-}
-
-export interface Category {
-  id: number;
-  name: string;
-  kind: CategoryKind;
-  color: string | null;
-  parentId: number | null;
-  isDefault: boolean;
-  isInternalTransfer: boolean;
 }
 
 export interface Rule {
@@ -60,39 +40,6 @@ export interface TransferRule {
   direction: 'outgoing' | 'incoming';
   counterpartAccountId: number | null;
   enabled: boolean;
-}
-
-export interface TransactionSplit {
-  id: number;
-  transactionId: number;
-  categoryId: number | null;
-  amount: string;
-  memo: string | null;
-}
-
-export interface Transaction {
-  id: number;
-  accountId: number;
-  date: string;
-  amount: string;
-  rawLabel: string;
-  normalizedLabel: string;
-  memo: string | null;
-  notes: string | null;
-  fitid: string | null;
-  dedupKey: string;
-  categoryId: number | null;
-  categorySource: CategorySource;
-  transferGroupId: string | null;
-  sourceFileId: number | null;
-  importedAt: string;
-  // Per-transaction lock override in years. Null falls back to the account's
-  // lockYears; null on both means no lock. Clocked from the transaction date.
-  lockYears?: number | null;
-  // Account balance after this transaction (opening balance + cumulative sum
-  // by date). Present only when the list is fetched with an accountId filter.
-  runningBalance?: string;
-  splits: TransactionSplit[];
 }
 
 export interface AccountFilenamePattern {
@@ -147,15 +94,6 @@ export interface CategoryReportRow {
   month: string;
   total: string;
   transaction_count: number;
-}
-
-export interface BalanceCheckpoint {
-  id: number;
-  accountId: number;
-  checkpointDate: string;   // YYYY-MM-DD
-  expectedAmount: string;   // fixed-point string, per project convention
-  note: string | null;
-  createdAt: string;
 }
 
 export type BudgetPeriod = 'monthly' | 'yearly';

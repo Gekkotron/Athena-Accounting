@@ -111,7 +111,10 @@ describe('BalanceCheckpointsDrawer', () => {
 
   it('accepts a French comma amount and passes the canonical decimal to the API', async () => {
     listMock.mockResolvedValue({ checkpoints: [] });
-    createMock.mockResolvedValueOnce({ checkpoint: { id: 1, checkpointDate: '2025-06-01', expectedAmount: '1500.00', note: null } });
+    createMock.mockResolvedValueOnce({ checkpoint: {
+      id: 1, accountId: 1, checkpointDate: '2025-06-01',
+      expectedAmount: '1500.00', note: null, createdAt: '2026-01-01T00:00:00Z',
+    } });
     const user = userEvent.setup();
     renderDrawer();
     fireEvent.change(await screen.findByLabelText(/date du point de contrôle/i), { target: { value: '2025-06-01' } });
