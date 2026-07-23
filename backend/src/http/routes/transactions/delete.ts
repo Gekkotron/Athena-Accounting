@@ -21,14 +21,18 @@ export function registerDelete(app: FastifyInstance): void {
       .where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
     if (!existing) return reply.code(404).send({ error: 'not found' });
 
-    if (existing.transferGroupId) {
-      await db
-        .update(transactions)
-        .set({ transferGroupId: null })
-        .where(and(eq(transactions.transferGroupId, existing.transferGroupId), eq(transactions.userId, uid)));
-    }
-
-    await db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
+    // The unlink + delete run inside one DB transaction (mirroring bulk.ts)
+    // so a crash between the two statements can't leave the mirror leg
+    // permanently unlinked while the row survives.
+    await db.transaction(async (tx) => {
+      if (existing.transferGroupId) {
+        await tx
+          .update(transactions)
+          .set({ transferGroupId: null })
+          .where(and(eq(transactions.transferGroupId, existing.transferGroupId), eq(transactions.userId, uid)));
+      }
+      await tx.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
+    });
     return { ok: true };
   });
 }
