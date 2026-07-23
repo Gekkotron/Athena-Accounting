@@ -1,5 +1,5 @@
 import Translate from '@docusaurus/Translate';
-import styles from './index.module.css';
+import styles from '../pages/index.module.css';
 
 type LedgerStep = {
   n: string;
