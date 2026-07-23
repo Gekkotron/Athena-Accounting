@@ -571,7 +571,8 @@ export const transactionSplits = pgTable(
   {
     id: serial('id').primaryKey(),
     transactionId: bigint('transaction_id', { mode: 'number' })
-      .notNull(),
+      .notNull()
+      .references(() => transactions.id, { onDelete: 'cascade' }),
     categoryId: integer('category_id').references(() => categories.id, {
       onDelete: 'set null',
     }),
