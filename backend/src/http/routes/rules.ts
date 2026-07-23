@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { rules } from '../../db/schema.js';
+import { isSafeRulePattern } from '../../domain/rules/matcher.js';
 import { recategorizeAll } from '../../domain/rules/recategorize.js';
 import { userId } from '../plugins/auth.js';
 
@@ -16,6 +17,17 @@ const CreateBody = z.object({
 });
 
 const UpdateBody = CreateBody.partial();
+
+// POST /api/recategorize runs every rule against every transaction on the
+// event loop, so a catastrophic-backtracking pattern would hang the process
+// for every user. Only enforce this on 'regex' matchMode — 'word' and
+// 'substring' build their own patterns and pass user text through
+// escapeRegex first.
+function guardRegexPattern(body: { matchMode?: string; keyword?: string }): string | null {
+  if (body.matchMode !== 'regex' || typeof body.keyword !== 'string') return null;
+  const check = isSafeRulePattern(body.keyword);
+  return check.ok ? null : check.reason;
+}
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const RecatBody = z.object({ preserveManual: z.boolean().default(true) });
 
@@ -51,6 +63,10 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
+    const patternError = guardRegexPattern(parsed.data);
+    if (patternError) {
+      return reply.code(400).send({ error: patternError });
+    }
     try {
       const [created] = await db
         .insert(rules)
@@ -75,6 +91,10 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
     }
     if (Object.keys(parsed.data).length === 0) {
       return reply.code(400).send({ error: 'no fields to update' });
+    }
+    const patternError = guardRegexPattern(parsed.data);
+    if (patternError) {
+      return reply.code(400).send({ error: patternError });
     }
     const [updated] = await db
       .update(rules)

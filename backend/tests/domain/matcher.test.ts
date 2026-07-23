@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compileRule, firstMatch, type CompiledRule } from '../../src/domain/rules/matcher.js';
+import { compileRule, firstMatch, isSafeRulePattern, type CompiledRule } from '../../src/domain/rules/matcher.js';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { rules } from '../../src/db/schema.js';
 
@@ -89,5 +89,32 @@ describe('compileRule / firstMatch', () => {
     expect(firstMatch(list, 'cb carrefour', -10)?.rule.id).toBe(2);
     // If nothing matches, returns null.
     expect(firstMatch(list, 'sncf', -10)).toBeNull();
+  });
+});
+
+describe('isSafeRulePattern', () => {
+  it('accepts simple, well-formed patterns', () => {
+    expect(isSafeRulePattern('^vir.*alan$')).toEqual({ ok: true });
+    expect(isSafeRulePattern('carrefour|monoprix')).toEqual({ ok: true });
+    expect(isSafeRulePattern('sncf\\s*\\d{2,4}')).toEqual({ ok: true });
+  });
+
+  it('rejects patterns whose group body pairs a quantifier with a group quantifier (ReDoS)', () => {
+    expect(isSafeRulePattern('(a+)+').ok).toBe(false);
+    expect(isSafeRulePattern('(a*)*').ok).toBe(false);
+    expect(isSafeRulePattern('(x+y)+').ok).toBe(false);
+  });
+
+  it('rejects invalid regex syntax', () => {
+    const r = isSafeRulePattern('(unclosed');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/invalid regex/i);
+  });
+
+  it('rejects patterns beyond the length cap', () => {
+    const huge = 'a'.repeat(201);
+    const r = isSafeRulePattern(huge);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/too long/i);
   });
 });

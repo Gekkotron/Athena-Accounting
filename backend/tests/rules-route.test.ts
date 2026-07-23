@@ -183,6 +183,26 @@ describe.skipIf(!RUN)('/api/rules', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('rejects a regex rule with a catastrophic-backtracking pattern with 400', async () => {
+    const res = await app.inject({
+      method: 'POST', url: '/api/rules',
+      headers: { cookie },
+      payload: { categoryId, keyword: '(a+)+', matchMode: 'regex' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/redos|nested|quantifier/i);
+  });
+
+  it('rejects a regex rule with invalid syntax with 400', async () => {
+    const res = await app.inject({
+      method: 'POST', url: '/api/rules',
+      headers: { cookie },
+      payload: { categoryId, keyword: '(unclosed', matchMode: 'regex' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/invalid regex/i);
+  });
+
   it("does not leak, mutate, or delete another user's rules (cross-user isolation)", async () => {
     const { db } = await import('../src/db/client.js');
     const { users, categories, rules } = await import('../src/db/schema.js');

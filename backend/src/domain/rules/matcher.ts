@@ -13,6 +13,37 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Reject the shapes most likely to cause catastrophic backtracking on the
+// event loop when POST /api/recategorize matches every rule against every
+// transaction. Heuristics rather than a solver — small and dep-free, but
+// blocks the obvious footguns:
+//   - patterns beyond a hard length cap
+//   - a syntactically invalid regex
+//   - a group with a quantifier whose body also contains a quantifier
+//     (the "(a+)+" / "(a*)*" family)
+//   - unbounded upper-bound repetition like "{5,}" that pairs badly with
+//     alternation
+export const REGEX_PATTERN_MAX_LENGTH = 200;
+
+export function isSafeRulePattern(pattern: string): { ok: true } | { ok: false; reason: string } {
+  if (pattern.length > REGEX_PATTERN_MAX_LENGTH) {
+    return { ok: false, reason: `regex too long (max ${REGEX_PATTERN_MAX_LENGTH} chars)` };
+  }
+  try {
+    new RegExp(pattern);
+  } catch (e) {
+    return { ok: false, reason: `invalid regex: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  // Any group body containing an unbounded quantifier immediately followed
+  // by a group-level quantifier — the classic catastrophic-backtracking
+  // shape.
+  const nested = /\(([^()]*[+*][^()]*|[^()]*\{\d+,\}[^()]*)\)\s*[+*?{]/;
+  if (nested.test(pattern)) {
+    return { ok: false, reason: 'regex has nested unbounded quantifiers (possible ReDoS)' };
+  }
+  return { ok: true };
+}
+
 function signOk(amount: number, c: Rule['signConstraint']): boolean {
   if (c === 'positive') return amount > 0;
   if (c === 'negative') return amount < 0;
