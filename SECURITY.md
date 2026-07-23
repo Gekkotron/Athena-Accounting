@@ -28,3 +28,27 @@ prioritized, but there is no guaranteed time-to-fix.
 
 Only the latest release on `main` receives security fixes. Older tags and
 pre-release builds are not maintained.
+
+## Threat model
+
+Athena Accounting is designed as a **single-tenant, LAN-only** deployment
+(a home mini-PC, an intranet server, or similar). By default:
+
+- The frontend and backend containers bind to **every host interface**
+  (`0.0.0.0`) so other devices on your LAN can reach the app at
+  `http://<host-ip>:<port>`. If that's not what you want, restrict with a
+  host firewall — or edit `docker-compose.yml` and prefix the port
+  mappings with `127.0.0.1:` (e.g. `127.0.0.1:8000:80`) and put a
+  reverse proxy in front for remote access.
+- Onboarding registration is **open by design**: any client that can
+  reach the app can create the first user. On a LAN-exposed deployment,
+  that means anyone on your network can register an account. Firewall
+  the ports, disable onboarding after your first user, or put an
+  authenticating reverse proxy in front if you need stricter access.
+- Sessions are cookie-based with `httpOnly`; set `COOKIE_SECURE=true`
+  behind an HTTPS-terminating reverse proxy so the cookie isn't
+  transmitted over plain HTTP.
+
+The project is **not** intended to be reachable from the public internet
+without an authenticating reverse proxy (Tailscale, Cloudflare Access,
+nginx basic-auth, etc.) between it and the outside world.
