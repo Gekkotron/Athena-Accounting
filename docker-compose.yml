@@ -38,7 +38,14 @@ services:
       - "${BACKEND_PORT:-8001}:3000"
 
   frontend:
-    build: ./frontend
+    # Build from the repo root, not ./frontend, because
+    # frontend/tsconfig.json includes "../shared/**/*.ts" and
+    # frontend/src/api/types.ts imports '../../../shared/api-contracts'.
+    # With context=./frontend the sibling shared/ dir isn't visible in the
+    # Docker build and tsc bails out.
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     restart: unless-stopped
     depends_on:
       - backend

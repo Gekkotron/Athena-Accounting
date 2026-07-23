@@ -1,0 +1,56 @@
+# Applies to the frontend build (context = repo root — see docker-compose.yml).
+# Backend still uses context: ./backend and keeps its own backend/.dockerignore.
+
+# VCS / tooling
+.git
+.github
+.claude
+.superpowers
+.vscode
+.idea
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Env / secrets — never ship these into build layers
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Node
+node_modules
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+
+# Frontend build artifacts (rebuilt inside the container anyway)
+frontend/dist
+frontend/coverage
+frontend/playwright-report
+frontend/test-results
+frontend/.playwright-cache
+frontend/playwright/.cache
+
+# Backend / desktop / website — not needed by the frontend build
+backend
+desktop
+website
+docs
+
+# Local Postgres state (would balloon the build context otherwise)
+postgres-data
+
+# Top-level markdown / repo cruft
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+README*
+PLAN.md
+compose*.yml
+docker-compose*.yml
+Dockerfile*
+.gitignore
+.dockerignore
