@@ -1,5 +1,18 @@
 # Project audit — remediation plan (2026-07-23)
 
+> **REMEDIATED — do not promote these tasks again.** Verified 2026-07-24:
+> every finding below was fixed on main on 2026-07-23, most within hours of
+> this document being written. Commit map: #1 `800b710`, #2 `919d3b5`
+> (reject-with-409 path), #3 `39f4495`, #4 `77cb105`, #5 `d01b7d4`,
+> #6 `f093307`, #7 fixed in compose/.env.example (Postgres bound 127.0.0.1,
+> LAN exposure documented honestly) + SECURITY.md open-registration note,
+> #8 `a68c242`, #9 `9c0cd6b`, #10 `a530f2f`, #11 backend `USER node` +
+> nginx security headers (frontend nginx master stays root — official-image
+> norm), #12 `4ba9beb`, #13 `d367a9b`, #14 `29da0b7`, #15 `1768337`,
+> #16 `05323a8`, #17 `78e86f6`, #18 PLAN/TODO/STATUS gitignored + OCR CDN
+> warning + SECURITY.md checklist. Residual doc bug (security-and-privacy.md
+> claiming registration locks after first user) fixed 2026-07-24.
+
 Full-project audit (security, backend correctness, frontend, architecture) run by
 four parallel review agents; the three critical findings below were re-verified
 by hand against the code. Tasks are ordered by severity. Each task is written to

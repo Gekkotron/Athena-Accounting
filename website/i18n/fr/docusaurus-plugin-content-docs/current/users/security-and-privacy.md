@@ -33,11 +33,16 @@ force brute sur les mots de passe faibles.
 aléatoire par utilisateur. Ni le mot de passe brut ni une représentation
 réversible ne sont stockés.
 
-**Verrou anti-takeover au premier lancement.** L'onboarding crée le
-premier compte administrateur puis verrouille l'endpoint — les visiteurs
-suivants ne peuvent pas enregistrer un nouvel administrateur par-dessus
-le vôtre. Ajoutez d'autres utilisateurs depuis la page Réglages une fois
-connecté.
+**Inscription ouverte sur le LAN.** L'onboarding crée le premier compte
+utilisateur, et l'endpoint reste ouvert ensuite : toute personne qui peut
+atteindre l'application sur votre réseau peut créer son propre compte
+depuis l'écran de connexion (« Créer un compte »). Les données de chaque
+compte sont totalement isolées — un autre utilisateur ne peut jamais voir
+vos transactions — et les noms d'utilisateur sont uniques, donc personne ne
+peut s'enregistrer par-dessus le vôtre. L'inscription est limitée en débit
+(rate-limit) ; pour bloquer entièrement les nouvelles inscriptions,
+restreignez l'accès via un pare-feu ou un VPN (voir
+[SECURITY.md](https://github.com/Gekkotron/Athena-Accounting/blob/main/SECURITY.md)).
 
 **Chemin Desktop.** Le build Tauri tourne avec `AUTH_MODE=none` : pas de
 cookies, pas d'écran de connexion, un unique utilisateur local est semé

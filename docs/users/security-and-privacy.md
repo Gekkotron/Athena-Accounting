@@ -30,10 +30,14 @@ attempts against weak passwords.
 2 iterations, parallelism 1) and a per-user random salt. Neither the raw
 password nor a reversible representation is ever stored.
 
-**First-run anti-takeover.** Onboarding creates the first user account and
-then locks the endpoint — subsequent visitors cannot register a new
-administrator over the top of yours. Add extra users from the Settings
-page once you're signed in.
+**Open registration on the LAN.** Onboarding creates the first user
+account, and the endpoint stays open afterwards: anyone who can reach the
+app on your network can create their own account from the login screen
+("Créer un compte"). Every account's data is fully isolated — another user
+can never see your transactions — and usernames are unique, so nobody can
+register over the top of yours. Registration is rate-limited; if you want
+to stop new sign-ups entirely, restrict access with a firewall or VPN (see
+[SECURITY.md](https://github.com/Gekkotron/Athena-Accounting/blob/main/SECURITY.md)).
 
 **Desktop path.** The Tauri build runs with `AUTH_MODE=none`: no cookies,
 no login screen, a single hard-coded local user is seeded on first boot.
