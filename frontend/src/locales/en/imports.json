@@ -224,6 +224,8 @@
       "title": "Delete this template?",
       "descriptionPrefix": "The template",
       "descriptionSuffix": "will be deleted. The next PDF import with the same bank fingerprint will relaunch the wizard. Already-imported transactions are not affected."
-    }
+    },
+    "rename": "Rename",
+    "renameInputLabel": "New template name"
   }
 }

@@ -224,6 +224,8 @@
       "title": "Supprimer ce template ?",
       "descriptionPrefix": "Le template",
       "descriptionSuffix": "sera supprimé. Le prochain import PDF avec la même empreinte de banque relancera l'assistant. Les transactions déjà importées ne sont pas affectées."
-    }
+    },
+    "rename": "Renommer",
+    "renameInputLabel": "Nouveau nom du template"
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
@@ -6,6 +6,7 @@ import type { Account } from '../../api/types';
 import {
   listPdfTemplates,
   deletePdfTemplate,
+  renamePdfTemplate,
   type PdfTemplateRow,
 } from '../../api/pdf-templates';
 import { getAccountName } from '../../lib/accounts';
@@ -34,6 +35,31 @@ export function PdfTemplatesPanel(): JSX.Element {
 
   const [pending, setPending] = useState<PdfTemplateRow | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: number; draft: string } | null>(null);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  // Escape closes the editor synchronously; the flag stops a stray blur from
+  // committing the abandoned draft right after.
+  const renameCancelled = useRef(false);
+  const renameMut = useMutation({
+    mutationFn: ({ id, label }: { id: number; label: string }) => renamePdfTemplate(id, label),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pdf-templates'] });
+      setEditing(null);
+      setRenameError(null);
+    },
+    onError: (err: Error) => setRenameError(err.message),
+  });
+
+  const commitRename = (tpl: PdfTemplateRow): void => {
+    if (!editing || editing.id !== tpl.id || renameMut.isPending) return;
+    const label = editing.draft.trim();
+    if (!label || label === tpl.label) {
+      setEditing(null);
+      return;
+    }
+    renameMut.mutate({ id: tpl.id, label });
+  };
+
   const deleteMut = useMutation({
     mutationFn: (id: number) => deletePdfTemplate(id),
     onSuccess: () => {
@@ -89,6 +115,11 @@ export function PdfTemplatesPanel(): JSX.Element {
         <p className="text-sm text-ink-300 mb-3">
           {t('templates.description')}
         </p>
+        {renameError && (
+          <div className="rounded-lg border border-clay-800/60 bg-clay-900/25 px-3 py-2 mb-3 text-sm text-clay-200">
+            {renameError}
+          </div>
+        )}
         {legacyCount > 0 && (
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/25 px-3 py-2 mb-3 text-sm text-clay-200">
             {t('templates.legacyWarning', { count: legacyCount })}{' '}
@@ -111,7 +142,32 @@ export function PdfTemplatesPanel(): JSX.Element {
               {templates.map((tpl) => (
                 <tr key={tpl.id} className="border-b border-ink-800/40 last:border-0 align-top">
                   <td className="px-3 py-2 text-ink-100 max-w-[18rem]">
-                    <div className="truncate" title={tpl.label}>{tpl.label}</div>
+                    {editing?.id === tpl.id ? (
+                      <input
+                        autoFocus
+                        aria-label={t('templates.renameInputLabel')}
+                        className="w-full rounded-md border border-ink-700 bg-ink-900/60 px-2 py-1 text-sm text-ink-100 focus:border-sage-600 focus:outline-none disabled:opacity-40"
+                        value={editing.draft}
+                        disabled={renameMut.isPending}
+                        onChange={(e) => setEditing({ id: tpl.id, draft: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename(tpl);
+                          if (e.key === 'Escape') {
+                            renameCancelled.current = true;
+                            setEditing(null);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (renameCancelled.current) {
+                            renameCancelled.current = false;
+                            return;
+                          }
+                          commitRename(tpl);
+                        }}
+                      />
+                    ) : (
+                      <div className="truncate" title={tpl.label}>{tpl.label}</div>
+                    )}
                     {(tpl.pageAnchor || tpl.otherAnchors.length > 0) && (
                       <div className="mt-1 text-[10px] text-ink-500 font-mono leading-relaxed">
                         {tpl.pageAnchor && (
@@ -149,7 +205,18 @@ export function PdfTemplatesPanel(): JSX.Element {
                   <td className="px-3 py-2 text-ink-400 font-mono text-xs whitespace-nowrap">
                     {shortIsoDate(tpl.updatedAt)}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <button
+                      className="text-xs text-ink-300 hover:text-ink-100 border border-ink-700/60 hover:border-ink-600 rounded-md px-2 py-1 transition disabled:opacity-40 mr-2"
+                      disabled={renameMut.isPending}
+                      onClick={() => {
+                        renameCancelled.current = false;
+                        setRenameError(null);
+                        setEditing({ id: tpl.id, draft: tpl.label });
+                      }}
+                    >
+                      {t('templates.rename')}
+                    </button>
                     <button
                       className="text-xs text-clay-300 hover:text-clay-200 border border-clay-800/60 hover:border-clay-700 rounded-md px-2 py-1 transition disabled:opacity-40"
                       disabled={deleteMut.isPending}

@@ -15,16 +15,18 @@ pinLocale('imports');
 vi.mock('../../../api/pdf-templates', () => ({
   listPdfTemplates: vi.fn(),
   deletePdfTemplate: vi.fn(),
+  renamePdfTemplate: vi.fn(),
 }));
 vi.mock('../../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
   return { ...actual, api: vi.fn() };
 });
 
-import { listPdfTemplates, deletePdfTemplate } from '../../../api/pdf-templates';
+import { listPdfTemplates, deletePdfTemplate, renamePdfTemplate } from '../../../api/pdf-templates';
 import { api } from '../../../api/client';
 const listMock = vi.mocked(listPdfTemplates);
 const deleteMock = vi.mocked(deletePdfTemplate);
+const renameMock = vi.mocked(renamePdfTemplate);
 const apiMock = vi.mocked(api);
 
 function renderPanel() {
@@ -42,6 +44,7 @@ const account = (id: number, name: string) => ({
 beforeEach(() => {
   listMock.mockReset();
   deleteMock.mockReset();
+  renameMock.mockReset();
   apiMock.mockReset();
   apiMock.mockImplementation(async (path: string) => {
     if (path === '/api/accounts') return { accounts: [account(1, 'Compte courant'), account(2, 'Livret A')] };
@@ -118,5 +121,46 @@ describe('PdfTemplatesPanel', () => {
     // Two buttons now: the row one AND the confirm one. Click the last (the dialog's).
     await user.click(confirmBtn[confirmBtn.length - 1]!);
     await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(10));
+  });
+
+  const bnpTemplate = {
+    id: 10, fingerprint: 'abc', accountId: 1, label: 'BNP',
+    source: 'interactive' as const, hasPageAnchor: true,
+    pageAnchor: 'compte courant n° 12345', otherAnchors: [],
+    createdAt: '2026-06-01T09:00:00Z', updatedAt: '2026-06-15T09:00:00Z',
+  };
+
+  it('renames a template inline when pressing Enter', async () => {
+    listMock.mockResolvedValueOnce([bnpTemplate]);
+    // After rename, the query invalidates and refetches with the new label.
+    listMock.mockResolvedValueOnce([{ ...bnpTemplate, label: 'BNP 2026' }]);
+    renameMock.mockResolvedValueOnce(undefined);
+
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText('BNP');
+    await user.click(screen.getByRole('button', { name: /^renommer$/i }));
+    const input = screen.getByRole('textbox', { name: /nouveau nom/i });
+    expect(input).toHaveValue('BNP');
+    await user.clear(input);
+    await user.type(input, 'BNP 2026{Enter}');
+    await waitFor(() => expect(renameMock).toHaveBeenCalledWith(10, 'BNP 2026'));
+    expect(await screen.findByText('BNP 2026')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /nouveau nom/i })).not.toBeInTheDocument();
+  });
+
+  it('cancels an inline rename with Escape without calling the API', async () => {
+    listMock.mockResolvedValueOnce([bnpTemplate]);
+
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText('BNP');
+    await user.click(screen.getByRole('button', { name: /^renommer$/i }));
+    const input = screen.getByRole('textbox', { name: /nouveau nom/i });
+    await user.clear(input);
+    await user.type(input, 'autre nom{Escape}');
+    expect(renameMock).not.toHaveBeenCalled();
+    expect(screen.getByText('BNP')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /nouveau nom/i })).not.toBeInTheDocument();
   });
 });
