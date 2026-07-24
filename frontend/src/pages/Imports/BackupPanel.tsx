@@ -28,26 +28,47 @@ export function BackupPanel(): JSX.Element {
   const [backupError, setBackupError] = useState<string | null>(null);
   const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportPassphrase, setExportPassphrase] = useState('');
+  const [importPassphrase, setImportPassphrase] = useState('');
   // Holds the parsed JSON between the user picking a file and confirming
   // the destructive import in the dialog.
   const [pendingImport, setPendingImport] = useState<unknown | null>(null);
+  // enc1 files need the passphrase collected inside the confirm dialog.
+  const pendingIsEncrypted =
+    typeof pendingImport === 'object' &&
+    pendingImport !== null &&
+    (pendingImport as { v?: unknown }).v === 'enc1';
 
   // Streams the backup endpoint to a downloadable file. We can't use a plain
   // <a href> because the endpoint requires the session cookie and we want
-  // proper "save as" behaviour with a meaningful filename.
+  // proper "save as" behaviour with a meaningful filename. With a passphrase
+  // the export switches to the POST variant, which returns the AES-256-GCM
+  // envelope instead of cleartext JSON.
   const exportBackup = async () => {
     setBackupError(null);
     setBackupResult(null);
+    const passphrase = exportPassphrase.trim();
+    if (passphrase && passphrase.length < 8) {
+      setBackupError(t('backup.encrypt.tooShort'));
+      return;
+    }
     setExporting(true);
     try {
-      const res = await fetch('/api/backup/export', { credentials: 'include' });
+      const res = passphrase
+        ? await fetch('/api/backup/export', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ passphrase }),
+          })
+        : await fetch('/api/backup/export', { credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       const today = new Date().toISOString().slice(0, 10);
-      a.download = `athena-backup-${today}.json`;
+      a.download = `athena-backup-${today}${passphrase ? '.enc' : ''}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -89,6 +110,7 @@ export function BackupPanel(): JSX.Element {
 
   const cancelImport = () => {
     setPendingImport(null);
+    setImportPassphrase('');
     if (backupFileRef.current) backupFileRef.current.value = '';
   };
 
@@ -113,6 +135,16 @@ export function BackupPanel(): JSX.Element {
             >
               {exporting ? t('backup.export.exporting') : t('backup.export.idle')}
             </button>
+
+            <input
+              type="password"
+              className="input max-w-xs"
+              aria-label={t('backup.encrypt.label')}
+              placeholder={t('backup.encrypt.label')}
+              value={exportPassphrase}
+              onChange={(e) => setExportPassphrase(e.target.value)}
+              disabled={exporting}
+            />
 
             <label className="btn-secondary cursor-pointer">
               {importBackupMut.isPending ? t('backup.import.pending') : t('backup.import.idle')}
@@ -165,6 +197,19 @@ export function BackupPanel(): JSX.Element {
             <span className="display-italic">{t('backup.confirmDialog.descriptionPrefix')}</span>{' '}
             {t('backup.confirmDialog.descriptionMiddle')} <span className="display-italic">{t('backup.confirmDialog.descriptionErased')}</span>
             {' '}{t('backup.confirmDialog.descriptionSuffix')}
+            {pendingIsEncrypted && (
+              <span className="block mt-3">
+                {t('backup.confirmDialog.encryptedNote')}
+                <input
+                  type="password"
+                  className="input mt-2 w-full"
+                  aria-label={t('backup.confirmDialog.passphraseLabel')}
+                  value={importPassphrase}
+                  onChange={(e) => setImportPassphrase(e.target.value)}
+                  disabled={importBackupMut.isPending}
+                />
+              </span>
+            )}
           </>
         }
         confirmLabel={t('backup.confirmDialog.confirmLabel')}
@@ -173,8 +218,14 @@ export function BackupPanel(): JSX.Element {
         error={backupError}
         onConfirm={() => {
           if (!pendingImport) return;
-          importBackupMut.mutate(pendingImport, {
-            onSuccess: () => setPendingImport(null),
+          const payload = pendingIsEncrypted
+            ? { ...(pendingImport as Record<string, unknown>), passphrase: importPassphrase }
+            : pendingImport;
+          importBackupMut.mutate(payload, {
+            onSuccess: () => {
+              setPendingImport(null);
+              setImportPassphrase('');
+            },
           });
         }}
         onCancel={cancelImport}

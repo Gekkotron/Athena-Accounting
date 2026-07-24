@@ -12,8 +12,10 @@ import {
   transactions,
   transactionSplits,
 } from '../../../db/schema.js';
+import { z } from 'zod';
 import { userId } from '../../plugins/auth.js';
 import { VERSION, fileImportKey } from './schema.js';
+import { encryptEnvelope } from './crypto.js';
 
 // Emits a portable JSON dump using natural keys (account / category names).
 // Multi-user safe: only the calling user's data is included.
@@ -22,9 +24,8 @@ import { VERSION, fileImportKey } from './schema.js';
 // the `is_internal_transfer` flag on categories, and every restore of an
 // old dump still re-inserts them via the optional schema field, so historic
 // backups keep round-tripping cleanly.
-export function registerExportRoute(app: FastifyInstance): void {
-  app.get('/api/backup/export', async (req, reply) => {
-    const uid = userId(req);
+async function buildDump(uid: number) {
+  {
     const [accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
@@ -161,15 +162,43 @@ export function registerExportRoute(app: FastifyInstance): void {
       })),
     };
 
-    // Local-time stamp so multiple exports on the same day stay distinct in the
-    // download folder. Shape: athena-backup-YYYY-MM-DD-HHMMSS.json
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const stamp =
-      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-      `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    reply.header('Content-Type', 'application/json; charset=utf-8');
-    reply.header('Content-Disposition', `attachment; filename="athena-backup-${stamp}.json"`);
     return dump;
+  }
+}
+
+// Local-time stamp so multiple exports on the same day stay distinct in the
+// download folder. Shape: athena-backup-YYYY-MM-DD-HHMMSS.json
+function stampNow(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  );
+}
+
+const EncryptBody = z.object({ passphrase: z.string().min(8).max(1024) });
+
+export function registerExportRoute(app: FastifyInstance): void {
+  app.get('/api/backup/export', async (req, reply) => {
+    const dump = await buildDump(userId(req));
+    reply.header('Content-Type', 'application/json; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="athena-backup-${stampNow()}.json"`);
+    return dump;
+  });
+
+  // Same dump, sealed with AES-256-GCM under a scrypt-derived key. POST
+  // (not a GET query param) so the passphrase travels in the body and never
+  // lands in access logs or browser history.
+  app.post('/api/backup/export', async (req, reply) => {
+    const parsed = EncryptBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
+    }
+    const dump = await buildDump(userId(req));
+    const envelope = encryptEnvelope(JSON.stringify(dump), parsed.data.passphrase);
+    reply.header('Content-Type', 'application/json; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="athena-backup-${stampNow()}.enc.json"`);
+    return envelope;
   });
 }

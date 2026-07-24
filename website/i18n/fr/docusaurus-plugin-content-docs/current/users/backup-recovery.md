@@ -11,12 +11,18 @@ c'est simplement produire un fichier JSON portable que vous rangez où
 bon vous semble ; restaurer, c'est le renvoyer dans une installation
 fraîche ou existante.
 
-:::caution Limite connue
-Les fichiers d'export sont du **JSON en clair, sans chiffrement au
-repos**. Ils contiennent l'intégralité de vos comptes, transactions,
-règles et budgets. Conservez-les dans un dossier chiffré (FileVault,
-BitLocker, LUKS, Cryptomator, etc.) ou dans un stockage protégé par
-mot de passe si vous les gardez hors de la machine d'origine.
+:::caution Sachez ce que contient votre export
+Les fichiers d'export contiennent l'intégralité de vos comptes,
+transactions, règles et budgets. Par défaut ils sont du **JSON en
+clair, sans chiffrement au repos** — conservez-les dans un dossier
+chiffré (FileVault, BitLocker, LUKS, Cryptomator, etc.) si vous les
+gardez hors de la machine d'origine. Vous pouvez aussi renseigner le
+champ optionnel **phrase secrète** à côté du bouton d'export : le
+fichier est alors scellé en AES-256-GCM (clé dérivée par scrypt) et
+devient illisible — et inviolable — sans la phrase secrète. La
+restauration d'un fichier chiffré demande la même phrase ; il n'existe
+**aucune récupération** en cas de perte, traitez-la comme le mot de
+passe maître d'un gestionnaire de mots de passe.
 :::
 
 ## Où se trouve la base ?

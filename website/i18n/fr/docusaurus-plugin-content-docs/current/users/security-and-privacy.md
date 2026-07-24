@@ -68,7 +68,7 @@ depuis Réglages → MCP. Chaque jeton est **chiffré au repos** avec
 si bien qu'un observateur sur le fil ne voit que du texte chiffré.
 Révoquer un jeton depuis Réglages l'invalide immédiatement.
 
-## Les sauvegardes sont en clair
+## Les sauvegardes sont en clair par défaut
 
 L'export de sauvegarde d'Athena (`/api/backup/export`, ou le bouton dans
 l'onglet Données) écrit une enveloppe JSON contenant tous les comptes,
@@ -80,6 +80,15 @@ sensible que la base elle-même. Rangez-le comme vous rangeriez l'export
 d'un gestionnaire de mots de passe : une image disque chiffrée, un disque
 externe chiffré, ou un dossier cloud personnel lui-même chiffré au repos.
 Ne vous l'envoyez pas par email en clair.
+
+Si vous préférez que le fichier se protège lui-même, renseignez le champ
+optionnel de phrase secrète à côté du bouton d'export : le dump est alors
+chiffré en AES-256-GCM avec une clé dérivée par scrypt (N=2¹⁵, r=8, p=1),
+ce qui le rend illisible et inviolable sans la phrase secrète. Les
+sauvegardes en clair et chiffrées se restaurent par le même flux d'import
+— un fichier chiffré demande simplement sa phrase secrète d'abord. Il
+n'existe aucune récupération de phrase secrète ; la perdre, c'est perdre
+la sauvegarde.
 
 Voir [Sauvegarde et restauration](backup-recovery.md) pour le tour
 complet et le playbook de récupération d'un fichier corrompu.

@@ -70,4 +70,63 @@ describe('BackupPanel', () => {
     await waitFor(() => expect(apiMock).toHaveBeenCalled());
     expect(apiMock).toHaveBeenCalledWith('/api/backup/import', { method: 'POST', json: dump });
   });
+
+  it('exports via POST with the passphrase when one is filled in', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Blob(['{}'], { type: 'application/json' })),
+    );
+    const createUrl = vi.fn(() => 'blob:athena');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() }));
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.type(screen.getByLabelText(/Phrase secrète/i), 'family-vault-2026');
+    await user.click(screen.getByRole('button', { name: 'Exporter (JSON)' }));
+
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const [url, init] = fetchSpy.mock.calls[0]!;
+    expect(url).toBe('/api/backup/export');
+    expect(init?.method).toBe('POST');
+    expect(String(init?.body)).toContain('family-vault-2026');
+    fetchSpy.mockRestore();
+  });
+
+  it('rejects a too-short export passphrase client-side without calling the server', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.type(screen.getByLabelText(/Phrase secrète/i), 'short');
+    await user.click(screen.getByRole('button', { name: 'Exporter (JSON)' }));
+
+    expect(await screen.findByText(/au moins 8 caractères/i)).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it('asks for the passphrase when an encrypted file is picked and sends it along', async () => {
+    apiMock.mockResolvedValue({
+      imported: {
+        accounts: 1, categories: 0, accountFilenamePatterns: 0,
+        rules: 0, transferRules: 0, transactions: 0,
+      },
+    });
+    const user = userEvent.setup();
+    renderPanel();
+
+    const env = { v: 'enc1', kdf: 'scrypt', salt: 'cw==', iv: 'aXY=', authTag: 'dGFn', ciphertext: 'Y3Q=' };
+    const file = new File([JSON.stringify(env)], 'b.enc.json', { type: 'application/json' });
+    await user.upload(screen.getByLabelText(/Importer une sauvegarde/i), file);
+
+    const dialog = await screen.findByRole('dialog', {}, { timeout: 3000 });
+    const passInput = within(dialog).getByLabelText(/Phrase secrète/i);
+    await user.type(passInput, 'family-vault-2026');
+    await user.click(within(dialog).getByRole('button', { name: 'Effacer et restaurer' }));
+
+    await waitFor(() => expect(apiMock).toHaveBeenCalled());
+    expect(apiMock).toHaveBeenCalledWith('/api/backup/import', {
+      method: 'POST',
+      json: { ...env, passphrase: 'family-vault-2026' },
+    });
+  });
 });

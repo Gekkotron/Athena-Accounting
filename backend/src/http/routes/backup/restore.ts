@@ -15,6 +15,7 @@ import {
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { BackupBody, fileImportKey } from './schema.js';
+import { decryptEnvelope, isEncryptedEnvelope } from './crypto.js';
 import {
   normalizeCategoryKind,
   resolveCategoryRef,
@@ -29,7 +30,24 @@ export function registerRestoreRoute(app: FastifyInstance): void {
     bodyLimit: 50 * 1024 * 1024,
   }, async (req, reply) => {
     const uid = userId(req);
-    const parsed = BackupBody.safeParse(req.body);
+    // Encrypted (enc1) files arrive as the envelope plus a sibling
+    // `passphrase` field. Decrypt-and-reparse happens BEFORE the wipe
+    // transaction below, so a wrong passphrase can never destroy data.
+    let payload: unknown = req.body;
+    if (isEncryptedEnvelope(payload)) {
+      const pass = (req.body as Record<string, unknown>).passphrase;
+      if (typeof pass !== 'string' || pass.length < 8) {
+        return reply.code(400).send({ error: 'passphrase required for an encrypted backup' });
+      }
+      try {
+        payload = JSON.parse(decryptEnvelope(payload, pass));
+      } catch {
+        // Wrong passphrase, tampered file, or non-JSON plaintext — GCM
+        // can't distinguish and neither should the client-facing error.
+        return reply.code(400).send({ error: 'wrong passphrase or corrupted backup file' });
+      }
+    }
+    const parsed = BackupBody.safeParse(payload);
     if (!parsed.success) {
       return reply.code(400).send({
         error: 'invalid backup format',

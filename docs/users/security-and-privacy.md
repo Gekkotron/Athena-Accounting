@@ -62,7 +62,7 @@ is encrypted at rest using `pgcrypto` and the request/response envelope is
 encrypted with the same key so an inspector on the wire only sees ciphertext.
 Revoking a token from Settings invalidates it immediately.
 
-## Backups are cleartext
+## Backups are cleartext by default
 
 Athena's backup export (`/api/backup/export`, or the button on the Data
 tab) writes a JSON envelope containing every account, transaction,
@@ -73,6 +73,14 @@ database itself. Store it somewhere you'd store a password manager export:
 an encrypted disk image, an encrypted external drive, or a personal cloud
 folder that is itself encrypted at rest. Do not email it to yourself in
 the clear.
+
+If you'd rather the file protect itself, fill in the optional passphrase
+field next to the export button: the dump is then encrypted with
+AES-256-GCM under a scrypt-derived key (N=2¹⁵, r=8, p=1), which makes it
+both unreadable and tamper-evident without the passphrase. Plain and
+encrypted backups restore through the same import flow — an encrypted file
+simply prompts for its passphrase first. There is no passphrase recovery;
+losing it means losing the backup.
 
 See [Backup and recovery](backup-recovery.md) for the full round-trip and
 the corrupt-file recovery playbook.

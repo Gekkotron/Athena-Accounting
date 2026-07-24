@@ -532,4 +532,75 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(res.statusCode).toBe(200);
     });
   });
+
+  describe('encrypted backups (enc1)', () => {
+    it('round-trips an encrypted export through import', async () => {
+      await seedSomeData();
+      const exp = await app.inject({
+        method: 'POST', url: '/api/backup/export',
+        headers: { cookie },
+        payload: { passphrase: 'family-vault-2026' },
+      });
+      expect(exp.statusCode).toBe(200);
+      const env = exp.json();
+      expect(env.v).toBe('enc1');
+      // The ciphertext must not leak any recognizable data.
+      expect(exp.body).not.toContain('BackupA');
+      expect(exp.body).not.toContain('BACKUPMERCHANT');
+
+      await wipeUserData();
+
+      const imp = await app.inject({
+        method: 'POST', url: '/api/backup/import',
+        headers: { cookie },
+        payload: { ...env, passphrase: 'family-vault-2026' },
+      });
+      expect(imp.statusCode).toBe(200);
+      expect(imp.json().imported.accounts).toBeGreaterThanOrEqual(1);
+      const accs = await app.inject({ method: 'GET', url: '/api/accounts', headers: { cookie } });
+      expect(accs.json().accounts.find((a: { name: string }) => a.name === 'BackupA')).toBeTruthy();
+    });
+
+    it('rejects a wrong passphrase with 400 and leaves existing data untouched', async () => {
+      await seedSomeData();
+      const exp = await app.inject({
+        method: 'POST', url: '/api/backup/export',
+        headers: { cookie },
+        payload: { passphrase: 'right-passphrase' },
+      });
+      const imp = await app.inject({
+        method: 'POST', url: '/api/backup/import',
+        headers: { cookie },
+        payload: { ...exp.json(), passphrase: 'wrong-passphrase' },
+      });
+      expect(imp.statusCode).toBe(400);
+      expect(imp.json().error).toMatch(/passphrase|corrupted/i);
+      // The failed import must not have wiped anything.
+      const accs = await app.inject({ method: 'GET', url: '/api/accounts', headers: { cookie } });
+      expect(accs.json().accounts.find((a: { name: string }) => a.name === 'BackupA')).toBeTruthy();
+    });
+
+    it('rejects an encrypted file without a passphrase, and a too-short export passphrase', async () => {
+      await seedSomeData();
+      const exp = await app.inject({
+        method: 'POST', url: '/api/backup/export',
+        headers: { cookie },
+        payload: { passphrase: 'long-enough-pass' },
+      });
+      const noPass = await app.inject({
+        method: 'POST', url: '/api/backup/import',
+        headers: { cookie },
+        payload: exp.json(),
+      });
+      expect(noPass.statusCode).toBe(400);
+      expect(noPass.json().error).toMatch(/passphrase/i);
+
+      const short = await app.inject({
+        method: 'POST', url: '/api/backup/export',
+        headers: { cookie },
+        payload: { passphrase: 'short' },
+      });
+      expect(short.statusCode).toBe(400);
+    });
+  });
 });

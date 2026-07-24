@@ -95,7 +95,13 @@
       "descriptionMiddle": "les données actuelles (comptes, catégories, règles, transactions) seront",
       "descriptionErased": "effacées",
       "descriptionSuffix": "puis remplacées par celles du fichier. L'opération est transactionnelle : si elle échoue à mi-chemin, rien n'est appliqué.",
-      "confirmLabel": "Effacer et restaurer"
+      "confirmLabel": "Effacer et restaurer",
+      "passphraseLabel": "Phrase secrète de la sauvegarde",
+      "encryptedNote": "Cette sauvegarde est chiffrée — saisissez sa phrase secrète pour la restaurer."
+    },
+    "encrypt": {
+      "label": "Phrase secrète (chiffrement, optionnel)",
+      "tooShort": "La phrase secrète doit contenir au moins 8 caractères."
     }
   },
   "duplicates": {

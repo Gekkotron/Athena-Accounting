@@ -7,8 +7,8 @@ sidebar_position: 8
 
 Athena keeps all your data local — on your home server (Docker) or in the desktop app's PGlite file. Backing up is simply producing a portable JSON file that you file away wherever you like; restoring is feeding it back into a fresh or existing install.
 
-:::caution Known limitation
-Export files are **plain JSON, with no encryption at rest**. They contain the full set of your accounts, transactions, rules and budgets. Keep them in an encrypted folder (FileVault, BitLocker, LUKS, Cryptomator, etc.) or in password-protected storage if you keep them off the origin machine.
+:::caution Know what your export contains
+Export files contain the full set of your accounts, transactions, rules and budgets. By default they are **plain JSON, with no encryption at rest** — keep them in an encrypted folder (FileVault, BitLocker, LUKS, Cryptomator, etc.) if you keep them off the origin machine. Alternatively, fill in the optional **passphrase field** next to the export button: the file is then sealed with AES-256-GCM (scrypt-derived key) and is unreadable — and tamper-evident — without the passphrase. Restoring an encrypted file prompts for the same passphrase; there is **no recovery** if you lose it, so treat it like a password-manager master password.
 :::
 
 ## Where is the database?
