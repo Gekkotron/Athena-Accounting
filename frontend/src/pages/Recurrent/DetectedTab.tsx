@@ -192,6 +192,30 @@ export function DetectedTab(): JSX.Element {
   );
 }
 
+// The latest occurrence moved ≥10% and ≥2€ against the trailing average
+// (computed server-side). Amounts render as magnitudes — the row's sign
+// coloring already says whether this is an expense or income series.
+function PriceCreepChip({
+  creep,
+}: {
+  creep: NonNullable<RecurringSeries['priceCreep']>;
+}): JSX.Element {
+  const up = creep.deltaPct > 0;
+  const pct = `${up ? '+' : '−'}${Math.abs(Math.round(creep.deltaPct))} %`;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 mt-1 w-fit text-[11px] rounded-full px-2 py-[1px] border ${
+        up
+          ? 'text-clay-200 border-clay-800/60 bg-clay-900/25'
+          : 'text-sage-300 border-sage-800/60 bg-sage-900/20'
+      }`}
+    >
+      {up ? 'Prix en hausse' : 'Prix en baisse'} :{' '}
+      {formatAmount(Math.abs(creep.previousAvg))} → {formatAmount(Math.abs(creep.latest))} ({pct})
+    </span>
+  );
+}
+
 function SeriesRow({
   row,
   onUpdate,
@@ -237,6 +261,7 @@ function SeriesRow({
           <span>Prochain le {formatDate(row.nextDueAt)}</span>
           <span>{row.memberCount} occurrences</span>
         </div>
+        {row.priceCreep && <PriceCreepChip creep={row.priceCreep} />}
       </div>
       <div className={`text-sm tabular-nums shrink-0 ${amountSignClass(row.avgAmount)}`}>
         {formatAmount(row.avgAmount)}

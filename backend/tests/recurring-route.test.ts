@@ -279,4 +279,44 @@ describe.skipIf(!RUN)('/api/recurring', () => {
     expect(series[0].label).toBe('CAFE DU COIN');
     expect(series[1].label).toBe('LOYER');
   });
+
+  // Seed a series with explicit member links so the creep math is tested
+  // independently of the detector's own clustering thresholds.
+  async function seedLinkedSeries(label: string, amounts: string[]): Promise<number> {
+    const txRows = amounts.map((amount, i) => ({
+      userId, accountId,
+      date: `2026-0${i + 1}-10`,
+      amount,
+      rawLabel: label,
+      normalizedLabel: label.toLowerCase(),
+      dedupKey: `${label}-${i}`,
+    }));
+    const inserted = await db.insert(schema.transactions).values(txRows).returning({ id: schema.transactions.id });
+    const [series] = await db.insert(schema.recurringSeries).values({
+      userId, label, cadenceDays: 30,
+      avgAmount: amounts[0], firstSeenAt: txRows[0]!.date,
+      lastSeenAt: txRows[txRows.length - 1]!.date,
+      nextDueAt: txRows[txRows.length - 1]!.date,
+    }).returning({ id: schema.recurringSeries.id });
+    await db.insert(schema.recurringSeriesTransactions).values(
+      inserted.map((t: { id: number }) => ({ seriesId: series!.id, transactionId: t.id })),
+    );
+    return series!.id as number;
+  }
+
+  it('exposes priceCreep on a creeping series and null on a stable one', async () => {
+    await seedLinkedSeries('EDF', ['-80.00', '-80.00', '-80.00', '-95.00']);
+    await seedLinkedSeries('FREEBOX', ['-30.00', '-30.00', '-30.00', '-30.00']);
+
+    const list = await app.inject({ method: 'GET', url: '/api/recurring', headers: { cookie } });
+    expect(list.statusCode).toBe(200);
+    const byLabel = new Map(
+      list.json().recurring.map((s: { label: string; priceCreep: unknown }) => [s.label, s.priceCreep]),
+    );
+    const edf = byLabel.get('EDF') as { previousAvg: number; latest: number; deltaPct: number };
+    expect(edf).not.toBeNull();
+    expect(edf.latest).toBeCloseTo(-95);
+    expect(edf.deltaPct).toBeCloseTo(18.75);
+    expect(byLabel.get('FREEBOX')).toBeNull();
+  });
 });

@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { recurringSeries, recurringSeriesTransactions, transactions } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
+import { detectPriceCreep } from '../../services/recurring-creep-core.js';
 import { addDays } from '../../domain/transfers/matching.js';
 
 const UpdateBody = z.object({
@@ -127,6 +128,32 @@ export async function recurringRoutes(app: FastifyInstance): Promise<void> {
         desc(sql<number>`ABS(${recurringSeries.avgAmount}::numeric * 30.0 / ${recurringSeries.cadenceDays}::numeric)`),
       );
 
+    // Price creep is computed at read time from the member transactions'
+    // chronological amounts — no schema change, always current. Caveat
+    // inherited from the detector: its ±15%-of-median amount filter means a
+    // single jump beyond ~15% may not be linked as a member, so creep
+    // detection is sharpest for the gradual 10–15% drift it exists to catch.
+    const memberRows = await db
+      .select({
+        seriesId: recurringSeriesTransactions.seriesId,
+        amount: transactions.amount,
+      })
+      .from(recurringSeriesTransactions)
+      .innerJoin(transactions, eq(transactions.id, recurringSeriesTransactions.transactionId))
+      .innerJoin(recurringSeries, eq(recurringSeries.id, recurringSeriesTransactions.seriesId))
+      .where(eq(recurringSeries.userId, uid))
+      .orderBy(asc(transactions.date), asc(transactions.id));
+    const amountsBySeries = new Map<number, number[]>();
+    for (const m of memberRows) {
+      const arr = amountsBySeries.get(m.seriesId) ?? [];
+      arr.push(Number(m.amount));
+      amountsBySeries.set(m.seriesId, arr);
+    }
+    const withCreep = rows.map((r) => ({
+      ...r,
+      priceCreep: detectPriceCreep(amountsBySeries.get(r.id) ?? []),
+    }));
+
     if (requestedHorizon !== undefined) {
       // Cap silently — clients can request a larger value than the
       // server allows and the response degrades gracefully to the max
@@ -135,7 +162,7 @@ export async function recurringRoutes(app: FastifyInstance): Promise<void> {
       const horizon = Math.min(UPCOMING_MAX_DAYS, requestedHorizon);
       const today = todayIso();
       const cutoff = addDays(today, horizon);
-      const withNext = rows.map((r) => ({
+      const withNext = withCreep.map((r) => ({
         ...r,
         nextDueAt: computeNextDue(r.lastSeenAt, r.cadenceDays, today),
       }));
@@ -144,7 +171,7 @@ export async function recurringRoutes(app: FastifyInstance): Promise<void> {
       return { recurring: filtered };
     }
 
-    return { recurring: rows };
+    return { recurring: withCreep };
   });
 
   app.put('/api/recurring/:id', async (req, reply) => {

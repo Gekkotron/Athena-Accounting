@@ -81,7 +81,9 @@
     "budgetOverruns": {
       "headline_one": "{{count}} budget exceeded in {{month}}",
       "headline_other": "{{count}} budgets exceeded in {{month}}"
-    }
+    },
+    "priceCreep_one": "{{count}} subscription got more expensive recently",
+    "priceCreep_other": "{{count}} subscriptions got more expensive recently"
   },
   "sankey": {
     "title": "Cash flow · {{currency}}",

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import i18next from 'i18next';
-import { buildInsights, monthLabel } from '../insights';
-import type { Category, CategoryReportRow, BudgetReportRow } from '../../../api/types';
+import { buildInsights, monthLabel, priceCreepInsight } from '../insights';
+import type { Category, CategoryReportRow, BudgetReportRow, RecurringSeries } from '../../../api/types';
 import frDashboard from '../../../locales/fr/dashboard.json';
 import { pinLocale } from '../../../test/i18n';
 
@@ -261,5 +261,51 @@ describe('buildInsights — budget overruns', () => {
 
   it('returns an empty array when no insight clears its threshold', () => {
     expect(build([])).toEqual([]);
+  });
+});
+
+describe('priceCreepInsight', () => {
+  const rec = (over: Partial<RecurringSeries>): RecurringSeries =>
+    ({
+      id: 1, label: 'EDF', cadenceDays: 30, avgAmount: '-80', amountStddev: '0',
+      categoryId: null, firstSeenAt: '2026-01-01', lastSeenAt: '2026-06-01',
+      nextDueAt: '2026-07-01', status: 'confirmed', essentialness: null,
+      createdAt: '2026-01-01', updatedAt: '2026-01-01', memberCount: 5,
+      primaryAccountId: null, priceCreep: null,
+      ...over,
+    } as RecurringSeries);
+
+  it('returns null when nothing creeps upward', () => {
+    expect(priceCreepInsight([rec({})], t)).toBeNull();
+    // Magnitude decreases don't make the Dashboard card — per-row chips
+    // cover those.
+    expect(
+      priceCreepInsight([rec({ priceCreep: { previousAvg: -100, latest: -85, deltaPct: -15 } })], t),
+    ).toBeNull();
+  });
+
+  it('ignores dismissed series entirely', () => {
+    expect(
+      priceCreepInsight(
+        [rec({ status: 'dismissed', priceCreep: { previousAvg: -80, latest: -95, deltaPct: 18.75 } })],
+        t,
+      ),
+    ).toBeNull();
+  });
+
+  it('counts upward creeps and details the steepest one', () => {
+    const insight = priceCreepInsight(
+      [
+        rec({ id: 1, label: 'EDF', priceCreep: { previousAvg: -80, latest: -95, deltaPct: 18.75 } }),
+        rec({ id: 2, label: 'Netflix', priceCreep: { previousAvg: -10, latest: -13, deltaPct: 30 } }),
+        rec({ id: 3, label: 'Stable', priceCreep: null }),
+      ],
+      t,
+    );
+    expect(insight).not.toBeNull();
+    expect(insight!.headline).toBe('2 abonnements ont augmenté récemment');
+    expect(insight!.detail).toContain('Netflix');
+    expect(insight!.detail).toContain('+30');
+    expect(insight!.to).toBe('/recurring/detected');
   });
 });

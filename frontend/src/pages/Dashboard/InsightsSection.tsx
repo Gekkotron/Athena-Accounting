@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/types';
+import type { Category, CategoryReportRow, BudgetReportRow, RecurringSeries } from '../../api/types';
 import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
-import { buildInsights, monthLabel, type InsightTone } from './insights';
+import { buildInsights, monthLabel, priceCreepInsight, type InsightTone } from './insights';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 const TONE_CLASS: Record<InsightTone, string> = {
@@ -55,21 +56,27 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
     queryKey: ['categories'],
     queryFn: () => api<{ categories: Category[] }>('/api/categories'),
   });
+  const recurringQ = useQuery({
+    queryKey: ['recurring'],
+    queryFn: () => api<{ recurring: RecurringSeries[] }>('/api/recurring'),
+  });
 
-  const insights = useMemo(
-    () =>
-      buildInsights(
-        catQ.data?.rows ?? [],
-        categoriesQ.data?.categories ?? [],
-        budgetQ.data?.rows ?? [],
-        months,
-        referenceMonth,
-        currency,
-        t,
-        lang,
-      ),
-    [catQ.data, categoriesQ.data, budgetQ.data, months, referenceMonth, currency, t, lang],
-  );
+  const insights = useMemo(() => {
+    const base = buildInsights(
+      catQ.data?.rows ?? [],
+      categoriesQ.data?.categories ?? [],
+      budgetQ.data?.rows ?? [],
+      months,
+      referenceMonth,
+      currency,
+      t,
+      lang,
+    );
+    // Appended outside buildInsights: creep is not month-scoped, so the
+    // month stepper shouldn't affect it and TOP_N shouldn't cap it.
+    const creep = priceCreepInsight(recurringQ.data?.recurring ?? [], t);
+    return creep ? [...base, creep] : base;
+  }, [catQ.data, categoriesQ.data, budgetQ.data, recurringQ.data, months, referenceMonth, currency, t, lang]);
 
   if (catQ.isLoading) {
     return (
@@ -128,7 +135,13 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
                 {ins.icon}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-ink-100">{ins.headline}</div>
+                {ins.to ? (
+                  <Link to={ins.to} className="text-ink-100 hover:underline">
+                    {ins.headline}
+                  </Link>
+                ) : (
+                  <div className="text-ink-100">{ins.headline}</div>
+                )}
                 {ins.detail && (
                   <div className={`text-sm ${TONE_CLASS[ins.tone]}`}>{ins.detail}</div>
                 )}

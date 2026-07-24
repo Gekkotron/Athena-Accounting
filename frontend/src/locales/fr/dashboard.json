@@ -81,7 +81,9 @@
     "budgetOverruns": {
       "headline_one": "{{count}} budget dépassé en {{month}}",
       "headline_other": "{{count}} budgets dépassés en {{month}}"
-    }
+    },
+    "priceCreep_one": "{{count}} abonnement a augmenté récemment",
+    "priceCreep_other": "{{count}} abonnements ont augmenté récemment"
   },
   "sankey": {
     "title": "Flux · {{currency}}",

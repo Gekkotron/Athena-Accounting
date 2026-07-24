@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { Category, CategoryReportRow, BudgetReportRow } from '../../api/types';
+import type { Category, CategoryReportRow, BudgetReportRow, RecurringSeries } from '../../api/types';
 import { formatAmount } from '../../lib/format';
 
 export type InsightTone = 'sage' | 'clay' | 'neutral';
@@ -13,6 +13,36 @@ export interface Insight {
   tone: InsightTone;
   score: number;
   spark?: number[];
+  // In-app route this insight deep-links to. Rendered as a Link when set.
+  to?: string;
+}
+
+// One card summarizing the recurring series whose latest amount rose past
+// the creep thresholds (server-computed priceCreep, deltaPct > 0). Dismissed
+// series are ignored; magnitude decreases stay on the Récurrent page's
+// per-row chips only. Kept out of buildInsights so the TOP_N score cap
+// never swallows it.
+export function priceCreepInsight(
+  recurring: readonly RecurringSeries[],
+  t: TFunction,
+): Insight | null {
+  const creeping = recurring.filter(
+    (s) => s.status !== 'dismissed' && s.priceCreep && s.priceCreep.deltaPct > 0,
+  );
+  if (creeping.length === 0) return null;
+  const top = creeping.reduce((a, b) =>
+    b.priceCreep!.deltaPct > a.priceCreep!.deltaPct ? b : a,
+  );
+  const c = top.priceCreep!;
+  return {
+    key: 'price-creep',
+    icon: '💸',
+    headline: t('insights.priceCreep', { count: creeping.length }),
+    detail: `${top.label} : ${formatAmount(Math.abs(c.previousAvg))} → ${formatAmount(Math.abs(c.latest))} (+${Math.abs(Math.round(c.deltaPct))} %)`,
+    tone: 'clay',
+    score: 0,
+    to: '/recurring/detected',
+  };
 }
 
 const DELTA_PCT_MIN = 10;

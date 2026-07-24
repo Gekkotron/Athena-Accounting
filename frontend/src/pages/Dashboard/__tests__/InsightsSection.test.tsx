@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InsightsSection } from '../InsightsSection';
 import { pinLocale } from '../../../test/i18n';
@@ -113,5 +114,52 @@ describe('InsightsSection', () => {
     });
     renderWithProviders();
     expect(await screen.findByText(/Vos dépenses de juin/i)).toBeInTheDocument();
+  });
+});
+
+describe('InsightsSection — price creep card', () => {
+  function renderWithRouter() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <InsightsSection currency="EUR" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('shows the creep card linking to the Récurrent page when a series creeps', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path.includes('budget')) return Promise.resolve({ month: '2026-06', rows: [], totals: { limit: '0', spent: '0' } });
+      if (path === '/api/recurring') {
+        return Promise.resolve({
+          recurring: [{
+            id: 1, label: 'EDF', cadenceDays: 30, avgAmount: '-80', amountStddev: '0',
+            categoryId: null, firstSeenAt: '2026-01-01', lastSeenAt: '2026-06-01',
+            nextDueAt: '2026-07-01', status: 'confirmed', essentialness: null,
+            createdAt: '2026-01-01', updatedAt: '2026-01-01', memberCount: 5,
+            primaryAccountId: null,
+            priceCreep: { previousAvg: -80, latest: -95, deltaPct: 18.75 },
+          }],
+        });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    renderWithRouter();
+    const link = await screen.findByRole('link', { name: /1 abonnement a augmenté récemment/i });
+    expect(link).toHaveAttribute('href', '/recurring/detected');
+    expect(screen.getByText(/EDF/)).toBeInTheDocument();
+  });
+
+  it('renders no creep card when no series creeps', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path.includes('budget')) return Promise.resolve({ month: '2026-06', rows: [], totals: { limit: '0', spent: '0' } });
+      if (path === '/api/recurring') return Promise.resolve({ recurring: [] });
+      return Promise.resolve({ rows: [] });
+    });
+    renderWithRouter();
+    expect(await screen.findByText(/Rien de notable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/abonnement/)).not.toBeInTheDocument();
   });
 });

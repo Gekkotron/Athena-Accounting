@@ -203,6 +203,10 @@ export interface RecurringSeries {
   // scoped account (e.g. a salary lands on Checking, so it shouldn't
   // inflate the Savings projection).
   primaryAccountId: number | null;
+  // Read-time price-creep verdict: the latest occurrence vs the trailing
+  // average of the prior ones. deltaPct is magnitude-based (positive =
+  // more expensive). Optional so demo-mode payloads without it stay valid.
+  priceCreep?: { previousAvg: number; latest: number; deltaPct: number } | null;
 }
 
 export interface EnvelopeReport {

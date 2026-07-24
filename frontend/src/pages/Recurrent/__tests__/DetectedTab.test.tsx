@@ -302,6 +302,47 @@ describe('DetectedTab', () => {
     expect(await screen.findByText(/2 séries ignorées/)).toBeInTheDocument();
   });
 
+  it('shows a price-creep chip when the latest amount jumped', async () => {
+    mockApi({
+      categories: [],
+      recurring: [
+        series({
+          id: 1, label: 'EDF',
+          priceCreep: { previousAvg: -80, latest: -95, deltaPct: 18.75 },
+        }),
+      ],
+    });
+    render(wrap(<DetectedTab />));
+    const chip = await screen.findByText(/Prix en hausse/);
+    expect(chip.textContent).toContain('80,00');
+    expect(chip.textContent).toContain('95,00');
+    expect(chip.textContent).toContain('+19');
+  });
+
+  it('shows a decrease chip with a minus sign when the price dropped', async () => {
+    mockApi({
+      categories: [],
+      recurring: [
+        series({
+          id: 1, label: 'Assurance',
+          priceCreep: { previousAvg: -100, latest: -85, deltaPct: -15 },
+        }),
+      ],
+    });
+    render(wrap(<DetectedTab />));
+    expect(await screen.findByText(/Prix en baisse/)).toBeInTheDocument();
+  });
+
+  it('renders no creep chip when priceCreep is null', async () => {
+    mockApi({
+      categories: [],
+      recurring: [series({ id: 1, label: 'Stable', priceCreep: null })],
+    });
+    render(wrap(<DetectedTab />));
+    await screen.findByText('Stable');
+    expect(screen.queryByText(/Prix en hausse|Prix en baisse/)).not.toBeInTheDocument();
+  });
+
   it('sends status:detected when "Annuler" restores a dismissed series', async () => {
     mockApi({
       categories: [],
