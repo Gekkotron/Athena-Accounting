@@ -202,7 +202,10 @@ export async function runImport(opts: {
     // import transaction so an import either lands fully categorized or not at all.
     if (insertedIds.length > 0) {
       trace('tx: loading rule engine');
-      const { compiled, defaultId } = await loadRuleEngine(opts.userId);
+      // Pass `tx` explicitly — loadRuleEngine defaults to the top-level `db`
+      // client, which on PGlite would deadlock waiting for the connection
+      // that this very transaction is holding.
+      const { compiled, defaultId } = await loadRuleEngine(opts.userId, tx);
       trace(`tx: rule engine loaded (${compiled.length} rules, defaultId=${defaultId ?? 'null'})`);
 
       const freshRows = await tx

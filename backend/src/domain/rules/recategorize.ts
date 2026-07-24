@@ -1,7 +1,16 @@
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
 import { db } from '../../db/client.js';
 import { categories, rules, transactions } from '../../db/schema.js';
 import { compileRule, firstMatch, type CompiledRule } from './matcher.js';
+
+// Callers that already own an outer DB transaction can pass `tx` so the
+// rule-engine's SELECTs run *on that transaction* rather than through the
+// top-level `db` client. On PGlite (single connection) not passing `tx`
+// would deadlock: `db.transaction()` is holding the connection, and
+// `db.select()` here queues waiting for it to be released.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Runner = typeof db | PgTransaction<any, any, any>;
 
 export interface RecategorizeOptions {
   userId: number;
@@ -17,8 +26,8 @@ export interface RecategorizeResult {
 
 const BATCH = 500;
 
-async function loadCompiledRules(userId: number): Promise<CompiledRule[]> {
-  const rs = await db
+async function loadCompiledRules(userId: number, runner: Runner = db): Promise<CompiledRule[]> {
+  const rs = await runner
     .select()
     .from(rules)
     .where(and(eq(rules.userId, userId), eq(rules.enabled, true)))
@@ -26,8 +35,8 @@ async function loadCompiledRules(userId: number): Promise<CompiledRule[]> {
   return rs.map(compileRule);
 }
 
-async function loadDefaultCategoryId(userId: number): Promise<number | null> {
-  const [d] = await db
+async function loadDefaultCategoryId(userId: number, runner: Runner = db): Promise<number | null> {
+  const [d] = await runner
     .select({ id: categories.id })
     .from(categories)
     .where(and(eq(categories.userId, userId), eq(categories.isDefault, true)))
@@ -126,10 +135,10 @@ export async function categorizeOne(
   return { categoryId: defaultId, source: 'default' };
 }
 
-export async function loadRuleEngine(userId: number) {
+export async function loadRuleEngine(userId: number, runner: Runner = db) {
   const [compiled, defaultId] = await Promise.all([
-    loadCompiledRules(userId),
-    loadDefaultCategoryId(userId),
+    loadCompiledRules(userId, runner),
+    loadDefaultCategoryId(userId, runner),
   ]);
   return { compiled, defaultId };
 }
