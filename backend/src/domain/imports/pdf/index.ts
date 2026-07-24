@@ -26,13 +26,19 @@ export type ImportPdfResult =
       result: ImportResult;
       skippedRows: Array<{ rowText: string; reason: string }>;
     }
-  | ParkedDraft;
+  | ParkedDraft
+  // headless mode only: the PDF would need the interactive template wizard,
+  // and no draft was parked (nothing to resume, no OCR job started).
+  | { kind: 'skipped'; reason: 'no_text_layer' | 'low_confidence' | 'template_stale' };
 
 export async function importPdf(opts: {
   filename: string;
   accountId: number;
   userId: number;
   buffer: Buffer;
+  // True for non-interactive callers (the watch-folder importer): instead of
+  // parking a draft for the wizard, return { kind: 'skipped' }.
+  headless?: boolean;
 }): Promise<ImportPdfResult> {
   const pages = await extractText(opts.buffer);
   const noText = pages.every((p) => p.items.length === 0);
@@ -62,6 +68,7 @@ export async function importPdf(opts: {
         // straight back into the wizard with a draft — same code path
         // that a first-time import takes — and include a short diagnostic
         // so the user knows WHY the template didn't apply.
+        if (opts.headless) return { kind: 'skipped', reason: 'template_stale' };
         const diag = diagnoseStaleTemplate(pages, z, parsed.skippedRows);
         return await parkDraft(opts, pages, fingerprint, z, 'template_stale', diag);
       }
@@ -78,6 +85,7 @@ export async function importPdf(opts: {
 
   // 2) No template — try heuristic.
   if (noText) {
+    if (opts.headless) return { kind: 'skipped', reason: 'no_text_layer' };
     return await parkDraft(opts, pages, fingerprint, null, 'no_text_layer');
   }
   const h = runHeuristic(pages);
@@ -108,6 +116,7 @@ export async function importPdf(opts: {
       });
     return { kind: 'imported', result, skippedRows: h.skippedRows };
   }
+  if (opts.headless) return { kind: 'skipped', reason: 'low_confidence' };
   const suggested = h.confidence >= HEURISTIC_SUGGEST_THRESHOLD ? h.zones : null;
   return await parkDraft(opts, pages, fingerprint, suggested, 'low_confidence');
 }

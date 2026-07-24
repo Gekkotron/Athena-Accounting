@@ -66,6 +66,14 @@ Chaque import écrit aussi une **ligne d'audit** — nom de fichier, hash, et co
 
 Si vous avez deux comptes et que vous transférez de l'argent entre eux, les deux jambes apparaîtront dans leurs imports respectifs comme des dépenses / revenus ordinaires. Le détecteur de virement d'Athena les relie via un `transfer_group_id` partagé et les exclut des agrégats revenus/dépenses. Configurez les paires de mots-clés dans **Règles** (l'interface de règles de virement est minimale ; l'API se trouve à `/api/transfer-rules`). Une fois matché, l'importeur cherche la jambe miroir dans le compte homologue à ±7 jours.
 
+## Le dossier surveillé (imports automatiques)
+
+Pour vous passer complètement du formulaire d'upload, définissez la variable d'environnement `WATCH_IMPORTS_DIR` côté backend (voir [Configuration](../reference/configuration.md)). Athena scrute alors ce dossier toutes les 60 secondes et importe tout relevé déposé dans un sous-dossier portant le nom du compte de destination — par exemple `watch/Compte courant/mai-2026.pdf`. La correspondance du nom de dossier est insensible à la casse et aux accents, et rien n'est jamais deviné : les fichiers à la racine, ou dans un dossier ne correspondant à aucun compte (ou à plusieurs), restent intacts avec un avertissement dans les logs du backend.
+
+Chaque fichier passe par exactement le même pipeline qu'un upload — déduplication, règles, détection des virements et des récurrences — et apparaît normalement dans la liste des imports. Le résultat est consigné en renommant le fichier sur place, ce qui permet d'auditer depuis n'importe quel gestionnaire de fichiers : `.imported` en cas de succès (re-déposer le même relevé est un no-op sans risque grâce à la déduplication), `.failed` plus un `.error.txt` à côté avec la raison, ou `.needs-template` pour un PDF dont la mise en page n'a pas encore de modèle entraîné — entraînez-en un via l'assistant, puis re-déposez le fichier.
+
+Installation typique : exportez le dossier depuis votre NAS ou partagez-le en SMB, montez-le dans le conteneur backend, et enregistrez les relevés de chaque mois dans le bon sous-dossier de compte depuis n'importe quel appareil de la maison.
+
 ## Dépannage
 
 **« L'assistant de modèle dit qu'il ne trouve pas de transactions. »**

@@ -39,6 +39,7 @@ fill in the fields marked **required**.
 | `STATIC_ROOT` | `<cwd>/frontend/dist` | filesystem path | Directory Fastify serves the SPA from when `SERVE_STATIC` is enabled. |
 | `DATA_DIR` | `/data` (Docker) / CWD (dev) | filesystem path | Root directory for user data: the PGlite file, backups, and uploads. The Tauri entry point overrides this to the OS-specific per-user data directory. |
 | `OCR_LANG_PATH` | *(unset — CDN fetch)* | filesystem path | Local path to Tesseract language files. When unset, the first OCR run downloads them from a CDN, which fails on a LAN-only deployment. Docker builds bundle the files and set this variable automatically. |
+| `WATCH_IMPORTS_DIR` | *(unset — feature off)* | filesystem path | Opt-in watch-folder importer. The backend polls the directory every 60 s and imports statements (`.ofx`/`.qfx`/`.csv`/`.pdf`) dropped into a subfolder named after the destination account (case- and accent-insensitive). Outcomes are recorded by renaming the file: `.imported`, `.failed` (+ sibling `.error.txt`), or `.needs-template` for PDFs without a trained template. See [Importing](../users/importing.md). |
 
 ### Frontend (build-time, Vite)
 

@@ -40,6 +40,7 @@ n'est pas définie. Copiez `.env.example` en `.env` avant de lancer
 | `STATIC_ROOT` | `<cwd>/frontend/dist` | chemin fichier | Répertoire depuis lequel Fastify sert le SPA quand `SERVE_STATIC` est actif. |
 | `DATA_DIR` | `/data` (Docker) / CWD (dev) | chemin fichier | Répertoire racine des données utilisateur : fichier PGlite, sauvegardes, imports. Le point d'entrée Tauri le remplace par le dossier de données utilisateur spécifique à l'OS. |
 | `OCR_LANG_PATH` | *(non défini — fetch CDN)* | chemin fichier | Chemin local vers les fichiers de langue Tesseract. Non défini, le premier OCR télécharge depuis un CDN — ce qui échoue en déploiement LAN sans internet. Les builds Docker embarquent les fichiers et fixent la variable automatiquement. |
+| `WATCH_IMPORTS_DIR` | *(non défini — fonction désactivée)* | chemin fichier | Importeur par dossier surveillé (opt-in). Le backend scrute le dossier toutes les 60 s et importe les relevés (`.ofx`/`.qfx`/`.csv`/`.pdf`) déposés dans un sous-dossier portant le nom du compte de destination (insensible à la casse et aux accents). Le résultat est consigné en renommant le fichier : `.imported`, `.failed` (+ un `.error.txt` à côté), ou `.needs-template` pour les PDF sans modèle entraîné. Voir [Importer](../users/importing.md). |
 
 ### Frontend (build-time, Vite)
 

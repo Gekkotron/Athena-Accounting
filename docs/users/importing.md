@@ -111,6 +111,31 @@ keyword pairs in **Rules** (the transfer-rules UI is minimal; the
 API is at `/api/transfer-rules`). Once matched, the importer looks for
 the mirror leg in the counterpart account within ±7 days.
 
+## The watch folder (automatic imports)
+
+If you'd rather skip the upload form entirely, set the
+`WATCH_IMPORTS_DIR` environment variable on the backend (see
+[Configuration](../reference/configuration.md)). Athena then polls that
+directory every 60 seconds and imports any statement dropped into a
+subfolder named after the destination account — for example
+`watch/Compte courant/mai-2026.pdf`. The folder-name match is case-
+and accent-insensitive, and nothing is ever guessed: files at the root
+or in a folder matching no account (or more than one) are left
+untouched with a warning in the backend log.
+
+Every file runs through the exact same pipeline as an upload —
+deduplication, rules, transfer and recurring detection — and shows up
+in the Imports list normally. The outcome is recorded by renaming the
+file in place, so you can audit results from any file manager:
+`.imported` on success (re-dropping the same statement is a safe
+no-op thanks to dedup), `.failed` plus a sibling `.error.txt` with the
+reason, or `.needs-template` for a PDF whose layout has no trained
+template yet — train one once via the wizard, then re-drop the file.
+
+Typical setup: export the folder from your NAS or share it over SMB,
+mount it into the backend container, and save each month's statements
+into the right account subfolder from any device in the house.
+
 ## Troubleshooting
 
 **"The template wizard says it can't find transactions."**
