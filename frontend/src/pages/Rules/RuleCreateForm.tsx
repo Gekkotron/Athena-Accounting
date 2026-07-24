@@ -1,8 +1,28 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { api } from '../../api/client';
 import type { Category, MatchMode, SignConstraint } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
+import { amountSignClass, formatAmount } from '../../lib/format';
 import { NormalizationHint } from './NormalizationHint';
+
+interface PreviewMatch {
+  id: number;
+  date: string;
+  amount: string;
+  rawLabel: string;
+  accountId: number;
+}
+
+interface KeywordPreview {
+  keyword: string;
+  matches: PreviewMatch[];
+  totalCount: number;
+}
+
+// Rows shown per keyword — enough to judge over/under-matching at a glance;
+// the header count still reflects every match.
+const PREVIEW_ROWS_SHOWN = 8;
 
 export function RuleCreateForm({
   categories,
@@ -30,6 +50,9 @@ export function RuleCreateForm({
   const [signConstraint, setSignConstraint] = useState<SignConstraint>('any');
   const [matchMode, setMatchMode] = useState<MatchMode>('word');
   const [priority, setPriority] = useState(0);
+  const [preview, setPreview] = useState<KeywordPreview[] | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
     [categories],
@@ -44,6 +67,38 @@ export function RuleCreateForm({
       setKeyword('');
     }
   }, [successCount]);
+
+  // A stale preview is worse than none — drop it as soon as any input that
+  // feeds the dry run changes.
+  useEffect(() => {
+    setPreview(null);
+    setPreviewError(null);
+  }, [keyword, signConstraint, matchMode]);
+
+  const runPreview = async () => {
+    const keywords = Array.from(
+      new Set(keyword.split(',').map((s) => s.trim()).filter(Boolean)),
+    );
+    if (keywords.length === 0 || previewing) return;
+    setPreviewing(true);
+    setPreviewError(null);
+    try {
+      const results = await Promise.all(
+        keywords.map(async (k) => {
+          const r = await api<{ matches: PreviewMatch[]; totalCount: number; limit: number }>(
+            '/api/rules/preview',
+            { method: 'POST', json: { keyword: k, signConstraint, matchMode } },
+          );
+          return { keyword: k, matches: r.matches, totalCount: r.totalCount };
+        }),
+      );
+      setPreview(results);
+    } catch (err) {
+      setPreviewError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPreviewing(false);
+    }
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -120,12 +175,59 @@ export function RuleCreateForm({
         <button className="btn-primary" disabled={submitting}>
           {submitting ? t('ruleCreateForm.submitPending') : t('ruleCreateForm.submit')}
         </button>
+        <button
+          type="button"
+          className="text-sm text-ink-300 hover:text-ink-100 border border-ink-700/60 hover:border-ink-600 rounded-md px-3 py-1.5 transition disabled:opacity-40"
+          disabled={!keyword.trim() || previewing}
+          onClick={() => void runPreview()}
+        >
+          {previewing ? t('ruleCreateForm.previewPending') : t('ruleCreateForm.preview')}
+        </button>
         {successCount != null && successCount > 0 && (
           <span className="text-xs text-sage-300">
             {t('ruleCreateForm.successCount', { count: successCount })}
           </span>
         )}
       </div>
+      {previewError && (
+        <div className="sm:col-span-2 lg:col-span-6 text-sm text-clay-300">{previewError}</div>
+      )}
+      {preview && (
+        <div className="sm:col-span-2 lg:col-span-6 space-y-3">
+          {preview.map((p) => (
+            <div key={p.keyword}>
+              <div className="text-xs text-ink-400 mb-1">
+                <span className="font-mono text-ink-300">« {p.keyword} »</span>{' '}
+                <span>
+                  {p.totalCount === 0
+                    ? t('ruleCreateForm.previewEmpty')
+                    : t('ruleCreateForm.previewCount', { count: p.totalCount })}
+                </span>
+              </div>
+              {p.matches.length > 0 && (
+                <ul className="text-xs divide-y divide-ink-800/40 border border-ink-800/40 rounded-md">
+                  {p.matches.slice(0, PREVIEW_ROWS_SHOWN).map((m) => (
+                    <li key={m.id} className="flex items-center gap-3 px-2.5 py-1.5">
+                      <span className="font-mono text-ink-500 whitespace-nowrap">{m.date}</span>
+                      <span className="truncate text-ink-200 flex-1">{m.rawLabel}</span>
+                      <span className={`font-mono whitespace-nowrap ${amountSignClass(m.amount)}`}>
+                        {formatAmount(m.amount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {p.totalCount > Math.min(p.matches.length, PREVIEW_ROWS_SHOWN) && (
+                <div className="text-[11px] text-ink-500 mt-1">
+                  {t('ruleCreateForm.previewMore', {
+                    count: p.totalCount - Math.min(p.matches.length, PREVIEW_ROWS_SHOWN),
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </form>
   );
 }

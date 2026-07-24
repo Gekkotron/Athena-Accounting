@@ -1,7 +1,7 @@
-import type { Rule, TransferRule } from '../../../types';
+import type { Rule, Transaction, TransferRule } from '../../../types';
 import { getState, setState } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
-import { nextId } from './lib';
+import { matchesRule, nextId } from './lib';
 
 function handleRuleCreate(req: DemoRequest) {
   const body = (req.body ?? {}) as Partial<Rule>;
@@ -38,6 +38,34 @@ function handleRuleDelete(req: DemoRequest) {
   return { ok: true };
 }
 
+// Dry run of a draft rule against the seed history — read-only mirror of the
+// backend's POST /api/rules/preview.
+function handleRulePreview(req: DemoRequest) {
+  const body = (req.body ?? {}) as Partial<Rule>;
+  const draft: Rule = {
+    id: 0,
+    categoryId: 0,
+    keyword: body.keyword ?? '',
+    signConstraint: body.signConstraint ?? 'any',
+    matchMode: body.matchMode ?? 'word',
+    priority: 0,
+    enabled: true,
+    createdAt: new Date().toISOString(),
+  };
+  const limit = 20;
+  const hits = (getState().transactions as Transaction[])
+    .filter((t) => matchesRule(t, draft))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  return {
+    matches: hits.slice(0, limit).map((t) => ({
+      id: t.id, date: t.date, amount: t.amount,
+      rawLabel: t.rawLabel, accountId: t.accountId,
+    })),
+    totalCount: hits.length,
+    limit,
+  };
+}
+
 function handleTransferRuleCreate(req: DemoRequest) {
   const body = (req.body ?? {}) as Partial<TransferRule>;
   const tr: TransferRule = {
@@ -72,6 +100,7 @@ function handleTransferRuleDelete(req: DemoRequest) {
 
 export function registerRulesWriteHandlers(): void {
   registerHandler('POST', '/api/rules', handleRuleCreate);
+  registerHandler('POST', '/api/rules/preview', handleRulePreview);
   registerHandler('PUT', '/api/rules/:id', handleRuleUpdate);
   registerHandler('PATCH', '/api/rules/:id', handleRuleUpdate);
   registerHandler('DELETE', '/api/rules/:id', handleRuleDelete);

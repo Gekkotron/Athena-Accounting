@@ -88,7 +88,13 @@
     "submitPending": "Ajout…",
     "submit": "Ajouter la règle",
     "successCount_one": "{{count}} règle ajoutée",
-    "successCount_other": "{{count}} règles ajoutées"
+    "successCount_other": "{{count}} règles ajoutées",
+    "preview": "Aperçu",
+    "previewPending": "Aperçu…",
+    "previewCount_one": "{{count}} transaction correspondante",
+    "previewCount_other": "{{count}} transactions correspondantes",
+    "previewEmpty": "Aucune transaction ne correspond.",
+    "previewMore": "+ {{count}} autres"
   },
   "colorPicker": {
     "dialogAriaLabel": "Choisir une couleur pour « {{name}} »",

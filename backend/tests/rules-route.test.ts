@@ -243,4 +243,126 @@ describe.skipIf(!RUN)('/api/rules', () => {
     // Cleanup — cascades to the category + rule.
     await db.delete(users).where(eq(users.id, otherUser!.id));
   });
+
+  describe('POST /api/rules/preview', () => {
+    let accountId: number;
+
+    beforeAll(async () => {
+      const acct = await app.inject({
+        method: 'POST', url: '/api/accounts',
+        headers: { cookie },
+        payload: { name: 'Preview acct', type: 'checking', openingDate: '2026-01-01' },
+      });
+      accountId = acct.json().account.id;
+
+      const fixtures = [
+        { date: '2026-06-15', amount: '-42.30', rawLabel: 'CB CARREFOUR PARIS' },
+        { date: '2026-06-16', amount: '-12.00', rawLabel: 'CB CARREFOUR CITY' },
+        { date: '2026-06-17', amount: '2500.00', rawLabel: 'VIR SALAIRE ACME' },
+        { date: '2026-06-18', amount: '-9.99', rawLabel: 'PAYWEB NETFLIX' },
+      ];
+      for (const payload of fixtures) {
+        const res = await app.inject({
+          method: 'POST', url: '/api/transactions',
+          headers: { cookie }, payload: { accountId, ...payload },
+        });
+        if (res.statusCode !== 201) throw new Error(`fixture tx failed: ${res.body}`);
+      }
+    });
+
+    it('matches word-mode keywords against past transactions, newest first', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: 'carrefour' },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.totalCount).toBe(2);
+      expect(body.matches.map((m: { rawLabel: string }) => m.rawLabel))
+        .toEqual(['CB CARREFOUR CITY', 'CB CARREFOUR PARIS']);
+      expect(body.matches[0]).toMatchObject({
+        date: '2026-06-16', amount: '-12.00', accountId,
+      });
+    });
+
+    it('applies the signConstraint filter', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: 'carrefour', signConstraint: 'positive' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().totalCount).toBe(0);
+    });
+
+    it('supports substring and regex match modes', async () => {
+      const sub = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: 'arrefou', matchMode: 'substring' },
+      });
+      expect(sub.statusCode).toBe(200);
+      expect(sub.json().totalCount).toBe(2);
+
+      const re = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: 'net(flix)?', matchMode: 'regex' },
+      });
+      expect(re.statusCode).toBe(200);
+      expect(re.json().totalCount).toBe(1);
+      expect(re.json().matches[0].rawLabel).toBe('PAYWEB NETFLIX');
+    });
+
+    it('rejects invalid or dangerous regex patterns with 400 without running them', async () => {
+      const invalid = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: '(unclosed', matchMode: 'regex' },
+      });
+      expect(invalid.statusCode).toBe(400);
+      expect(invalid.json().error).toMatch(/invalid regex/i);
+
+      const redos = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: '(a+)+b', matchMode: 'regex' },
+      });
+      expect(redos.statusCode).toBe(400);
+      expect(redos.json().error).toMatch(/redos/i);
+    });
+
+    it("never previews against another user's transactions", async () => {
+      const { db } = await import('../src/db/client.js');
+      const { users, accounts, transactions } = await import('../src/db/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      const [otherUser] = await db.insert(users).values({
+        username: 'other-user-preview', passwordHash: 'x',
+      }).returning();
+      const [otherAcct] = await db.insert(accounts).values({
+        userId: otherUser!.id, name: 'Autre compte', type: 'checking',
+        openingDate: '2026-01-01',
+      }).returning();
+      await db.insert(transactions).values({
+        userId: otherUser!.id, accountId: otherAcct!.id,
+        date: '2026-06-20', amount: '-33.00',
+        rawLabel: 'CB CARREFOUR AUTRE', normalizedLabel: 'carrefour autre',
+        dedupKey: 'preview-other-user-1',
+      });
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/rules/preview',
+        headers: { cookie },
+        payload: { keyword: 'carrefour' },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.totalCount).toBe(2);
+      for (const m of body.matches) expect(m.accountId).toBe(accountId);
+
+      await db.delete(users).where(eq(users.id, otherUser!.id));
+    });
+  });
 });
