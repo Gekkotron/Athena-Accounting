@@ -1,7 +1,8 @@
-import { desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import {
   accountFilenamePatterns,
+  accounts,
   fileImports,
   transactions,
 } from '../../db/schema.js';
@@ -108,6 +109,43 @@ export async function runImport(opts: {
 
     if (!fileImport) throw new Error('failed to create file_imports row');
     trace(`tx: fileImport row id=${fileImport.id}`);
+
+    // Auto-heal a common footgun: user creates an account today with
+    // opening_balance=0 (default), then imports historical transactions.
+    // The list-endpoint balance rollup only sums transactions where
+    // t.date >= a.opening_date, so all the imported rows silently drop
+    // out of currentBalance and the account keeps reporting 0. If we
+    // detect this case, shift opening_date back to the earliest imported
+    // date so the sum picks them up. Only safe when opening_balance is
+    // zero — a nonzero opening_balance is a factual claim about a
+    // specific date that we must NOT rewrite silently.
+    if (parsed.length > 0) {
+      const earliestDate = parsed.reduce(
+        (min, p) => (p.date < min ? p.date : min),
+        parsed[0]!.date,
+      );
+      const [acct] = await tx
+        .select({
+          openingBalance: accounts.openingBalance,
+          openingDate: accounts.openingDate,
+        })
+        .from(accounts)
+        .where(and(eq(accounts.id, opts.accountId), eq(accounts.userId, opts.userId)));
+      if (
+        acct &&
+        Number(acct.openingBalance) === 0 &&
+        earliestDate < acct.openingDate
+      ) {
+        trace(
+          `tx: shifting account.opening_date ${acct.openingDate} → ${earliestDate} ` +
+          `(opening_balance=0, historical import) account=${opts.accountId}`,
+        );
+        await tx
+          .update(accounts)
+          .set({ openingDate: earliestDate })
+          .where(and(eq(accounts.id, opts.accountId), eq(accounts.userId, opts.userId)));
+      }
+    }
 
     let inserted = 0;
     let skipped = 0;
