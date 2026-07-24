@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, desc, eq, gte, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
-import { transactions, transactionSplits, accounts } from '../../../db/schema.js';
+import { transactions, accounts } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { ListQuery } from './schemas.js';
-import { buildAmountRange, hydrateSplits, parseId } from './helpers.js';
+import { hydrateSplits, parseId } from './helpers.js';
+import { buildListWhere } from './filters.js';
 import { computeRunningBalances } from './running-balance.js';
 
 export function registerList(app: FastifyInstance): void {
@@ -16,57 +17,7 @@ export function registerList(app: FastifyInstance): void {
     }
     const q = parsed.data;
 
-    const where: SQL[] = [eq(transactions.userId, uid)];
-    if (q.accountId) where.push(eq(transactions.accountId, q.accountId));
-    if (q.categoryId) {
-      // Match plain-category transactions OR transactions with any split
-      // targeting the wanted category. Keeps the "Livres" filter honest
-      // when a Livres split lives on an Amazon transaction whose own
-      // category_id points elsewhere (or is null).
-      where.push(sql`(
-        ${transactions.categoryId} = ${q.categoryId}
-        OR EXISTS (
-          SELECT 1 FROM ${transactionSplits} s
-           WHERE s.transaction_id = ${transactions.id}
-             AND s.category_id = ${q.categoryId}
-        )
-      )`);
-    }
-    if (q.sourceFileId) where.push(eq(transactions.sourceFileId, q.sourceFileId));
-    if (q.fromDate) where.push(gte(transactions.date, q.fromDate));
-    if (q.toDate) where.push(lte(transactions.date, q.toDate));
-    if (q.minAmount) where.push(gte(transactions.amount, q.minAmount));
-    if (q.maxAmount) where.push(lte(transactions.amount, q.maxAmount));
-    if (q.amount) {
-      // Sign-agnostic match — both the credit and the debit — which is what
-      // the user usually means by "find 338€". Missing decimals widen: "19"
-      // → 19.00–19.99 (finds 19.72), "55.5" → 55.50–55.59 (finds 55.57), so
-      // the results keep updating while the user is still typing. Typing the
-      // full cents ("19.72") collapses to an exact match, which is what
-      // reconciliation against a known écart needs.
-      const { lo, hi } = buildAmountRange(q.amount.replace(/^-/, ''));
-      const cond = or(
-        and(gte(transactions.amount, lo), lte(transactions.amount, hi)),
-        and(gte(transactions.amount, `-${hi}`), lte(transactions.amount, `-${lo}`)),
-      );
-      if (cond) where.push(cond);
-    }
-    if (!q.includeTransfers) where.push(isNull(transactions.transferGroupId));
-
-    if (q.search) {
-      // Substring match across every user-facing text field, accent- and
-      // case-insensitive. Four seq-scan LIKE branches — acceptable at
-      // homelab scale (~<10k rows). If perf hurts, promote to a generated
-      // column + GIN trigram index (see TODO.md).
-      const needle = sql`immutable_unaccent(lower(${q.search}))`;
-      where.push(sql`(
-        immutable_unaccent(lower(${transactions.rawLabel})) LIKE '%' || ${needle} || '%'
-        OR immutable_unaccent(lower(${transactions.normalizedLabel})) LIKE '%' || ${needle} || '%'
-        OR immutable_unaccent(lower(coalesce(${transactions.memo}, ''))) LIKE '%' || ${needle} || '%'
-        OR immutable_unaccent(lower(coalesce(${transactions.notes}, ''))) LIKE '%' || ${needle} || '%'
-      )`);
-    }
-
+    const where = buildListWhere(uid, q);
     const whereExpr = where.length > 0 ? and(...where) : undefined;
     const dir = q.order === 'asc' ? asc : desc;
     const orderCol =

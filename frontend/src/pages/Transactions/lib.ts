@@ -1,4 +1,17 @@
 import type { Category } from '../../api/types';
+import type { Filters } from './filters';
+
+// Query string for GET /api/transactions/export — the same filter fields the
+// list request sends, so the CSV is exactly the on-screen view without its
+// page boundary. Unset/empty values are dropped.
+export function buildExportUrl(filters: Filters): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v === undefined || v === null || v === '') continue;
+    params.set(k, String(v));
+  }
+  return `/api/transactions/export?${params.toString()}`;
+}
 
 // URL-param → positive-int-or-undefined. Used at mount time to pick up
 // deep-link `?accountId=…` / `?sourceFileId=…` from Dashboard / Imports.

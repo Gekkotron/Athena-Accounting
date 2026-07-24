@@ -1,6 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import { readIntParam, truncate, sortCategoriesForPicker, toggleInSet } from '../lib';
+import { buildExportUrl, readIntParam, truncate, sortCategoriesForPicker, toggleInSet } from '../lib';
 import type { Category } from '../../../api/types';
+import type { Filters } from '../filters';
+
+describe('buildExportUrl', () => {
+  const base: Filters = { sort: 'date', order: 'desc' };
+
+  it('carries every set filter and drops unset ones', () => {
+    const url = buildExportUrl({
+      ...base,
+      accountId: 3,
+      categoryId: 7,
+      fromDate: '2026-01-01',
+      toDate: '2026-06-30',
+    });
+    expect(url.startsWith('/api/transactions/export?')).toBe(true);
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('accountId')).toBe('3');
+    expect(params.get('categoryId')).toBe('7');
+    expect(params.get('fromDate')).toBe('2026-01-01');
+    expect(params.get('toDate')).toBe('2026-06-30');
+    expect(params.get('sort')).toBe('date');
+    expect(params.get('order')).toBe('desc');
+    expect(params.has('search')).toBe(false);
+    expect(params.has('amount')).toBe(false);
+    expect(params.has('sourceFileId')).toBe(false);
+  });
+
+  it('URL-encodes free-text search values', () => {
+    const url = buildExportUrl({ ...base, search: 'café & thé' });
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('search')).toBe('café & thé');
+  });
+
+  it('drops empty-string values', () => {
+    const url = buildExportUrl({ ...base, search: '' });
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.has('search')).toBe(false);
+  });
+});
 
 const cat = (id: number, name: string, parentId: number | null = null): Category =>
   ({ id, name, parentId } as Category);

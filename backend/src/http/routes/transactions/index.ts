@@ -4,6 +4,7 @@ import { registerList } from './list.js';
 import { registerPatch } from './patch.js';
 import { registerBulk } from './bulk.js';
 import { registerDelete } from './delete.js';
+import { registerExport } from './export.js';
 import { registerDuplicateRoutes } from './duplicates.js';
 import { registerSplitsRoutes } from './splits.js';
 
@@ -14,6 +15,7 @@ export async function transactionsRoutes(app: FastifyInstance): Promise<void> {
   registerDuplicateRoutes(app);
   registerSplitsRoutes(app);
   registerList(app);
+  registerExport(app);
   registerPatch(app);
   registerBulk(app);
   registerDelete(app);

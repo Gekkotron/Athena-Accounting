@@ -17,7 +17,7 @@ import { useTransactionsMutations } from './useTransactionsMutations';
 import { useDefaultAccountResolver } from './useDefaultAccountResolver';
 import { parseAmountQuery } from './parseAmountQuery';
 import { BulkSelectionBar } from './BulkSelectionBar';
-import { readIntParam, sortCategoriesForPicker, toggleInSet } from './lib';
+import { buildExportUrl, readIntParam, sortCategoriesForPicker, toggleInSet } from './lib';
 import { listCheckpoints } from '../../api/checkpoints';
 import { ErrorState } from '../../components/StateBlocks';
 import { useSettings } from '../../lib/useSettings';
@@ -197,6 +197,11 @@ export function Transactions() {
           <button className="btn-secondary md:hidden" onClick={() => setShowFilters((s) => !s)}>
             {showFilters ? t('filtersToggle.hide') : t('filtersToggle.show')}
           </button>
+          {import.meta.env.VITE_DEMO !== '1' && (
+            <a className="btn-secondary" href={buildExportUrl(filters)} download>
+              {t('actions.exportCsv')}
+            </a>
+          )}
           <button className="btn-primary" onClick={() => setModalTx(null)}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

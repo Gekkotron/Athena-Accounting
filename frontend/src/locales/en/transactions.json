@@ -7,7 +7,8 @@
     "hide": "Hide"
   },
   "actions": {
-    "newTransaction": "New transaction"
+    "newTransaction": "New transaction",
+    "exportCsv": "Export CSV"
   },
   "sourceFileFilter": {
     "prefix": "Filtered by import",
