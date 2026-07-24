@@ -110,20 +110,27 @@ export async function runImport(opts: {
     if (!fileImport) throw new Error('failed to create file_imports row');
     trace(`tx: fileImport row id=${fileImport.id}`);
 
-    // Auto-heal a common footgun: user creates an account today with
-    // opening_balance=0 (default), then imports historical transactions.
-    // The list-endpoint balance rollup only sums transactions where
-    // t.date >= a.opening_date, so all the imported rows silently drop
-    // out of currentBalance and the account keeps reporting 0. If we
-    // detect this case, shift opening_date back to the earliest imported
-    // date so the sum picks them up. Only safe when opening_balance is
-    // zero — a nonzero opening_balance is a factual claim about a
-    // specific date that we must NOT rewrite silently.
+    // Auto-heal a common footgun: user creates an account whose opening_date
+    // is today (default) or later, then imports historical transactions. The
+    // list-endpoint balance rollup only sums transactions where
+    // t.date >= a.opening_date, so all the imported rows silently drop out of
+    // currentBalance and the account keeps reporting its opening_balance.
+    // When we detect this case, shift opening_date back to the earliest
+    // imported date so the sum picks them up.
+    //
+    // Guard: only shift when the CURRENT opening_date is today or in the
+    // future — i.e. the account hasn't "happened" yet. An account whose
+    // opening_date is already in the past was deliberately started at a
+    // specific point (with a corresponding opening_balance that reflects
+    // reality on that date); rewriting its date would invalidate that
+    // factual claim.
     if (parsed.length > 0) {
       const earliestDate = parsed.reduce(
         (min, p) => (p.date < min ? p.date : min),
         parsed[0]!.date,
       );
+      const now = new Date();
+      const todayIso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
       const [acct] = await tx
         .select({
           openingBalance: accounts.openingBalance,
@@ -133,12 +140,12 @@ export async function runImport(opts: {
         .where(and(eq(accounts.id, opts.accountId), eq(accounts.userId, opts.userId)));
       if (
         acct &&
-        Number(acct.openingBalance) === 0 &&
+        acct.openingDate >= todayIso &&
         earliestDate < acct.openingDate
       ) {
         trace(
           `tx: shifting account.opening_date ${acct.openingDate} → ${earliestDate} ` +
-          `(opening_balance=0, historical import) account=${opts.accountId}`,
+          `(opening_date was today-or-future, historical import) account=${opts.accountId}`,
         );
         await tx
           .update(accounts)
