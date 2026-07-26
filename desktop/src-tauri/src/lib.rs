@@ -46,14 +46,20 @@ fn spawn_sidecar(app: &tauri::AppHandle) -> (Child, u16) {
         .expect("no app data dir available on this platform");
     std::fs::create_dir_all(&data_dir).expect("failed to create app data dir");
 
-    let mut child = Command::new(&node_bin)
-        .arg(&entry)
+    let mut cmd = Command::new(&node_bin);
+    cmd.arg(&entry)
         .current_dir(&dir)
         .env("DATA_DIR", &data_dir)
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .expect("failed to spawn sidecar");
+        .stderr(Stdio::inherit());
+    // node.exe is a console-subsystem binary: without CREATE_NO_WINDOW it
+    // allocates a visible terminal window behind the app on Windows.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let mut child = cmd.spawn().expect("failed to spawn sidecar");
 
     let stdout = child.stdout.take().expect("sidecar stdout piped");
     let (tx, rx) = mpsc::channel::<u16>();
