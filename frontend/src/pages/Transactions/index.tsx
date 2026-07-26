@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
+import type { Account, Category, Transaction } from '../../api/types';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
@@ -18,7 +18,7 @@ import { useDefaultAccountResolver } from './useDefaultAccountResolver';
 import { parseAmountQuery } from './parseAmountQuery';
 import { BulkSelectionBar } from './BulkSelectionBar';
 import { buildExportUrl, readIntParam, sortCategoriesForPicker, toggleInSet } from './lib';
-import { listCheckpoints } from '../../api/checkpoints';
+import { useCheckpoints } from './useCheckpoints';
 import { ErrorState } from '../../components/StateBlocks';
 import { useSettings } from '../../lib/useSettings';
 
@@ -125,12 +125,6 @@ export function Transactions() {
   const rowAnchor = useTourAnchor('transactions:row');
   const multiAnchor = useTourAnchor('transactions:multi-select');
 
-  const checkpointsQ = useQuery({
-    queryKey: ['balance-checkpoints', filters.accountId],
-    queryFn: () => listCheckpoints(filters.accountId!),
-    enabled: filters.accountId != null,
-  });
-
   const {
     updateCategory,
     updateNotes,
@@ -164,22 +158,12 @@ export function Transactions() {
 
   const accountById = new Map(accounts.map((a) => [a.id, a] as const));
 
-  const checkpointByDate: Map<string, BalanceCheckpoint> = new Map(
-    (checkpointsQ.data?.checkpoints ?? []).map((c) => [c.checkpointDate, c] as const),
-  );
-
-  const onToggleCheckpoint = (tx: Transaction, checked: boolean) => {
-    const accId = filters.accountId;
-    if (accId == null || tx.runningBalance == null) return;
-    setPendingCheckpointDate(tx.date);
-    if (checked) {
-      createCheckpointM.mutate({ accountId: accId, date: tx.date, amount: tx.runningBalance });
-    } else {
-      const cp = checkpointByDate.get(tx.date);
-      if (cp) removeCheckpointM.mutate({ accountId: accId, cpId: cp.id });
-      else setPendingCheckpointDate(null);
-    }
-  };
+  const { checkpointByDate, onToggleCheckpoint } = useCheckpoints({
+    accountId: filters.accountId,
+    createCheckpointM,
+    removeCheckpointM,
+    setPendingCheckpointDate,
+  });
 
   return (
     <div className="flex flex-col gap-6">
