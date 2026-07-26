@@ -62,7 +62,11 @@ fn spawn_sidecar(app: &tauri::AppHandle) -> (Child, u16) {
     let mut child = cmd.spawn().expect("failed to spawn sidecar");
 
     let stdout = child.stdout.take().expect("sidecar stdout piped");
-    let (tx, rx) = mpsc::channel::<u16>();
+    enum Startup {
+        Port(u16),
+        Fatal(String),
+    }
+    let (tx, rx) = mpsc::channel::<Startup>();
     thread::spawn(move || {
         let reader = BufReader::new(stdout);
         let mut sent = false;
@@ -70,18 +74,23 @@ fn spawn_sidecar(app: &tauri::AppHandle) -> (Child, u16) {
             if !sent {
                 if let Some(rest) = line.strip_prefix("ATHENA_PORT=") {
                     if let Ok(port) = rest.trim().parse::<u16>() {
-                        let _ = tx.send(port);
+                        let _ = tx.send(Startup::Port(port));
                         sent = true;
                     }
+                } else if let Some(msg) = line.strip_prefix("ATHENA_FATAL=") {
+                    let _ = tx.send(Startup::Fatal(msg.to_string()));
+                    sent = true;
                 }
             }
             println!("[sidecar] {line}");
         }
     });
 
-    let port = rx
-        .recv_timeout(std::time::Duration::from_secs(30))
-        .expect("sidecar did not report ATHENA_PORT within 30s");
+    let port = match rx.recv_timeout(std::time::Duration::from_secs(30)) {
+        Ok(Startup::Port(port)) => port,
+        Ok(Startup::Fatal(msg)) => panic!("sidecar failed to start: {msg}"),
+        Err(_) => panic!("sidecar did not report ATHENA_PORT within 30s"),
+    };
     (child, port)
 }
 

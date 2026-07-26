@@ -9,9 +9,31 @@
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { dataDir } from '../dataDir.js';
+import { acquireSingleInstanceLock, AlreadyRunningError } from './singleInstance.js';
+import { startParentWatchdog } from './parentWatchdog.js';
+
+// If the Tauri shell dies without cleaning us up (force quit, crash), exit
+// instead of lingering as an orphan that keeps the PGlite datadir open.
+startParentWatchdog();
 
 const dir = dataDir();
 await mkdir(dir, { recursive: true });
+
+// PGlite tolerates exactly one process per data directory; a concurrent
+// second sidecar (typically an orphan from a force-quit shell) wedges
+// Postgres-in-WASM in a 100%-CPU busy-wait on the next write. The
+// ATHENA_FATAL line is machine-readable — the Rust shell surfaces it instead
+// of timing out waiting for ATHENA_PORT.
+let releaseLock: () => Promise<void>;
+try {
+  releaseLock = await acquireSingleInstanceLock(dir);
+} catch (err) {
+  if (err instanceof AlreadyRunningError) {
+    process.stdout.write(`ATHENA_FATAL=${err.message}\n`);
+    process.exit(1);
+  }
+  throw err;
+}
 
 process.env.DB_DRIVER = 'pglite';
 process.env.AUTH_MODE = 'none';
@@ -51,6 +73,7 @@ const shutdown = async (signal: string) => {
     await unlink(portFile).catch(() => { /* file may not exist */ });
     await app.close();
     await pool.end();
+    await releaseLock();
     process.exit(0);
   } catch (err) {
     app.log.error(err, 'error during shutdown');
