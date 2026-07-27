@@ -130,10 +130,24 @@ try {
 
   let unlockedPort: number | undefined;
   if (marker !== null) {
-    const unlock = await runUnlockServer({ dir });
-    process.stdout.write(`ATHENA_PORT=${unlock.port}\n`);
-    await writeFile(portFile, `${unlock.port}\n`, { mode: 0o600 });
-    unlockedPort = unlock.port;
+    // runUnlockServer() resolves the moment the listener binds — well
+    // before anyone has typed a password — precisely so the port can be
+    // published immediately below. The password prompt is only reachable
+    // once the Rust shell has pointed its WebView at this port (off the
+    // ATHENA_PORT line), so publishing the port and waiting for `unlocked`
+    // must be two separate steps, not one: bundling them (as an earlier
+    // version of this file did) meant nothing could ever unlock, because
+    // the port was never printed until *after* a correct password had
+    // already been submitted to it.
+    const { port, unlocked } = await runUnlockServer({ dir });
+    process.stdout.write(`ATHENA_PORT=${port}\n`);
+    await writeFile(portFile, `${port}\n`, { mode: 0o600 });
+    unlockedPort = port;
+
+    // Blocks here until the user actually submits the right password —
+    // everything below (crash recovery, activateSnapshots, the dynamic DB
+    // imports) only makes sense once we have it.
+    const unlock = await unlocked;
 
     if (marker === 'disable-pending') {
       // The just-decrypted snapshot is the truth in this state — trash any

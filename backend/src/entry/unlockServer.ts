@@ -4,9 +4,9 @@
 // from. Instead, tauri.ts binds this tiny plain node:http server first,
 // prints its port as the `ATHENA_PORT` contract line so the Rust shell
 // points the WebView at it, and shows a French password prompt. Once the
-// right password decrypts the on-disk snapshot, the promise this module
-// returns resolves with the plaintext dump and the server closes so the
-// real app can bind the same port.
+// right password decrypts the on-disk snapshot, the `unlocked` promise this
+// module hands back resolves with the plaintext dump and the server closes
+// so the real app can bind the same port.
 //
 // Deliberately no Fastify here: this surface only ever serves three fixed
 // routes and needs to be usable before any of the app's dynamic DB imports
@@ -98,10 +98,27 @@ const PAGE = `<!doctype html>
 </html>
 `;
 
-export interface UnlockResult {
-  port: number;
+// What the password unlock actually produces, once someone types the right
+// one — the passphrase (so the caller can activate the snapshot scheduler
+// under it) and the decrypted plaintext dump (so the caller can boot PGlite
+// from it in memory, without ever writing plaintext to disk).
+export interface UnlockOutcome {
   passphrase: string;
   snapshot: Buffer;
+}
+
+// What runUnlockServer() resolves with — deliberately split from
+// UnlockOutcome above. The bound `port` is known (and needed by the caller,
+// to print the ATHENA_PORT contract line and show the password prompt) the
+// instant the listener binds, long before anyone has typed a password;
+// `unlocked` is the separate, later-settling promise for that. Bundling
+// both into one promise (as an earlier version of this module did) meant
+// the caller couldn't publish the port until *after* a correct password had
+// already been submitted — a chicken-and-egg deadlock, since the password
+// prompt is only reachable once the port has been published.
+export interface UnlockBinding {
+  port: number;
+  unlocked: Promise<UnlockOutcome>;
 }
 
 // Keeps a single wrong-password-guessing script (or a curious LAN neighbor —
@@ -142,8 +159,20 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-export function runUnlockServer(opts: { dir: string; port?: number }): Promise<UnlockResult> {
-  return new Promise((resolve, reject) => {
+export function runUnlockServer(opts: { dir: string; port?: number }): Promise<UnlockBinding> {
+  return new Promise((resolveBinding, rejectBinding) => {
+    let resolveUnlocked!: (outcome: UnlockOutcome) => void;
+    let rejectUnlocked!: (err: unknown) => void;
+    const unlocked = new Promise<UnlockOutcome>((resolve, reject) => {
+      resolveUnlocked = resolve;
+      rejectUnlocked = reject;
+    });
+    // A rejected `unlocked` with nobody (yet) awaiting it — e.g. a server
+    // error fires before tauri.ts's `await unlocked` line executes — must
+    // never surface as an unhandled rejection. tauri.ts always awaits it a
+    // moment later; this is purely defensive bookkeeping.
+    unlocked.catch(() => { /* observed above; real handling is in the caller */ });
+
     const server = createServer((req, res) => {
       void handleRequest(req, res).catch((err: unknown) => {
         if (!res.headersSent) sendJson(res, 500, { error: 'internal error' });
@@ -204,15 +233,15 @@ export function runUnlockServer(opts: { dir: string; port?: number }): Promise<U
         }
 
         // Respond and let the response flush to the socket before resolving
-        // and closing the listener — server.close() only stops accepting new
-        // connections, it does not tear down the in-flight response. Send
-        // `Connection: close` so the client doesn't keep this socket alive
-        // for reuse — the caller is about to hand this exact port to the
-        // real app, and a lingering keep-alive connection to the now-closed
-        // unlock server would otherwise still look "reachable".
+        // `unlocked` and closing the listener — server.close() only stops
+        // accepting new connections, it does not tear down the in-flight
+        // response. Send `Connection: close` so the client doesn't keep
+        // this socket alive for reuse — the caller is about to hand this
+        // exact port to the real app, and a lingering keep-alive connection
+        // to the now-closed unlock server would otherwise still look
+        // "reachable".
         sendJson(res, 200, { ok: true }, { Connection: 'close' });
-        const { port } = server.address() as AddressInfo;
-        resolve({ port, passphrase: password, snapshot });
+        resolveUnlocked({ passphrase: password, snapshot });
         server.close();
         return;
       }
@@ -220,17 +249,25 @@ export function runUnlockServer(opts: { dir: string; port?: number }): Promise<U
       sendJson(res, 423, { error: 'locked' });
     }
 
-    server.once('error', reject);
+    server.once('error', rejectBinding);
     server.listen(opts.port ?? 0, '127.0.0.1', () => {
-      server.off('error', reject);
+      server.off('error', rejectBinding);
+      const { port } = server.address() as AddressInfo;
       // A bare EventEmitter with zero 'error' listeners throws uncaught on
-      // the next error — swap the bind-time `reject` for a permanent
-      // no-op-but-logging listener so a late error (an aborted client
-      // connection, EPIPE on the way down while closing, ...) can never
-      // crash the whole sidecar process.
+      // the next error — swap the bind-time `rejectBinding` for a permanent
+      // listener that both logs (so a late error — an aborted client
+      // connection, EPIPE on the way down while closing, ... — can never
+      // crash the whole sidecar process) and rejects `unlocked` (so the
+      // caller's `await unlocked` surfaces it as a real boot failure rather
+      // than hanging forever on a server that's silently stopped working).
+      // Rejecting a promise that has already settled — e.g. this fires
+      // after a successful unlock already resolved `unlocked` and closed
+      // the server — is simply a no-op.
       server.on('error', (err) => {
         console.error('[unlockServer] error', err);
+        rejectUnlocked(err);
       });
+      resolveBinding({ port, unlocked });
     });
   });
 }
