@@ -14,6 +14,7 @@ import {
   transferRules,
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
+import { wipeUserData } from './wipe.js';
 import { BackupBody, fileImportKey } from './schema.js';
 import { decryptEnvelope, isEncryptedEnvelope } from './crypto.js';
 import {
@@ -57,20 +58,9 @@ export function registerRestoreRoute(app: FastifyInstance): void {
     const dump = parsed.data;
 
     const result = await db.transaction(async (tx) => {
-      // Wipe only THIS user's rows, in reverse dependency order.
-      // Splits die via CASCADE when their parent transactions get wiped
-      // below, but we drop them explicitly to keep the ordering readable.
-      await tx.delete(transactionSplits)
-        .where(sql`transaction_id IN (SELECT id FROM transactions WHERE user_id = ${uid})`);
-      await tx.delete(transactions).where(eq(transactions.userId, uid));
-      await tx.delete(fileImports).where(eq(fileImports.userId, uid));
-      await tx.delete(rules).where(eq(rules.userId, uid));
-      await tx.delete(transferRules).where(eq(transferRules.userId, uid));
-      await tx.delete(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid));
-      await tx.delete(categoryBudgets).where(eq(categoryBudgets.userId, uid));
-      await tx.delete(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid));
-      await tx.delete(categories).where(eq(categories.userId, uid));
-      await tx.delete(accounts).where(eq(accounts.userId, uid));
+      // TRUNCATE when solo, per-user DELETEs otherwise — see wipe.ts for the
+      // PGlite busy-wait rationale.
+      await wipeUserData(tx, uid);
 
       const accountIdByName = new Map<string, number>();
       for (const a of dump.accounts) {
