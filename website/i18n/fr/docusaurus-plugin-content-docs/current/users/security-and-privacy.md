@@ -112,6 +112,9 @@ complet et le playbook de récupération d'un fichier corrompu.
 
 ## Voir aussi
 
+- [Chiffrement au repos](encryption-at-rest.md) — le chiffrement optionnel
+  de la base de l'application bureau, et comment chiffrer le volume
+  Postgres sur Docker/LAN.
 - [Sauvegarde et restauration](backup-recovery.md) — exporter, restaurer
   et récupérer d'une base corrompue.
 - [Référence de configuration](../reference/configuration.md) — les

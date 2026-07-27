@@ -76,3 +76,4 @@ The script `backend/scripts/backup-drill.ts` runs a round-trip on a temporary PG
 
 - [Getting started](./getting-started)
 - [Security and privacy](./security-and-privacy)
+- [Encryption at rest](./encryption-at-rest)

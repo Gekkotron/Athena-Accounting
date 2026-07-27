@@ -102,6 +102,9 @@ the corrupt-file recovery playbook.
 
 ## See also
 
+- [Encryption at rest](encryption-at-rest.md) — the desktop app's opt-in
+  database encryption, and how to encrypt the Postgres volume on
+  Docker/LAN.
 - [Backup and recovery](backup-recovery.md) — export, restore, and recover
   from a corrupt database.
 - [Configuration reference](../reference/configuration.md) — the env vars

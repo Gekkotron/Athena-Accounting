@@ -20,6 +20,8 @@ You installed Athena or plan to. Start here.
   locked money, backups.
 - **[Security & privacy](security-and-privacy.md)** — auth, sessions,
   privacy mode.
+- **[Encryption at rest](encryption-at-rest.md)** — desktop database
+  encryption, and encrypting the Postgres volume on Docker/LAN.
 - **[MCP access](mcp.md)** — optional local LLM access.
 - **[Troubleshooting](troubleshooting.md)** — FAQ and known issues.
 

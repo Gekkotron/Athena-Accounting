@@ -487,3 +487,4 @@ oversights.
 - [Contributing guide](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Backup and recovery](docs/users/backup-recovery.md)
+- [Encryption at rest](docs/users/encryption-at-rest.md)

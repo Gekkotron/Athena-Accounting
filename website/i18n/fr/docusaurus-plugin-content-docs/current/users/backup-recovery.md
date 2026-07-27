@@ -131,3 +131,4 @@ vit dans [`docs/dev/backup-drill-report.md`](https://github.com/Gekkotron/Athena
 
 - [Getting started](./getting-started)
 - [Security and privacy](./security-and-privacy)
+- [Chiffrement au repos](./encryption-at-rest)
