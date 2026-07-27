@@ -111,7 +111,7 @@ const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
 
   const backupLastSuccessTimestampSeconds = new Gauge({
     name: 'athena_backup_last_success_timestamp_seconds',
-    help: 'Unix timestamp of the last successful GET /api/backup/export response.',
+    help: 'Unix timestamp of the last successful backup export (POST /api/backup/export).',
     registers: [registry],
   });
 

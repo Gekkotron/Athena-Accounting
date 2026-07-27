@@ -65,6 +65,21 @@ async function wipeUserData() {
   await db.delete(accounts);
 }
 
+// Plaintext export is gone — tests obtain a dump via the POST (encrypted)
+// export and decrypt it locally. Importing the decrypted JSON also keeps the
+// legacy plaintext-import path covered.
+const EXPORT_PASS = 'test-passphrase-1';
+async function exportDump() {
+  const { decryptEnvelope } = await import('../src/http/routes/backup/crypto.js');
+  const res = await app.inject({
+    method: 'POST', url: '/api/backup/export',
+    headers: { cookie },
+    payload: { passphrase: EXPORT_PASS },
+  });
+  expect(res.statusCode).toBe(200);
+  return JSON.parse(decryptEnvelope(res.json(), EXPORT_PASS));
+}
+
 describe.skipIf(!RUN)('/api/backup', () => {
   beforeAll(async () => {
     const { buildApp } = await import('./helpers/build-app.js');
@@ -83,16 +98,24 @@ describe.skipIf(!RUN)('/api/backup', () => {
   afterEach(async () => { await wipeUserData(); });
 
   describe('GET /api/backup/export', () => {
-    it('returns a JSON attachment with version + counts + rows', async () => {
-      await seedSomeData();
+    it('is gone — plaintext export was removed', async () => {
       const res = await app.inject({
         method: 'GET', url: '/api/backup/export', headers: { cookie },
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.headers['content-type']).toContain('application/json');
-      expect(res.headers['content-disposition']).toContain('attachment');
-      expect(res.headers['content-disposition']).toContain('athena-backup-');
-      const dump = res.json();
+      expect(res.statusCode).toBe(410);
+      expect(res.json().error).toMatch(/plaintext export removed/);
+    });
+
+    it('rejects unauthenticated requests with 401', async () => {
+      const res = await app.inject({ method: 'GET', url: '/api/backup/export' });
+      expect(res.statusCode).toBe(401);
+    });
+  });
+
+  describe('POST /api/backup/export (dump shape)', () => {
+    it('carries version + counts + rows inside the envelope', async () => {
+      await seedSomeData();
+      const dump = await exportDump();
       expect(dump.version).toBe(4);
       expect(dump.instance).toBe('athena-accounting');
       expect(dump.counts.accounts).toBeGreaterThanOrEqual(1);
@@ -112,29 +135,17 @@ describe.skipIf(!RUN)('/api/backup', () => {
     });
 
     it('emits an empty dump when the user has no data', async () => {
-      const res = await app.inject({
-        method: 'GET', url: '/api/backup/export', headers: { cookie },
-      });
-      expect(res.statusCode).toBe(200);
-      const dump = res.json();
+      const dump = await exportDump();
       expect(dump.accounts).toEqual([]);
       expect(dump.transactions).toEqual([]);
       expect(dump.counts.accounts).toBe(0);
-    });
-
-    it('rejects unauthenticated requests with 401', async () => {
-      const res = await app.inject({ method: 'GET', url: '/api/backup/export' });
-      expect(res.statusCode).toBe(401);
     });
   });
 
   describe('POST /api/backup/import', () => {
     it('roundtrips: export → wipe → import restores the same data shape', async () => {
       await seedSomeData();
-      const exp = await app.inject({
-        method: 'GET', url: '/api/backup/export', headers: { cookie },
-      });
-      const dump = exp.json();
+      const dump = await exportDump();
       await wipeUserData();
 
       const imp = await app.inject({
@@ -185,8 +196,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       });
       expect(cpRes.statusCode).toBe(201);
 
-      const exp = await app.inject({ method: 'GET', url: '/api/backup/export', headers: { cookie } });
-      const dump = exp.json();
+      const dump = await exportDump();
       expect(dump.counts.balanceCheckpoints).toBe(1);
       expect(dump.balanceCheckpoints).toEqual([{
         account: 'BackupA', checkpointDate: '2026-05-31', expectedAmount: '1234.56', note: 'mai',
@@ -224,7 +234,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
         headers: { cookie }, payload: { categoryId: catId, monthlyLimit: '150.00' },
       });
 
-      const dump = (await app.inject({ method: 'GET', url: '/api/backup/export', headers: { cookie } })).json();
+      const dump = await exportDump();
       expect(dump.budgets.find((b: { category: string }) => b.category === 'Loisirs').monthlyLimit).toBe('150.00');
 
       const restore = await app.inject({
@@ -273,9 +283,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       });
 
       // Export.
-      const exp = await app.inject({ method: 'GET', url: '/api/backup/export', headers: { cookie } });
-      expect(exp.statusCode).toBe(200);
-      const dump = exp.json();
+      const dump = await exportDump();
       expect(dump.budgets).toHaveLength(2);
       const yearly = dump.budgets.find((b: { period: string }) => b.period === 'yearly');
       expect(yearly.account).toBe('Test Account'); // account name matches
@@ -425,10 +433,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       });
       expect(put.statusCode).toBe(200);
 
-      const exported = await app.inject({
-        method: 'GET', url: '/api/backup/export', headers: { cookie },
-      });
-      const dump = exported.json();
+      const dump = await exportDump();
       expect(dump.version).toBe(4);
       const dumpedTx = (dump.transactions as Array<{ rawLabel: string; splits?: unknown[] }>)
         .find((t) => t.rawLabel === 'Amazon FR')!;
@@ -479,10 +484,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       });
 
       // Export the current state.
-      const firstExport = await app.inject({
-        method: 'GET', url: '/api/backup/export', headers: { cookie },
-      });
-      const dump = firstExport.json();
+      const dump = await exportDump();
 
       // Mutate the dump so the tx now has different splits.
       const dumpTx = (dump.transactions as Array<{ rawLabel: string; splits?: unknown[] }>)

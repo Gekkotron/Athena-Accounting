@@ -202,7 +202,7 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     expect(Number(afterMatch![1])).toBe(beforeCount + deleted);
   });
 
-  it('records athena_backup_last_success_timestamp_seconds after GET /api/backup/export', async () => {
+  it('records athena_backup_last_success_timestamp_seconds after a backup export', async () => {
     await app.inject({
       method: 'POST', url: '/api/onboarding/create',
       payload: { username: 'backup-user', password: 'backup-1234' },
@@ -219,8 +219,9 @@ describe.skipIf(!RUN)('/metrics endpoint', () => {
     const nowBefore = Math.floor(Date.now() / 1000);
 
     const dump = await app.inject({
-      method: 'GET', url: '/api/backup/export',
+      method: 'POST', url: '/api/backup/export',
       headers: { cookie },
+      payload: { passphrase: 'metrics-test-pass' },
     });
     expect(dump.statusCode).toBe(200);
 

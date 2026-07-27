@@ -180,11 +180,12 @@ function stampNow(): string {
 const EncryptBody = z.object({ passphrase: z.string().min(8).max(1024) });
 
 export function registerExportRoute(app: FastifyInstance): void {
-  app.get('/api/backup/export', async (req, reply) => {
-    const dump = await buildDump(userId(req));
-    reply.header('Content-Type', 'application/json; charset=utf-8');
-    reply.header('Content-Disposition', `attachment; filename="athena-backup-${stampNow()}.json"`);
-    return dump;
+  // Plaintext export was removed (2026-07) — backups are always encrypted
+  // now. 410 (not 404) so old clients/bookmarks get an explanation.
+  app.get('/api/backup/export', async (_req, reply) => {
+    return reply.code(410).send({
+      error: 'plaintext export removed — POST with a passphrase',
+    });
   });
 
   // Same dump, sealed with AES-256-GCM under a scrypt-derived key. POST
