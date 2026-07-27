@@ -43,6 +43,11 @@ export function decryptBuffer(file: Buffer, passphrase: string): Buffer {
     const h = JSON.parse(file.subarray(MAGIC.length, nl).toString('utf8')) as {
       N: number; r: number; p: number; salt: string; iv: string; tag: string;
     };
+    // Untrusted input: bound the KDF cost so a crafted header can't force a
+    // giant scrypt allocation before the auth-tag check.
+    if (h.N > 2 ** 16 || h.r > 16 || h.p > 2 || h.N < 2 ** 10 || h.r < 1 || h.p < 1) {
+      throw new Error('unreasonable KDF parameters');
+    }
     const key = scryptSync(passphrase, Buffer.from(h.salt, 'base64'), 32, {
       N: h.N, r: h.r, p: h.p, maxmem: 128 * h.N * h.r * 2,
     });

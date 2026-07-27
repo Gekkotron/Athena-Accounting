@@ -29,4 +29,22 @@ describe('binaryEnvelope', () => {
     expect(isBinaryEnvelope(Buffer.from('not an envelope'))).toBe(false);
     expect(() => decryptBuffer(Buffer.from('not an envelope'), 'x')).toThrow(EnvelopeDecryptError);
   });
+
+  it('rejects malicious header with huge KDF parameters', () => {
+    const file = encryptBuffer(plain, 'right-passphrase');
+    // Find the header line (between MAGIC and first newline after MAGIC)
+    const magicEnd = 16; // "ATHENA-DB-ENC:1\n".length
+    const headerEnd = file.indexOf(0x0a, magicEnd);
+    // Replace header with a malicious one (huge N value)
+    const maliciousHeader = Buffer.from(
+      '{"kdf":"scrypt","N":1073741824,"r":8,"p":1,"salt":"aGVsbG8gd29ybGQ=","iv":"aGVsbG8gd29ybGQ=","tag":"aGVsbG8gd29ybGQ="}\n',
+      'utf8',
+    );
+    const maliciousFile = Buffer.concat([
+      file.subarray(0, magicEnd),
+      maliciousHeader,
+      file.subarray((headerEnd ?? -1) + 1),
+    ]);
+    expect(() => decryptBuffer(maliciousFile, 'right-passphrase')).toThrow(EnvelopeDecryptError);
+  });
 });
