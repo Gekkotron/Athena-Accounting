@@ -132,6 +132,41 @@ describe('snapshotScheduler', () => {
     expect(unhandled).not.toHaveBeenCalled();
   });
 
+  it('forces an immediate snapshot once 60s have elapsed since the first markDirty, even if dirtying never stops', async () => {
+    const pipeline = vi.fn().mockResolvedValue(undefined);
+    _setPipelineForTests(pipeline);
+    activateSnapshots('pass');
+
+    // Re-dirty every 8s — always inside the 10s debounce window, so the
+    // debounce timer alone would never fire on its own.
+    for (let i = 0; i < 9; i++) {
+      markDirty();
+      await vi.advanceTimersByTimeAsync(8000);
+    }
+
+    // The 9th markDirty lands 64s after the first — past the 60s ceiling —
+    // so it must force a snapshot immediately rather than re-arm again.
+    expect(pipeline).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets the ceiling window after a snapshot actually runs', async () => {
+    const pipeline = vi.fn().mockResolvedValue(undefined);
+    _setPipelineForTests(pipeline);
+    activateSnapshots('pass');
+
+    for (let i = 0; i < 9; i++) {
+      markDirty();
+      await vi.advanceTimersByTimeAsync(8000);
+    }
+    expect(pipeline).toHaveBeenCalledTimes(1);
+
+    // Continued dirtying after the forced flush gets a fresh 60s budget —
+    // it shouldn't immediately force a second flush.
+    markDirty();
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(pipeline).toHaveBeenCalledTimes(1);
+  });
+
   it('captures the passphrase before the run starts, immune to a concurrent deactivateSnapshots', async () => {
     let resolveRun: (() => void) | undefined;
     const seenPasses: string[] = [];

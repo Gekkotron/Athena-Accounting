@@ -4,11 +4,18 @@ import { getPglite } from './client.js';
 import { writeSnapshot } from './snapshotStore.js';
 
 const DEBOUNCE_MS = 10_000;
+// Ceiling on how long a continuously-dirtying app can postpone a snapshot.
+// markDirty() re-arms a fresh 10s debounce on every call, so a workload that
+// never goes 10s idle (a busy import, a script hammering the API) could
+// starve the snapshot forever. Once 60s have elapsed since the *first*
+// unflushed markDirty(), flush immediately instead of re-arming again.
+const MAX_WAIT_MS = 60_000;
 
 let passphrase: string | null = null;
 let timer: NodeJS.Timeout | undefined;
 let running = false;
 let queued = false;
+let firstDirtyAt: number | undefined;
 
 // The real dump → encrypt → write pipeline. Overridable in tests via
 // `_setPipelineForTests` so unit tests don't need a real PGlite instance.
@@ -45,6 +52,7 @@ export function deactivateSnapshots(): void {
   }
   running = false;
   queued = false;
+  firstDirtyAt = undefined;
 }
 
 export async function snapshotNow(): Promise<void> {
@@ -63,6 +71,11 @@ export async function snapshotNow(): Promise<void> {
     // chance to start) — nothing to snapshot.
     return;
   }
+  // A run is actually starting — reset the ceiling window regardless of how
+  // we got here (debounce timer, the ceiling's own forced flush, an
+  // explicit external snapshotNow() call from shutdown, ...). The next
+  // markDirty() gets a fresh 60s budget from this point.
+  firstDirtyAt = undefined;
   running = true;
   try {
     await pipeline(pass);
@@ -88,6 +101,22 @@ export async function snapshotNow(): Promise<void> {
 
 export function markDirty(): void {
   if (passphrase === null) return;
+
+  const now = Date.now();
+  if (firstDirtyAt === undefined) {
+    firstDirtyAt = now;
+  } else if (now - firstDirtyAt >= MAX_WAIT_MS) {
+    // Constant mutation has kept re-arming the debounce for over a minute
+    // straight — stop postponing and flush right now instead of letting a
+    // busy workload starve the snapshot indefinitely.
+    if (timer) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
+    void snapshotNow();
+    return;
+  }
+
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     timer = undefined;

@@ -45,6 +45,22 @@ describe('snapshotStore', () => {
     it('throws when reading a missing snapshot', async () => {
       await expect(readSnapshot(dir)).rejects.toThrow();
     });
+
+    it('falls back to .bak when the current file is missing but a backup exists', async () => {
+      // Simulates a crash between writeSnapshot's two renames: `cur` never
+      // landed (or was removed out from under us) but the rotated-out
+      // previous snapshot is still sitting at `.bak`.
+      const bakPath = path.join(dir, 'athena.db.enc.bak');
+      const previous = Buffer.from('previous still-valid snapshot');
+      await writeFile(bakPath, previous);
+
+      const read = await readSnapshot(dir);
+      expect(read).toEqual(previous);
+    });
+
+    it('still throws when neither the current file nor .bak exist', async () => {
+      await expect(readSnapshot(dir)).rejects.toThrow();
+    });
   });
 
   describe('hasSnapshot', () => {

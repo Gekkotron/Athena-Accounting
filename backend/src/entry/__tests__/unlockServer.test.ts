@@ -111,4 +111,38 @@ describe('runUnlockServer', () => {
     });
     await unlockPromise;
   });
+
+  it('rejects an oversized unlock body with 413 without resolving', async () => {
+    const port = await getFreePort();
+    const unlockPromise = runUnlockServer({ dir, port });
+    const base = `http://127.0.0.1:${port}`;
+
+    let settled = false;
+    unlockPromise.then(
+      () => { settled = true; },
+      () => { settled = true; },
+    );
+
+    // A password field far past the 64KB cap.
+    const oversized = JSON.stringify({ password: 'x'.repeat(100 * 1024) });
+    const res = await fetch(`${base}/api/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: oversized,
+    });
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toEqual({ error: 'payload too large' });
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+
+    // Clean up: unlock for real so the server closes and the promise
+    // doesn't dangle past the end of the test.
+    await fetch(`${base}/api/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: PASSWORD }),
+    });
+    await unlockPromise;
+  });
 });

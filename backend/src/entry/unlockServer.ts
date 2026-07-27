@@ -104,6 +104,13 @@ export interface UnlockResult {
   snapshot: Buffer;
 }
 
+// Keeps a single wrong-password-guessing script (or a curious LAN neighbor —
+// this only ever binds 127.0.0.1, but defense in depth) from streaming an
+// unbounded body at the process before the JSON.parse ever runs.
+const MAX_BODY_BYTES = 64 * 1024;
+
+class BodyTooLargeError extends Error {}
+
 function sendJson(
   res: ServerResponse,
   status: number,
@@ -121,7 +128,15 @@ function sendJson(
 
 async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
+  let total = 0;
   for await (const chunk of req) {
+    total += (chunk as Buffer).length;
+    if (total > MAX_BODY_BYTES) {
+      // Breaking out of the for-await loop runs its implicit iterator
+      // cleanup, which destroys/unpipes the underlying request stream —
+      // no need to manually drain or destroy `req` ourselves.
+      throw new BodyTooLargeError();
+    }
     chunks.push(chunk as Buffer);
   }
   return Buffer.concat(chunks).toString('utf8');
@@ -160,8 +175,12 @@ export function runUnlockServer(opts: { dir: string; port?: number }): Promise<U
             throw new Error('missing password');
           }
           password = parsed.password;
-        } catch {
-          sendJson(res, 400, { error: 'invalid input' });
+        } catch (err) {
+          if (err instanceof BodyTooLargeError) {
+            sendJson(res, 413, { error: 'payload too large' });
+          } else {
+            sendJson(res, 400, { error: 'invalid input' });
+          }
           return;
         }
 
@@ -194,6 +213,14 @@ export function runUnlockServer(opts: { dir: string; port?: number }): Promise<U
     server.once('error', reject);
     server.listen(opts.port ?? 0, '127.0.0.1', () => {
       server.off('error', reject);
+      // A bare EventEmitter with zero 'error' listeners throws uncaught on
+      // the next error — swap the bind-time `reject` for a permanent
+      // no-op-but-logging listener so a late error (an aborted client
+      // connection, EPIPE on the way down while closing, ...) can never
+      // crash the whole sidecar process.
+      server.on('error', (err) => {
+        console.error('[unlockServer] error', err);
+      });
     });
   });
 }

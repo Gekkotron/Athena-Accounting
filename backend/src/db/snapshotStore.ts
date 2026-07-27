@@ -31,7 +31,20 @@ export async function writeSnapshot(dir: string, file: Buffer): Promise<void> {
 }
 
 export async function readSnapshot(dir: string): Promise<Buffer> {
-  return readFile(snapshotPath(dir));
+  try {
+    return await readFile(snapshotPath(dir));
+  } catch (err) {
+    // writeSnapshot()'s rotation (write tmp, rename cur -> .bak, rename tmp
+    // -> cur) is two separate renames, not one atomic operation. A crash
+    // between them leaves `cur` missing while `.bak` still holds the
+    // previous — still valid, still decryptable — snapshot. Fall back to it
+    // rather than treating "no current file" as "no snapshot at all", which
+    // would otherwise look identical to a fresh, never-encrypted install.
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return readFile(path.join(dir, 'athena.db.enc.bak'));
+    }
+    throw err;
+  }
 }
 
 export async function hasSnapshot(dir: string): Promise<boolean> {
