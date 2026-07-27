@@ -22,6 +22,7 @@ import {
   resolveCategoryRef,
   resolveNameToId,
 } from './helpers.js';
+import { flushSnapshots } from '../../../db/snapshotScheduler.js';
 
 // REPLACE semantics, scoped to the calling user only. Wipes only the caller's
 // rows (via WHERE user_id = $uid) and reinserts every row from the dump with
@@ -323,6 +324,15 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         },
       };
     });
+
+    // A restore replaces the entire dataset in one transaction — the
+    // debounced onResponse hook (buildServer.ts) would still cover it on its
+    // own 10s-60s schedule, but a restore is exactly the kind of
+    // all-or-nothing event the spec wants captured immediately rather than
+    // left exposed to that window. Fire-and-forget: flushSnapshots() is a
+    // cheap no-op when snapshots aren't active, and the reply shouldn't wait
+    // on the encrypt+write pipeline.
+    void flushSnapshots();
 
     return reply.code(200).send(result);
   });

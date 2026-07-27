@@ -53,6 +53,15 @@ export function registerStubHandlers(): void {
   registerHandler('POST',   '/api/transactions/mark-not-duplicate', stub);
   registerHandler('POST',   '/api/transactions/delete-bulk', stub);
 
+  // Encryption at rest — the demo has no real PGlite datadir to snapshot.
+  // The GET read stub reports the always-unencrypted, nothing-pending state
+  // so Settings → Security renders the "Enable encryption" form harmlessly;
+  // the mutating routes aren't stubbed, so submitting it falls through to
+  // the generic missing-handler error.
+  registerHandler('GET',    '/api/security', () => ({
+    driver: 'pglite', encrypted: false, pendingDisable: false,
+  }));
+
   // MCP settings — token generation needs a real server; read stubs
   // let the settings page render "disabled" without a raw error.
   registerHandler('GET',    '/api/settings/mcp', () => ({ enabled: false, hasToken: false }));

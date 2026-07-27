@@ -30,7 +30,7 @@ describe('SettingsSecurity', () => {
   it('postgres driver shows only the pointer paragraph, no forms', async () => {
     apiMock.mockResolvedValue({ driver: 'postgres', encrypted: false, pendingDisable: false });
     renderPanel();
-    expect(await screen.findByText(/docs\/users\/encryption-at-rest\.md/)).toBeInTheDocument();
+    expect(await screen.findByText(/Athena-Accounting\/docs\/users\/encryption-at-rest/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Activer le chiffrement' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Mot de passe')).not.toBeInTheDocument();
   });
@@ -110,7 +110,9 @@ describe('SettingsSecurity', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText('Chiffrement activé. Vos données sont désormais chiffrées au repos.'),
+        screen.getByText(
+          "Chiffrement activé. Redémarrez l'application pour terminer la migration et supprimer la copie non chiffrée.",
+        ),
       ).toBeInTheDocument(),
     );
   });

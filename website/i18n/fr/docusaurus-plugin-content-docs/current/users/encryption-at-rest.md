@@ -27,10 +27,16 @@ mot de passe.
 **Ce que l'activation change réellement.** Une fois activé, la base de
 données ne vit plus sur le disque comme un cluster PGlite en clair. Elle
 tourne entièrement **en mémoire** pendant que l'application est ouverte,
-et la seule chose écrite sur le disque est un unique **instantané chiffré
-en AES-256-GCM**, scellé sous une clé dérivée de votre mot de passe par
-scrypt. Rien de lisible ne touche jamais le disque — pas même
-temporairement. L'instantané vit dans votre dossier de données (voir
+et la seule chose écrite sur le disque à partir de là est un unique
+**instantané chiffré en AES-256-GCM**, scellé sous une clé dérivée de
+votre mot de passe par scrypt. Rien de lisible n'est écrit sur le disque
+*après* ce point — mais l'activation elle-même ne supprime pas
+immédiatement l'ancienne copie en clair : il faut **redémarrer
+l'application une fois** après l'activation pour que la migration se
+termine et que l'ancien dossier de base de données en clair soit
+effectivement supprimé. Tant que ce redémarrage n'a pas eu lieu, la copie
+en clair reste présente sur le disque à côté du nouvel instantané chiffré.
+L'instantané vit dans votre dossier de données (voir
 [Installation bureau](desktop-install.md) pour son emplacement) sous
 forme de deux fichiers :
 
@@ -59,9 +65,16 @@ mot de passe de chiffrement, vos données sont perdues — il n'y a ni
 réinitialisation, ni porte dérobée, ni recours au support pour les
 récupérer. Votre seul filet de sécurité est une **sauvegarde exportée**
 faite au préalable (**Réglages → Données → Sauvegarde** ; voir
-[Sauvegarde et restauration](backup-recovery.md)), qui est un fichier
-JSON séparé, non chiffré par défaut, et qui ne dépend pas du mot de passe
-de chiffrement.
+[Sauvegarde et restauration](backup-recovery.md)). Une sauvegarde est un
+fichier séparé chiffré avec **sa propre phrase secrète**, indépendante du
+mot de passe de chiffrement au repos ci-dessus — vous la choisissez au
+moment de l'export et elle vous est redemandée au moment de la
+restauration. Cette phrase secrète de sauvegarde doit être gardée en
+sécurité tout autant que le mot de passe de chiffrement : si vous perdez à
+la fois le mot de passe de chiffrement et la phrase secrète de sauvegarde,
+il ne reste plus rien à récupérer — le fait que la sauvegarde soit un
+fichier séparé ne sert à rien si sa propre phrase secrète est également
+perdue.
 
 **Changer ou désactiver le mot de passe.** Les deux se trouvent dans
 **Réglages → Sécurité**, et les deux exigent le mot de passe actuel pour
@@ -139,7 +152,7 @@ sur Windows. L'un comme l'autre protège tout le disque — y compris
 
 | Scénario | Bureau (PGlite) | Docker/LAN (Postgres) |
 | --- | --- | --- |
-| Appareil volé ou disque retiré **hors tension** | Protégé — seul un instantané chiffré existe sur le disque | Protégé, **si** vous avez mis en place le chiffrement du volume/du disque comme ci-dessus |
+| Appareil volé ou disque retiré **hors tension** | Protégé — seul un instantané chiffré existe sur le disque (après le redémarrage qui suit l'activation ; avant ce redémarrage, la copie en clair est aussi encore présente) | Protégé, **si** vous avez mis en place le chiffrement du volume/du disque comme ci-dessus |
 | Attaquant avec un accès root ou Docker **en direct** sur l'hôte en cours d'exécution | **Non protégé** — un processus en cours d'exécution peut être sollicité pour déchiffrer les données qu'il utilise déjà | **Non protégé** — un accès Docker/root lit directement la base en cours d'exécution, volume chiffré ou non |
 | Mot de passe / phrase secrète perdu | Données irrécupérables, sauf sauvegarde exportée au préalable | Phrase secrète LUKS perdue ⇒ les données de ce volume sont irrécupérables |
 

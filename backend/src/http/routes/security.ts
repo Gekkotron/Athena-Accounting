@@ -7,7 +7,7 @@ import {
   clearEncryption, readMarker, readSnapshot, removeBackupSnapshot, writeMarker,
 } from '../../db/snapshotStore.js';
 import {
-  activateSnapshots, deactivateSnapshots, snapshotNow,
+  activateSnapshots, deactivateSnapshots, flushSnapshots,
 } from '../../db/snapshotScheduler.js';
 
 // Desktop encryption-at-rest control plane: enable / disable / change the
@@ -50,22 +50,43 @@ export async function securityRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: 'encryption requires the desktop (pglite) driver' });
     }
     const dir = dataDir();
-    if ((await readMarker(dir)) === 'encrypted') {
-      return reply.code(400).send({ error: 'already encrypted' });
+    // Reject unless there is NO marker at all yet — not just when already
+    // 'encrypted'. A 'disable-pending' marker means a previous disable
+    // hasn't been finalized (that only happens on the next boot — see
+    // tauri.ts); letting /enable proceed here would run the failure-cleanup
+    // path's clearEncryption() below against the ONLY on-disk copy of the
+    // data (the plaintext datadir has already been superseded), destroying
+    // it outright instead of merely failing to enable.
+    const preExistingMarker = await readMarker(dir);
+    if (preExistingMarker !== null) {
+      return reply.code(400).send({
+        error: preExistingMarker === 'encrypted'
+          ? 'already encrypted'
+          : 'a disable is pending — restart the app to finalize it before enabling again',
+      });
     }
 
     const { password } = parsed.data;
-    // activateSnapshots + snapshotNow run the real dump -> encrypt -> write
-    // pipeline (snapshotScheduler.ts) under the candidate password. snapshotNow()
-    // never rejects (it logs and swallows pipeline failures), so success is
-    // only confirmed by reading the snapshot back and decrypting it below.
+    // activateSnapshots + flushSnapshots run the real dump -> encrypt ->
+    // write pipeline (snapshotScheduler.ts) under the candidate password.
+    // flushSnapshots() (not a bare snapshotNow()) also waits out any
+    // debounced run already in flight before performing this one, so a
+    // concurrent write can't short-circuit it. The pipeline never rejects
+    // (it logs and swallows failures), so success is only confirmed by
+    // reading the snapshot back and decrypting it below.
     activateSnapshots(password);
-    await snapshotNow();
+    await flushSnapshots();
 
     try {
       await verifyPassword(dir, password);
     } catch {
-      await clearEncryption(dir);
+      // Guard kept explicit even though preExistingMarker === null is
+      // guaranteed by the check above: clearEncryption() is destructive
+      // enough (it removes the only on-disk copy) that this must never
+      // fire against a pre-existing marker, by construction or by accident.
+      if (preExistingMarker === null) {
+        await clearEncryption(dir);
+      }
       deactivateSnapshots();
       return reply.code(500).send({ error: 'failed to write encrypted snapshot' });
     }
@@ -120,22 +141,29 @@ export async function securityRoutes(app: FastifyInstance): Promise<void> {
       throw err;
     }
 
-    // Same never-rejects caveat as /enable: snapshotNow() logs and swallows
-    // pipeline failures, so a silent failure here would leave athena.db.enc
-    // still encrypted under `oldPassword` while reporting success — the user's
-    // new password would then fail to unlock on next boot. Verify by reading
-    // the snapshot back and decrypting it under `newPassword`; on failure,
+    // Same never-rejects caveat as /enable: the pipeline logs and swallows
+    // failures, so a silent failure here would leave athena.db.enc still
+    // encrypted under `oldPassword` while reporting success — the user's new
+    // password would then fail to unlock on next boot. Verify by reading the
+    // snapshot back and decrypting it under `newPassword`; on failure,
     // re-activate the old password and re-snapshot under it so the previous
     // password keeps working, rather than leaving the app in a state where
     // neither password is guaranteed to open the on-disk snapshot.
+    // flushSnapshots() (not a bare snapshotNow()) so an in-flight debounced
+    // run can't short-circuit this write either.
     activateSnapshots(newPassword);
-    await snapshotNow();
+    await flushSnapshots();
 
     try {
       await verifyPassword(dir, newPassword);
     } catch {
       activateSnapshots(oldPassword);
-      await snapshotNow();
+      await flushSnapshots();
+      // writeSnapshot()'s rotation just moved the failed newPassword attempt
+      // into .bak — still decryptable under `newPassword`, the very
+      // password this whole rollback just rejected. Remove it so a rejected
+      // new password can't retain a readable copy of the data.
+      await removeBackupSnapshot(dir);
       return reply.code(500).send({ error: 'password change failed — previous password still applies' });
     }
 

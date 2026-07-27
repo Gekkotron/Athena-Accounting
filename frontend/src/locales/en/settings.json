@@ -54,7 +54,7 @@
     },
     "security": {
       "sectionTitle": "Security",
-      "postgresPointer": "Encryption at rest protects the local database file (PGlite). This installation uses PostgreSQL, so protecting the data volume is up to your server infrastructure — see docs/users/encryption-at-rest.md for the recommended setup (disk encryption, encrypted backups).",
+      "postgresPointer": "Encryption at rest protects the local database file (PGlite). This installation uses PostgreSQL, so protecting the data volume is up to your server infrastructure — see the documentation (https://gekkotron.github.io/Athena-Accounting/docs/users/encryption-at-rest) for the recommended setup (disk encryption, encrypted backups).",
       "noRecoveryWarning": "Warning: if you forget this password, your data will be permanently unrecoverable — unless you have a backup exported beforehand. There is no way to reset this password.",
       "disablePending": "Disabling encryption is scheduled: it will take effect the next time the application starts.",
       "wrongPassword": "Incorrect password.",
@@ -64,7 +64,7 @@
         "password": "Password",
         "confirm": "Confirm password",
         "submit": "Enable encryption",
-        "success": "Encryption enabled. Your data is now encrypted at rest."
+        "success": "Encryption enabled. Restart the application to finish the migration and remove the unencrypted copy."
       },
       "change": {
         "title": "Change the encryption password",

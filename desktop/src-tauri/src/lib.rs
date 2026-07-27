@@ -134,12 +134,23 @@ fn terminate_gracefully(mut child: Child) {
         // signal (a missing/already-gone pid makes `kill` exit non-zero) —
         // treating any `Ok` as success would burn the whole 15s grace
         // period waiting on a child that was never actually signaled.
-        let sent = Command::new("/bin/kill")
+        let sent = match Command::new("/bin/kill")
             .arg("-TERM")
             .arg(child.id().to_string())
             .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
+        {
+            Ok(status) => status.success(),
+            // `.status()` itself returned Err — /bin/kill couldn't even be
+            // spawned (missing on some minimal distros/containers), as
+            // opposed to running and reporting failure. Retry once via
+            // PATH before giving up on a graceful shutdown entirely.
+            Err(_) => Command::new("kill")
+                .arg("-TERM")
+                .arg(child.id().to_string())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false),
+        };
 
         if sent {
             let start = Instant::now();

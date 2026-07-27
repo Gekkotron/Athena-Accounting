@@ -11,6 +11,7 @@ import { importPdf, applyTemplateAndImport, previewTemplate } from '../../domain
 import type { TemplateZones } from '../../domain/imports/pdf/zones.js';
 import { importPhoto, PhotoTooLargeError, PhotoUnsupportedMimeError } from '../../domain/imports/photo/index.js';
 import { userId } from '../plugins/auth.js';
+import { flushSnapshots } from '../../db/snapshotScheduler.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -83,7 +84,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       try {
         const r = await importPdf({ filename, accountId, userId: uid, buffer });
         if (r.kind === 'imported') {
-          app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' });
+          app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' }); void flushSnapshots();
           return reply.code(201).send(r);
         }
         return reply.code(200).send(r);
@@ -100,7 +101,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
 
     try {
       const result = await runImport({ filename, accountId, userId: uid, format, buffer });
-      app.metrics.importsTotal.inc({ kind: format, outcome: 'success' });
+      app.metrics.importsTotal.inc({ kind: format, outcome: 'success' }); void flushSnapshots();
       return reply.code(201).send(result);
     } catch (err) {
       app.metrics.importsTotal.inc({ kind: format, outcome: 'error' });
@@ -124,7 +125,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       const result = await importPhoto({
         filename, accountId, userId: userId(req), buffer,
       });
-      app.metrics.importsTotal.inc({ kind: 'photo', outcome: 'success' });
+      app.metrics.importsTotal.inc({ kind: 'photo', outcome: 'success' }); void flushSnapshots();
       return reply.code(200).send(result);
     } catch (err) {
       app.metrics.importsTotal.inc({ kind: 'photo', outcome: 'error' });
@@ -169,7 +170,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
         overrideRows,
         userId: userId(req),
       });
-      app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' });
+      app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' }); void flushSnapshots();
       return reply.code(201).send(r);
     } catch (err: any) {
       app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'error' });

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { db } from '../../db/client.js';
 import { accounts } from '../../db/schema.js';
+import { markDirty } from '../../db/snapshotScheduler.js';
 import { runImport } from './import-service.js';
 import { importPdf } from './pdf/index.js';
 import {
@@ -142,6 +143,16 @@ export function startWatchFolder(app: FastifyInstance): void {
     if (running) return; // a slow NAS scan must never overlap the next tick
     running = true;
     void scanWatchFolderOnce(dir, app.log)
+      .then((result) => {
+        // Watch-folder imports write straight through `db` (see
+        // scanWatchFolderOnce above), bypassing the onResponse hook that
+        // every HTTP-driven mutation uses to call markDirty() (buildServer.ts).
+        // Without this, an encrypted install relying solely on watch-folder
+        // imports would never get a fresh snapshot — mark dirty here
+        // whenever at least one file actually landed in the database this
+        // tick. No-op when snapshots aren't active (see markDirty()).
+        if (result.imported > 0) markDirty();
+      })
       .catch((err) => app.log.error({ err }, '[watch-imports] scan failed'))
       .finally(() => { running = false; });
   };

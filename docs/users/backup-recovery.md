@@ -8,7 +8,7 @@ sidebar_position: 8
 Athena keeps all your data local — on your home server (Docker) or in the desktop app's PGlite file. Backing up is simply producing a portable JSON file that you file away wherever you like; restoring is feeding it back into a fresh or existing install.
 
 :::caution Know what your export contains
-Export files contain the full set of your accounts, transactions, rules and budgets. By default they are **plain JSON, with no encryption at rest** — keep them in an encrypted folder (FileVault, BitLocker, LUKS, Cryptomator, etc.) if you keep them off the origin machine. Alternatively, fill in the optional **passphrase field** next to the export button: the file is then sealed with AES-256-GCM (scrypt-derived key) and is unreadable — and tamper-evident — without the passphrase. Restoring an encrypted file prompts for the same passphrase; there is **no recovery** if you lose it, so treat it like a password-manager master password.
+Export files contain the full set of your accounts, transactions, rules and budgets. Every export is **always encrypted** — you set a passphrase in the **Export data** dialog, and the file is sealed with AES-256-GCM (scrypt-derived key); there's no plain-JSON option any more. Restoring prompts for that same passphrase; there is **no recovery** if you lose it, so treat it like a password-manager master password — and keep it safe independently of any encryption-at-rest password on the app itself, since the two are unrelated and losing both leaves nothing to recover.
 :::
 
 ## Where is the database?
@@ -23,22 +23,24 @@ Export files contain the full set of your accounts, transactions, rules and budg
 ## Export (via the UI)
 
 1. Open **Settings → Data → Backup**.
-2. Click **Export data**. Athena downloads a file named `athena-backup-YYYY-MM-DD-HHMMSS.json`.
-3. File it into encrypted storage (see the limitation above).
+2. Click **Export data**, enter a passphrase when prompted. Athena downloads a file named `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`.
+3. Keep that passphrase somewhere safe — it's the only way to open the file later.
 
-There's nothing to configure server-side: the export is a plain `GET /api/backup/export` that serialises your user with every relation, using natural keys (account names, category names), so it stays readable outside Athena too.
+Under the hood: export is a `POST /api/backup/export` with the passphrase in the request body (never a query string, so it never lands in access logs or browser history), which serialises your user with every relation using natural keys (account names, category names) and then seals the result. The plain `GET /api/backup/export` this used to be now returns `410 Gone`.
 
 ## Schedule regular exports
 
 Athena doesn't schedule automatic exports — this is deliberate, to avoid the file landing somewhere you don't control. Two common approaches:
 
-- **macOS/Linux (cron).** A weekly `curl` script that calls the endpoint and drops the result into an encrypted folder:
+- **macOS/Linux (cron).** A weekly `curl` script that POSTs a passphrase and drops the result into a folder:
   ```sh
-  curl -s -o "/mnt/vault/athena-$(date +%F).json" \
+  curl -s -o "/mnt/vault/athena-$(date +%F).enc.json" \
     -b athena_session=… \
+    -X POST -H 'Content-Type: application/json' \
+    -d '{"passphrase":"…"}' \
     http://home.lan:8000/api/backup/export
   ```
-  The session cookie comes from a prior login; on desktop (Tauri, `AUTH_MODE=none`) the cookie isn't required.
+  The session cookie comes from a prior login; on desktop (Tauri, `AUTH_MODE=none`) the cookie isn't required. The output is already encrypted, so it doesn't need its own encrypted folder the way a plain-JSON export would have.
 - **Windows (Task Scheduler).** Same idea, with `Invoke-WebRequest` in a PowerShell script.
 
 ## Restore (via the UI)

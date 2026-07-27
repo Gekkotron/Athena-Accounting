@@ -14,7 +14,7 @@
 // the same pattern).
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -190,6 +190,25 @@ describe('/api/security (pglite, AUTH_MODE=none)', () => {
     const res = await app.inject({ method: 'GET', url: '/api/security' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ driver: 'pglite', encrypted: false, pendingDisable: true });
+  });
+
+  it('rejects enabling while a disable is pending, leaving athena.db.enc untouched', async () => {
+    const { snapshotPath } = await import('../src/db/snapshotStore.js');
+    const before = await readFile(snapshotPath(tmp));
+
+    const res = await app.inject({
+      method: 'POST', url: '/api/security/enable', payload: { password: 'brand-new-attempt-password-2026' },
+    });
+    expect(res.statusCode).toBe(400);
+
+    // The pre-existing 'disable-pending' marker must fall into the same
+    // rejection as an already-'encrypted' marker — falling through to the
+    // failure-cleanup path would call clearEncryption(), destroying the
+    // only remaining on-disk copy of the data instead of just failing.
+    const after = await readFile(snapshotPath(tmp));
+    expect(after.equals(before)).toBe(true);
+    const { readMarker } = await import('../src/db/snapshotStore.js');
+    expect(await readMarker(tmp)).toBe('disable-pending');
   });
 
   it('rejects disable/change once no longer in the encrypted state', async () => {

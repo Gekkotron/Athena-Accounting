@@ -17,6 +17,7 @@ import {
   markDirty,
   snapshotNow,
   flushSnapshots,
+  lastSnapshotSucceeded,
   _setPipelineForTests,
 } from '../snapshotScheduler.js';
 
@@ -258,5 +259,37 @@ describe('snapshotScheduler', () => {
     await expect(run).resolves.toBeUndefined();
 
     expect(seenPasses).toEqual(['secret-pass']);
+  });
+
+  describe('lastSnapshotSucceeded', () => {
+    it('flips to false after a failing pipeline run, then back to true once a run succeeds', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        _setPipelineForTests(async () => { throw new Error('disk full'); });
+        activateSnapshots('pass');
+
+        await snapshotNow();
+        expect(lastSnapshotSucceeded()).toBe(false);
+
+        _setPipelineForTests(async () => { /* succeeds */ });
+        await snapshotNow();
+        expect(lastSnapshotSucceeded()).toBe(true);
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
+    it('reflects failure through flushSnapshots too', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        _setPipelineForTests(async () => { throw new Error('disk full'); });
+        activateSnapshots('pass');
+
+        await flushSnapshots();
+        expect(lastSnapshotSucceeded()).toBe(false);
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
   });
 });

@@ -232,7 +232,7 @@ try {
   const { runMigrations } = await import('../db/migrate.js');
   const { pool } = await import('../db/client.js');
   const { ensureLocalUser } = await import('../domain/auth/localUser.js');
-  const { isSnapshotActive, flushSnapshots } = await import('../db/snapshotScheduler.js');
+  const { isSnapshotActive, flushSnapshots, lastSnapshotSucceeded } = await import('../db/snapshotScheduler.js');
 
   await runMigrations();
   await ensureLocalUser();
@@ -246,7 +246,8 @@ try {
     app.log.info({ signal }, 'shutting down');
     try {
       await unlink(portFile).catch(() => { /* file may not exist */ });
-      if (isSnapshotActive()) {
+      const finalFlushNeeded = isSnapshotActive();
+      if (finalFlushNeeded) {
         // flushSnapshots() (not a bare snapshotNow()): if a debounced run is
         // already in flight when shutdown starts, snapshotNow() alone would
         // just mark it "queued" and return immediately without actually
@@ -256,6 +257,11 @@ try {
         // performing one final flush.
         await flushSnapshots();
       }
+      // Only meaningful when a final flush actually ran above — the
+      // pipeline logs and swallows its own failures (see
+      // snapshotScheduler.ts), so this is the only way to know whether the
+      // encrypted snapshot it was supposed to produce actually landed.
+      const finalFlushOk = !finalFlushNeeded || lastSnapshotSucceeded();
       // Re-read rather than trusting the boot-time `marker` — a disable
       // request during this session flips it to 'disable-pending', and
       // that finalization happens on the *next* boot, not here.
@@ -263,16 +269,31 @@ try {
       await app.close();
       await pool.end();
       if (currentMarker === 'encrypted' && existsSync(process.env.PGLITE_PATH ?? '')) {
-        // Enable-migration finalization: the encrypted snapshot is
-        // confirmed written (readMarker only ever returns 'encrypted'
-        // after the security route verified it — see
-        // http/routes/security.ts), so the plaintext datadir left over
-        // from before encryption was enabled is now redundant. Removed
-        // only after pool.end(): during an enable-migration session this
-        // datadir can still be what backs the live PGlite instance, so it
-        // must not be touched while the pool that might hold it open is
-        // still live.
-        await trashDataDir(process.env.PGLITE_PATH as string);
+        if (finalFlushOk) {
+          // Enable-migration finalization: the encrypted snapshot is
+          // confirmed written (readMarker only ever returns 'encrypted'
+          // after the security route verified it — see
+          // http/routes/security.ts), so the plaintext datadir left over
+          // from before encryption was enabled is now redundant. Removed
+          // only after pool.end(): during an enable-migration session this
+          // datadir can still be what backs the live PGlite instance, so it
+          // must not be touched while the pool that might hold it open is
+          // still live.
+          await trashDataDir(process.env.PGLITE_PATH as string);
+        } else {
+          // The final flush before exit failed (pipeline() logged and
+          // swallowed the error) — the encrypted snapshot on disk may not
+          // reflect the plaintext datadir's latest state. Leaving the
+          // plaintext copy in place is safe: next boot's PG_VERSION branch
+          // (see the `marker === 'encrypted'` case above) treats a
+          // still-present plaintext datadir as the truth and re-derives the
+          // snapshot from it, rather than trusting a possibly-stale
+          // ciphertext. Deleting it here instead would risk losing data
+          // with no recovery path.
+          app.log.error(
+            'final snapshot flush failed at shutdown — leaving the plaintext datadir in place for next boot to recover from',
+          );
+        }
       }
       await releaseLock();
       process.exit(0);

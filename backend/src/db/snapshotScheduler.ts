@@ -33,6 +33,20 @@ let firstDirtyAt: number | undefined;
 let inFlightDone: Promise<void> | undefined;
 let resolveInFlightDone: (() => void) | undefined;
 
+// Whether the most recent pipeline run (if any) actually succeeded. Starts
+// `true` — "no run ever needed" counts as succeeded, since there's nothing to
+// have failed. Read by shutdown (tauri.ts): trashing the plaintext datadir
+// after an enable-migration is only safe once the encrypted snapshot that's
+// supposed to replace it is confirmed good — if the final flush before exit
+// silently failed (pipeline() logs and swallows its own errors, see
+// snapshotNow() below), the plaintext copy is the only remaining copy of the
+// data and must not be deleted.
+let lastRunSucceeded = true;
+
+export function lastSnapshotSucceeded(): boolean {
+  return lastRunSucceeded;
+}
+
 // The real dump → encrypt → write pipeline. Overridable in tests via
 // `_setPipelineForTests` so unit tests don't need a real PGlite instance.
 // Takes the passphrase as a parameter (rather than reading the module-level
@@ -100,6 +114,7 @@ export async function snapshotNow(): Promise<void> {
   }
   try {
     await pipeline(pass);
+    lastRunSucceeded = true;
   } catch (err) {
     // Autonomous scheduling (the debounce timer, and this function's own
     // queued-follow-up recursion) must never let a pipeline failure — disk
@@ -107,6 +122,7 @@ export async function snapshotNow(): Promise<void> {
     // rejection, which kills the process. Log and swallow instead; the next
     // markDirty()/debounce cycle gets another chance.
     console.error('[snapshot] failed', err);
+    lastRunSucceeded = false;
   } finally {
     running = false;
   }

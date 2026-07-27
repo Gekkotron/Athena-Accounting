@@ -13,16 +13,16 @@ fraîche ou existante.
 
 :::caution Sachez ce que contient votre export
 Les fichiers d'export contiennent l'intégralité de vos comptes,
-transactions, règles et budgets. Par défaut ils sont du **JSON en
-clair, sans chiffrement au repos** — conservez-les dans un dossier
-chiffré (FileVault, BitLocker, LUKS, Cryptomator, etc.) si vous les
-gardez hors de la machine d'origine. Vous pouvez aussi renseigner le
-champ optionnel **phrase secrète** à côté du bouton d'export : le
-fichier est alors scellé en AES-256-GCM (clé dérivée par scrypt) et
-devient illisible — et inviolable — sans la phrase secrète. La
-restauration d'un fichier chiffré demande la même phrase ; il n'existe
+transactions, règles et budgets. Chaque export est **toujours
+chiffré** — vous définissez une phrase secrète dans la boîte de
+dialogue **Exporter les données**, et le fichier est scellé en
+AES-256-GCM (clé dérivée par scrypt) ; il n'y a plus d'option JSON en
+clair. La restauration demande cette même phrase secrète ; il n'existe
 **aucune récupération** en cas de perte, traitez-la comme le mot de
-passe maître d'un gestionnaire de mots de passe.
+passe maître d'un gestionnaire de mots de passe — et gardez-la en
+sécurité indépendamment du mot de passe de chiffrement au repos de
+l'application, les deux étant sans rapport : perdre les deux ne laisse
+plus rien à récupérer.
 :::
 
 ## Où se trouve la base ?
@@ -43,15 +43,19 @@ passe maître d'un gestionnaire de mots de passe.
 ## Exporter (via l'interface)
 
 1. Ouvrez **Réglages → Données → Sauvegarde**.
-2. Cliquez sur **Exporter les données**. Athena télécharge un fichier
-   `athena-backup-YYYY-MM-DD-HHMMSS.json`.
-3. Rangez le fichier dans un stockage chiffré (voir la limite
-   ci-dessus).
+2. Cliquez sur **Exporter les données**, saisissez une phrase secrète
+   quand elle est demandée. Athena télécharge un fichier
+   `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`.
+3. Gardez cette phrase secrète en lieu sûr — c'est le seul moyen de
+   rouvrir le fichier plus tard.
 
-Il n'y a rien à configurer côté serveur : l'export est un simple
-`GET /api/backup/export` qui sérialise votre utilisateur avec toutes
-ses relations, en clés naturelles (noms de comptes, noms de
-catégories), donc lisible même en dehors d'Athena.
+Sous le capot : l'export est un `POST /api/backup/export` avec la
+phrase secrète dans le corps de la requête (jamais en paramètre
+d'URL, pour ne jamais atterrir dans les journaux d'accès ou
+l'historique du navigateur), qui sérialise votre utilisateur avec
+toutes ses relations en clés naturelles (noms de comptes, noms de
+catégories) puis scelle le résultat. L'ancien `GET /api/backup/export`
+en clair renvoie désormais `410 Gone`.
 
 ## Planifier des exports réguliers
 
@@ -59,15 +63,19 @@ Athena ne planifie pas d'export automatique — c'est volontaire, pour
 éviter que le fichier ne se retrouve à un endroit sur lequel vous
 n'avez pas la main. Deux approches courantes :
 
-- **macOS/Linux (cron).** Un script `curl` hebdomadaire qui appelle
-  l'endpoint et déplace le résultat dans un dossier chiffré :
+- **macOS/Linux (cron).** Un script `curl` hebdomadaire qui envoie une
+  phrase secrète en `POST` et dépose le résultat dans un dossier :
   ```sh
-  curl -s -o "/mnt/coffre/athena-$(date +%F).json" \
+  curl -s -o "/mnt/coffre/athena-$(date +%F).enc.json" \
     -b athena_session=… \
+    -X POST -H 'Content-Type: application/json' \
+    -d '{"passphrase":"…"}' \
     http://home.lan:8000/api/backup/export
   ```
   Le cookie de session vient d'une connexion préalable ; sur le
-  bureau (Tauri, `AUTH_MODE=none`) le cookie n'est pas requis.
+  bureau (Tauri, `AUTH_MODE=none`) le cookie n'est pas requis. Le
+  résultat est déjà chiffré, inutile donc de le ranger en plus dans un
+  dossier chiffré comme il l'aurait fallu pour un export JSON en clair.
 - **Windows (Planificateur de tâches).** Même idée, avec
   `Invoke-WebRequest` dans un script PowerShell.
 

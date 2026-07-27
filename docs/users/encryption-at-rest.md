@@ -24,10 +24,15 @@ Security → Enable encryption**, where you set a password.
 
 **What enabling it actually does.** Once enabled, the database no longer
 lives on disk as a plain PGlite cluster. It runs entirely **in memory**
-while the app is open, and the only thing written to disk is a single
-**AES-256-GCM encrypted snapshot**, sealed under a key derived from your
-password with scrypt. Nothing readable ever touches the disk — not even
-temporarily. The snapshot lives in your data directory (see
+while the app is open, and the only thing written to disk going forward is
+a single **AES-256-GCM encrypted snapshot**, sealed under a key derived
+from your password with scrypt. Nothing readable is written to disk
+*after* that point — but enabling itself doesn't remove the previous
+plaintext copy immediately: **you need to restart the app once** after
+enabling for the migration to finish and the old plaintext database
+directory to actually be deleted. Until that restart happens, the
+plaintext copy still sits alongside the new encrypted snapshot on disk.
+The snapshot lives in your data directory (see
 [Desktop install](desktop-install.md) for where that is) as two files:
 
 - `athena.db.enc` — the current encrypted snapshot.
@@ -50,9 +55,14 @@ exit does.
 **There is no password recovery.** If you forget the encryption password,
 your data is gone — there is no reset, no backdoor, no support path to get
 it back. Your only safety net is an **exported backup** made beforehand
-(**Settings → Data → Backup**; see [Backup and recovery](backup-recovery.md)),
-which is a separate, unencrypted-by-default JSON file that doesn't depend
-on the encryption password at all.
+(**Settings → Data → Backup**; see [Backup and recovery](backup-recovery.md)).
+A backup is a separate file that's encrypted with **its own passphrase**,
+independent of the encryption-at-rest password above — you choose it at
+export time and are asked for it again at restore time. That backup
+passphrase needs to be kept just as safe as the encryption password: if
+you lose both the encryption password and the backup passphrase, there is
+nothing left to recover — the backup being a separate file doesn't help if
+its own passphrase is also gone.
 
 **Changing or disabling the password.** Both are in **Settings →
 Security**, and both require the current password to confirm you're
@@ -127,7 +137,7 @@ locked.
 
 | Scenario | Desktop (PGlite) | Docker/LAN (Postgres) |
 | --- | --- | --- |
-| Device stolen or drive removed **while powered off** | Protected — only an encrypted snapshot exists on disk | Protected, **if** you've set up volume/full-disk encryption as above |
+| Device stolen or drive removed **while powered off** | Protected — only an encrypted snapshot exists on disk (after the restart that follows enabling; until that restart, the plaintext copy is still there too) | Protected, **if** you've set up volume/full-disk encryption as above |
 | Attacker with **live** root or Docker access on the running host | **Not protected** — a live process can be asked to decrypt the data it's already using | **Not protected** — Docker/root access reads the running database directly, encrypted volume or not |
 | Password/passphrase lost | Data unrecoverable except from a prior exported backup | LUKS passphrase lost ⇒ that volume's data is unrecoverable |
 

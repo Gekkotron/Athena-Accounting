@@ -19,7 +19,10 @@ export async function writeSnapshot(dir: string, file: Buffer): Promise<void> {
   const cur = snapshotPath(dir);
   const bak = backupSnapshotPath(dir);
 
-  const fh = await open(tmp, 'w');
+  // 0o600 (owner read/write only) — matches the .mcp-port precedent
+  // (entry/tauri.ts): this file holds an encrypted snapshot of the whole
+  // database, no other local account should even be able to read it.
+  const fh = await open(tmp, 'w', 0o600);
   try {
     await fh.writeFile(file);
     await fh.sync();
@@ -103,7 +106,7 @@ export async function writeMarker(
 ): Promise<void> {
   const markerFile = markerPath(dir);
   const content = JSON.stringify({ mode });
-  await writeFile(markerFile, content);
+  await writeFile(markerFile, content, { mode: 0o600 });
 }
 
 // Removes just the rotated-out backup snapshot, keeping the current one and

@@ -71,6 +71,7 @@ const PAGE = `<!doctype html>
     e.preventDefault();
     error.classList.add('hidden');
     button.disabled = true;
+    input.disabled = true;
     fetch('/api/unlock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,15 +82,24 @@ const PAGE = `<!doctype html>
       })
       .then(function (result) {
         if (result.status === 200 && result.data && result.data.ok) {
+          // The password was accepted, but there can still be several
+          // seconds of work left (decrypting + materializing the datadir,
+          // possibly re-deriving the snapshot from a crash-recovered
+          // plaintext copy) before /health flips to unlocked. Swap the
+          // button label so that window doesn't look like nothing is
+          // happening.
+          button.textContent = 'Déverrouillage…';
           poll();
         } else {
           error.classList.remove('hidden');
           button.disabled = false;
+          input.disabled = false;
         }
       })
       .catch(function () {
         error.classList.remove('hidden');
         button.disabled = false;
+        input.disabled = false;
       });
   });
 })();
@@ -138,6 +148,11 @@ function sendJson(
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(payload),
+    // The unlock page (and its /health poll) must never be served from a
+    // browser cache — a stale cached `locked: true`/`locked: false` would
+    // make the poll loop never notice the real state, and a cached password
+    // page is exactly the kind of thing that shouldn't linger in disk cache.
+    'Cache-Control': 'no-store',
     ...extraHeaders,
   });
   res.end(payload);
@@ -185,7 +200,10 @@ export function runUnlockServer(opts: { dir: string; port?: number }): Promise<U
       const url = req.url ?? '/';
 
       if (method === 'GET' && url === '/') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+        });
         res.end(PAGE);
         return;
       }
