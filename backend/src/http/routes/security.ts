@@ -120,8 +120,25 @@ export async function securityRoutes(app: FastifyInstance): Promise<void> {
       throw err;
     }
 
+    // Same never-rejects caveat as /enable: snapshotNow() logs and swallows
+    // pipeline failures, so a silent failure here would leave athena.db.enc
+    // still encrypted under `oldPassword` while reporting success — the user's
+    // new password would then fail to unlock on next boot. Verify by reading
+    // the snapshot back and decrypting it under `newPassword`; on failure,
+    // re-activate the old password and re-snapshot under it so the previous
+    // password keeps working, rather than leaving the app in a state where
+    // neither password is guaranteed to open the on-disk snapshot.
     activateSnapshots(newPassword);
     await snapshotNow();
+
+    try {
+      await verifyPassword(dir, newPassword);
+    } catch {
+      activateSnapshots(oldPassword);
+      await snapshotNow();
+      return reply.code(500).send({ error: 'password change failed — previous password still applies' });
+    }
+
     return { ok: true };
   });
 }

@@ -80,9 +80,11 @@ export async function writeMarker(
 export async function clearEncryption(dir: string): Promise<void> {
   const cur = snapshotPath(dir);
   const bak = path.join(dir, 'athena.db.enc.bak');
+  const tmp = path.join(dir, 'athena.db.enc.tmp');
   const markerFile = markerPath(dir);
 
   await rm(cur, { force: true });
   await rm(bak, { force: true });
+  await rm(tmp, { force: true });
   await rm(markerFile, { force: true });
 }

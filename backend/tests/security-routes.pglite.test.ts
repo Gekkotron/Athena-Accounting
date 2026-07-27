@@ -127,6 +127,37 @@ describe('/api/security (pglite, AUTH_MODE=none)', () => {
     expect(() => decryptBuffer(snapshot, GOOD_PASSWORD)).toThrow(EnvelopeDecryptError);
   });
 
+  it('rolls back to the previous password when the pipeline silently fails during change', async () => {
+    const { _setPipelineForTests } = await import('../src/db/snapshotScheduler.js');
+    const { readSnapshot } = await import('../src/db/snapshotStore.js');
+    const { decryptBuffer, EnvelopeDecryptError } = await import('../src/lib/binaryEnvelope.js');
+
+    // snapshotNow() never rejects — a real pipeline failure (disk full, dump
+    // error) is only ever logged and swallowed. Simulate exactly that with a
+    // no-op pipeline: the on-disk snapshot stays encrypted under
+    // OTHER_PASSWORD (the current password, set by the previous test)
+    // instead of being rewritten under the attempted new password.
+    _setPipelineForTests(async () => { /* simulate a silently-failing pipeline: write nothing */ });
+    try {
+      const res = await app.inject({
+        method: 'POST', url: '/api/security/change',
+        payload: { oldPassword: OTHER_PASSWORD, newPassword: 'attempted-new-password-2026' },
+      });
+      expect(res.statusCode).toBe(500);
+      expect(res.json()).toEqual({
+        error: 'password change failed — previous password still applies',
+      });
+
+      const snapshot = await readSnapshot(tmp);
+      // The previous (current) password still works...
+      expect(() => decryptBuffer(snapshot, OTHER_PASSWORD)).not.toThrow();
+      // ...and the attempted new password was never actually applied.
+      expect(() => decryptBuffer(snapshot, 'attempted-new-password-2026')).toThrow(EnvelopeDecryptError);
+    } finally {
+      _setPipelineForTests(null);
+    }
+  });
+
   it('rejects change with the wrong old password', async () => {
     const res = await app.inject({
       method: 'POST', url: '/api/security/change',

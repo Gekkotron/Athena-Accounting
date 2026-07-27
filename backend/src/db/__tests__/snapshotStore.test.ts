@@ -176,6 +176,19 @@ describe('snapshotStore', () => {
       expect(await hasSnapshot(dir)).toBe(false);
       await expect(clearEncryption(dir)).resolves.not.toThrow();
     });
+
+    it('also removes a stray .tmp file left behind by a failed enable', async () => {
+      await writeSnapshot(dir, Buffer.from('content'));
+      await writeMarker(dir, 'encrypted');
+      const tmpPath = path.join(dir, 'athena.db.enc.tmp');
+      await writeFile(tmpPath, 'leftover from an interrupted write');
+
+      expect(existsSync(tmpPath)).toBe(true);
+
+      await clearEncryption(dir);
+
+      expect(existsSync(tmpPath)).toBe(false);
+    });
   });
 
   describe('tmp file handling', () => {
