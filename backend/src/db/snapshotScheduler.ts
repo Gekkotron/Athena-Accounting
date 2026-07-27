@@ -12,17 +12,20 @@ let queued = false;
 
 // The real dump → encrypt → write pipeline. Overridable in tests via
 // `_setPipelineForTests` so unit tests don't need a real PGlite instance.
-async function defaultPipeline(): Promise<void> {
+// Takes the passphrase as a parameter (rather than reading the module-level
+// `passphrase` itself) so the caller (snapshotNow) can capture it once, up
+// front, before any `await` — see the comment there for why that matters.
+async function defaultPipeline(pass: string): Promise<void> {
   const p = getPglite();
   if (!p) return;
   const blob = await p.dumpDataDir('gzip');
   const buf = Buffer.from(await blob.arrayBuffer());
-  await writeSnapshot(dataDir(), encryptBuffer(buf, passphrase as string));
+  await writeSnapshot(dataDir(), encryptBuffer(buf, pass));
 }
 
-let pipeline: () => Promise<void> = defaultPipeline;
+let pipeline: (pass: string) => Promise<void> = defaultPipeline;
 
-export function _setPipelineForTests(fn: (() => Promise<void>) | null): void {
+export function _setPipelineForTests(fn: ((pass: string) => Promise<void>) | null): void {
   pipeline = fn ?? defaultPipeline;
 }
 
@@ -49,12 +52,34 @@ export async function snapshotNow(): Promise<void> {
     queued = true;
     return;
   }
+  // Capture the passphrase as the very first statement of the run, before
+  // any `await` — deactivateSnapshots() can null out the module-level
+  // `passphrase` at any point while dumpDataDir()/writeSnapshot() are in
+  // flight, and the pipeline must keep using the value that was active when
+  // the run started rather than race a concurrent deactivation.
+  const pass = passphrase;
+  if (pass === null) {
+    // Encryption isn't active (or was deactivated before this run got a
+    // chance to start) — nothing to snapshot.
+    return;
+  }
   running = true;
   try {
-    await pipeline();
+    await pipeline(pass);
+  } catch (err) {
+    // Autonomous scheduling (the debounce timer, and this function's own
+    // queued-follow-up recursion) must never let a pipeline failure — disk
+    // full, dump failure, rename failure — surface as an unhandled
+    // rejection, which kills the process. Log and swallow instead; the next
+    // markDirty()/debounce cycle gets another chance.
+    console.error('[snapshot] failed', err);
   } finally {
     running = false;
   }
+  // A markDirty() that arrived while this run was in flight still gets its
+  // follow-up run, whether this run succeeded or failed — a failure is the
+  // more important case to retry (transient disk issue), and honoring
+  // `queued` unconditionally keeps the single-flight bookkeeping simple.
   if (queued) {
     queued = false;
     await snapshotNow();

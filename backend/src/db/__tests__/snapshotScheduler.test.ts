@@ -100,4 +100,63 @@ describe('snapshotScheduler', () => {
 
     expect(pipeline).toHaveBeenCalledTimes(2);
   });
+
+  it('a rejecting pipeline does not produce an unhandled rejection, and a later markDirty still schedules a new run', async () => {
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+
+    const pipeline = vi.fn().mockRejectedValueOnce(new Error('disk full')).mockResolvedValue(undefined);
+    _setPipelineForTests(pipeline);
+    activateSnapshots('pass');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      markDirty();
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(pipeline).toHaveBeenCalledTimes(1);
+      // The rejection was caught and logged, not left to reject snapshotNow's
+      // own promise / surface as an unhandled rejection.
+      expect(consoleError).toHaveBeenCalledWith('[snapshot] failed', expect.any(Error));
+
+      // A subsequent markDirty still arms a brand-new run (the failure didn't
+      // leave `running` stuck true).
+      markDirty();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(pipeline).toHaveBeenCalledTimes(2);
+    } finally {
+      consoleError.mockRestore();
+      process.off('unhandledRejection', unhandled);
+    }
+
+    expect(unhandled).not.toHaveBeenCalled();
+  });
+
+  it('captures the passphrase before the run starts, immune to a concurrent deactivateSnapshots', async () => {
+    let resolveRun: (() => void) | undefined;
+    const seenPasses: string[] = [];
+    const pipeline = vi.fn().mockImplementation(
+      (pass: string) =>
+        new Promise<void>((resolve) => {
+          seenPasses.push(pass);
+          resolveRun = resolve;
+        }),
+    );
+    _setPipelineForTests(pipeline);
+    activateSnapshots('secret-pass');
+
+    const run = snapshotNow();
+    expect(pipeline).toHaveBeenCalledWith('secret-pass');
+
+    // Deactivate while the run is still in flight — the pipeline invocation
+    // already captured 'secret-pass' as a plain argument, so this must not
+    // change what it's using (and must not throw/produce a null passphrase).
+    deactivateSnapshots();
+    expect(isSnapshotActive()).toBe(false);
+
+    resolveRun?.();
+    await expect(run).resolves.toBeUndefined();
+
+    expect(seenPasses).toEqual(['secret-pass']);
+  });
 });
