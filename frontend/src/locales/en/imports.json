@@ -100,8 +100,9 @@
       "encryptedNote": "This backup is encrypted — enter its passphrase to restore it."
     },
     "encrypt": {
-      "label": "Passphrase (encryption, optional)",
-      "tooShort": "The passphrase must be at least 8 characters long."
+      "label": "Passphrase (required, min. 8 characters)",
+      "tooShort": "The passphrase must be at least 8 characters long.",
+      "mandatoryWarning": "Backups are always encrypted. Without this passphrase the backup is unreadable — keep it safe."
     }
   },
   "duplicates": {

@@ -41,34 +41,31 @@ export function BackupPanel(): JSX.Element {
 
   // Streams the backup endpoint to a downloadable file. We can't use a plain
   // <a href> because the endpoint requires the session cookie and we want
-  // proper "save as" behaviour with a meaningful filename. With a passphrase
-  // the export switches to the POST variant, which returns the AES-256-GCM
-  // envelope instead of cleartext JSON.
+  // proper "save as" behaviour with a meaningful filename. The passphrase is
+  // mandatory: exports are always the AES-256-GCM envelope, never cleartext.
   const exportBackup = async () => {
     setBackupError(null);
     setBackupResult(null);
     const passphrase = exportPassphrase.trim();
-    if (passphrase && passphrase.length < 8) {
+    if (passphrase.length < 8) {
       setBackupError(t('backup.encrypt.tooShort'));
       return;
     }
     setExporting(true);
     try {
-      const res = passphrase
-        ? await fetch('/api/backup/export', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ passphrase }),
-          })
-        : await fetch('/api/backup/export', { credentials: 'include' });
+      const res = await fetch('/api/backup/export', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ passphrase }),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       const today = new Date().toISOString().slice(0, 10);
-      a.download = `athena-backup-${today}${passphrase ? '.enc' : ''}.json`;
+      a.download = `athena-backup-${today}.enc.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -131,7 +128,7 @@ export function BackupPanel(): JSX.Element {
             <button
               className="btn-primary"
               onClick={exportBackup}
-              disabled={exporting}
+              disabled={exporting || exportPassphrase.trim().length < 8}
             >
               {exporting ? t('backup.export.exporting') : t('backup.export.idle')}
             </button>
@@ -158,6 +155,8 @@ export function BackupPanel(): JSX.Element {
               />
             </label>
           </div>
+
+          <p className="text-xs text-clay-300">{t('backup.encrypt.mandatoryWarning')}</p>
 
           {backupError && (
             <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-4 py-3 text-sm text-clay-200">

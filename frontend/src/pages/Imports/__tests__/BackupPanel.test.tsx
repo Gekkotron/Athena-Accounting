@@ -41,12 +41,17 @@ function renderPanel() {
 beforeEach(() => { apiMock.mockReset(); });
 
 describe('BackupPanel', () => {
-  // Export is a raw fetch + blob download (not an api() call), so we only
-  // assert the button renders and is clickable — see Task 1 notes.
-  it('renders the export button', () => {
+  // The passphrase is mandatory: export stays disabled until it has 8+
+  // characters (there is no plaintext export anymore).
+  it('disables export until the passphrase has 8+ characters', async () => {
+    const user = userEvent.setup();
     renderPanel();
-    expect(screen.getByRole('button', { name: 'Exporter (JSON)' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Exporter (JSON)' })).toBeEnabled();
+    const exportBtn = screen.getByRole('button', { name: 'Exporter (JSON)' });
+    expect(exportBtn).toBeDisabled();
+    await user.type(screen.getByLabelText(/Phrase secrète/i), 'short');
+    expect(exportBtn).toBeDisabled();
+    await user.type(screen.getByLabelText(/Phrase secrète/i), '-mais-longue');
+    expect(exportBtn).toBeEnabled();
   });
 
   it('picking a restore file then confirming fires api(/api/backup/import) with the parsed JSON', async () => {
@@ -91,15 +96,15 @@ describe('BackupPanel', () => {
     fetchSpy.mockRestore();
   });
 
-  it('rejects a too-short export passphrase client-side without calling the server', async () => {
+  it('never calls the server while the passphrase is too short', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const user = userEvent.setup();
     renderPanel();
 
     await user.type(screen.getByLabelText(/Phrase secrète/i), 'short');
+    // Button is disabled — clicking is a no-op and fetch never fires.
     await user.click(screen.getByRole('button', { name: 'Exporter (JSON)' }));
 
-    expect(await screen.findByText(/au moins 8 caractères/i)).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

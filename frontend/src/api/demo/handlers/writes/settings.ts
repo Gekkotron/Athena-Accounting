@@ -9,13 +9,14 @@ function handleSettingsPatch(req: DemoRequest) {
 
 // Full state envelope. In real mode the backend returns a versioned dump;
 // in demo mode the seed IS the dump, so we return the store as JSON.
-// BackupPanel today uses raw fetch() so this handler is unused until the
-// backup export gets rewired through api().
+// BackupPanel always POSTs now (passphrases are mandatory); demo data is
+// synthetic, so the "encrypted" export is just the seed state — the demo
+// fetch patch (api/demo/index.ts) routes the raw fetch() here.
 function handleBackupExport(): DemoState {
   return getState();
 }
 
 export function registerSettingsWriteHandlers(): void {
   registerHandler('PATCH', '/api/settings', handleSettingsPatch);
-  registerHandler('GET', '/api/backup/export', handleBackupExport);
+  registerHandler('POST', '/api/backup/export', handleBackupExport);
 }

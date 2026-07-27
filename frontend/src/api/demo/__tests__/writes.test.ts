@@ -107,8 +107,13 @@ describe('demo write handlers', () => {
     expect(afterList.transactions.some((t) => t.categoryId === create.category.id)).toBe(false);
   });
 
-  it('GET /api/backup/export returns the full state envelope', async () => {
-    const dump = await api<{ v: number; accounts: unknown[] }>('/api/backup/export');
+  it('POST /api/backup/export returns the full state envelope', async () => {
+    // Passphrases became mandatory, so BackupPanel always POSTs; the demo
+    // handler ignores the passphrase and returns the seed state.
+    const dump = await api<{ v: number; accounts: unknown[] }>('/api/backup/export', {
+      method: 'POST',
+      json: { passphrase: 'demo-passphrase' },
+    });
     expect(dump.v).toBe(3);
     expect(dump.accounts).toHaveLength(2);
   });

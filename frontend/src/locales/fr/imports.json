@@ -100,8 +100,9 @@
       "encryptedNote": "Cette sauvegarde est chiffrée — saisissez sa phrase secrète pour la restaurer."
     },
     "encrypt": {
-      "label": "Phrase secrète (chiffrement, optionnel)",
-      "tooShort": "La phrase secrète doit contenir au moins 8 caractères."
+      "label": "Phrase secrète (obligatoire, 8 caractères min.)",
+      "tooShort": "La phrase secrète doit contenir au moins 8 caractères.",
+      "mandatoryWarning": "Les sauvegardes sont toujours chiffrées. Sans cette phrase secrète, la sauvegarde est illisible — conservez-la précieusement."
     }
   },
   "duplicates": {
