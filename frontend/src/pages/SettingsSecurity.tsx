@@ -30,15 +30,20 @@ export function SettingsSecurity(): JSX.Element | null {
   const [enablePassword, setEnablePassword] = useState('');
   const [enableConfirm, setEnableConfirm] = useState('');
   const [enableError, setEnableError] = useState<string | null>(null);
+  const [enableOk, setEnableOk] = useState(false);
   const enableMut = useMutation({
     mutationFn: (password: string) => api('/api/security/enable', { method: 'POST', json: { password } }),
     onSuccess: () => {
       setEnablePassword('');
       setEnableConfirm('');
       setEnableError(null);
+      setEnableOk(true);
       refreshStatus();
     },
-    onError: (err) => setEnableError(describeError(err, t)),
+    onError: (err) => {
+      setEnableOk(false);
+      setEnableError(describeError(err, t));
+    },
   });
 
   const [oldPassword, setOldPassword] = useState('');
@@ -106,7 +111,13 @@ export function SettingsSecurity(): JSX.Element | null {
         <p className="text-sm text-ink-400">{t('settings.security.postgresPointer')}</p>
       )}
 
-      {driver === 'pglite' && !encrypted && (
+      {driver === 'pglite' && pendingDisable && (
+        <div className="rounded-lg border border-amber-800/50 bg-amber-900/15 px-3 py-2 text-sm text-amber-200">
+          {t('settings.security.disablePending')}
+        </div>
+      )}
+
+      {driver === 'pglite' && !encrypted && !pendingDisable && (
         <form onSubmit={submitEnable} className="flex flex-col gap-3">
           <div className="label">{t('settings.security.enable.title')}</div>
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
@@ -145,6 +156,11 @@ export function SettingsSecurity(): JSX.Element | null {
               {enableError}
             </div>
           )}
+          {enableOk && (
+            <div className="rounded-lg border border-sage-800/50 bg-sage-900/15 px-3 py-2 text-sm text-sage-200">
+              {t('settings.security.enable.success')}
+            </div>
+          )}
           <button className="btn-primary" disabled={!enableValid || enableMut.isPending}>
             {t('settings.security.enable.submit')}
           </button>
@@ -153,12 +169,6 @@ export function SettingsSecurity(): JSX.Element | null {
 
       {driver === 'pglite' && encrypted && (
         <>
-          {pendingDisable && (
-            <div className="rounded-lg border border-amber-800/50 bg-amber-900/15 px-3 py-2 text-sm text-amber-200">
-              {t('settings.security.disablePending')}
-            </div>
-          )}
-
           <form onSubmit={submitChange} className="flex flex-col gap-3">
             <div className="label">{t('settings.security.change.title')}</div>
             <div>

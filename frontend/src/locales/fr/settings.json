@@ -64,8 +64,7 @@
         "password": "Mot de passe",
         "confirm": "Confirmer le mot de passe",
         "submit": "Activer le chiffrement",
-        "mismatch": "Les mots de passe ne correspondent pas.",
-        "tooShort": "Le mot de passe doit faire au moins 8 caractères."
+        "success": "Chiffrement activé. Vos données sont désormais chiffrées au repos."
       },
       "change": {
         "title": "Changer le mot de passe de chiffrement",

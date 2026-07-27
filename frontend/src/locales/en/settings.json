@@ -64,8 +64,7 @@
         "password": "Password",
         "confirm": "Confirm password",
         "submit": "Enable encryption",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long."
+        "success": "Encryption enabled. Your data is now encrypted at rest."
       },
       "change": {
         "title": "Change the encryption password",

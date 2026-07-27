@@ -80,11 +80,38 @@ describe('SettingsSecurity', () => {
     await waitFor(() => expect(screen.getByText('Mot de passe incorrect.')).toBeInTheDocument());
   });
 
-  it('shows the pendingDisable banner when the backend reports a pending disable', async () => {
-    apiMock.mockResolvedValue({ driver: 'pglite', encrypted: true, pendingDisable: true });
+  it('shows a dedicated pending-disable state and hides the enable form', async () => {
+    // The marker is single-valued on the backend: a pending disable always
+    // reports encrypted:false (see backend/src/http/routes/security.ts —
+    // 'disable-pending' is a distinct marker from 'encrypted'). Offering the
+    // enable form here would fight the boot-time finalization.
+    apiMock.mockResolvedValue({ driver: 'pglite', encrypted: false, pendingDisable: true });
     renderPanel();
     expect(
       await screen.findByText(/La désactivation du chiffrement est programmée/),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activer le chiffrement' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Changer le mot de passe' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Désactiver le chiffrement' })).not.toBeInTheDocument();
+  });
+
+  it('shows a confirmation after enabling encryption succeeds', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/security') return { driver: 'pglite', encrypted: false, pendingDisable: false };
+      if (path === '/api/security/enable') return { ok: true };
+      throw new Error(`unexpected call: ${path}`);
+    });
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.type(await screen.findByLabelText('Mot de passe'), 'longenough1');
+    await user.type(screen.getByLabelText('Confirmer le mot de passe'), 'longenough1');
+    await user.click(screen.getByRole('button', { name: 'Activer le chiffrement' }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Chiffrement activé. Vos données sont désormais chiffrées au repos.'),
+      ).toBeInTheDocument(),
+    );
   });
 });
