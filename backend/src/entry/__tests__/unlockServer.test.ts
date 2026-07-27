@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
-import { writeSnapshot, writeMarker } from '../../db/snapshotStore.js';
+import {
+  writeSnapshot, writeMarker, snapshotPath,
+} from '../../db/snapshotStore.js';
 import { encryptBuffer } from '../../lib/binaryEnvelope.js';
 import { runUnlockServer } from '../unlockServer.js';
 
@@ -138,6 +140,45 @@ describe('runUnlockServer', () => {
 
     // Clean up: unlock for real so the server closes and the promise
     // doesn't dangle past the end of the test.
+    await fetch(`${base}/api/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: PASSWORD }),
+    });
+    await unlockPromise;
+  });
+
+  it('responds 500 (not 403) when the snapshot file itself is unreadable', async () => {
+    // Delete the snapshot entirely (no .bak either, since this fixture only
+    // ever writes once) — any password now fails inside readSnapshot()
+    // (ENOENT), a different failure mode than a wrong password, and one a
+    // "try again" 403 message would be actively misleading for.
+    await rm(snapshotPath(dir), { force: true });
+
+    const port = await getFreePort();
+    const unlockPromise = runUnlockServer({ dir, port });
+    const base = `http://127.0.0.1:${port}`;
+
+    let settled = false;
+    unlockPromise.then(
+      () => { settled = true; },
+      () => { settled = true; },
+    );
+
+    const res = await fetch(`${base}/api/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: PASSWORD }),
+    });
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'snapshot unreadable' });
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+
+    // Restore the snapshot and complete a real unlock so the server closes
+    // and the promise doesn't dangle past the end of the test.
+    await writeSnapshot(dir, encryptBuffer(PLAINTEXT, PASSWORD));
     await fetch(`${base}/api/unlock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

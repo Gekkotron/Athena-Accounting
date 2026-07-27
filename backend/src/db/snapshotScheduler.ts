@@ -15,7 +15,23 @@ let passphrase: string | null = null;
 let timer: NodeJS.Timeout | undefined;
 let running = false;
 let queued = false;
+// The global `performance.now()` (monotonic) rather than Date.now() (wall
+// clock): a system clock change (NTP sync, DST, manual adjustment) must not
+// be able to make the 60s ceiling below fire early or never — it only cares
+// about elapsed time, which only a monotonic clock actually measures.
+// Deliberately the ambient global rather than `import { performance } from
+// 'node:perf_hooks'` — that named export is a plain captured reference, not
+// a live binding to `globalThis.performance`, so fake-timer libraries (this
+// module's own tests included) that patch the global in place don't affect
+// it, and the ceiling would never appear to move under fake timers.
 let firstDirtyAt: number | undefined;
+
+// Resolves once the in-flight run (and any run it triggers as a queued
+// follow-up) has fully settled. Created lazily by the first snapshotNow()
+// call in a chain, and cleared once that whole chain is done — see
+// flushSnapshots() below, which is the only consumer.
+let inFlightDone: Promise<void> | undefined;
+let resolveInFlightDone: (() => void) | undefined;
 
 // The real dump → encrypt → write pipeline. Overridable in tests via
 // `_setPipelineForTests` so unit tests don't need a real PGlite instance.
@@ -77,6 +93,11 @@ export async function snapshotNow(): Promise<void> {
   // markDirty() gets a fresh 60s budget from this point.
   firstDirtyAt = undefined;
   running = true;
+  if (!inFlightDone) {
+    inFlightDone = new Promise((resolve) => {
+      resolveInFlightDone = resolve;
+    });
+  }
   try {
     await pipeline(pass);
   } catch (err) {
@@ -96,13 +117,33 @@ export async function snapshotNow(): Promise<void> {
   if (queued) {
     queued = false;
     await snapshotNow();
+    return;
   }
+  // The whole chain (this run plus any queued follow-up) is done — let
+  // flushSnapshots() (or anything else awaiting inFlightDone) proceed.
+  resolveInFlightDone?.();
+  inFlightDone = undefined;
+  resolveInFlightDone = undefined;
+}
+
+// Guarantees a fully up-to-date snapshot before the caller proceeds. Used by
+// shutdown: a bare snapshotNow() call while a run is already in flight only
+// sets the `queued` flag and returns *immediately*, without waiting for that
+// run — or its own queued follow-up — to actually finish, which would let
+// shutdown close the pool/exit before the last snapshot is safely on disk.
+// This awaits the in-flight chain (if any) first, then performs one more
+// flush so whatever was dirtied most recently is captured too.
+export async function flushSnapshots(): Promise<void> {
+  if (inFlightDone) {
+    await inFlightDone;
+  }
+  await snapshotNow();
 }
 
 export function markDirty(): void {
   if (passphrase === null) return;
 
-  const now = Date.now();
+  const now = performance.now();
   if (firstDirtyAt === undefined) {
     firstDirtyAt = now;
   } else if (now - firstDirtyAt >= MAX_WAIT_MS) {

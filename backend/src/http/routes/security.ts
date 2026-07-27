@@ -4,7 +4,7 @@ import { dataDir } from '../../dataDir.js';
 import { dbDriver } from '../../db/client.js';
 import { decryptBuffer, EnvelopeDecryptError } from '../../lib/binaryEnvelope.js';
 import {
-  clearEncryption, readMarker, readSnapshot, writeMarker,
+  clearEncryption, readMarker, readSnapshot, removeBackupSnapshot, writeMarker,
 } from '../../db/snapshotStore.js';
 import {
   activateSnapshots, deactivateSnapshots, snapshotNow,
@@ -138,6 +138,13 @@ export async function securityRoutes(app: FastifyInstance): Promise<void> {
       await snapshotNow();
       return reply.code(500).send({ error: 'password change failed — previous password still applies' });
     }
+
+    // writeSnapshot()'s rotation just moved the pre-change snapshot — still
+    // decryptable under `oldPassword` — into .bak. A password change must
+    // actually revoke the old password's ability to open a copy of the
+    // data, not just make the new one additionally work, so remove it now
+    // that the new-password snapshot is confirmed good.
+    await removeBackupSnapshot(dir);
 
     return { ok: true };
   });

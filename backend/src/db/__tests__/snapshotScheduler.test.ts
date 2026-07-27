@@ -16,12 +16,23 @@ import {
   isSnapshotActive,
   markDirty,
   snapshotNow,
+  flushSnapshots,
   _setPipelineForTests,
 } from '../snapshotScheduler.js';
 
 describe('snapshotScheduler', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    // The 60s ceiling (see the "forces an immediate snapshot" tests below)
+    // is measured with performance.now(), a monotonic clock, on purpose —
+    // it must not fake `Date` alone, since that's not what the module reads.
+    // Explicitly list vitest's own default fakes plus 'performance': passing
+    // `toFake` at all replaces the default list rather than extending it.
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout', 'clearTimeout', 'setImmediate', 'clearImmediate',
+        'setInterval', 'clearInterval', 'Date', 'performance',
+      ],
+    });
   });
 
   afterEach(() => {
@@ -164,6 +175,60 @@ describe('snapshotScheduler', () => {
     // it shouldn't immediately force a second flush.
     markDirty();
     await vi.advanceTimersByTimeAsync(8000);
+    expect(pipeline).toHaveBeenCalledTimes(1);
+  });
+
+  it('flushSnapshots waits out an in-flight run and its queued follow-up, then does one more flush', async () => {
+    const resolvers: Array<() => void> = [];
+    const pipeline = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    _setPipelineForTests(pipeline);
+    activateSnapshots('pass');
+
+    // Get a run "in flight" directly, bypassing the debounce.
+    const firstRun = snapshotNow();
+    expect(pipeline).toHaveBeenCalledTimes(1);
+
+    // Dirty while it's running — queues exactly one follow-up.
+    markDirty();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(pipeline).toHaveBeenCalledTimes(1);
+
+    let flushed = false;
+    const flush = flushSnapshots().then(() => {
+      flushed = true;
+    });
+
+    // Let the first run finish — its queued follow-up starts (call #2).
+    resolvers[0]?.();
+    await vi.waitFor(() => expect(pipeline).toHaveBeenCalledTimes(2));
+    expect(flushed).toBe(false);
+
+    // Let the follow-up finish too — the original chain settles, and
+    // flushSnapshots (which was awaiting that whole chain) should then issue
+    // its own extra flush (call #3) before resolving.
+    resolvers[1]?.();
+    await firstRun;
+    await vi.waitFor(() => expect(pipeline).toHaveBeenCalledTimes(3));
+    expect(flushed).toBe(false);
+
+    resolvers[2]?.();
+    await flush;
+    expect(flushed).toBe(true);
+    expect(pipeline).toHaveBeenCalledTimes(3);
+  });
+
+  it('flushSnapshots just runs a single flush when nothing is in flight', async () => {
+    const pipeline = vi.fn().mockResolvedValue(undefined);
+    _setPipelineForTests(pipeline);
+    activateSnapshots('pass');
+
+    await flushSnapshots();
+
     expect(pipeline).toHaveBeenCalledTimes(1);
   });
 

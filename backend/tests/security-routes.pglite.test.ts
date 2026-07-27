@@ -15,6 +15,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -125,6 +126,13 @@ describe('/api/security (pglite, AUTH_MODE=none)', () => {
     expect(() => decryptBuffer(snapshot, OTHER_PASSWORD)).not.toThrow();
     // ...and no longer under the old one.
     expect(() => decryptBuffer(snapshot, GOOD_PASSWORD)).toThrow(EnvelopeDecryptError);
+  });
+
+  it('removes the .bak file after a password change (old password must not stay unlockable)', async () => {
+    const { backupSnapshotPath } = await import('../src/db/snapshotStore.js');
+    // writeSnapshot's rotation would otherwise leave the pre-change
+    // ciphertext — still decryptable under GOOD_PASSWORD — sitting in .bak.
+    expect(existsSync(backupSnapshotPath(tmp))).toBe(false);
   });
 
   it('rolls back to the previous password when the pipeline silently fails during change', async () => {

@@ -28,6 +28,18 @@ function toBlob(buf: Buffer): Blob {
   return new Blob([new Uint8Array(buf)]);
 }
 
+// ATHENA_FATAL is a machine-readable, single-line stdout contract the Rust
+// shell greps for (see spawn_sidecar in desktop/src-tauri/src/lib.rs) — an
+// error message that happens to contain a newline (an embedded stack trace,
+// a multi-line library error, ...) would otherwise get split across
+// multiple "lines" on stdout, none of which match the `ATHENA_FATAL=`
+// prefix the shell is scanning for after the first line. Take the first
+// line only.
+function fatalMessage(err: unknown): string {
+  const first = String(err instanceof Error ? err.message : err).split('\n')[0];
+  return first ?? '';
+}
+
 // Deletes a PGlite datadir atomically: rename-then-remove instead of a
 // straight recursive rm, so a crash mid-delete never leaves a half-deleted
 // directory sitting at `dirToRemove` — the next boot's PG_VERSION check
@@ -61,7 +73,7 @@ try {
   releaseLock = await acquireSingleInstanceLock(dir);
 } catch (err) {
   if (err instanceof AlreadyRunningError) {
-    process.stdout.write(`ATHENA_FATAL=${err.message}\n`);
+    process.stdout.write(`ATHENA_FATAL=${fatalMessage(err)}\n`);
     process.exit(1);
   }
   throw err;
@@ -83,7 +95,10 @@ process.env.SESSION_SECRET ??= 'athena-tauri-local-session-secret-not-remote';
 // PGLITE_PATH, but it can leave a `.trash` sibling behind if the process
 // died between the rename and the final rm. Sweep it unconditionally on
 // every boot, before anything below might need PGLITE_PATH's `.trash` slot.
-await rm(`${process.env.PGLITE_PATH}.trash`, { recursive: true, force: true });
+// Opportunistic: swallow failures here rather than let a leftover `.trash`
+// (itself harmless — trashDataDir() always cleans it up again next time
+// too) turn into a boot-blocking fatal.
+await rm(`${process.env.PGLITE_PATH}.trash`, { recursive: true, force: true }).catch(() => { /* best effort */ });
 
 // Advertise the bound port to local MCP clients. `${DATA_DIR}/.mcp-port` is
 // the well-known contract: the MCP bridge (mcp/dist/index.js) resolves its
@@ -127,6 +142,24 @@ try {
       // branch) so PGlite.create below always materializes into a clean,
       // nonexistent directory instead of throwing "Database already
       // exists, cannot load from tarball".
+      //
+      // Accepted trade-off: /api/security/disable only records the intent
+      // (writeMarker) — it does not deactivate the debounced snapshotter,
+      // so the plaintext datadir kept being the live database and the
+      // snapshot kept being resynced from it for the rest of that session.
+      // A *graceful* shutdown always flushes one final snapshot before
+      // exiting (see shutdown() below), so by the time this boot runs the
+      // two should agree. Only a hard crash between the last successful
+      // debounced flush and the next graceful shutdown could leave the
+      // plaintext datadir fresher than the snapshot — unlike the
+      // `marker === 'encrypted'` branch below, this path doesn't attempt to
+      // recover from that (no PG_VERSION-gated "datadir is the truth"
+      // fallback here), so those last few seconds of writes would be lost
+      // in that specific crash window. Kept simple deliberately: a user who
+      // explicitly asked to disable encryption is about to see their data
+      // in plaintext anyway, and the residual window is bounded by the
+      // same debounce/ceiling (snapshotScheduler.ts) that protects every
+      // other write.
       await trashDataDir(process.env.PGLITE_PATH);
       const { PGlite } = await import('@electric-sql/pglite');
       const back = await PGlite.create({
@@ -185,7 +218,7 @@ try {
   const { runMigrations } = await import('../db/migrate.js');
   const { pool } = await import('../db/client.js');
   const { ensureLocalUser } = await import('../domain/auth/localUser.js');
-  const { isSnapshotActive, snapshotNow } = await import('../db/snapshotScheduler.js');
+  const { isSnapshotActive, flushSnapshots } = await import('../db/snapshotScheduler.js');
 
   await runMigrations();
   await ensureLocalUser();
@@ -200,7 +233,14 @@ try {
     try {
       await unlink(portFile).catch(() => { /* file may not exist */ });
       if (isSnapshotActive()) {
-        await snapshotNow();
+        // flushSnapshots() (not a bare snapshotNow()): if a debounced run is
+        // already in flight when shutdown starts, snapshotNow() alone would
+        // just mark it "queued" and return immediately without actually
+        // waiting for a snapshot to land on disk — closing the pool right
+        // after would race the in-flight dump. flushSnapshots() waits out
+        // whatever's already running (plus its own queued follow-up) before
+        // performing one final flush.
+        await flushSnapshots();
       }
       // Re-read rather than trusting the boot-time `marker` — a disable
       // request during this session flips it to 'disable-pending', and
@@ -261,7 +301,7 @@ try {
     process.stdout.write(`ATHENA_PORT=${port}\n`);
   }
 } catch (err) {
-  process.stdout.write(`ATHENA_FATAL=${(err as Error).message}\n`);
+  process.stdout.write(`ATHENA_FATAL=${fatalMessage(err)}\n`);
   await releaseLock().catch(() => { /* best effort — process is exiting anyway */ });
   process.exit(1);
 }

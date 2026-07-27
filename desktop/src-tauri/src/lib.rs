@@ -1,15 +1,22 @@
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::Mutex;
 use std::thread;
+use std::time::Duration;
 #[cfg(unix)]
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 struct SidecarHandle(Mutex<Option<Child>>);
+
+// Set just before terminate_gracefully sends SIGTERM/kill, so the sidecar
+// exit that causes is never mistaken by the post-boot monitor thread (see
+// run() below) for an unexpected crash.
+static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
 
 fn sidecar_dir(app: &tauri::AppHandle) -> PathBuf {
     // In production the sidecar/ folder is bundled as a resource; in dev the
@@ -96,6 +103,10 @@ fn spawn_sidecar(app: &tauri::AppHandle) -> (Child, u16) {
     (child, port)
 }
 
+// How often the post-boot monitor (see run() below) polls the sidecar's
+// liveness.
+const MONITOR_INTERVAL: Duration = Duration::from_millis(500);
+
 // How long to wait for the sidecar to exit on its own after SIGTERM before
 // falling back to a hard kill. Only meaningful on unix, where SIGTERM is
 // actually sent (see terminate_gracefully below).
@@ -111,15 +122,24 @@ const POLL_INTERVAL: Duration = Duration::from_millis(100);
 // straight past all of that, so a window close during an active
 // enable-migration session could leave the on-disk state half-finished.
 fn terminate_gracefully(mut child: Child) {
+    SHUTTING_DOWN.store(true, Ordering::SeqCst);
     #[cfg(unix)]
     {
-        // Avoid pulling in the libc crate just for one syscall — `kill -TERM`
-        // via a plain Command does the same thing.
-        let sent = Command::new("kill")
+        // Avoid pulling in the libc crate just for one syscall — `kill
+        // -TERM` via a plain Command does the same thing. Absolute path
+        // (not just "kill") so this doesn't depend on PATH in whatever
+        // environment the app was launched from. Only a *successful* exit
+        // status counts as "sent": `.status()` returning `Ok` just means
+        // the `kill` command itself ran, not that it actually delivered the
+        // signal (a missing/already-gone pid makes `kill` exit non-zero) —
+        // treating any `Ok` as success would burn the whole 15s grace
+        // period waiting on a child that was never actually signaled.
+        let sent = Command::new("/bin/kill")
             .arg("-TERM")
             .arg(child.id().to_string())
             .status()
-            .is_ok();
+            .map(|s| s.success())
+            .unwrap_or(false);
 
         if sent {
             let start = Instant::now();
@@ -149,6 +169,52 @@ pub fn run() {
             let (child, port) = spawn_sidecar(&handle);
             app.manage(SidecarHandle(Mutex::new(Some(child))));
 
+            // spawn_sidecar's reader thread only watches stdout for the
+            // *first* ATHENA_PORT/ATHENA_FATAL line, then just echoes
+            // everything after that with no structured handling. A locked
+            // boot can legitimately fail *after* the port was already
+            // handed to the WebView (any throw inside tauri.ts's outer
+            // try/catch prints a second, now-unwatched ATHENA_FATAL and
+            // exits) — without this, that would just leave a dead, white,
+            // unresponsive window with no signal anything went wrong. Poll
+            // the sidecar's liveness here instead and crash loudly if it
+            // exits on its own: with `panic = "abort"` set in the release
+            // profile, a panic on any thread aborts the whole process,
+            // which the OS then reports through its normal crash-reporting
+            // UI — a working, discoverable failure instead of a silent one.
+            let monitor_handle = handle.clone();
+            thread::spawn(move || loop {
+                thread::sleep(MONITOR_INTERVAL);
+                if SHUTTING_DOWN.load(Ordering::SeqCst) {
+                    return;
+                }
+                let Some(state) = monitor_handle.try_state::<SidecarHandle>() else {
+                    return;
+                };
+                let status = {
+                    let mut guard = state.0.lock().unwrap();
+                    match guard.as_mut() {
+                        // Already taken by terminate_gracefully — a
+                        // shutdown is under way, stop monitoring.
+                        None => return,
+                        Some(child) => child.try_wait(),
+                    }
+                };
+                match status {
+                    Ok(Some(status)) => {
+                        if !SHUTTING_DOWN.load(Ordering::SeqCst) {
+                            panic!("sidecar exited unexpectedly: {status}");
+                        }
+                        return;
+                    }
+                    // Still running — keep polling.
+                    Ok(None) => {}
+                    // Can't determine status; stop monitoring rather than
+                    // spin on a call that keeps failing.
+                    Err(_) => return,
+                }
+            });
+
             let url = format!("http://127.0.0.1:{port}/")
                 .parse()
                 .expect("valid loopback url");
@@ -169,7 +235,17 @@ pub fn run() {
             }
             | RunEvent::ExitRequested { .. } => {
                 if let Some(state) = app.try_state::<SidecarHandle>() {
-                    if let Some(child) = state.0.lock().unwrap().take() {
+                    // Release the mutex *before* terminate_gracefully, which
+                    // can block for up to SHUTDOWN_GRACE: binding `.take()`
+                    // directly inside an `if let` scrutinee extends that
+                    // temporary MutexGuard's lifetime across the entire
+                    // `if let` body under edition-2021 temporary-scope
+                    // rules, which would hold the lock (and starve the
+                    // monitor thread's own `state.0.lock()` above) for the
+                    // whole wait. A plain `let` statement drops the guard
+                    // at its semicolon, before terminate_gracefully runs.
+                    let child = state.0.lock().unwrap().take();
+                    if let Some(child) = child {
                         terminate_gracefully(child);
                     }
                 }

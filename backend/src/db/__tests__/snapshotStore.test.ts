@@ -5,12 +5,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   snapshotPath,
+  backupSnapshotPath,
   markerPath,
   writeSnapshot,
   readSnapshot,
   hasSnapshot,
   readMarker,
   writeMarker,
+  removeBackupSnapshot,
   clearEncryption,
 } from '../snapshotStore.js';
 
@@ -72,6 +74,16 @@ describe('snapshotStore', () => {
       await writeSnapshot(dir, Buffer.from('test'));
       expect(await hasSnapshot(dir)).toBe(true);
     });
+
+    it('returns true when only .bak exists (cur missing, mid-rotation crash)', async () => {
+      // Must agree with readSnapshot()'s .bak fallback: a recoverable
+      // snapshot at .bak counts as "there is a snapshot here", otherwise a
+      // corruption guard keyed off hasSnapshot() would miss exactly the
+      // state it exists to catch.
+      await writeFile(backupSnapshotPath(dir), Buffer.from('bak only'));
+      expect(existsSync(snapshotPath(dir))).toBe(false);
+      expect(await hasSnapshot(dir)).toBe(true);
+    });
   });
 
   describe('writeSnapshot rotation', () => {
@@ -110,6 +122,24 @@ describe('snapshotStore', () => {
 
       const curContent = await readSnapshot(dir);
       expect(curContent).toEqual(third);
+    });
+
+    it('preserves an existing .bak when cur is absent (no zero-snapshot window)', async () => {
+      // Simulates writing a fresh snapshot right after recovering via
+      // readSnapshot()'s .bak fallback: `cur` is missing but `.bak` still
+      // holds a good previous snapshot. The rotation logic must leave that
+      // alone (nothing to rotate) rather than clearing it before the new
+      // `cur` is safely in place.
+      const bakPath = backupSnapshotPath(dir);
+      const previousGood = Buffer.from('previous good snapshot, cur is missing');
+      await writeFile(bakPath, previousGood);
+      expect(existsSync(snapshotPath(dir))).toBe(false);
+
+      const fresh = Buffer.from('fresh snapshot content');
+      await writeSnapshot(dir, fresh);
+
+      expect(await readFile(bakPath)).toEqual(previousGood);
+      expect(await readSnapshot(dir)).toEqual(fresh);
     });
   });
 
@@ -164,6 +194,27 @@ describe('snapshotStore', () => {
       await writeMarker(dir, 'encrypted');
       await writeMarker(dir, 'disable-pending');
       expect(await readMarker(dir)).toBe('disable-pending');
+    });
+  });
+
+  describe('removeBackupSnapshot', () => {
+    it('removes only .bak, leaving cur and the marker untouched', async () => {
+      await writeSnapshot(dir, Buffer.from('first'));
+      await writeSnapshot(dir, Buffer.from('second'));
+      await writeMarker(dir, 'encrypted');
+
+      const bakPath = backupSnapshotPath(dir);
+      expect(existsSync(bakPath)).toBe(true);
+
+      await removeBackupSnapshot(dir);
+
+      expect(existsSync(bakPath)).toBe(false);
+      expect(await readSnapshot(dir)).toEqual(Buffer.from('second'));
+      expect(await readMarker(dir)).toBe('encrypted');
+    });
+
+    it('does not error when .bak does not exist', async () => {
+      await expect(removeBackupSnapshot(dir)).resolves.not.toThrow();
     });
   });
 

@@ -14,7 +14,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { readSnapshot } from '../db/snapshotStore.js';
-import { decryptBuffer } from '../lib/binaryEnvelope.js';
+import { decryptBuffer, EnvelopeDecryptError } from '../lib/binaryEnvelope.js';
 
 const PAGE = `<!doctype html>
 <html lang="fr">
@@ -188,8 +188,18 @@ export function runUnlockServer(opts: { dir: string; port?: number }): Promise<U
         try {
           const encrypted = await readSnapshot(opts.dir);
           snapshot = decryptBuffer(encrypted, password);
-        } catch {
-          sendJson(res, 403, { error: 'wrong password' });
+        } catch (err) {
+          // Only a wrong password (a failed decrypt/auth-tag check) is a
+          // 403 — readSnapshot() throwing (missing/unreadable snapshot
+          // file, e.g. both `cur` and `.bak` gone) is a different failure
+          // mode entirely and must not be reported as "wrong password",
+          // which would send the user into an unwinnable retry loop.
+          if (err instanceof EnvelopeDecryptError) {
+            sendJson(res, 403, { error: 'wrong password' });
+          } else {
+            console.error('[unlockServer] snapshot unreadable', err);
+            sendJson(res, 500, { error: 'snapshot unreadable' });
+          }
           return;
         }
 
