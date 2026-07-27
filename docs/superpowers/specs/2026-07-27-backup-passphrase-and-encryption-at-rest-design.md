@@ -49,8 +49,11 @@ ships first; Part 2 changes the desktop persistence model.
   any running app).
 - **No recovery**: password loss = data loss. The enable flow says this in
   unmissable copy; exported backups are the escape hatch.
-- Scope: desktop / PGlite driver only. LAN installs (DB_DRIVER=postgres) are
-  out of scope and unaffected. Opt-in via Settings; off by default.
+- Scope: the in-memory snapshot model applies to the PGlite driver
+  (desktop). For the Docker/LAN deployment (DB_DRIVER=postgres) the app
+  cannot transparently encrypt Postgres's files — at-rest protection is
+  delivered as **documented volume encryption** instead (owner's choice, see
+  "Docker / LAN deployment" below). Opt-in via Settings; off by default.
 
 ### Storage format
 
@@ -127,6 +130,20 @@ ships first; Part 2 changes the desktop persistence model.
 - Flow: enable → unlock → mutate → snapshot → relaunch-equivalent reload →
   data present; disable roundtrip (integration tests using in-memory PGlite,
   no external services needed).
+
+### Docker / LAN deployment (postgres driver)
+
+- No app-code changes: login (user accounts) already gates UI/API access,
+  and pgcrypto-style column encryption would break search, rule matching,
+  indexes, and stats.
+- At-rest protection ships as documentation + compose integration:
+  `docs/users/encryption-at-rest.md` describing how to put the Postgres
+  volume on encrypted storage (LUKS loop device or encrypted ZFS/Btrfs
+  dataset on Linux hosts like the Geekom; FileVault/BitLocker notes for
+  desktop-class hosts), with a docker-compose override example mounting the
+  encrypted mount point as the `pgdata` volume.
+- Settings → Sécurité on the postgres driver shows a short pointer to that
+  doc instead of the enable/disable controls.
 
 ### Out of scope (v1)
 
