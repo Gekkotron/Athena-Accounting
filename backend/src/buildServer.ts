@@ -5,7 +5,8 @@ import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { ZodError } from 'zod';
 import { env } from './env.js';
-import { pool } from './db/client.js';
+import { pool, dbDriver } from './db/client.js';
+import { markDirty } from './db/snapshotScheduler.js';
 import { HttpError, isPgError } from './lib/http.js';
 import { authPlugin } from './http/plugins/auth.js';
 import { onboardingRoutes } from './http/routes/onboarding.js';
@@ -65,7 +66,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
 
   app.get('/health', async () => {
     await pool.query('SELECT 1');
-    return { ok: true, ts: new Date().toISOString() };
+    return { ok: true, ts: new Date().toISOString(), driver: dbDriver, locked: false };
   });
 
   await app.register(multipart);
@@ -77,6 +78,17 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
     max: 300,
     timeWindow: '1 minute',
   });
+
+  // Debounced encrypted snapshots: any successful non-GET/HEAD/OPTIONS
+  // request marks the in-memory PGlite dirty so the scheduler flushes an
+  // encrypted snapshot to disk shortly after. No-ops when encryption at
+  // rest hasn't been activated (see snapshotScheduler.ts).
+  app.addHook('onResponse', async (req, reply) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return;
+    if (reply.statusCode >= 400) return;
+    markDirty();
+  });
+
   await app.register(metricsPlugin);
   await app.register(authPlugin);
 
