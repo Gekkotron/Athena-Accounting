@@ -21,6 +21,22 @@ export interface QueryPool {
   end(): Promise<void>;
 }
 
+// Minimal surface client.ts needs from a live PGlite instance — just enough
+// to let callers (the snapshot scheduler, security routes) dump the current
+// state back out for re-encryption. `null` on the postgres driver.
+export interface PGliteLike {
+  dumpDataDir(compression?: 'gzip'): Promise<Blob>;
+}
+
+let pgliteInstance: PGliteLike | null = null;
+
+export function getPglite(): PGliteLike | null {
+  return pgliteInstance;
+}
+
+export const dbDriver: 'pglite' | 'postgres' =
+  env.DB_DRIVER === 'postgres' ? 'postgres' : 'pglite';
+
 function buildPostgres() {
   const p = new pg.Pool({ connectionString: env.DATABASE_URL });
   const d = drizzlePg(p, { schema });
@@ -42,10 +58,20 @@ async function buildPglite() {
   const { unaccent } = await import('@electric-sql/pglite/contrib/unaccent');
   const { pgcrypto } = await import('@electric-sql/pglite/contrib/pgcrypto');
 
+  // Set by the entry process before this module is ever imported: a Blob
+  // holding a full PGlite `dumpDataDir()` snapshot that was decrypted
+  // in-memory (see snapshotStore.ts). When present, PGlite boots entirely
+  // from the blob — no plaintext ever touches disk. Falls back to the
+  // filesystem-backed `dataDir` path (or fully in-memory when PGLITE_PATH
+  // is unset) otherwise.
+  const loadBlob = (globalThis as Record<string, unknown>).__athenaLoadDataDir as
+    | Blob
+    | undefined;
   const client = await PGlite.create({
-    dataDir: env.PGLITE_PATH,
+    ...(loadBlob ? { loadDataDir: loadBlob } : { dataDir: env.PGLITE_PATH }),
     extensions: { pg_trgm, unaccent, pgcrypto },
   });
+  pgliteInstance = client;
   const d = drizzlePglite(client, { schema });
   const wrapped: QueryPool = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
