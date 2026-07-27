@@ -51,6 +51,36 @@
       "description": "Shows the guided tour and every hidden section tip again.",
       "replayButton": "Replay the guided tour",
       "replayConfirm": "Show all first-visit tips again?"
+    },
+    "security": {
+      "sectionTitle": "Security",
+      "postgresPointer": "Encryption at rest protects the local database file (PGlite). This installation uses PostgreSQL, so protecting the data volume is up to your server infrastructure — see docs/users/encryption-at-rest.md for the recommended setup (disk encryption, encrypted backups).",
+      "noRecoveryWarning": "Warning: if you forget this password, your data will be permanently unrecoverable — unless you have a backup exported beforehand. There is no way to reset this password.",
+      "disablePending": "Disabling encryption is scheduled: it will take effect the next time the application starts.",
+      "wrongPassword": "Incorrect password.",
+      "genericError": "Something went wrong. Please try again.",
+      "enable": {
+        "title": "Enable encryption",
+        "password": "Password",
+        "confirm": "Confirm password",
+        "submit": "Enable encryption",
+        "mismatch": "The passwords do not match.",
+        "tooShort": "The password must be at least 8 characters long."
+      },
+      "change": {
+        "title": "Change the encryption password",
+        "old": "Current password",
+        "new": "New password",
+        "confirm": "Confirm new password",
+        "submit": "Change password",
+        "success": "Encryption password updated."
+      },
+      "disable": {
+        "title": "Disable encryption",
+        "password": "Password",
+        "submit": "Disable encryption",
+        "note": "Disabling only takes effect the next time the application starts."
+      }
     }
   },
   "login": {

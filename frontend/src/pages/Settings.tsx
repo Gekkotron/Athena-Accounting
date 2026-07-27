@@ -11,6 +11,7 @@ import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from 
 import { useTips } from '../contexts/TipsContext';
 import { LoadingBlock } from '../components/StateBlocks';
 import { NumberField, SavedChip } from './Settings-fields';
+import { SettingsSecurity } from './SettingsSecurity';
 
 export function Settings(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -230,6 +231,8 @@ export function Settings(): JSX.Element {
             </div>
           )}
         </section>
+
+        <SettingsSecurity />
 
         <section className="pt-4 border-t border-ink-800/60">
           <button className="btn-ghost" onClick={() => setConfirmReset(true)}>

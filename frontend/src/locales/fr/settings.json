@@ -51,6 +51,36 @@
       "description": "Réaffiche la visite guidée et tous les conseils de section masqués.",
       "replayButton": "Rejouer la visite guidée",
       "replayConfirm": "Réafficher tous les conseils de première visite ?"
+    },
+    "security": {
+      "sectionTitle": "Sécurité",
+      "postgresPointer": "Le chiffrement au repos protège le fichier de base de données local (PGlite). Cette installation utilise PostgreSQL : la protection du volume de données relève de votre infrastructure serveur — consultez docs/users/encryption-at-rest.md pour la configuration recommandée (chiffrement du disque, sauvegardes chiffrées).",
+      "noRecoveryWarning": "Attention : si vous oubliez ce mot de passe, vos données seront définitivement irrécupérables — sauf si vous disposez d'une sauvegarde exportée au préalable. Il n'existe aucun moyen de réinitialiser ce mot de passe.",
+      "disablePending": "La désactivation du chiffrement est programmée : elle prendra effet au prochain démarrage de l'application.",
+      "wrongPassword": "Mot de passe incorrect.",
+      "genericError": "Une erreur est survenue. Réessayez.",
+      "enable": {
+        "title": "Activer le chiffrement",
+        "password": "Mot de passe",
+        "confirm": "Confirmer le mot de passe",
+        "submit": "Activer le chiffrement",
+        "mismatch": "Les mots de passe ne correspondent pas.",
+        "tooShort": "Le mot de passe doit faire au moins 8 caractères."
+      },
+      "change": {
+        "title": "Changer le mot de passe de chiffrement",
+        "old": "Mot de passe actuel",
+        "new": "Nouveau mot de passe",
+        "confirm": "Confirmer le nouveau mot de passe",
+        "submit": "Changer le mot de passe",
+        "success": "Mot de passe de chiffrement mis à jour."
+      },
+      "disable": {
+        "title": "Désactiver le chiffrement",
+        "password": "Mot de passe",
+        "submit": "Désactiver le chiffrement",
+        "note": "La désactivation ne prend effet qu'au prochain démarrage de l'application."
+      }
     }
   },
   "login": {
