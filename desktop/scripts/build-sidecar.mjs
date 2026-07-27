@@ -130,10 +130,18 @@ extractNode(downloadNode());
 const backendPkg = JSON.parse(readFileSync(path.join(BACKEND, 'package.json'), 'utf8'));
 const runtimeDeps = backendPkg.dependencies;
 
+// The sidecar package.json carries the DESKTOP app version (not the backend
+// package version): entry/tauri.ts reads it at boot and stamps it into
+// /health, so release smoke tests can assert the running artifact matches
+// the tag.
+const tauriConf = JSON.parse(
+  readFileSync(path.join(REPO, 'desktop', 'src-tauri', 'tauri.conf.json'), 'utf8'),
+);
+
 const sidecarPkg = {
   name: 'athena-sidecar',
   private: true,
-  version: backendPkg.version,
+  version: tauriConf.version,
   type: 'module',
   dependencies: runtimeDeps,
 };

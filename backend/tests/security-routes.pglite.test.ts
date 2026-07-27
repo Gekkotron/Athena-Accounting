@@ -21,6 +21,7 @@ import path from 'node:path';
 
 const MUTATED_ENV_KEYS = [
   'DB_DRIVER', 'AUTH_MODE', 'SESSION_SECRET', 'DATA_DIR', 'PGLITE_PATH',
+  'ATHENA_APP_VERSION',
 ] as const;
 const savedEnv: Partial<Record<(typeof MUTATED_ENV_KEYS)[number], string>> = {};
 for (const key of MUTATED_ENV_KEYS) {
@@ -31,6 +32,7 @@ for (const key of MUTATED_ENV_KEYS) {
 process.env.DB_DRIVER = 'pglite';
 process.env.AUTH_MODE = 'none';
 process.env.SESSION_SECRET = 'x'.repeat(32);
+process.env.ATHENA_APP_VERSION = '9.9.9-test';
 
 let tmp: string;
 let app: FastifyInstance;
@@ -67,6 +69,12 @@ describe('/api/security (pglite, AUTH_MODE=none)', () => {
     const res = await app.inject({ method: 'GET', url: '/api/security' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ driver: 'pglite', encrypted: false, pendingDisable: false });
+  });
+
+  it('GET /health carries the app version when ATHENA_APP_VERSION is set', async () => {
+    const res = await app.inject({ method: 'GET', url: '/health' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().version).toBe('9.9.9-test');
   });
 
   it('rejects enable with a password under 8 characters', async () => {

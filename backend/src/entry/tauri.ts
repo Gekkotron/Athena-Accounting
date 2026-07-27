@@ -7,7 +7,7 @@
 // env vars — the desktop distribution is a single embedded configuration:
 // PGlite driver, no auth, data under DATA_DIR (defaults to CWD).
 import {
-  mkdir, writeFile, unlink, rm, rename,
+  mkdir, writeFile, unlink, rm, rename, readFile,
 } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -90,6 +90,25 @@ process.env.SERVE_STATIC ??= 'true';
 // Tauri app has no remote surface (127.0.0.1 only) so a fixed local secret
 // is fine — sessions are per-install, not shared.
 process.env.SESSION_SECRET ??= 'athena-tauri-local-session-secret-not-remote';
+
+// Stamp the app version into /health so release smoke tests can assert the
+// running artifact matches the tag. In the shipped bundle, package.json sits
+// next to entry.js and carries the desktop version (build-sidecar.mjs copies
+// it from tauri.conf.json); in dev the sibling lookup fails and we fall back
+// to backend/package.json.
+for (const rel of ['./package.json', '../../package.json']) {
+  try {
+    const pkg = JSON.parse(await readFile(new URL(rel, import.meta.url), 'utf8')) as {
+      version?: string;
+    };
+    if (pkg.version) {
+      process.env.ATHENA_APP_VERSION ??= pkg.version;
+      break;
+    }
+  } catch {
+    // try the next candidate
+  }
+}
 
 // Crash safety: trashDataDir() above never leaves a half-deleted datadir at
 // PGLITE_PATH, but it can leave a `.trash` sibling behind if the process

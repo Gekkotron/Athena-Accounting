@@ -67,7 +67,16 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
 
   app.get('/health', async () => {
     await pool.query('SELECT 1');
-    return { ok: true, ts: new Date().toISOString(), driver: dbDriver, locked: false };
+    return {
+      ok: true,
+      ts: new Date().toISOString(),
+      driver: dbDriver,
+      locked: false,
+      // Desktop builds stamp the app version (entry/tauri.ts reads it from
+      // the sidecar bundle's package.json) so release smoke tests can assert
+      // the running artifact matches the tag. Absent on the LAN server.
+      ...(process.env.ATHENA_APP_VERSION ? { version: process.env.ATHENA_APP_VERSION } : {}),
+    };
   });
 
   await app.register(multipart);

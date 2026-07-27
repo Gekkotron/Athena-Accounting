@@ -119,9 +119,34 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      # A pushed tag must match the version compiled into the app — a
+      # mismatch here means someone forgot the version bump (or tagged the
+      # wrong commit), which is exactly how a stale build ships.
+      - name: Assert tag matches tauri.conf.json version
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          conf="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")"
+          tag="${{ steps.tag.outputs.name }}"
+          if [ "v$conf" != "$tag" ]; then
+            echo "tag $tag does not match tauri.conf.json version v$conf" >&2
+            exit 1
+          fi
+
       - name: Build sidecar for host platform
         shell: bash
         run: node desktop/scripts/build-sidecar.mjs
+
+      # Smoke the exact bundle that ships: the pinned Node binary, the
+      # esbuild entry.js, and the production node_modules tree. This is the
+      # layer source-level suites can't cover (bundling regressions, native
+      # modules, "works under tsx but not in the bundle"). Windows is skipped
+      # for now — the script's process/signal semantics don't translate to
+      # Git Bash; the planned installed-app smoke (Layer 2) will cover it.
+      - name: Smoke-test bundled sidecar
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: SIDECAR_DIR="$PWD/desktop/sidecar" bash desktop/scripts/smoke-encryption.sh
 
       # Tauri CLI v2. Pinned to the same major the shell was authored against.
       - name: Install Tauri CLI
@@ -161,6 +186,17 @@ jobs:
             find desktop/src-tauri/target/release/bundle -maxdepth 4 -type f >&2 || true
             exit 1
           fi
+          # Belt-and-braces against the stale-cache class of bugs (rc1/rc2
+          # shipped an old exe): the artifact filename must carry the version
+          # tauri.conf.json declares.
+          conf="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")"
+          case "$(basename "${matches[0]}")" in
+            *"$conf"*) ;;
+            *)
+              echo "artifact $(basename "${matches[0]}") does not carry version $conf — stale build output?" >&2
+              exit 1
+              ;;
+          esac
           echo "path=${matches[0]}" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "${matches[0]}")" >> "$GITHUB_OUTPUT"
 

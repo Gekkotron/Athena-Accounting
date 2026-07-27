@@ -12,6 +12,12 @@
 # Requires: node (with backend/node_modules installed, for --import tsx) and
 # curl. No Docker/Postgres — this drives the pglite/DATA_DIR desktop path.
 #
+# Bundle mode: set SIDECAR_DIR=/path/to/desktop/sidecar to smoke the BUILT
+# sidecar (bundled node binary + esbuild entry.js + production node_modules)
+# instead of the tsx dev entry — this is what the desktop-release workflow
+# runs, and it needs nothing from backend/node_modules:
+#   SIDECAR_DIR="$PWD/desktop/sidecar" bash desktop/scripts/smoke-encryption.sh
+#
 # IMPORTANT process-lifetime note: src/entry/tauri.ts starts a parent
 # watchdog that SIGKILLs the sidecar ~2s after its parent process exits (see
 # parentWatchdog.ts) — this guards against orphaned sidecars wedging PGlite
@@ -157,8 +163,16 @@ start_sidecar() {
   local logfile
   logfile="$(mktemp "$WORK_DIR/sidecar-log.XXXXXX")"
   (
-    cd "$BACKEND_DIR" || exit 1
-    exec env DATA_DIR="$DATA_DIR" node --import tsx src/entry/tauri.ts
+    if [ -n "${SIDECAR_DIR:-}" ]; then
+      # Bundle mode: run the exact artifact the Tauri shell ships.
+      cd "$SIDECAR_DIR" || exit 1
+      node_bin="./node"
+      [ -x "./node.exe" ] && node_bin="./node.exe"
+      exec env DATA_DIR="$DATA_DIR" "$node_bin" entry.js
+    else
+      cd "$BACKEND_DIR" || exit 1
+      exec env DATA_DIR="$DATA_DIR" node --import tsx src/entry/tauri.ts
+    fi
   ) >"$logfile" 2>&1 &
   CUR_PID=$!
   CUR_LOG="$logfile"
