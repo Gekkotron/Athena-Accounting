@@ -141,6 +141,9 @@ export function BankConnectionCard({
           {result.status === 'needs_reconnect'
             ? t('settings.bankSync.connections.reconnectRequired')
             : t('settings.bankSync.errors.generic')}
+          {result.status === 'error' && result.error && (
+            <div className="mt-1 text-xs font-mono text-clay-300 break-all">{result.error}</div>
+          )}
         </div>
       )}
     </div>
