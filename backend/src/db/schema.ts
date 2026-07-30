@@ -584,3 +584,21 @@ export const transactionSplits = pgTable(
     idxCat: index('transaction_splits_cat_idx').on(t.categoryId),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// bank_sync_credentials — per-user Enable Banking application credentials
+// (migration 0028). One row per user: the application ID plus the RS256
+// private key, AES-256-GCM-encrypted under a SESSION_SECRET-derived key
+// (see domain/bank-sync/crypto.ts). The plaintext key never leaves the
+// backend: no route returns it and no log line carries it.
+// ---------------------------------------------------------------------------
+
+export const bankSyncCredentials = pgTable('bank_sync_credentials', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  applicationId: text('application_id').notNull(),
+  privateKeyEncrypted: text('private_key_encrypted').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
