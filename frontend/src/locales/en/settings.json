@@ -43,7 +43,7 @@
     },
     "bankSync": {
       "sectionLabel": "Bank sync",
-      "description": "Connect your banks through Enable Banking (PSD2) to import transactions automatically. Optional — OFX/CSV file import remains the baseline.",
+      "description": "Connect your banks through Enable Banking (PSD2) to import transactions automatically.",
       "guide": "Create a free account at enablebanking.com, link your own bank accounts (restricted production mode), create an application with the redirect URL below, then paste its application ID and private key here. The key is encrypted and never leaves your server.",
       "redirectUrlLabel": "Redirect URL to declare in your Enable Banking application:",
       "applicationIdLabel": "Application ID",
