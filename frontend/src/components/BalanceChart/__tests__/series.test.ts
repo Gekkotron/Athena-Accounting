@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAggregatedSeries } from '../series';
+import { buildAggregatedSeries, withCarriedBaselines } from '../series';
 import type { BalancePoint } from '../../../api/types';
 
 function p(bucket: string, cumulative: string, account_id = 1, currency = 'EUR'): BalancePoint {
@@ -69,5 +69,59 @@ describe('buildAggregatedSeries', () => {
     expect(out.map((d) => d.date)).toEqual([
       '2024-01-01', '2024-02-01', '2024-03-01',
     ]);
+  });
+});
+
+describe('withCarriedBaselines', () => {
+  it('returns points unchanged when fromDate is undefined (range "Tout")', () => {
+    const points = [p('2024-01-01', '100'), p('2024-06-01', '200')];
+    expect(withCarriedBaselines(points, undefined)).toEqual(points);
+  });
+
+  it('keeps in-window points and drops pre-window ones for active accounts', () => {
+    const points = [
+      p('2024-01-01', '100'),
+      p('2024-06-10', '150'),
+    ];
+    const out = withCarriedBaselines(points, '2024-06-01');
+    expect(out).toContainEqual(p('2024-06-10', '150'));
+    expect(out.some((q) => q.bucket === '2024-01-01')).toBe(false);
+  });
+
+  it('injects a baseline at the window start carrying the last pre-window cumulative', () => {
+    const points = [
+      p('2024-01-01', '100'),
+      p('2024-03-01', '180'),
+      p('2024-06-10', '150'),
+    ];
+    const out = withCarriedBaselines(points, '2024-06-01');
+    expect(out).toContainEqual({ ...p('2024-06-01', '180'), delta: '0' });
+  });
+
+  it('an account quiet inside the window still contributes its carried balance', () => {
+    // Account 2 (savings) last moved in February — before, it vanished from
+    // the aggregate entirely and dragged the total toward zero.
+    const points = [
+      p('2024-02-15', '10000', 2),
+      p('2024-06-10', '150', 1),
+    ];
+    const out = withCarriedBaselines(points, '2024-06-01');
+    const agg = buildAggregatedSeries(out, 'EUR');
+    expect(agg[agg.length - 1]).toEqual({ date: '2024-06-10', value: 150 + 10000 });
+  });
+
+  it('does not inject a baseline when the account has a bucket exactly at the window start', () => {
+    const points = [
+      p('2024-05-20', '80'),
+      p('2024-06-01', '120'),
+    ];
+    const out = withCarriedBaselines(points, '2024-06-01');
+    expect(out.filter((q) => q.bucket === '2024-06-01')).toHaveLength(1);
+    expect(out).toContainEqual(p('2024-06-01', '120'));
+  });
+
+  it('leaves accounts with no pre-window history untouched', () => {
+    const points = [p('2024-06-10', '150')];
+    expect(withCarriedBaselines(points, '2024-06-01')).toEqual(points);
   });
 });

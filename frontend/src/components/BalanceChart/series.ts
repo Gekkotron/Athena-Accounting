@@ -5,6 +5,38 @@ export interface SeriesPoint {
   value: number;
 }
 
+// Clip a full-history point set to a display window WITHOUT losing quiet
+// accounts. A plain `bucket >= fromDate` filter drops every point of an
+// account that hasn't moved inside the window, so buildAggregatedSeries
+// carries 0 for it and the total sags by that account's whole balance —
+// the same under-count the backend avoids by clipping AFTER its cumulative
+// sum. For each account with pre-window history we inject a delta-0
+// baseline point AT the window start holding its last known cumulative,
+// unless the account already has a bucket exactly there.
+export function withCarriedBaselines(
+  points: BalancePoint[],
+  fromDate: string | undefined,
+): BalancePoint[] {
+  if (!fromDate) return points;
+  const out: BalancePoint[] = [];
+  const lastBefore = new Map<number, BalancePoint>();
+  const hasAtWindowStart = new Set<number>();
+  for (const p of points) {
+    if (p.bucket < fromDate) {
+      const prev = lastBefore.get(p.account_id);
+      if (!prev || p.bucket > prev.bucket) lastBefore.set(p.account_id, p);
+    } else {
+      out.push(p);
+      if (p.bucket === fromDate) hasAtWindowStart.add(p.account_id);
+    }
+  }
+  for (const [accId, p] of lastBefore) {
+    if (hasAtWindowStart.has(accId)) continue;
+    out.push({ ...p, bucket: fromDate, delta: '0' });
+  }
+  return out;
+}
+
 // /api/reports/timeseries returns one row per (account, date-bucket) only
 // when that account had activity on that bucket. Naively summing per date
 // skips accounts that didn't move on that day, dragging the multi-account
