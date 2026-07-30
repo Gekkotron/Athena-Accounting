@@ -49,6 +49,40 @@ describe('CheckpointRow', () => {
     expect(onSave).toHaveBeenCalledWith({ note: null });
   });
 
+  it('commits a French-format date as ISO on Enter', async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<CheckpointRow cp={cp} currency="EUR" onSave={onSave} onDelete={() => {}} saving={false} deleting={false} />);
+    await user.click(screen.getByRole('button', { name: '2025-06-01' }));
+    const input = screen.getByDisplayValue('2025-06-01');
+    await user.clear(input);
+    await user.type(input, '14/07/2025{Enter}');
+    expect(onSave).toHaveBeenCalledWith({ checkpointDate: '2025-07-14' });
+  });
+
+  it('an unchanged date blur does NOT fire onSave', async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<CheckpointRow cp={cp} currency="EUR" onSave={onSave} onDelete={() => {}} saving={false} deleting={false} />);
+    await user.click(screen.getByRole('button', { name: '2025-06-01' }));
+    screen.getByDisplayValue('2025-06-01');
+    await user.click(document.body);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('an unparseable date reverts silently without saving', async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<CheckpointRow cp={cp} currency="EUR" onSave={onSave} onDelete={() => {}} saving={false} deleting={false} />);
+    await user.click(screen.getByRole('button', { name: '2025-06-01' }));
+    const input = screen.getByDisplayValue('2025-06-01');
+    await user.clear(input);
+    await user.type(input, 'pas une date{Enter}');
+    expect(onSave).not.toHaveBeenCalled();
+    // Back to display mode with the original date.
+    expect(screen.getByRole('button', { name: '2025-06-01' })).toBeInTheDocument();
+  });
+
   it('fires onDelete when ✕ is clicked', async () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();

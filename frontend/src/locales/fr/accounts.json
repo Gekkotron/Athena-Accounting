@@ -86,7 +86,8 @@
     "noteInputLabel": "Note",
     "addButton": "+ ajouter",
     "row": {
-      "addNote": "ajouter…"
+      "addNote": "ajouter…",
+      "editDate": "modifier la date"
     }
   },
   "merge": {

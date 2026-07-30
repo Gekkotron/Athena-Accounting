@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatAmount, parseDecimal } from '../../lib/format';
+import { formatAmount, parseDecimal, parseUserDate } from '../../lib/format';
 import type { BalanceCheckpoint } from '../../api/types';
 
 export function CheckpointRow({
@@ -13,16 +13,34 @@ export function CheckpointRow({
 }: {
   cp: BalanceCheckpoint;
   currency: string;
-  onSave: (patch: { expectedAmount?: string; note?: string | null }) => void;
+  onSave: (patch: { checkpointDate?: string; expectedAmount?: string; note?: string | null }) => void;
   onDelete: () => void;
   saving: boolean;
   deleting: boolean;
 }) {
   const { t } = useTranslation(['accounts', 'common']);
+  const [editingDate, setEditingDate] = useState(false);
+  const [dateDraft, setDateDraft] = useState(cp.checkpointDate);
   const [editingAmount, setEditingAmount] = useState(false);
   const [amountDraft, setAmountDraft] = useState(cp.expectedAmount);
   const [editingNote, setEditingNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState(cp.note ?? '');
+
+  const commitDate = () => {
+    // parseUserDate normalizes French day-first input ("14/07/2025") and
+    // passes ISO through; an unparseable draft reverts silently, like the
+    // amount cell does.
+    const parsed = parseUserDate(dateDraft);
+    if (parsed == null) {
+      setDateDraft(cp.checkpointDate);
+      setEditingDate(false);
+      return;
+    }
+    if (parsed !== cp.checkpointDate) {
+      onSave({ checkpointDate: parsed });
+    }
+    setEditingDate(false);
+  };
 
   const commitAmount = () => {
     // Route the typed value through parseDecimal so French "1500,00" is
@@ -48,7 +66,30 @@ export function CheckpointRow({
 
   return (
     <tr className="border-t border-ink-800/60">
-      <td className="py-1 text-ink-400">{cp.checkpointDate}</td>
+      <td className="py-1 text-ink-400">
+        {editingDate ? (
+          <input
+            className="input-sm w-24"
+            autoFocus
+            value={dateDraft}
+            onChange={(e) => setDateDraft(e.target.value)}
+            onBlur={commitDate}
+            onKeyDown={(e) => e.key === 'Enter' && commitDate()}
+            aria-label={t('checkpoints.row.editDate')}
+          />
+        ) : (
+          <button
+            className="hover:text-ink-200"
+            onClick={() => {
+              setDateDraft(cp.checkpointDate);
+              setEditingDate(true);
+            }}
+            title={t('checkpoints.row.editDate')}
+          >
+            {cp.checkpointDate}
+          </button>
+        )}
+      </td>
       <td className="py-1 text-right text-ink-200 private">
         {editingAmount ? (
           <input

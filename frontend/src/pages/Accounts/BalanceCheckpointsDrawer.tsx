@@ -117,7 +117,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
   });
 
   const patch = useMutation({
-    mutationFn: (args: { cpId: number; patch: { expectedAmount?: string; note?: string | null } }) =>
+    mutationFn: (args: { cpId: number; patch: { checkpointDate?: string; expectedAmount?: string; note?: string | null } }) =>
       updateCheckpoint(accountId, args.cpId, args.patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['balance-checkpoints', accountId] });

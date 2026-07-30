@@ -28,6 +28,7 @@ const CreateBody = z.object({
 });
 
 const UpdateBody = z.object({
+  checkpointDate: isoDate.optional(),
   expectedAmount: decimal.optional(),
   note: z
     .string()
@@ -141,8 +142,9 @@ export async function balanceCheckpointsRoutes(app: FastifyInstance): Promise<vo
     }
   });
 
-  // PUT — patch expectedAmount and/or note. Date is immutable — the client
-  // deletes + recreates to move a checkpoint.
+  // PUT — patch checkpointDate, expectedAmount and/or note. Moving the date
+  // onto another checkpoint's date hits the (account, date) unique index and
+  // maps to the same 409 the POST produces.
   app.put('/api/accounts/:id/balance-checkpoints/:cpId', async (req, reply) => {
     const uid = userId(req);
     const params = parseCpParams(req, reply);
@@ -152,22 +154,33 @@ export async function balanceCheckpointsRoutes(app: FastifyInstance): Promise<vo
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     const patch: Partial<typeof balanceCheckpoints.$inferInsert> = {};
+    if (parsed.data.checkpointDate !== undefined) patch.checkpointDate = parsed.data.checkpointDate;
     if (parsed.data.expectedAmount !== undefined) patch.expectedAmount = parsed.data.expectedAmount;
     if (parsed.data.note !== undefined) patch.note = parsed.data.note;
     if (Object.keys(patch).length === 0) {
       return reply.code(400).send({ error: 'no fields to update' });
     }
-    const [updated] = await db
-      .update(balanceCheckpoints)
-      .set(patch)
-      .where(and(
-        eq(balanceCheckpoints.id, params.cpId),
-        eq(balanceCheckpoints.accountId, params.accountId),
-        eq(balanceCheckpoints.userId, uid),
-      ))
-      .returning();
-    if (!updated) return reply.code(404).send({ error: 'not found' });
-    return { checkpoint: serialize(updated) };
+    try {
+      const [updated] = await db
+        .update(balanceCheckpoints)
+        .set(patch)
+        .where(and(
+          eq(balanceCheckpoints.id, params.cpId),
+          eq(balanceCheckpoints.accountId, params.accountId),
+          eq(balanceCheckpoints.userId, uid),
+        ))
+        .returning();
+      if (!updated) return reply.code(404).send({ error: 'not found' });
+      return { checkpoint: serialize(updated) };
+    } catch (err) {
+      if (isPgError(err) && err.code === '23505') {
+        return reply.code(409).send({
+          error: 'checkpoint_exists',
+          date: parsed.data.checkpointDate,
+        });
+      }
+      throw err;
+    }
   });
 
   // DELETE — 204 on success, 404 if the (id, cpId) pair isn't owned.

@@ -99,6 +99,49 @@ describe.skipIf(!RUN)('/api/accounts/:id/balance-checkpoints', () => {
     expect(dup.json().date).toBe('2025-06-01');
   });
 
+  it('PUT can move the checkpoint date; colliding with another checkpoint is 409', async () => {
+    const first = await app.inject({
+      method: 'POST', url: `/api/accounts/${accountAId}/balance-checkpoints`,
+      headers: { cookie },
+      payload: { checkpointDate: '2025-03-01', expectedAmount: '100.00' },
+    });
+    const second = await app.inject({
+      method: 'POST', url: `/api/accounts/${accountAId}/balance-checkpoints`,
+      headers: { cookie },
+      payload: { checkpointDate: '2025-04-01', expectedAmount: '200.00' },
+    });
+    const secondId = second.json().checkpoint.id;
+
+    const moved = await app.inject({
+      method: 'PUT', url: `/api/accounts/${accountAId}/balance-checkpoints/${secondId}`,
+      headers: { cookie }, payload: { checkpointDate: '2025-04-15' },
+    });
+    expect(moved.statusCode).toBe(200);
+    expect(moved.json().checkpoint.checkpointDate).toBe('2025-04-15');
+    expect(moved.json().checkpoint.expectedAmount).toBe('200.00');
+
+    const collide = await app.inject({
+      method: 'PUT', url: `/api/accounts/${accountAId}/balance-checkpoints/${secondId}`,
+      headers: { cookie }, payload: { checkpointDate: first.json().checkpoint.checkpointDate },
+    });
+    expect(collide.statusCode).toBe(409);
+    expect(collide.json().error).toBe('checkpoint_exists');
+    expect(collide.json().date).toBe('2025-03-01');
+  });
+
+  it('PUT rejects a malformed date with 400', async () => {
+    const cp = await app.inject({
+      method: 'POST', url: `/api/accounts/${accountAId}/balance-checkpoints`,
+      headers: { cookie },
+      payload: { checkpointDate: '2025-05-01', expectedAmount: '1.00' },
+    });
+    const bad = await app.inject({
+      method: 'PUT', url: `/api/accounts/${accountAId}/balance-checkpoints/${cp.json().checkpoint.id}`,
+      headers: { cookie }, payload: { checkpointDate: '01/05/2025' },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('rejects invalid input with 400', async () => {
     const bad = await app.inject({
       method: 'POST', url: `/api/accounts/${accountAId}/balance-checkpoints`,

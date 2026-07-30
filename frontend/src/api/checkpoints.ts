@@ -20,7 +20,7 @@ export function createCheckpoint(
 export function updateCheckpoint(
   accountId: number,
   cpId: number,
-  patch: { expectedAmount?: string; note?: string | null },
+  patch: { checkpointDate?: string; expectedAmount?: string; note?: string | null },
 ) {
   return api<{ checkpoint: BalanceCheckpoint }>(
     `/api/accounts/${accountId}/balance-checkpoints/${cpId}`,
