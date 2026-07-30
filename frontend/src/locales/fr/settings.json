@@ -99,12 +99,12 @@
         "title": "Connexion bancaire",
         "exchanging": "Finalisation de la connexion avec votre banque…",
         "mappingTitle": "Associer les comptes {{name}}",
-        "mappingHelp": "Associez chaque compte bancaire à un compte Athena. Les comptes marqués « Ignorer » ne seront pas synchronisés — vous pourrez changer cela dans les Réglages.",
+        "mappingHelp": "Associez chaque compte bancaire à un compte Athena. Les comptes marqués « Ignorer » ne seront pas synchronisés — vous pourrez changer cela dans Données → Synchronisation bancaire.",
         "save": "Enregistrer",
         "skip": "Plus tard",
-        "error": "La connexion a échoué. Relancez la connexion depuis les Réglages.",
-        "noCode": "Code d'autorisation absent de l'URL — relancez la connexion depuis les Réglages.",
-        "backToSettings": "Retour aux réglages"
+        "error": "La connexion a échoué. Relancez la connexion depuis Données → Synchronisation bancaire.",
+        "noCode": "Code d'autorisation absent de l'URL — relancez la connexion depuis Données → Synchronisation bancaire.",
+        "backToSettings": "Retour à la synchronisation bancaire"
       }
     },
     "reset": {

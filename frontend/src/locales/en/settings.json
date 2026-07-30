@@ -99,12 +99,12 @@
         "title": "Bank connection",
         "exchanging": "Finalizing the connection with your bank…",
         "mappingTitle": "Map {{name}} accounts",
-        "mappingHelp": "Map each bank account to an Athena account. Accounts marked “Skip” won't sync — you can change this later in Settings.",
+        "mappingHelp": "Map each bank account to an Athena account. Accounts marked “Skip” won't sync — you can change this later in Données → Synchronisation bancaire.",
         "save": "Save",
         "skip": "Later",
-        "error": "The connection failed. Start the connection again from Settings.",
-        "noCode": "No authorization code in the URL — start the connection again from Settings.",
-        "backToSettings": "Back to settings"
+        "error": "The connection failed. Start the connection again from Données → Synchronisation bancaire.",
+        "noCode": "No authorization code in the URL — start the connection again from Données → Synchronisation bancaire.",
+        "backToSettings": "Back to bank sync"
       }
     },
     "reset": {

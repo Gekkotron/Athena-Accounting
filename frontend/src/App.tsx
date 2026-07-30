@@ -23,6 +23,7 @@ import { UpcomingTab } from './pages/Recurrent/UpcomingTab';
 import { ForecastTab } from './pages/Recurrent/ForecastTab';
 import { Accounts } from './pages/Accounts';
 import { Imports } from './pages/Data/Imports';
+import { BankSync } from './pages/Data/BankSync';
 import { Duplicates } from './pages/Data/Duplicates';
 import { PdfTemplates } from './pages/Data/PdfTemplates';
 import { Backup } from './pages/Data/Backup';
@@ -53,6 +54,7 @@ export default function App() {
 
   const DONNEES_TABS: HubTab[] = [
     { to: '/data/imports', label: t('nav.children.data.imports') },
+    { to: '/data/bank-sync', label: t('nav.children.data.bankSync') },
     { to: '/data/duplicates', label: t('nav.children.data.duplicates') },
     { to: '/data/pdf-templates', label: t('nav.children.data.pdfTemplates') },
     { to: '/data/backup', label: t('nav.children.data.backup') },
@@ -139,6 +141,7 @@ export default function App() {
             <Route path="/data" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>
               <Route index element={<Navigate to="imports" replace />} />
               <Route path="imports" element={<Imports />} />
+              <Route path="bank-sync" element={<BankSync />} />
               <Route path="duplicates" element={<Duplicates />} />
               <Route path="pdf-templates" element={<PdfTemplates />} />
               <Route path="backup" element={<Backup />} />

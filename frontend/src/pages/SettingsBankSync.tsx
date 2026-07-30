@@ -145,11 +145,8 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
   const redirectUrl = consentRedirectUrl(window.location.origin);
 
   return (
-    <section data-testid="bank-sync-section" className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
-      <div>
-        <div className="label">{t('settings.bankSync.sectionLabel')}</div>
-        <p className="text-sm text-ink-400 mt-1">{t('settings.bankSync.description')}</p>
-      </div>
+    <section data-testid="bank-sync-section" className="flex flex-col gap-4">
+      <p className="text-sm text-ink-400">{t('settings.bankSync.description')}</p>
 
       {!configured && (
         <SettingsBankSyncCredentials

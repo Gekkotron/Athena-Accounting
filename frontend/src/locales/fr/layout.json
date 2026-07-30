@@ -1,62 +1,63 @@
 {
-  "nav": {
-    "sections": {
-      "daily": "Tous les jours",
-      "classification": "Classification",
-      "structure": "Structure"
-    },
-    "items": {
-      "dashboard": "Dashboard",
-      "transactions": "Transactions",
-      "budgets": "Budgets",
-      "rules": "Règles",
-      "recurrent": "Récurrent",
-      "accounts": "Comptes",
-      "data": "Données"
-    },
-    "children": {
-      "rules": {
-        "sort": "Tri",
-        "list": "Règles",
-        "categories": "Catégories"
-      },
-      "recurrent": {
-        "detected": "Détectés",
-        "upcoming": "À venir",
-        "forecast": "Prévision"
-      },
-      "data": {
-        "imports": "Imports",
-        "duplicates": "Doublons",
-        "pdfTemplates": "Modèles PDF",
-        "backup": "Sauvegarde"
-      },
-      "budgets": {
-        "plafonds": "Plafonds",
-        "enveloppes": "Enveloppes"
-      }
-    },
-    "badge_one": "{{count}} en attente",
-    "badge_other": "{{count}} en attente"
+ "nav": {
+  "sections": {
+   "daily": "Tous les jours",
+   "classification": "Classification",
+   "structure": "Structure"
   },
-  "header": {
-    "menu": "Menu",
-    "connectedAs": "Connecté"
+  "items": {
+   "dashboard": "Dashboard",
+   "transactions": "Transactions",
+   "budgets": "Budgets",
+   "rules": "Règles",
+   "recurrent": "Récurrent",
+   "accounts": "Comptes",
+   "data": "Données"
   },
-  "footer": {
-    "githubLink": "Projet sur GitHub"
+  "children": {
+   "rules": {
+    "sort": "Tri",
+    "list": "Règles",
+    "categories": "Catégories"
+   },
+   "recurrent": {
+    "detected": "Détectés",
+    "upcoming": "À venir",
+    "forecast": "Prévision"
+   },
+   "data": {
+    "imports": "Imports",
+    "bankSync": "Synchronisation",
+    "duplicates": "Doublons",
+    "pdfTemplates": "Modèles PDF",
+    "backup": "Sauvegarde"
+   },
+   "budgets": {
+    "plafonds": "Plafonds",
+    "enveloppes": "Enveloppes"
+   }
   },
-  "user": {
-    "editProfile": "Modifier mon profil",
-    "settings": "Réglages",
-    "logout": "Se déconnecter",
-    "privacy": {
-      "show": "Afficher les montants",
-      "hideTitle": "Masquer les montants (auto après 5 min)",
-      "hide": "Masquer les montants"
-    }
-  },
-  "subNav": {
-    "ariaLabel": "Sous-navigation {{title}}"
+  "badge_one": "{{count}} en attente",
+  "badge_other": "{{count}} en attente"
+ },
+ "header": {
+  "menu": "Menu",
+  "connectedAs": "Connecté"
+ },
+ "footer": {
+  "githubLink": "Projet sur GitHub"
+ },
+ "user": {
+  "editProfile": "Modifier mon profil",
+  "settings": "Réglages",
+  "logout": "Se déconnecter",
+  "privacy": {
+   "show": "Afficher les montants",
+   "hideTitle": "Masquer les montants (auto après 5 min)",
+   "hide": "Masquer les montants"
   }
+ },
+ "subNav": {
+  "ariaLabel": "Sous-navigation {{title}}"
+ }
 }

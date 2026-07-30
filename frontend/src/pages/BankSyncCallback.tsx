@@ -66,7 +66,7 @@ export function BankSyncCallback(): JSX.Element {
         },
       });
       qc.invalidateQueries({ queryKey: ['bank-sync-connections'] });
-      navigate('/settings', { replace: true });
+      navigate('/data/bank-sync', { replace: true });
     } catch {
       setError(t('settings.bankSync.errors.generic'));
       setSaving(false);
@@ -84,7 +84,7 @@ export function BankSyncCallback(): JSX.Element {
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
             {error}
           </div>
-          <Link to="/settings" className="btn-ghost self-start">
+          <Link to="/data/bank-sync" className="btn-ghost self-start">
             {t('settings.bankSync.callback.backToSettings')}
           </Link>
         </div>
@@ -136,7 +136,7 @@ export function BankSyncCallback(): JSX.Element {
             <button type="button" className="btn-primary" disabled={saving} onClick={() => void saveMappings()}>
               {t('settings.bankSync.callback.save')}
             </button>
-            <Link to="/settings" className="btn-ghost">
+            <Link to="/data/bank-sync" className="btn-ghost">
               {t('settings.bankSync.callback.skip')}
             </Link>
           </div>

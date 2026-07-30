@@ -34,9 +34,9 @@ days — reconnecting takes one mobile confirmation.
    returned by the API).
 3. Create an **application**. When asked for a redirect URL, use your
    Athena address followed by `/bank-sync/callback` — the exact value is
-   shown in *Réglages → Synchronisation bancaire*. Download the RS256
+   shown in *Données → Synchronisation bancaire*. Download the RS256
    private key the Control Panel generates for the application.
-4. In Athena, open *Réglages → Synchronisation bancaire* and paste the
+4. In Athena, open *Données → Synchronisation bancaire* and paste the
    **application ID** and the **private key** (the full PEM file,
    including the `BEGIN`/`END` lines). Athena validates the pair against
    Enable Banking before saving; the key is encrypted at rest and never
@@ -52,7 +52,7 @@ to your bank's own consent page, confirm there (for most French banks
 this is one mobile-app validation — CIC/Crédit Mutuel's *Confirmation
 Mobile*, for example), and land back in Athena. Then map each bank
 account to an Athena account — accounts marked *Ignorer* are not
-synced. You can change the mapping at any time from Réglages.
+synced. You can change the mapping at any time from Données → Synchronisation bancaire.
 
 ## Syncing
 
@@ -130,14 +130,14 @@ path and bank sync is an optional layer on top.
 - **The redirect never reaches Athena** (the whitelisted URL doesn't
   match the address you browse Athena at, or the Control Panel refused
   your LAN URL) — the authorization code is still in the final page's
-  address bar. Copy that full URL and paste it into *Réglages →
+  address bar. Copy that full URL and paste it into *Données →
   Synchronisation bancaire → "Finaliser manuellement"*; Athena extracts
   the code and creates the connection. Remember the redirect URL only
   needs to be reachable by **your browser**, never by Enable Banking —
   a LAN address like `http://192.168.1.20:8080/bank-sync/callback` is
   the normal case.
 - **The callback page shows an error** — the authorization code is
-  single-use and short-lived; restart the connection from Réglages.
+  single-use and short-lived; restart the connection from Données → Synchronisation bancaire.
 - **A connection is stuck on "Reconnexion requise"** — that is the
   expected state after consent expiry; click **Reconnecter** and approve
   on your phone.
