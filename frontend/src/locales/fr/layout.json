@@ -18,7 +18,8 @@
    "rules": {
     "sort": "Tri",
     "list": "Règles",
-    "categories": "Catégories"
+    "categories": "Catégories",
+    "transfers": "Virements"
    },
    "recurrent": {
     "detected": "Détectés",
