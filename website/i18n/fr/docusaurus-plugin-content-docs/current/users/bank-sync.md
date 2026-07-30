@@ -30,7 +30,9 @@ Choisissez votre banque dans la liste et cliquez **Connecter**. Vous êtes redir
 
 Une fois connecté, Athena synchronise automatiquement **une fois par nuit** (désactivable avec `BANK_SYNC_AUTO=0`, voir la [référence de configuration](../reference/configuration.md)), et chaque carte de connexion propose un bouton **Synchroniser** pour un rafraîchissement immédiat.
 
-Les transactions synchronisées passent par exactement le même pipeline que les imports de fichiers : déduplication (une synchro qui chevauche un relevé déjà importé ne crée aucun doublon), règles de catégorisation, détection des virements internes et détection des séries récurrentes. Chaque lot de synchro apparaît dans *Données → Imports* comme une entrée `bank-sync`.
+Les transactions synchronisées passent par exactement le même pipeline que les imports de fichiers : déduplication, règles de catégorisation, détection des virements internes et détection des séries récurrentes. Chaque lot de synchro apparaît dans *Données → Imports* comme une entrée `bank-sync`.
+
+Une limite compte : la déduplication ne peut reconnaître que des lignes issues de la **même source** (l'API de la banque décrit une transaction avec un libellé et des références différents de ceux de ses fichiers OFX/CSV). La **première** synchro d'un compte associé démarre donc le lendemain de la transaction la plus récente déjà présente sur ce compte — votre historique importé par fichiers est laissé intact au lieu d'être réimporté en quasi-doublons. Les synchros suivantes chevauchent la précédente de 7 jours et se dédupliquent entre elles. Pour de l'historique plus ancien que vos fichiers, l'export OFX ponctuel reste la bonne méthode.
 
 ## Cycle de vie du consentement
 
@@ -59,6 +61,7 @@ Le mode restricted production d'Enable Banking est un palier d'évaluation gratu
 - **La redirection n'atteint jamais Athena** (l'URL whitelistée ne correspond pas à l'adresse à laquelle vous consultez Athena, ou le Control Panel a refusé votre URL LAN) — le code d'autorisation figure quand même dans la barre d'adresse de la page finale. Copiez cette URL complète et collez-la dans *Réglages → Synchronisation bancaire → « Finaliser manuellement »* ; Athena en extrait le code et crée la connexion. Rappel : l'URL de redirection ne doit être accessible que par **votre navigateur**, jamais par Enable Banking — une adresse LAN comme `http://192.168.1.20:8080/bank-sync/callback` est le cas normal.
 - **La page de retour affiche une erreur** — le code d'autorisation est à usage unique et de courte durée ; relancez la connexion depuis les Réglages.
 - **Une connexion reste sur « Reconnexion requise »** — c'est l'état attendu après expiration du consentement ; cliquez **Reconnecter** et validez sur votre téléphone.
+- **La première synchro a dupliqué des transactions importées par fichiers** (versions antérieures au correctif de borne de première synchro) — supprimez l'entrée `bank-sync` dans *Données → Imports* : cela retire toutes les transactions de ce lot en une seule étape transactionnelle et réinitialise la base de synchro, de sorte que la synchro suivante repart après votre transaction restante la plus récente au lieu de réimporter la fenêtre.
 
 ## Voir aussi
 

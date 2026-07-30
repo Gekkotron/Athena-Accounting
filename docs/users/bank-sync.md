@@ -62,10 +62,19 @@ with `BANK_SYNC_AUTO=0`, see the
 connection card has a **Synchroniser** button for an immediate pull.
 
 Synced transactions go through the exact same pipeline as file imports:
-deduplication (so a sync overlapping a statement you already imported
-creates no doubles), categorization rules, transfer detection, and
+deduplication, categorization rules, transfer detection, and
 recurring-series detection. Each sync batch appears in *Données →
 Imports* as a `bank-sync` entry.
+
+One boundary matters: deduplication can only recognize rows coming from
+the **same source** (the bank's API describes a transaction with
+different wording and references than its OFX/CSV files do). So the
+**first** sync of a mapped account starts the day **after** the newest
+transaction already in that account — your file-imported history is left
+alone rather than re-imported as near-duplicates. Subsequent syncs
+overlap the previous one by 7 days and self-deduplicate. If you want
+history older than your file imports, that stays the job of a one-time
+OFX export.
 
 ## Consent lifecycle
 
@@ -132,6 +141,12 @@ path and bank sync is an optional layer on top.
 - **A connection is stuck on "Reconnexion requise"** — that is the
   expected state after consent expiry; click **Reconnecter** and approve
   on your phone.
+- **The first sync duplicated transactions I had imported from files**
+  (versions before the first-sync boundary fix) — delete the `bank-sync`
+  entry in *Données → Imports*: it removes every transaction from that
+  batch in one transactional step and resets the sync baseline, so the
+  next sync starts after your newest remaining transaction instead of
+  re-importing the window.
 
 ## See also
 

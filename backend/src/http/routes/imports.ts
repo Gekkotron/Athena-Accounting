@@ -11,6 +11,7 @@ import { importPdf, applyTemplateAndImport, previewTemplate } from '../../domain
 import type { TemplateZones } from '../../domain/imports/pdf/zones.js';
 import { importPhoto, PhotoTooLargeError, PhotoUnsupportedMimeError } from '../../domain/imports/photo/index.js';
 import { userId } from '../plugins/auth.js';
+import { resetSyncBaseline } from '../../domain/imports/bank-sync.js';
 import { flushSnapshots } from '../../db/snapshotScheduler.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
@@ -278,7 +279,13 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       const fiDeleted = await tx
         .delete(fileImports)
         .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)))
-        .returning({ id: fileImports.id });
+        .returning({ id: fileImports.id, format: fileImports.format, accountId: fileImports.accountId });
+      // Undoing a bank-sync batch must also reset the sync baseline, else the
+      // next sync resumes from lastSyncedAt and skips the deleted window.
+      const fi = fiDeleted[0];
+      if (fi?.format === 'bank-sync' && fi.accountId !== null) {
+        await resetSyncBaseline(tx, uid, fi.accountId);
+      }
       return { transactions: txDeleted.length, fileImport: fiDeleted.length };
     });
     if (result.fileImport === 0) return reply.code(404).send({ error: 'not found' });

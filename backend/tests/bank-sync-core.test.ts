@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeEbTransaction, syncWindowStart } from '../src/domain/imports/bank-sync-core.js';
+import { firstSyncStart, normalizeEbTransaction, syncWindowStart } from '../src/domain/imports/bank-sync-core.js';
 import type { EbTransaction } from '../src/services/enable-banking/client.js';
 
 function tx(overrides: Partial<EbTransaction>): EbTransaction {
@@ -109,5 +109,21 @@ describe('syncWindowStart', () => {
 
   it('backs off 7 days from the last sync', () => {
     expect(syncWindowStart(new Date('2026-07-30T08:00:00Z'))).toBe('2026-07-23');
+  });
+});
+
+describe('firstSyncStart', () => {
+  it('is undefined when the account has no transactions yet', () => {
+    expect(firstSyncStart(null)).toBeUndefined();
+  });
+
+  it('starts the day after the newest existing transaction (no cross-source overlap)', () => {
+    expect(firstSyncStart('2026-07-05')).toBe('2026-07-06');
+    expect(firstSyncStart('2026-07-31')).toBe('2026-08-01');
+    expect(firstSyncStart('2026-12-31')).toBe('2027-01-01');
+  });
+
+  it('accepts a date-time and truncates to the day', () => {
+    expect(firstSyncStart('2026-07-05T10:00:00.000Z')).toBe('2026-07-06');
   });
 });

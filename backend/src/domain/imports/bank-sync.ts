@@ -1,7 +1,13 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { FastifyInstance } from 'fastify';
 import { db } from '../../db/client.js';
-import { bankConnections, bankConnectionAccounts, bankSyncCredentials } from '../../db/schema.js';
+import {
+  bankConnections,
+  bankConnectionAccounts,
+  bankSyncCredentials,
+  transactions,
+} from '../../db/schema.js';
 import { env } from '../../env.js';
 import { markDirty } from '../../db/snapshotScheduler.js';
 import { getCredentials } from '../bank-sync/store.js';
@@ -11,7 +17,7 @@ import {
   type EnableBankingClient,
 } from '../../services/enable-banking/client.js';
 import { runImport } from './import-service.js';
-import { normalizeEbTransaction, syncWindowStart } from './bank-sync-core.js';
+import { firstSyncStart, normalizeEbTransaction, syncWindowStart } from './bank-sync-core.js';
 
 // Sync engine: pulls booked transactions for every mapped account of every
 // active connection and feeds them through runImport, so dedup, rule
@@ -44,6 +50,39 @@ export type ConnectionSyncResult = {
   accounts: AccountSyncResult[];
   error?: string;
 };
+
+// Newest existing transaction on the target account — the first-sync
+// boundary (see firstSyncStart in bank-sync-core.ts).
+async function latestTransactionDate(userId: number, accountId: number): Promise<string | null> {
+  const [row] = await db
+    .select({ maxDate: sql<string | null>`max(${transactions.date})` })
+    .from(transactions)
+    .where(and(eq(transactions.userId, userId), eq(transactions.accountId, accountId)));
+  return row?.maxDate ?? null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Tx = PgTransaction<any, any, any>;
+
+// Deleting a bank-sync import batch (Données → Imports) removes its rows —
+// the next sync must re-baseline instead of resuming from lastSyncedAt,
+// otherwise the overlap window would re-import rows that no longer dedup
+// against anything. Called from the imports DELETE route inside its
+// transaction.
+export async function resetSyncBaseline(tx: Tx, userId: number, accountId: number): Promise<void> {
+  await tx
+    .update(bankConnectionAccounts)
+    .set({ lastSyncedAt: null })
+    .where(
+      and(
+        eq(bankConnectionAccounts.accountId, accountId),
+        inArray(
+          bankConnectionAccounts.connectionId,
+          tx.select({ id: bankConnections.id }).from(bankConnections).where(eq(bankConnections.userId, userId)),
+        ),
+      ),
+    );
+}
 
 async function markNeedsReconnect(connectionId: number): Promise<void> {
   await db
@@ -110,9 +149,13 @@ export async function syncUserConnections(
         continue;
       }
       try {
-        const txs = await client.getAllTransactions(row.bankAccountUid, {
-          dateFrom: syncWindowStart(row.lastSyncedAt),
-        });
+        // First sync for this mapping starts after the newest existing
+        // transaction (cross-source dedup is impossible — see core helper);
+        // subsequent syncs overlap 7 days and self-dedup on the API's refs.
+        const dateFrom = row.lastSyncedAt
+          ? syncWindowStart(row.lastSyncedAt)
+          : firstSyncStart(await latestTransactionDate(userId, row.accountId));
+        const txs = await client.getAllTransactions(row.bankAccountUid, { dateFrom });
         const prepared = txs
           .map(normalizeEbTransaction)
           .filter((p): p is NonNullable<typeof p> => p !== null);

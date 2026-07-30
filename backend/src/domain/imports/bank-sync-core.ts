@@ -70,3 +70,15 @@ export function syncWindowStart(lastSyncedAt: Date | null): string | undefined {
   const from = new Date(lastSyncedAt.getTime() - OVERLAP_DAYS * 86_400_000);
   return from.toISOString().slice(0, 10);
 }
+
+// date_from for an account's FIRST sync. Dedup keys cannot match across
+// sources (the bank's API references differ from file FITIDs/labels for the
+// same money), so re-fetching history that file imports already covered
+// creates real duplicates. Start the day after the newest existing
+// transaction; full history only when the account is empty.
+export function firstSyncStart(latestTxDate: string | null): string | undefined {
+  if (!latestTxDate) return undefined;
+  const next = new Date(`${latestTxDate.slice(0, 10)}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}

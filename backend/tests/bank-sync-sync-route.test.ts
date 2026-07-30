@@ -257,4 +257,69 @@ describe.skipIf(!RUN)('/api/bank-sync/sync', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().results).toHaveLength(2);
   });
+
+  it('starts a first sync AFTER the newest existing transaction (no cross-source duplicates)', async () => {
+    // Fresh account with file-era history: one existing row dated 2026-07-05.
+    const acc = await app.inject({
+      method: 'POST',
+      url: '/api/accounts',
+      headers: { cookie },
+      payload: { name: 'SYNC-B', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },
+    });
+    const accountBId = acc.json().account.id;
+    await app.inject({
+      method: 'POST',
+      url: '/api/transactions',
+      headers: { cookie },
+      payload: { accountId: accountBId, date: '2026-07-05', amount: '-10.00', rawLabel: 'OLD FILE ROW' },
+    });
+
+    const [conn] = await db
+      .insert(schema.bankConnections)
+      .values({ userId: uid, sessionId: 'sess-b', aspspName: 'CIC', validUntil: '2027-01-01' })
+      .returning();
+    await db.insert(schema.bankConnectionAccounts).values({
+      connectionId: conn.id,
+      bankAccountUid: 'uid-b',
+      accountId: accountBId,
+    });
+
+    ebTransactionsRespond(200, { transactions: [], continuation_key: null });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/bank-sync/sync',
+      headers: { cookie },
+      payload: { connectionId: conn.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(calls[0]!.url).toContain('date_from=2026-07-06');
+  });
+
+  it('deleting a bank-sync import batch resets the sync baseline', async () => {
+    const { eq } = await import('drizzle-orm');
+    const imports = await db.select().from(schema.fileImports);
+    const batch = imports.find((r: { format: string }) => r.format === 'bank-sync');
+    expect(batch).toBeTruthy();
+
+    // The mapped row got a lastSyncedAt from the earlier successful sync.
+    const [before] = await db
+      .select()
+      .from(schema.bankConnectionAccounts)
+      .where(eq(schema.bankConnectionAccounts.bankAccountUid, 'uid-mapped'));
+    expect(before.lastSyncedAt).not.toBeNull();
+
+    const del = await app.inject({
+      method: 'DELETE',
+      url: `/api/imports/${batch.id}`,
+      headers: { cookie },
+    });
+    expect(del.statusCode).toBe(200);
+    expect(del.json().deleted.transactions).toBeGreaterThan(0);
+
+    const [after] = await db
+      .select()
+      .from(schema.bankConnectionAccounts)
+      .where(eq(schema.bankConnectionAccounts.bankAccountUid, 'uid-mapped'));
+    expect(after.lastSyncedAt).toBeNull();
+  });
 });
