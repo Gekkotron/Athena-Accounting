@@ -40,10 +40,12 @@ function renderCard(props: Partial<typeof defaultProps> = {}) {
 }
 
 describe('AccountCard', () => {
-  it('renders name, type, currency, and balance', () => {
+  it('renders name, translated type, currency, and balance', () => {
     renderCard();
     expect(screen.getByText('Test')).toBeInTheDocument();
-    expect(screen.getByText(/checking/i)).toBeInTheDocument();
+    // The raw backend value ("checking") is translated for display.
+    expect(screen.getByText('Courant')).toBeInTheDocument();
+    expect(screen.queryByText(/checking/i)).not.toBeInTheDocument();
     expect(screen.getByText(/EUR/)).toBeInTheDocument();
     expect(screen.getByText(/250/)).toBeInTheDocument();
   });
@@ -65,7 +67,10 @@ describe('AccountCard', () => {
     renderCard({
       account: { ...acc, type: 'investment', currentBalance: '250.00', availableBalance: '250.00' },
     });
-    expect(screen.getByText(/placé/i)).toBeInTheDocument();
+    // Exact, case-sensitive matches: "Placé" is the translated type label,
+    // lowercase "placé" is the invested tag.
+    expect(screen.getByText('placé')).toBeInTheDocument();
+    expect(screen.getByText('Placé')).toBeInTheDocument();
   });
 
   it('fires onEdit(account) when modifier is clicked', async () => {

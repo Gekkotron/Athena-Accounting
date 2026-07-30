@@ -43,7 +43,7 @@ export function AccountCard({
         <div className="text-sm font-medium text-ink-100 truncate min-w-0">{a.name}</div>
         <span className="badge shrink-0">{a.currency}</span>
       </div>
-      <div className="label mt-0.5">{a.type}</div>
+      <div className="label mt-0.5">{t(`form.typeOptions.${a.type}`, { defaultValue: a.type })}</div>
       <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
         {formatAmount(a.currentBalance ?? '0', a.currency)}
       </div>
