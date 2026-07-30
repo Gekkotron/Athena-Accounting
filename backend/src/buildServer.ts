@@ -37,7 +37,7 @@ import { envelopesRoutes } from './http/routes/envelopes/index.js';
 import { reconcileRoutes } from './http/routes/reconcile.js';
 import { recurringRoutes } from './http/routes/recurring.js';
 import { securityRoutes } from './http/routes/security.js';
-import { bankSyncRoutes } from './http/routes/bank-sync.js';
+import { bankSyncRoutes } from './http/routes/bank-sync/index.js';
 import { metricsPlugin } from './http/plugins/metrics.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
