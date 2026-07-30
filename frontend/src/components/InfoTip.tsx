@@ -5,11 +5,13 @@ import {
   useHover, useFocus, useDismiss, useRole, useInteractions,
 } from '@floating-ui/react';
 
-// Small info-icon that reveals its `text` in a floating popover on hover or
+// Small info-icon that reveals its content in a floating popover on hover or
 // keyboard focus. Portaled to document.body so ancestor `overflow-hidden`
 // containers (surface cards, table scrollers) never clip the tooltip.
 // Zero click behaviour — the button exists only as a hover / focus target.
-export function InfoTip({ text }: { text: string }): JSX.Element {
+// `children` (when given) is the rendered popover body; `text` is always the
+// trigger's accessible label, and the popover body when no children are given.
+export function InfoTip({ text, children }: { text: string; children?: React.ReactNode }): JSX.Element {
   const [open, setOpen] = useState(false);
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -53,7 +55,7 @@ export function InfoTip({ text }: { text: string }): JSX.Element {
           {...getFloatingProps()}
           className="z-50 rounded-md border border-ink-700 bg-ink-800 px-3 py-2 text-xs leading-relaxed text-ink-100 shadow-lg ring-1 ring-ink-950/50 pointer-events-none"
         >
-          {text}
+          {children ?? text}
         </div>,
         document.body,
       )}

@@ -82,6 +82,17 @@ describe('AccountForm', () => {
     }));
   });
 
+  it('shows account-type examples in a tooltip on the Type label', async () => {
+    const user = userEvent.setup();
+    render(<AccountForm mode="create" onSubmit={() => {}} />);
+    const tip = screen.getByRole('button', { name: /exemples de types de compte/i });
+    await user.hover(tip);
+    // Tooltip is portaled to document.body; findByText waits out the
+    // floating-ui open delay. One example line + the blocked-amount note.
+    expect(await screen.findByText(/assurance-vie/i)).toBeInTheDocument();
+    expect(screen.getByText(/solde disponible/i)).toBeInTheDocument();
+  });
+
   it('blocks submit and surfaces an error when opening balance is unparseable', async () => {
     const onSubmit = vi.fn();
     const user = userEvent.setup();

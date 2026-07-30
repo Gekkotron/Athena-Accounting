@@ -43,6 +43,15 @@
       "credit": "Crédit",
       "other": "Autre"
     },
+    "typeHelp": {
+      "aria": "Exemples de types de compte",
+      "checking": "compte du quotidien (salaire, paiements carte)",
+      "savings": "Livret A, LDDS, PEL",
+      "investment": "PEA, compte-titres, assurance-vie",
+      "credit": "carte de crédit, prêts",
+      "other": "espèces, titres-restaurant, autre",
+      "note": "Les comptes placés et les montants bloqués sont exclus du solde disponible et affichés comme « bloqués » sur le tableau de bord."
+    },
     "openingBalanceEditHint": "Modifier ce montant ajustera automatiquement le solde courant.",
     "lockYearsTitle": "Nombre d'années pendant lesquelles ce compte est bloqué à partir de sa date d'ouverture (PEA, dépôt à terme, etc.). Laissez vide si aucun blocage.",
     "creating": "Création…",

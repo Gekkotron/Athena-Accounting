@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseDecimal } from '../../lib/format';
+import { InfoTip } from '../../components/InfoTip';
+
+const ACCOUNT_TYPES = ['checking', 'savings', 'investment', 'credit', 'other'] as const;
 
 export interface AccountFormValues {
   name: string;
@@ -50,13 +53,29 @@ function FormFields({
         <input className="input" value={name} onChange={(e) => setName(e.target.value)} required={mode === 'create'} />
       </div>
       <div className={mode === 'create' ? '' : ''}>
-        <label className="label mb-1.5 block">{t('form.labels.type')}</label>
+        {/* The label stays the direct child queried by tests' fieldFor helper;
+            the flex row only hosts the InfoTip beside it. */}
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <label className="label">{t('form.labels.type')}</label>
+          <InfoTip text={t('form.typeHelp.aria')}>
+            <ul className="space-y-0.5">
+              {ACCOUNT_TYPES.map((k) => (
+                <li key={k}>
+                  <span className="font-medium">{t(`form.typeOptions.${k}`)}</span>
+                  {' — '}
+                  {t(`form.typeHelp.${k}`)}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-1.5 pt-1.5 border-t border-ink-700 text-ink-300">
+              {t('form.typeHelp.note')}
+            </div>
+          </InfoTip>
+        </div>
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="checking">{t('form.typeOptions.checking')}</option>
-          <option value="savings">{t('form.typeOptions.savings')}</option>
-          <option value="investment">{t('form.typeOptions.investment')}</option>
-          <option value="credit">{t('form.typeOptions.credit')}</option>
-          <option value="other">{t('form.typeOptions.other')}</option>
+          {ACCOUNT_TYPES.map((k) => (
+            <option key={k} value={k}>{t(`form.typeOptions.${k}`)}</option>
+          ))}
         </select>
       </div>
       <div>
