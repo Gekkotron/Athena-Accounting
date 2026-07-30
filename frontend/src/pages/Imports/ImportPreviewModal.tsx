@@ -30,7 +30,10 @@ export function ImportPreviewModal({
   const rows: Tagged[] = useMemo(() => {
     const n: Tagged[] = preview.newRows.map((r) => ({ ...r, status: 'new' as const }));
     const d: Tagged[] = preview.duplicateRows.map((r) => ({ ...r, status: 'duplicate' as const }));
-    return [...n, ...d];
+    // Chronological order across both groups — plain concatenation restarted
+    // the date column mid-table. Sort is stable: same-date rows keep file
+    // order, new before duplicate.
+    return [...n, ...d].sort((a, b) => a.date.localeCompare(b.date));
   }, [preview.newRows, preview.duplicateRows]);
 
   const shown = expanded ? rows : rows.slice(0, COLLAPSE_LIMIT);

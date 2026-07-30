@@ -47,6 +47,18 @@ describe('ImportPreviewModal', () => {
     expect(doublons.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('orders rows chronologically with duplicates interleaved by date', () => {
+    // Concatenating new rows then duplicates used to restart the date column
+    // mid-table (new 06-15/06-16 followed by duplicate 06-14). The table must
+    // read in date order; the status column already marks duplicates.
+    render(<ImportPreviewModal preview={preview} onConfirm={() => {}} onCancel={() => {}} />);
+    const dates = screen
+      .getAllByRole('row')
+      .slice(1) // skip the header row
+      .map((row) => row.querySelector('td')?.textContent);
+    expect(dates).toEqual(['2026-06-14', '2026-06-15', '2026-06-16']);
+  });
+
   it('fires onConfirm when Importer is clicked', async () => {
     const onConfirm = vi.fn();
     const user = userEvent.setup();
