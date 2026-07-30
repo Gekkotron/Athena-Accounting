@@ -15,6 +15,13 @@ export interface CheckpointMark extends Checkpoint {
 
 const CHECKPOINT_TOLERANCE = 0.01;
 
+// Shared drift predicate — the Trend chart's diamonds and the Transactions
+// table's bookmark both use it, so the two surfaces can never disagree on
+// what counts as a diverged checkpoint.
+export function isCheckpointDrifted(expected: number, actual: number): boolean {
+  return Math.abs(expected - actual) >= CHECKPOINT_TOLERANCE;
+}
+
 // Attach each in-range checkpoint to its "actual" cumulative on that date.
 // Banks aren't consistent about which balance they print on statement day D:
 // some show start-of-day (before D's transactions), some show end-of-day
@@ -58,7 +65,7 @@ export function buildCheckpointMarks(
       const useStart = Math.abs(deltaStart) < Math.abs(deltaEnd);
       const actual = useStart ? startOfDay : endOfDay;
       const delta = useStart ? deltaStart : deltaEnd;
-      const drift = Math.abs(delta) >= CHECKPOINT_TOLERANCE;
+      const drift = isCheckpointDrifted(c.expectedAmount, actual);
       const cx = xScale(c.date);
       return { ...c, actual, delta, drift, cx };
     });

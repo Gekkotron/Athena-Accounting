@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCheckpointMarks } from '../checkpoints';
+import { buildCheckpointMarks, isCheckpointDrifted } from '../checkpoints';
 
 const seriesRange = [
   { date: '2024-01-01', value: 100 },
@@ -164,5 +164,17 @@ describe('buildCheckpointMarks', () => {
     expect(marks[0]!.actual).toBe(100);
     expect(marks[0]!.delta).toBe(0);
     expect(marks[0]!.drift).toBe(false);
+  });
+});
+
+describe('isCheckpointDrifted', () => {
+  it('drifts at exactly the 0.01 tolerance', () => {
+    expect(isCheckpointDrifted(100, 100.01)).toBe(true);
+    expect(isCheckpointDrifted(100.01, 100)).toBe(true);
+  });
+
+  it('does not drift below the tolerance', () => {
+    expect(isCheckpointDrifted(100, 100.009)).toBe(false);
+    expect(isCheckpointDrifted(100, 100)).toBe(false);
   });
 });
