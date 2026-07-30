@@ -110,6 +110,30 @@ export function BankConnectionCard({
             imported: result.accounts.reduce((s, a) => s + a.imported, 0),
             deduped: result.accounts.reduce((s, a) => s + a.dedupSkipped, 0),
           })}
+          {(() => {
+            const rows = result.accounts.flatMap((a) => a.dedupSkippedRows ?? []);
+            const total = result.accounts.reduce((s, a) => s + a.dedupSkipped, 0);
+            if (rows.length === 0) return null;
+            return (
+              <details className="mt-2">
+                <summary className="cursor-pointer select-none text-xs text-sage-300">
+                  {t('settings.bankSync.connections.duplicatesSummary', { count: total })}
+                </summary>
+                <ul className="mt-1 flex flex-col gap-0.5 text-xs text-ink-300 font-mono">
+                  {rows.map((r, i) => (
+                    <li key={i} className="truncate">
+                      {r.date} · {r.rawLabel} · {r.amount}
+                    </li>
+                  ))}
+                  {total > rows.length && (
+                    <li className="text-ink-400">
+                      {t('settings.bankSync.connections.duplicatesMore', { count: total - rows.length })}
+                    </li>
+                  )}
+                </ul>
+              </details>
+            );
+          })()}
         </div>
       )}
       {result && result.status !== 'ok' && (

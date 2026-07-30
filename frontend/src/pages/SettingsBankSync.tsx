@@ -116,6 +116,12 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
       qc.invalidateQueries({ queryKey: ['bank-sync-connections'] });
       qc.invalidateQueries({ queryKey: ['transactions'] });
       qc.invalidateQueries({ queryKey: ['accounts'] });
+      // Same refreshes a file import triggers: the sync wrote an audit row,
+      // may have created fresh duplicate clusters, and moved every aggregate.
+      qc.invalidateQueries({ queryKey: ['imports'] });
+      qc.invalidateQueries({ queryKey: ['transaction-duplicates'] });
+      qc.invalidateQueries({ queryKey: ['reports'] });
+      qc.invalidateQueries({ queryKey: ['tri-groups'] });
     },
     onSettled: () => setSyncingId(null),
   });

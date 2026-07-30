@@ -91,7 +91,9 @@
         "unmapped": "— Skip —",
         "mappingLabel": "Athena account for",
         "lastSynced": "Last sync: {{date}}",
-        "syncResult": "{{imported}} transaction(s) imported, {{deduped}} duplicate(s) skipped."
+        "syncResult": "{{imported}} transaction(s) imported, {{deduped}} duplicate(s) skipped.",
+        "duplicatesSummary": "Show skipped duplicates ({{count}})",
+        "duplicatesMore": "… and {{count}} more"
       },
       "callback": {
         "title": "Bank connection",

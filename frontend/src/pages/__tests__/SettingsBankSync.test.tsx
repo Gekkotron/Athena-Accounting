@@ -188,6 +188,44 @@ describe('SettingsBankSync', () => {
     });
   });
 
+  it('lists the deduplicated rows after a sync', async () => {
+    routeApi({
+      'GET /api/bank-sync/status': { configured: true, applicationId: 'app-123' },
+      'GET /api/bank-sync/connections': { connections: [CONNECTION] },
+      'GET /api/bank-sync/aspsps': { aspsps: [] },
+      'POST /api/bank-sync/sync': {
+        results: [
+          {
+            connectionId: 11,
+            aspspName: 'CIC',
+            status: 'ok',
+            accounts: [
+              {
+                bankAccountUid: 'uid-1',
+                accountId: 1,
+                imported: 1,
+                dedupSkipped: 2,
+                dedupSkippedRows: [
+                  { date: '2026-07-10', amount: '-25.30', rawLabel: 'CARTE 09/07 CARREFOUR' },
+                  { date: '2026-07-01', amount: '1800.00', rawLabel: 'EMPLOYEUR SA' },
+                ],
+                skipped: null,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    renderSection();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Synchroniser' }));
+    await user.click(await screen.findByText('Voir les doublons ignorés (2)'));
+    expect(screen.getByText(/CARTE 09\/07 CARREFOUR/)).toBeInTheDocument();
+    expect(screen.getByText(/EMPLOYEUR SA/)).toBeInTheDocument();
+  });
+
   it('shows the reconnect chip and button on a needs_reconnect connection', async () => {
     routeApi({
       'GET /api/bank-sync/status': { configured: true, applicationId: 'app-123' },

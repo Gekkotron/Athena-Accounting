@@ -22,11 +22,18 @@ import { normalizeEbTransaction, syncWindowStart } from './bank-sync-core.js';
 
 const RECONNECT_STATUSES = new Set([401, 403, 410]);
 
+// Sample of dedup-skipped rows carried back to the UI so the user can see
+// WHAT was deduplicated, not just how many (same courtesy the file-import
+// preview gives). Capped to bound the response size — dedupSkipped carries
+// the true total.
+const DEDUP_SAMPLE_MAX = 20;
+
 export type AccountSyncResult = {
   bankAccountUid: string;
   accountId: number | null;
   imported: number;
   dedupSkipped: number;
+  dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }>;
   skipped: 'unmapped' | null;
 };
 
@@ -97,6 +104,7 @@ export async function syncUserConnections(
           accountId: null,
           imported: 0,
           dedupSkipped: 0,
+          dedupSkippedRows: [],
           skipped: 'unmapped',
         });
         continue;
@@ -110,6 +118,7 @@ export async function syncUserConnections(
           .filter((p): p is NonNullable<typeof p> => p !== null);
         let imported = 0;
         let dedupSkipped = 0;
+        let dedupSkippedRows: AccountSyncResult['dedupSkippedRows'] = [];
         if (prepared.length > 0) {
           const r = await runImport({
             filename: `bank-sync ${conn.aspspName} ${row.iban ?? row.bankAccountUid} ${todayIso}`,
@@ -120,6 +129,7 @@ export async function syncUserConnections(
           });
           imported = r.insertedCount;
           dedupSkipped = r.dedupSkipped;
+          dedupSkippedRows = r.dedupSkippedRows.slice(0, DEDUP_SAMPLE_MAX);
         }
         await db
           .update(bankConnectionAccounts)
@@ -130,6 +140,7 @@ export async function syncUserConnections(
           accountId: row.accountId,
           imported,
           dedupSkipped,
+          dedupSkippedRows,
           skipped: null,
         });
       } catch (err) {

@@ -29,6 +29,8 @@ export interface SyncAccountResult {
   accountId: number | null;
   imported: number;
   dedupSkipped: number;
+  // Sample (backend caps it) of the deduplicated rows — dedupSkipped is the true total.
+  dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }>;
   skipped: 'unmapped' | null;
 }
 

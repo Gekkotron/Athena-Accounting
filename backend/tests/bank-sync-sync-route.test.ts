@@ -145,8 +145,8 @@ describe.skipIf(!RUN)('/api/bank-sync/sync', () => {
     const [result] = res.json().results;
     expect(result.status).toBe('ok');
     expect(result.accounts).toEqual([
-      { bankAccountUid: 'uid-mapped', accountId, imported: 2, dedupSkipped: 0, skipped: null },
-      { bankAccountUid: 'uid-unmapped', accountId: null, imported: 0, dedupSkipped: 0, skipped: 'unmapped' },
+      { bankAccountUid: 'uid-mapped', accountId, imported: 2, dedupSkipped: 0, dedupSkippedRows: [], skipped: null },
+      { bankAccountUid: 'uid-unmapped', accountId: null, imported: 0, dedupSkipped: 0, dedupSkippedRows: [], skipped: 'unmapped' },
     ]);
 
     // First sync fetches the full consent history (no date_from).
@@ -184,6 +184,11 @@ describe.skipIf(!RUN)('/api/bank-sync/sync', () => {
     });
     const [result] = res.json().results;
     expect(result.accounts[0]).toMatchObject({ imported: 0, dedupSkipped: 2 });
+    // The skipped rows come back so the UI can show WHAT was deduplicated.
+    expect(result.accounts[0].dedupSkippedRows).toEqual([
+      { date: '2026-07-10', amount: '-25.30', rawLabel: 'CARTE 09/07 CARREFOUR' },
+      { date: '2026-07-01', amount: '1800.00', rawLabel: 'EMPLOYEUR SA' },
+    ]);
 
     // Second sync bounds the window to lastSyncedAt minus the overlap.
     expect(calls[0]!.url).toContain('date_from');
