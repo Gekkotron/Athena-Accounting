@@ -66,6 +66,16 @@
         "button": "Connecter",
         "hint": "Vous serez redirigé vers votre banque pour autoriser l'accès en lecture seule (validation mobile unique). L'accès reste valable 90 à 180 jours."
       },
+      "manual": {
+        "summary": "La redirection n'aboutit pas ? Finaliser manuellement",
+        "help": "Si la page de retour est inaccessible (URL de redirection différente de l'adresse d'Athena), copiez l'URL complète affichée dans la barre d'adresse après l'autorisation — le code y figure — et collez-la ici.",
+        "inputLabel": "URL de retour ou code d'autorisation",
+        "placeholder": "https://…/bank-sync/callback?code=…  ou le code seul",
+        "button": "Valider",
+        "success": "Connexion créée. Associez les comptes dans la carte ci-dessous.",
+        "error": "L'échange a échoué — le code est à usage unique et expire vite. Relancez la connexion.",
+        "noCode": "Aucun code trouvé dans le texte collé."
+      },
       "connections": {
         "label": "Connexions",
         "empty": "Aucune banque connectée pour l'instant.",

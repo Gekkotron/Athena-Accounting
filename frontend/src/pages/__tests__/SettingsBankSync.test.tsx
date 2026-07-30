@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { SettingsBankSync } from '../SettingsBankSync';
+import { extractAuthCode } from '../SettingsBankSync-lib';
 import type { Account } from '../../api/types';
 import { pinLocale } from '../../test/i18n';
 
@@ -66,7 +67,51 @@ beforeEach(() => {
   apiMock.mockReset();
 });
 
+describe('extractAuthCode', () => {
+  it('extracts the code from a pasted redirect URL', () => {
+    expect(extractAuthCode('http://192.168.1.5:3000/bank-sync/callback?code=abc-123&state=x')).toBe('abc-123');
+    expect(extractAuthCode('https://example.com/redirect?state=x&code=zzz')).toBe('zzz');
+  });
+
+  it('accepts a bare code', () => {
+    expect(extractAuthCode('  abc-123  ')).toBe('abc-123');
+  });
+
+  it('rejects empty input, code-less URLs, and free text', () => {
+    expect(extractAuthCode('')).toBeNull();
+    expect(extractAuthCode('https://example.com/redirect?state=x')).toBeNull();
+    expect(extractAuthCode('not a code at all')).toBeNull();
+  });
+});
+
 describe('SettingsBankSync', () => {
+  it('finalizes a consent manually from a pasted redirect URL', async () => {
+    routeApi({
+      'GET /api/bank-sync/status': { configured: true, applicationId: 'app-123' },
+      'GET /api/bank-sync/connections': { connections: [] },
+      'GET /api/bank-sync/aspsps': { aspsps: [] },
+      'POST /api/bank-sync/sessions': { connection: { id: 12 }, accounts: [] },
+    });
+
+    renderSection();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByText(/Finaliser manuellement/));
+    await user.type(
+      screen.getByLabelText("URL de retour ou code d'autorisation"),
+      'http://unreachable.example/cb?code=code-42',
+    );
+    await user.click(screen.getByRole('button', { name: 'Valider' }));
+
+    await waitFor(() => {
+      expect(apiMock).toHaveBeenCalledWith('/api/bank-sync/sessions', {
+        method: 'POST',
+        json: { code: 'code-42' },
+      });
+    });
+    expect(await screen.findByText(/Connexion créée/)).toBeInTheDocument();
+  });
+
   it('saves credentials and flips to the configured view', async () => {
     let configured = false;
     apiMock.mockImplementation(async (path: string, init?: { method?: string; json?: unknown }) => {

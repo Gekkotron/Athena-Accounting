@@ -59,6 +59,27 @@ export function connectionChipState(
   return 'ok';
 }
 
+// Manual consent finalization: the bank's redirect can land on an
+// unreachable page (e.g. the whitelisted URL doesn't match the address the
+// user browses Athena at) — the authorization code is still in that page's
+// URL. Accepts a full pasted URL or the bare code.
+export function extractAuthCode(input: string): string | null {
+  const raw = input.trim();
+  if (!raw) return null;
+  if (raw.includes('code=')) {
+    try {
+      const url = new URL(raw, 'http://placeholder.local');
+      const code = url.searchParams.get('code');
+      return code && code.trim() ? code.trim() : null;
+    } catch {
+      return null;
+    }
+  }
+  // A bare code never contains separators a URL would have.
+  if (/\s|\/|\?/.test(raw)) return null;
+  return raw;
+}
+
 // Display label for a bank account row in the mapping UI.
 export function bankAccountLabel(a: BankConnectionAccount): string {
   const name = a.name?.trim() || a.iban?.trim() || a.bankAccountUid;

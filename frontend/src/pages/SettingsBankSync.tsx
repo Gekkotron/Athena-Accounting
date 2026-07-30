@@ -8,6 +8,7 @@ import { formatDate } from '../lib/format';
 import {
   bankAccountLabel,
   connectionChipState,
+  extractAuthCode,
   type BankConnection,
   type BankSyncStatus,
   type SyncConnectionResult,
@@ -93,6 +94,38 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
     },
     onError: () => setConnectError(t('settings.bankSync.errors.generic')),
   });
+
+  // --- Manual consent finalization --------------------------------------------
+  // Fallback for when the bank's redirect lands on an unreachable page (the
+  // whitelisted URL doesn't match the address Athena is browsed at): the user
+  // pastes the final URL (or the bare code) and we exchange it here.
+  const [manualInput, setManualInput] = useState('');
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualOk, setManualOk] = useState(false);
+  const manualMut = useMutation({
+    mutationFn: (code: string) =>
+      api('/api/bank-sync/sessions', { method: 'POST', json: { code } }),
+    onSuccess: () => {
+      setManualInput('');
+      setManualError(null);
+      setManualOk(true);
+      qc.invalidateQueries({ queryKey: ['bank-sync-connections'] });
+    },
+    onError: () => {
+      setManualOk(false);
+      setManualError(t('settings.bankSync.manual.error'));
+    },
+  });
+  function submitManual(): void {
+    const code = extractAuthCode(manualInput);
+    if (!code) {
+      setManualOk(false);
+      setManualError(t('settings.bankSync.manual.noCode'));
+      return;
+    }
+    setManualError(null);
+    manualMut.mutate(code);
+  }
 
   // --- Per-connection actions ------------------------------------------------
   const [syncResults, setSyncResults] = useState<Record<number, SyncConnectionResult>>({});
@@ -234,6 +267,44 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
                 {connectError}
               </div>
             )}
+            <details className="mt-1">
+              <summary className="text-xs text-ink-400 cursor-pointer select-none">
+                {t('settings.bankSync.manual.summary')}
+              </summary>
+              <div className="flex flex-col gap-2 mt-2">
+                <p className="text-xs text-ink-400">{t('settings.bankSync.manual.help')}</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="input flex-1"
+                    aria-label={t('settings.bankSync.manual.inputLabel')}
+                    placeholder={t('settings.bankSync.manual.placeholder')}
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={manualInput.trim() === '' || manualMut.isPending}
+                    onClick={submitManual}
+                  >
+                    {t('settings.bankSync.manual.button')}
+                  </button>
+                </div>
+                {manualError && (
+                  <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
+                    {manualError}
+                  </div>
+                )}
+                {manualOk && (
+                  <div className="rounded-lg border border-sage-800/50 bg-sage-900/15 px-3 py-2 text-sm text-sage-200">
+                    {t('settings.bankSync.manual.success')}
+                  </div>
+                )}
+              </div>
+            </details>
           </div>
 
           <div className="flex flex-col gap-3">

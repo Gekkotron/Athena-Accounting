@@ -66,6 +66,16 @@
         "button": "Connect",
         "hint": "You will be redirected to your bank to authorize read-only access (one mobile confirmation). Access stays valid for 90–180 days."
       },
+      "manual": {
+        "summary": "Redirect not working? Finalize manually",
+        "help": "If the return page is unreachable (redirect URL differs from Athena's address), copy the full URL shown in the address bar after authorizing — the code is in it — and paste it here.",
+        "inputLabel": "Return URL or authorization code",
+        "placeholder": "https://…/bank-sync/callback?code=…  or the bare code",
+        "button": "Submit",
+        "success": "Connection created. Map the accounts in the card below.",
+        "error": "The exchange failed — the code is single-use and short-lived. Start the connection again.",
+        "noCode": "No code found in the pasted text."
+      },
       "connections": {
         "label": "Connections",
         "empty": "No bank connected yet.",

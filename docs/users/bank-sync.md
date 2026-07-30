@@ -107,6 +107,15 @@ path and bank sync is an optional layer on top.
 - **The bank isn't in the list** — the list shows French banks by
   default; check the bank exists in Enable Banking's
   [coverage](https://enablebanking.com/coverage/).
+- **The redirect never reaches Athena** (the whitelisted URL doesn't
+  match the address you browse Athena at, or the Control Panel refused
+  your LAN URL) — the authorization code is still in the final page's
+  address bar. Copy that full URL and paste it into *Réglages →
+  Synchronisation bancaire → "Finaliser manuellement"*; Athena extracts
+  the code and creates the connection. Remember the redirect URL only
+  needs to be reachable by **your browser**, never by Enable Banking —
+  a LAN address like `http://192.168.1.20:8080/bank-sync/callback` is
+  the normal case.
 - **The callback page shows an error** — the authorization code is
   single-use and short-lived; restart the connection from Réglages.
 - **A connection is stuck on "Reconnexion requise"** — that is the
