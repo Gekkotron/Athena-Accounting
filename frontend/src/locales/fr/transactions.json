@@ -67,7 +67,8 @@
     "splitBadge": "Ventilée ({{count}})",
     "manualTag": "manuel",
     "checkpointAriaLabel": "Valider le solde du {{date}} comme point de contrôle",
-    "checkpointTitle": "Valider ce solde comme point de contrôle"
+    "checkpointTitle": "Valider ce solde comme point de contrôle",
+    "checkpointDrift": "Point de contrôle divergent — attendu {{expected}}, recalculé {{actual}} (Δ {{delta}})"
   },
   "filters": {
     "labels": {

@@ -67,7 +67,8 @@
     "splitBadge": "Split ({{count}})",
     "manualTag": "manual",
     "checkpointAriaLabel": "Validate the {{date}} balance as a checkpoint",
-    "checkpointTitle": "Validate this balance as a checkpoint"
+    "checkpointTitle": "Validate this balance as a checkpoint",
+    "checkpointDrift": "Checkpoint diverged — expected {{expected}}, recalculated {{actual}} (Δ {{delta}})"
   },
   "filters": {
     "labels": {

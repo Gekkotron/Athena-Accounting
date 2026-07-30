@@ -297,3 +297,38 @@ describe('TransactionRow checkpoint pin', () => {
     expect(screen.queryByRole('button', { name: cpLabel })).not.toBeInTheDocument();
   });
 });
+
+describe('TransactionRow checkpoint drift warning', () => {
+  const txWithBalance: Transaction = { ...t, runningBalance: '1307.86' };
+  const cpLabel = /valider le solde/i;
+  function cp(expectedAmount: string): BalanceCheckpoint {
+    return {
+      id: 3, accountId: 1, checkpointDate: '2026-06-15', expectedAmount, note: null, createdAt: '2026-06-15T00:00:00Z',
+    };
+  }
+
+  it('turns the pin amber with a drift tooltip when the checkpoint diverges', () => {
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpoint: cp('1250.00') });
+    const btn = screen.getByRole('button', { name: cpLabel });
+    expect(btn.className).toContain('text-amber-300');
+    const title = btn.getAttribute('title') ?? '';
+    expect(title).toMatch(/divergent/i);
+    expect(title).toMatch(/1\s250,00/); // expected (fr formatting, non-breaking spaces)
+    expect(title).toMatch(/1\s307,86/); // recalculated
+    expect(title).toMatch(/\+/); // signed delta (actual − expected = +57,86)
+  });
+
+  it('keeps the sage pin and the normal tooltip when the checkpoint matches', () => {
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpoint: cp('1307.86') });
+    const btn = screen.getByRole('button', { name: cpLabel });
+    expect(btn.className).toContain('text-sage-300');
+    expect(btn.getAttribute('title') ?? '').not.toMatch(/divergent/i);
+  });
+
+  it('ignores sub-tolerance differences (< 0.01)', () => {
+    renderRow({ tx: txWithBalance, showBalance: true, isEndOfDay: true, checkpoint: cp('1307.855') });
+    const btn = screen.getByRole('button', { name: cpLabel });
+    expect(btn.className).toContain('text-sage-300');
+    expect(btn.getAttribute('title') ?? '').not.toMatch(/divergent/i);
+  });
+});

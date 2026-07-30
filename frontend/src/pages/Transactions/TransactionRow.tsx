@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
+import { isCheckpointDrifted } from '../../components/BalanceChart/checkpoints';
 
 export type TransactionRowProps = {
   tx: Transaction;
@@ -47,6 +48,27 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
   ) {
   const { t } = useTranslation(['transactions', 'common']);
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const currency = account?.currency ?? 'EUR';
+  // Amber warning when the saved checkpoint no longer matches the recomputed
+  // running balance — a transaction was edited, deleted, or back-imported
+  // since the balance was frozen. Direct value comparison is correct here
+  // (unlike the chart's start/end-of-day disambiguation): the checkpoint was
+  // created from this very row's end-of-day running balance.
+  const checkpointDelta =
+    checkpoint != null && tx.runningBalance != null
+      ? Number(tx.runningBalance) - Number(checkpoint.expectedAmount)
+      : null;
+  const checkpointDrifted =
+    checkpoint != null &&
+    tx.runningBalance != null &&
+    isCheckpointDrifted(Number(checkpoint.expectedAmount), Number(tx.runningBalance));
+  const driftMessage = checkpointDrifted
+    ? t('row.checkpointDrift', {
+        expected: formatAmount(checkpoint!.expectedAmount, currency),
+        actual: formatAmount(tx.runningBalance!, currency),
+        delta: `${(checkpointDelta ?? 0) >= 0 ? '+' : ''}${formatAmount(checkpointDelta ?? 0, currency)}`,
+      })
+    : null;
   return (
     <>
       <tr ref={ref} className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''}`}>
@@ -142,14 +164,19 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
                   onClick={() => onToggleCheckpoint(tx, !(checkpoint != null))}
                   disabled={checkpointPending}
                   aria-pressed={checkpoint != null}
-                  aria-label={t('row.checkpointAriaLabel', { date: formatDate(tx.date) })}
-                  title={t('row.checkpointTitle')}
-                  className={`inline-flex items-center rounded p-0.5 transition disabled:opacity-40 disabled:cursor-wait ${
+                  aria-label={`${t('row.checkpointAriaLabel', { date: formatDate(tx.date) })}${driftMessage ? ` — ${driftMessage}` : ''}`}
+                  title={driftMessage ?? t('row.checkpointTitle')}
+                  className={`inline-flex items-center gap-0.5 rounded p-0.5 transition disabled:opacity-40 disabled:cursor-wait ${
                     checkpoint != null
-                      ? 'text-sage-300 hover:text-sage-200'
+                      ? checkpointDrifted
+                        ? 'text-amber-300 hover:text-amber-200'
+                        : 'text-sage-300 hover:text-sage-200'
                       : 'text-ink-600 hover:text-sage-300 hover:bg-ink-900'
                   }`}
                 >
+                  {checkpointDrifted && (
+                    <span className="text-[10px] font-bold leading-none" aria-hidden>!</span>
+                  )}
                   {checkpoint != null ? (
                     <svg width="11" height="13" viewBox="0 0 12 14" fill="currentColor" aria-hidden>
                       <path d="M2 1h8v11.2L6 9.6 2 12.2z" />
