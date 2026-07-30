@@ -5,13 +5,14 @@ import { api } from '../../api/client';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
-import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
+import type { Account, BalancePoint, BalanceCheckpoint, CategoryReportRow } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { formatAmount, amountSignClass } from '../../lib/format';
 import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
-import { projectBalance } from '../../lib/recurring-forecast';
-import type { RecurringSeries } from '../../api/types';
+import { projectAverageBalance, monthlyFlowAverages } from '../../lib/average-forecast';
+import { computeMonthlyStats } from './monthly-stats';
+import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
@@ -113,44 +114,62 @@ export function Dashboard(): JSX.Element {
     return scoped.filter((p) => p.bucket >= rangeFromDate);
   }, [seriesQ.data, chartScope, rangeFromDate]);
 
-  // Recurring series drive the optional forecast overlay on the Trend
-  // chart. Query is unconditional but its result is only consumed when
-  // `settings.showForecast` is on — invalidations across the app already
-  // cascade to this cache.
-  const recurringQ = useQuery({
-    queryKey: ['recurring'],
-    queryFn: () => api<{ recurring: RecurringSeries[] }>('/api/recurring'),
+  // The optional forecast overlay extrapolates historical AVERAGES instead
+  // of replaying confirmed recurring series — users confirm their income
+  // series but few outflows, which made the old projection staircase upward
+  // while the real balance stayed flat. Same query key as
+  // MoyennesMensuellesSection, so React Query dedupes: tiles and projection
+  // always show the same averages.
+  const statsFromDate = monthAgoISODate(AVG_WINDOW_MONTHS);
+  const statsToDate = lastDayOfPrevMonthISODate();
+  const statsQ = useQuery({
+    queryKey: ['reports', 'categories', { fromDate: statsFromDate, toDate: statsToDate }],
+    queryFn: () =>
+      api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
+        query: { fromDate: statsFromDate, toDate: statsToDate },
+      }),
     enabled: settings.showForecast,
   });
 
   const forecastProjection = useMemo(() => {
     if (!settings.showForecast) return undefined;
-    const rows = recurringQ.data?.recurring ?? [];
-    if (rows.length === 0) return undefined;
+    const today = new Date().toISOString().slice(0, 10);
     // Anchor the projection to today's total for the current scope.
-    let startBalance = 0;
-    const balanceCurrency = chartCurrency;
+    let startBalance: number;
+    let avgMonthlyIncome: number;
+    let avgMonthlySpend: number;
     if (chartScope === 'all') {
       startBalance = Number(
-        balanceQ.data?.perCurrency?.find((c) => c.currency === balanceCurrency)?.total ?? 0,
+        balanceQ.data?.perCurrency?.find((c) => c.currency === chartCurrency)?.total ?? 0,
       );
+      const stats = computeMonthlyStats(statsQ.data?.rows ?? []);
+      if (stats.monthCount === 0) return undefined;
+      avgMonthlyIncome = stats.avgIncome;
+      avgMonthlySpend = -stats.avgSpend; // signed → positive magnitude
     } else {
+      // Single account: internal transfers move its balance, so derive the
+      // averages from its own balance deltas rather than the transfer-free
+      // category report. Full history — chartPoints is range-filtered.
       const acc = accounts.find((a) => a.id === chartScope);
       startBalance = Number(acc?.currentBalance ?? acc?.openingBalance ?? 0);
+      const scoped = (seriesQ.data?.points ?? []).filter((p) => p.account_id === chartScope);
+      const flows = monthlyFlowAverages(scoped, today);
+      if (!flows) return undefined;
+      avgMonthlyIncome = flows.avgIncome;
+      avgMonthlySpend = flows.avgSpend;
     }
-    const today = new Date().toISOString().slice(0, 10);
     // Cap at 180 days ahead so the overlay stays bounded regardless of
     // how the range picker was set.
     const HORIZON = 180;
-    const forecast = projectBalance({
+    // Drop index 0 (today) — the historical line already ends there.
+    return projectAverageBalance({
       startBalance,
-      series: rows,
+      avgMonthlyIncome,
+      avgMonthlySpend,
       horizonDays: HORIZON,
       startDate: today,
-    });
-    // Drop index 0 (today) — the historical line already ends there.
-    return forecast.slice(1).map((p) => ({ date: p.date, value: p.projectedBalance }));
-  }, [settings.showForecast, recurringQ.data, chartScope, chartCurrency, accounts, balanceQ.data]);
+    }).slice(1);
+  }, [settings.showForecast, statsQ.data, seriesQ.data, chartScope, chartCurrency, accounts, balanceQ.data]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -244,7 +263,7 @@ export function Dashboard(): JSX.Element {
             <div className="flex items-center gap-2 flex-wrap">
               <label
                 className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none"
-                title="Prolonge la courbe avec une projection en pointillé basée sur les séries récurrentes actives."
+                title={t('forecast.tooltip')}
               >
                 <input
                   type="checkbox"
@@ -252,7 +271,7 @@ export function Dashboard(): JSX.Element {
                   onChange={(e) => patchSettings({ showForecast: e.target.checked })}
                   className="accent-sage-500"
                 />
-                Voir la projection
+                {t('forecast.label')}
               </label>
               <AccountSelect
                 value={chartScope}

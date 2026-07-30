@@ -21,6 +21,10 @@
     "evolution": "Évolution · {{currency}}",
     "categoryBreakdown": "Répartition par catégorie"
   },
+  "forecast": {
+    "label": "Voir la projection",
+    "tooltip": "Prolonge la courbe avec une projection en pointillé basée sur vos moyennes mensuelles de revenus et de dépenses."
+  },
   "moyennes": {
     "title": "Moyennes mensuelles",
     "window_one": "— sur {{count}} mois glissant",

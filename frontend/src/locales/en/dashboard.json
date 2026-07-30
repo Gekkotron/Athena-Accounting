@@ -21,6 +21,10 @@
     "evolution": "Trend · {{currency}}",
     "categoryBreakdown": "Breakdown by category"
   },
+  "forecast": {
+    "label": "Show projection",
+    "tooltip": "Extends the curve with a dashed projection based on your average monthly income and spending."
+  },
   "moyennes": {
     "title": "Monthly averages",
     "window_one": "— over the last {{count}} month",
