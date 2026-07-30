@@ -141,6 +141,18 @@ describe('demo read handlers', () => {
     expect(Number(eur.total) - Number(eur.available)).toBeCloseTo(5000, 2);
   });
 
+  it('GET /api/settings merges app defaults over the demo seed', async () => {
+    // The seed stores only demo-specific keys (locale, currency,
+    // seedTodayForDemo). The handler must fill in the standard defaults the
+    // way the backend does — a partial payload leaves consumers like the
+    // Dashboard with dashboardChartScope === undefined, which blanks the
+    // Évolution chart's account scope and empties the graph.
+    const r = await api<{ settings: { dashboardChartScope: string; dashboardRange: string; locale: string } }>('/api/settings');
+    expect(r.settings.dashboardChartScope).toBe('all');
+    expect(r.settings.dashboardRange).toBe('3m');
+    expect(r.settings.locale).toBe('fr');
+  });
+
   it('GET /api/reports/timeseries', async () => {
     const r = await api<TimeseriesResp>('/api/reports/timeseries', { query: { granularity: 'day' } });
     expect(r.points.length).toBeGreaterThan(0);

@@ -1,10 +1,13 @@
+import { DEFAULTS } from '../../../../lib/settings';
 import { getState, setState, type DemoState } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
 
 function handleSettingsPatch(req: DemoRequest) {
   const patch = (req.body ?? {}) as Record<string, unknown>;
   setState((s) => { s.settings = { ...s.settings, ...patch }; });
-  return { settings: getState().settings };
+  // Same defaults merge as the GET handler — the response shape must stay
+  // full so optimistic cache updates don't reintroduce undefined keys.
+  return { settings: { ...DEFAULTS, ...getState().settings } };
 }
 
 // Full state envelope. In real mode the backend returns a versioned dump;
