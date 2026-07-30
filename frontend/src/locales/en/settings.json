@@ -41,6 +41,60 @@
       "tokenWarning": "This token will not be shown again — copy it now.",
       "tokenConfigHint": "Configure the MCP client with <1>ATHENA_MCP_USER</1> (your username) and<3> ATHENA_MCP_TOKEN</3>."
     },
+    "bankSync": {
+      "sectionLabel": "Bank sync",
+      "description": "Connect your banks through Enable Banking (PSD2) to import transactions automatically. Optional — OFX/CSV file import remains the baseline.",
+      "guide": "Create a free account at enablebanking.com, link your own bank accounts (restricted production mode), create an application with the redirect URL below, then paste its application ID and private key here. The key is encrypted and never leaves your server.",
+      "redirectUrlLabel": "Redirect URL to declare in your Enable Banking application:",
+      "applicationIdLabel": "Application ID",
+      "privateKeyLabel": "Private key (PEM)",
+      "privateKeyPlaceholder": "-----BEGIN PRIVATE KEY-----",
+      "saveButton": "Save credentials",
+      "saveSuccess": "Credentials validated with Enable Banking and saved.",
+      "configuredAs": "Configured application: {{id}}",
+      "deleteCredentials": "Delete credentials",
+      "deleteDialogTitle": "Delete credentials?",
+      "deleteDialogDescription": "Existing bank connections will stop syncing until new credentials are saved.",
+      "errors": {
+        "invalidKey": "Invalid private key — paste the full PEM file.",
+        "rejected": "Enable Banking rejected these credentials. Check the application ID and key.",
+        "generic": "Something went wrong. Try again."
+      },
+      "connect": {
+        "label": "Connect a bank",
+        "bankPlaceholder": "Pick a bank…",
+        "button": "Connect",
+        "hint": "You will be redirected to your bank to authorize read-only access (one mobile confirmation). Access stays valid for 90–180 days."
+      },
+      "connections": {
+        "label": "Connections",
+        "empty": "No bank connected yet.",
+        "connectedUntil": "Connected until {{date}}",
+        "reconnectBefore": "Reconnect required before {{date}}",
+        "reconnectRequired": "Reconnect required",
+        "reconnectButton": "Reconnect",
+        "syncButton": "Sync now",
+        "syncing": "Syncing…",
+        "disconnectButton": "Disconnect",
+        "disconnectDialogTitle": "Disconnect {{name}}?",
+        "disconnectDialogDescription": "Mapped accounts will stop syncing. Already-imported transactions are kept.",
+        "unmapped": "— Skip —",
+        "mappingLabel": "Athena account for",
+        "lastSynced": "Last sync: {{date}}",
+        "syncResult": "{{imported}} transaction(s) imported, {{deduped}} duplicate(s) skipped."
+      },
+      "callback": {
+        "title": "Bank connection",
+        "exchanging": "Finalizing the connection with your bank…",
+        "mappingTitle": "Map {{name}} accounts",
+        "mappingHelp": "Map each bank account to an Athena account. Accounts marked “Skip” won't sync — you can change this later in Settings.",
+        "save": "Save",
+        "skip": "Later",
+        "error": "The connection failed. Start the connection again from Settings.",
+        "noCode": "No authorization code in the URL — start the connection again from Settings.",
+        "backToSettings": "Back to settings"
+      }
+    },
     "reset": {
       "button": "Reset to defaults",
       "dialogTitle": "Reset settings?",

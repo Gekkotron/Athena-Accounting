@@ -69,6 +69,19 @@ export function registerStubHandlers(): void {
   registerHandler('POST',   '/api/settings/mcp/token', stub);
   registerHandler('DELETE', '/api/settings/mcp/token', stub);
 
+  // Bank sync (Enable Banking connector) — needs a real backend and per-user
+  // API credentials. Read stubs report the unconfigured state so the settings
+  // section renders its explanatory form harmlessly; every mutation is a
+  // proper demoStub 501.
+  registerHandler('GET',    '/api/bank-sync/status', () => ({ configured: false, applicationId: null }));
+  registerHandler('GET',    '/api/bank-sync/connections', () => ({ connections: [] }));
+  registerHandler('GET',    '/api/bank-sync/aspsps', stub);
+  registerHandler('PUT',    '/api/bank-sync/credentials', stub);
+  registerHandler('DELETE', '/api/bank-sync/credentials', stub);
+  registerHandler('POST',   '/api/bank-sync/connect', stub);
+  registerHandler('POST',   '/api/bank-sync/sessions', stub);
+  registerHandler('POST',   '/api/bank-sync/sync', stub);
+
   // Tips (per-page guided tours) — TipsContext posts to these on every
   // dismissal and rolls back optimistically on failure, so a plain 501
   // would keep the tour's popover stuck open. Storing dismissals

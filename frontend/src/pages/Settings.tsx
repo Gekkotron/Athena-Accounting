@@ -12,6 +12,7 @@ import { useTips } from '../contexts/TipsContext';
 import { LoadingBlock } from '../components/StateBlocks';
 import { NumberField, SavedChip } from './Settings-fields';
 import { SettingsSecurity } from './SettingsSecurity';
+import { SettingsBankSync } from './SettingsBankSync';
 
 export function Settings(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -231,6 +232,8 @@ export function Settings(): JSX.Element {
             </div>
           )}
         </section>
+
+        <SettingsBankSync accounts={accounts} />
 
         <SettingsSecurity />
 

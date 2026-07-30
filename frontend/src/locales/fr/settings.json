@@ -41,6 +41,60 @@
       "tokenWarning": "Ce jeton ne sera plus affiché — copiez-le maintenant.",
       "tokenConfigHint": "Configurez le client MCP avec <1>ATHENA_MCP_USER</1> (votre identifiant) et<3> ATHENA_MCP_TOKEN</3>."
     },
+    "bankSync": {
+      "sectionLabel": "Synchronisation bancaire",
+      "description": "Connectez vos banques via Enable Banking (PSD2) pour importer automatiquement vos transactions. Optionnel — l'import de fichiers OFX/CSV reste la méthode de base.",
+      "guide": "Créez un compte gratuit sur enablebanking.com, liez vos propres comptes bancaires (mode « restricted production »), créez une application avec l'URL de redirection ci-dessous, puis collez son identifiant et sa clé privée ici. La clé est chiffrée et ne quitte jamais votre serveur.",
+      "redirectUrlLabel": "URL de redirection à déclarer dans votre application Enable Banking :",
+      "applicationIdLabel": "Identifiant d'application",
+      "privateKeyLabel": "Clé privée (PEM)",
+      "privateKeyPlaceholder": "-----BEGIN PRIVATE KEY-----",
+      "saveButton": "Enregistrer les identifiants",
+      "saveSuccess": "Identifiants validés auprès d'Enable Banking et enregistrés.",
+      "configuredAs": "Application configurée : {{id}}",
+      "deleteCredentials": "Supprimer les identifiants",
+      "deleteDialogTitle": "Supprimer les identifiants ?",
+      "deleteDialogDescription": "Les connexions bancaires existantes cesseront de se synchroniser tant que de nouveaux identifiants ne seront pas enregistrés.",
+      "errors": {
+        "invalidKey": "Clé privée invalide — collez le fichier PEM complet.",
+        "rejected": "Enable Banking a refusé ces identifiants. Vérifiez l'identifiant d'application et la clé.",
+        "generic": "Une erreur est survenue. Réessayez."
+      },
+      "connect": {
+        "label": "Connecter une banque",
+        "bankPlaceholder": "Choisir une banque…",
+        "button": "Connecter",
+        "hint": "Vous serez redirigé vers votre banque pour autoriser l'accès en lecture seule (validation mobile unique). L'accès reste valable 90 à 180 jours."
+      },
+      "connections": {
+        "label": "Connexions",
+        "empty": "Aucune banque connectée pour l'instant.",
+        "connectedUntil": "Connecté jusqu'au {{date}}",
+        "reconnectBefore": "Reconnexion requise avant le {{date}}",
+        "reconnectRequired": "Reconnexion requise",
+        "reconnectButton": "Reconnecter",
+        "syncButton": "Synchroniser",
+        "syncing": "Synchronisation…",
+        "disconnectButton": "Déconnecter",
+        "disconnectDialogTitle": "Déconnecter {{name}} ?",
+        "disconnectDialogDescription": "Les comptes associés ne seront plus synchronisés. Les transactions déjà importées sont conservées.",
+        "unmapped": "— Ignorer —",
+        "mappingLabel": "Compte Athena pour",
+        "lastSynced": "Dernière synchro : {{date}}",
+        "syncResult": "{{imported}} transaction(s) importée(s), {{deduped}} doublon(s) ignoré(s)."
+      },
+      "callback": {
+        "title": "Connexion bancaire",
+        "exchanging": "Finalisation de la connexion avec votre banque…",
+        "mappingTitle": "Associer les comptes {{name}}",
+        "mappingHelp": "Associez chaque compte bancaire à un compte Athena. Les comptes marqués « Ignorer » ne seront pas synchronisés — vous pourrez changer cela dans les Réglages.",
+        "save": "Enregistrer",
+        "skip": "Plus tard",
+        "error": "La connexion a échoué. Relancez la connexion depuis les Réglages.",
+        "noCode": "Code d'autorisation absent de l'URL — relancez la connexion depuis les Réglages.",
+        "backToSettings": "Retour aux réglages"
+      }
+    },
     "reset": {
       "button": "Réinitialiser aux valeurs par défaut",
       "dialogTitle": "Réinitialiser les réglages ?",

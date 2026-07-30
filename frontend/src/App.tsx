@@ -28,6 +28,7 @@ import { PdfTemplates } from './pages/Data/PdfTemplates';
 import { Backup } from './pages/Data/Backup';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
+import { BankSyncCallback } from './pages/BankSyncCallback';
 
 export default function App() {
   const location = useLocation();
@@ -145,6 +146,7 @@ export default function App() {
 
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/bank-sync/callback" element={<BankSyncCallback />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
