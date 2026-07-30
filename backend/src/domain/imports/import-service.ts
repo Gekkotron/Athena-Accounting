@@ -15,7 +15,7 @@ import { firstMatch } from '../rules/matcher.js';
 import { detectTransfers } from '../transfers/detector.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 
-export type ImportFormat = 'ofx' | 'csv' | 'pdf';
+export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync';
 
 export interface ImportResult {
   fileImportId: number;
@@ -46,7 +46,9 @@ export async function resolveAccountFromFilename(userId: number, filename: strin
   return null;
 }
 
-export function inferFormat(filename: string): ImportFormat | null {
+// 'bank-sync' is excluded: it is not a file format — only the sync engine
+// passes it, always with `prepared` rows.
+export function inferFormat(filename: string): Exclude<ImportFormat, 'bank-sync'> | null {
   const ext = filename.toLowerCase().split('.').pop();
   if (ext === 'ofx' || ext === 'qfx') return 'ofx';
   if (ext === 'csv') return 'csv';

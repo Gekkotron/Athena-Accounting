@@ -17,6 +17,7 @@ import {
   deleteCredentials,
   getStatus,
 } from '../../domain/bank-sync/store.js';
+import { syncUserConnections } from '../../domain/imports/bank-sync.js';
 
 const CredentialsBody = z.object({
   applicationId: z.string().trim().min(1).max(200),
@@ -30,6 +31,10 @@ const ConnectBody = z.object({
 
 const SessionBody = z.object({
   code: z.string().trim().min(1).max(2_000),
+});
+
+const SyncBody = z.object({
+  connectionId: z.number().int().positive().optional(),
 });
 
 const MappingsBody = z.object({
@@ -260,6 +265,24 @@ export async function bankSyncRoutes(app: FastifyInstance): Promise<void> {
         currency: a.currency ?? null,
       })),
     });
+  });
+
+  // --- Sync ------------------------------------------------------------------
+
+  // Run the sync engine over all of the caller's connections (or a single
+  // one). Consent problems come back as per-connection needs_reconnect
+  // results, never as an error status for the whole request.
+  app.post('/api/bank-sync/sync', async (req, reply) => {
+    const uid = userId(req);
+    const parsed = SyncBody.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
+    }
+    const client = await clientFor(uid);
+    const results = await syncUserConnections(uid, client, {
+      ...(parsed.data.connectionId !== undefined ? { connectionId: parsed.data.connectionId } : {}),
+    });
+    return { results };
   });
 
   // --- Connections -----------------------------------------------------------

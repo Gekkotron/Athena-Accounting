@@ -50,7 +50,7 @@ export const transferDirectionEnum = pgEnum('transfer_direction', [
   'incoming',
 ]);
 
-export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf']);
+export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf', 'bank-sync']);
 
 export const recurringStatusEnum = pgEnum('recurring_status', [
   'detected',

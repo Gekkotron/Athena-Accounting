@@ -40,6 +40,10 @@ const Env = z
     // Tauri desktop sidecar; Docker Compose keeps nginx in front.
     SERVE_STATIC: boolish.optional(),
     STATIC_ROOT: z.string().optional(),
+    // Nightly unattended bank sync for users with Enable Banking credentials
+    // configured. On by default; set to 0/false to only sync on demand via
+    // POST /api/bank-sync/sync.
+    BANK_SYNC_AUTO: boolish.default(true),
   })
   .refine((v) => v.DB_DRIVER !== 'postgres' || !!v.DATABASE_URL, {
     message: 'DATABASE_URL is required when DB_DRIVER=postgres',
