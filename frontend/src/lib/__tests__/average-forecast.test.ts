@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { projectAverageBalance } from '../average-forecast';
+import { projectAverageBalance, monthlyFlowAverages } from '../average-forecast';
 
 describe('projectAverageBalance', () => {
   it('returns [] for a non-positive horizon', () => {
@@ -40,5 +40,60 @@ describe('projectAverageBalance', () => {
     const out = projectAverageBalance({ startBalance: 2000, avgMonthlyIncome: 3000, avgMonthlySpend: 2500, horizonDays: 31, startDate: '2026-07-31' });
     expect(out[31]!.date).toBe('2026-08-31');
     expect(out[31]!.value).toBeCloseTo(2500, 6); // 2000 + 3000 − 2500
+  });
+});
+
+function pt(bucket: string, delta: number): { bucket: string; delta: string } {
+  return { bucket, delta: delta.toFixed(2) };
+}
+
+describe('monthlyFlowAverages', () => {
+  it('returns null for an empty series', () => {
+    expect(monthlyFlowAverages([], '2026-07-30')).toBeNull();
+  });
+
+  it('returns null when the only month is the opening month', () => {
+    expect(monthlyFlowAverages([pt('2026-06-05', 1000)], '2026-07-30')).toBeNull();
+  });
+
+  it('excludes the opening month and the current month', () => {
+    const points = [
+      pt('2026-05-10', 5000), // opening balance folded here — must not count
+      pt('2026-06-01', 2000),
+      pt('2026-06-15', -800),
+      pt('2026-07-02', 9999), // current month — must not count
+    ];
+    const out = monthlyFlowAverages(points, '2026-07-30')!;
+    expect(out.monthCount).toBe(1);
+    expect(out.avgIncome).toBeCloseTo(2000, 6);
+    expect(out.avgSpend).toBeCloseTo(800, 6);
+  });
+
+  it('splits inflows and outflows within a month and averages across months', () => {
+    const points = [
+      pt('2026-03-01', 100), // opening month
+      pt('2026-04-01', 2000),
+      pt('2026-04-20', -500),
+      pt('2026-05-01', 1000),
+      pt('2026-05-20', -300),
+    ];
+    const out = monthlyFlowAverages(points, '2026-07-30')!;
+    expect(out.monthCount).toBe(2);
+    expect(out.avgIncome).toBeCloseTo(1500, 6); // (2000 + 1000) / 2
+    expect(out.avgSpend).toBeCloseTo(400, 6); // (500 + 300) / 2
+  });
+
+  it('caps the window at maxMonths (default 12) most recent eligible months', () => {
+    const points = [pt('2024-01-05', 100)]; // opening month
+    // 2024-02 .. 2026-06 — 29 eligible months, income i+1 € in month index i.
+    for (let i = 0; i < 29; i++) {
+      const y = 2024 + Math.floor((1 + i) / 12);
+      const m = ((1 + i) % 12) + 1;
+      points.push(pt(`${y}-${String(m).padStart(2, '0')}-10`, i + 1));
+    }
+    const out = monthlyFlowAverages(points, '2026-07-30')!;
+    expect(out.monthCount).toBe(12);
+    // Last 12 incomes are 18..29 → mean 23.5.
+    expect(out.avgIncome).toBeCloseTo(23.5, 6);
   });
 });
