@@ -61,6 +61,12 @@ a reference bucket (configuration, API, glossary).
   matching.
 - Folder or multi-file upload, processed sequentially with a per-file
   summary (inserted / skipped / needs-template / errored).
+- Scanned PDFs and photos of paper statements go through server-side OCR
+  (`tesseract.js`, fra+eng, LAN-only): rows come back editable, with
+  per-line confidence chips, before anything is imported.
+- Watch-folder imports: drop statements into a directory
+  (`WATCH_IMPORTS_DIR`) and they import themselves — subfolder-per-account
+  routing, idempotent `.imported` / `.failed` outcome renames.
 - Database-level deduplication on re-imports, plus an import audit trail
   and a "read but deduped" count in each import summary.
 
@@ -79,7 +85,22 @@ a reference bucket (configuration, API, glossary).
   on-the-fly rule generation from a keyword assignment.
 - Internal transfer detection: the two legs are linked (`transfer_group_id`)
   and excluded from income/expense aggregates.
-- Colour-coded category kinds (expense / income / neutral).
+- Rule preview: dry-run a draft rule against your history before saving
+  it — see exactly which past transactions each keyword would match.
+- Colour-coded category kinds (expense / income / neutral), with 2-level
+  sub-categories rolled up everywhere (`Parent › Leaf`).
+
+**Recurring & forecasting**
+
+- Automatic detection of recurring series (rent, salary, subscriptions)
+  from label + cadence clustering; confirm, dismiss, or tag each series
+  essential vs discretionary.
+- Upcoming-bills view with late-payment flags ("expected but not seen").
+- Balance forecast: project the curve to J+30/60/90/180 from confirmed
+  series — on a dedicated Prévision tab and as a dashboard chart
+  overlay, alongside a monthly-averages projection.
+- Price-creep alerts when a subscription drifts upward against its
+  trailing average.
 
 **Transactions**
 
@@ -89,11 +110,15 @@ a reference bucket (configuration, API, glossary).
   the parent amount by a deferrable DB trigger.
 - Bulk select + bulk delete, inline category edit, and a "possible
   duplicates" panel with a configurable similarity threshold.
+- Filtered CSV export (Excel-FR friendly: `;` separator, comma decimals,
+  UTF-8 BOM) of exactly the current filter — handy for tax season.
 
 **Accounts & dashboard**
 
 - Multi-currency, multi-account, with opening-balance discipline and
   drag-to-reorder.
+- Merge two accounts (atomic move of transactions, checkpoints, and
+  filename patterns onto the surviving account).
 - Locked money (PEA / dépôt à terme): the hero shows "Disponible" with a
   "+ X€ bloqués" tag until the lock matures.
 - Balance checkpoints: record an expected balance from a statement; the
@@ -101,13 +126,27 @@ a reference bucket (configuration, API, glossary).
   dotted line when the running total drifts by more than one cent.
 - Balance chart with a calendar X-axis, brush-to-zoom, and configurable
   dotted gap segments; category donut and account/range filters.
+- Insights panel (monthly income / expenses / savings / dominant
+  category, with a month stepper) and a Sankey cash-flow diagram from
+  income to expense categories.
 - Privacy mode blurs amounts after inactivity.
-- Optional per-category monthly budgets on a dedicated Budgets screen:
-  planned-vs-actual bar per expense category for a chosen month, red when over.
+
+**Budgets**
+
+- Monthly *or* yearly caps per category, optional per-account scope,
+  end-of-period projection, anomaly detection, cap suggestions, and
+  unbudgeted-candidate surfacing.
+- Envelope budgeting (zero-based allocation with rollover, holds, and
+  move-money reallocation) on a dedicated Enveloppes tab.
 
 **Data & settings**
 
-- Backup export / import (accounts, transactions, checkpoints, splits).
+- Backup export / import (accounts, transactions, checkpoints, splits,
+  budgets, rules) with optional passphrase encryption (AES-256-GCM +
+  scrypt) on export.
+- Optional encryption at rest for the database, enabled from the
+  Réglages security section — see
+  [docs/users/encryption-at-rest.md](docs/users/encryption-at-rest.md).
 - Per-user configurable defaults (dashboard range, chart account, chart
   gap threshold, duplicates similarity threshold) via the Réglages page.
 
@@ -212,12 +251,13 @@ Windows-1252 and UTF-8 are detected from the OFX header.
 
 ## Internal transfers
 
-Configure pairs of keywords in **Règles** → *(coming, transfer rules
-endpoint is `/api/transfer-rules` — UI page will appear in v2 if you
-need it)*. The importer annotates matching transactions, then looks for
-the mirror leg in the counterpart account within ±7 days. Found legs
-share a `transfer_group_id` and are excluded from income/expense
-aggregates.
+Transfer detection runs at import time: keyword rules
+(`/api/transfer-rules` — API-only today, no UI page yet) annotate
+matching transactions, then the importer looks for the mirror leg in
+the counterpart account within ±7 days. Found legs share a
+`transfer_group_id` and are excluded from income/expense aggregates.
+Independently, any category can be flagged *internal transfer* so the
+transactions it holds stay out of income/expense reports.
 
 ## Points de contrôle
 
@@ -307,6 +347,11 @@ valeur *par défaut*, passez par Réglages.
 | GET    | `/api/reports/budget`                 | Planned vs actual for a month.         |
 | GET PATCH | `/api/settings`                    | Per-user defaults (JSONB blob).        |
 
+The table above is the historical core. The full current surface —
+splits, budgets & envelopes, recurring, bank sync, backup, CSV export,
+balance checkpoints, MCP, and more — is documented endpoint-by-endpoint
+in [docs/reference/api-endpoints.md](docs/reference/api-endpoints.md).
+
 ## Migrations
 
 Hand-written SQL in `backend/src/db/migrations/*.sql`, applied in
@@ -387,6 +432,12 @@ for what's landed, [`STATUS.md`](STATUS.md) for the most recent work, and
 - [x] **Budgets v2** — monthly *or* yearly plafonds, optional per-account
       scope, end-of-period projection, anomaly detection, cap suggestions,
       unbudgeted-candidate surfacing.
+- [x] **Envelopes** — zero-based envelope budgeting with rollover, holds,
+      and move-money reallocation, alongside the caps model.
+- [x] **Recurring & forecasting** — recurring-series detection with
+      confirm/dismiss/essential, upcoming bills with late flags,
+      price-creep alerts, and balance projection (recurring-based +
+      monthly averages).
 - [x] **Distribution** — Docker family-server + Tauri desktop app
       (macOS/Windows/Linux) + browser-only demo, all from one codebase.
 - [x] **i18n** — English + French with browser detection (12 namespaces).
@@ -407,18 +458,14 @@ full brainstorm with per-item context.
 
 **Ergonomics** — small wins, high signal
 
-- `/transfer-rules` UI page (backend CRUD already exists)
-- Rule preview: show past transactions a rule *would have* matched before
-  saving it
+- `/transfer-rules` UI page (backend CRUD already exists and feeds the
+  import-time transfer detector)
 - Undo toast (~5 s) after a transaction or import deletion
 - Keyboard shortcuts on Transactions (`j`/`k` nav, `/` focus search,
   `e` edit, `d` delete)
 - Reorder rules by drag-and-drop (priority is already stored)
-- Merge two accounts (for duplicates created by mistake)
 - Auto-suggest a rule when N transactions get the same category from Tri
-- Export a filtered CSV (category × date range, for tax declarations)
-- Rename a PDF template inline; edit template zones without re-uploading
-  the source PDF
+- Edit PDF template zones without re-uploading the source PDF
 
 **Import surface expansion**
 
@@ -429,17 +476,13 @@ full brainstorm with per-item context.
 
 **Budgeting depth**
 
-- Envelope budgeting (Actual/YNAB-style zero-based allocation with
-  rollover) — larger posture shift vs. today's retrospective model,
-  spec required before implementation
 - Savings goals / tirelires (Firefly III-style) tied to an account, with
   progress bar and optional deadline
 
 **Detection & automation**
 
-- Recurring-transaction detection (Netflix, salaire, loyer) with
-  "expected this month but not seen" alerts
-- Scheduled / future transactions
+- Scheduled / future transactions materialised ahead of time (the
+  Prévision tab already projects, but nothing is written to the ledger)
 - Rule-driven auto-splits (e.g. Amazon → 70 % Livres / 30 % Électro)
 
 **Data richness**
