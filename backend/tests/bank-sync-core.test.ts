@@ -118,12 +118,23 @@ describe('firstSyncStart', () => {
   });
 
   it('starts the day after the newest existing transaction (no cross-source overlap)', () => {
-    expect(firstSyncStart('2026-07-05')).toBe('2026-07-06');
-    expect(firstSyncStart('2026-07-31')).toBe('2026-08-01');
-    expect(firstSyncStart('2026-12-31')).toBe('2027-01-01');
+    // Explicit todayIso far in the future so the future-date clamp stays out
+    // of the way of the pure day-arithmetic being tested here.
+    expect(firstSyncStart('2026-07-05', '2027-06-01')).toBe('2026-07-06');
+    expect(firstSyncStart('2026-07-31', '2027-06-01')).toBe('2026-08-01');
+    expect(firstSyncStart('2026-12-31', '2027-06-01')).toBe('2027-01-01');
   });
 
   it('accepts a date-time and truncates to the day', () => {
     expect(firstSyncStart('2026-07-05T10:00:00.000Z')).toBe('2026-07-06');
+  });
+
+  it('never produces a future date_from (Enable Banking rejects it with 422)', () => {
+    // Newest transaction dated today → tomorrow would be in the future.
+    expect(firstSyncStart('2026-07-30', '2026-07-30')).toBe('2026-07-30');
+    // Post-dated newest transaction → still clamped to today.
+    expect(firstSyncStart('2026-08-15', '2026-07-30')).toBe('2026-07-30');
+    // Ordinary past date is untouched.
+    expect(firstSyncStart('2026-07-05', '2026-07-30')).toBe('2026-07-06');
   });
 });

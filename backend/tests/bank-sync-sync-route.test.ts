@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { generateKeyPairSync } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { __setEbFetchForTests } from '../src/services/enable-banking/client.js';
 
 const RUN = !!process.env.RUN_DB_TESTS;
@@ -128,8 +129,9 @@ describe.skipIf(!RUN)('/api/bank-sync/sync', () => {
 
   afterAll(async () => {
     __setEbFetchForTests(null);
-    await db.delete(schema.bankConnections);
-    await db.delete(schema.bankSyncCredentials);
+    // User-scoped: the CI database is shared across suites.
+    await db.delete(schema.bankConnections).where(eq(schema.bankConnections.userId, uid));
+    await db.delete(schema.bankSyncCredentials).where(eq(schema.bankSyncCredentials.userId, uid));
     await app.close();
   });
 
@@ -167,7 +169,7 @@ describe.skipIf(!RUN)('/api/bank-sync/sync', () => {
   });
 
   it('records a bank-sync audit row in file_imports', async () => {
-    const rows = await db.select().from(schema.fileImports);
+    const rows = await db.select().from(schema.fileImports).where(eq(schema.fileImports.userId, uid));
     const bankSyncRows = rows.filter((r: { format: string }) => r.format === 'bank-sync');
     expect(bankSyncRows).toHaveLength(1);
     expect(bankSyncRows[0].filename).toContain('CIC');
@@ -296,8 +298,7 @@ describe.skipIf(!RUN)('/api/bank-sync/sync', () => {
   });
 
   it('deleting a bank-sync import batch resets the sync baseline', async () => {
-    const { eq } = await import('drizzle-orm');
-    const imports = await db.select().from(schema.fileImports);
+    const imports = await db.select().from(schema.fileImports).where(eq(schema.fileImports.userId, uid));
     const batch = imports.find((r: { format: string }) => r.format === 'bank-sync');
     expect(batch).toBeTruthy();
 

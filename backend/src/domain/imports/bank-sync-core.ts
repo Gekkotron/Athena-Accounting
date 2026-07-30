@@ -76,9 +76,17 @@ export function syncWindowStart(lastSyncedAt: Date | null): string | undefined {
 // same money), so re-fetching history that file imports already covered
 // creates real duplicates. Start the day after the newest existing
 // transaction; full history only when the account is empty.
-export function firstSyncStart(latestTxDate: string | null): string | undefined {
+export function firstSyncStart(
+  latestTxDate: string | null,
+  todayIso: string = new Date().toISOString().slice(0, 10),
+): string | undefined {
   if (!latestTxDate) return undefined;
   const next = new Date(`${latestTxDate.slice(0, 10)}T00:00:00Z`);
   next.setUTCDate(next.getUTCDate() + 1);
-  return next.toISOString().slice(0, 10);
+  const from = next.toISOString().slice(0, 10);
+  // A newest transaction dated today (or in the future — post-dated rows
+  // exist) would push date_from past today, which Enable Banking rejects
+  // with a 422. Clamp: same-day rows self-dedup when they came from a
+  // previous sync, which is the realistic case.
+  return from > todayIso ? todayIso : from;
 }

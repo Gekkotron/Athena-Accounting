@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { generateKeyPairSync } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { __setEbFetchForTests } from '../src/services/enable-banking/client.js';
 
 const RUN = !!process.env.RUN_DB_TESTS;
@@ -14,6 +15,7 @@ const APP_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 let app: FastifyInstance;
 let cookieA: string;
 let cookieB: string;
+let userAId: number;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any;
@@ -39,7 +41,7 @@ describe.skipIf(!RUN)('/api/bank-sync credentials', () => {
       ['bank-user-a', 'bank-sync-1234'],
       ['bank-user-b', 'bank-sync-5678'],
     ] as const) {
-      await app.inject({
+      const created = await app.inject({
         method: 'POST',
         url: '/api/onboarding/create',
         payload: { username: user, password: pass },
@@ -50,14 +52,20 @@ describe.skipIf(!RUN)('/api/bank-sync credentials', () => {
         payload: { username: user, password: pass },
       });
       const cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
-      if (user === 'bank-user-a') cookieA = cookie;
-      else cookieB = cookie;
+      if (user === 'bank-user-a') {
+        cookieA = cookie;
+        userAId = created.json().user.id;
+      } else {
+        cookieB = cookie;
+      }
     }
   });
 
   afterAll(async () => {
     __setEbFetchForTests(null);
-    await db.delete(schema.bankSyncCredentials);
+    // Scoped to this suite's user — on CI every suite shares one Postgres,
+    // so a global delete would sabotage sibling bank-sync suites mid-run.
+    await db.delete(schema.bankSyncCredentials).where(eq(schema.bankSyncCredentials.userId, userAId));
     await app.close();
   });
 
@@ -113,7 +121,12 @@ describe.skipIf(!RUN)('/api/bank-sync credentials', () => {
   });
 
   it('persists the key encrypted at rest, and the store round-trips it', async () => {
-    const rows = await db.select().from(schema.bankSyncCredentials);
+    // Scoped by user: other suites in the shared CI database also store
+    // credentials for their own users.
+    const rows = await db
+      .select()
+      .from(schema.bankSyncCredentials)
+      .where(eq(schema.bankSyncCredentials.userId, userAId));
     expect(rows).toHaveLength(1);
     expect(rows[0].privateKeyEncrypted).not.toContain('PRIVATE KEY');
     expect(rows[0].applicationId).toBe(APP_ID);
