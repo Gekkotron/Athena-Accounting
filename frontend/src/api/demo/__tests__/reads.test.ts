@@ -15,7 +15,7 @@ interface TxResp { transactions: Array<{
   id: number; accountId: number; date: string; amount: string;
   categoryId: number | null; runningBalance?: string;
 }>; pagination: { total: number; limit: number; offset: number } }
-interface BalanceResp { perCurrency: Array<{ currency: string; total: string; account_count: number }> }
+interface BalanceResp { perCurrency: Array<{ currency: string; total: string; available: string; invested: string; account_count: number }> }
 interface TimeseriesResp { points: Array<{ account_id: number; currency: string; bucket: string; delta: string; cumulative: string }> }
 interface CategoriesReportResp { rows: Array<{ category_id: number | null; month: string; total: string; transaction_count: number }> }
 interface BudgetReportResp { rows: Array<{ id: number; categoryId: number; spent: string; remaining: string; over: boolean }>; totals: { limit: string; spent: string } }
@@ -96,6 +96,49 @@ describe('demo read handlers', () => {
     expect(r.perCurrency).toHaveLength(1);
     expect(r.perCurrency[0].currency).toBe('EUR');
     expect(r.perCurrency[0].account_count).toBe(2);
+  });
+
+  it('GET /api/accounts excludes an active lockYears lock from availableBalance', async () => {
+    // Opened 2022-07-20 + 5-year lock → locked until 2027-07-20, still in the
+    // future at SEED_TODAY (2026-07-18). Mirrors backend accounts/list.ts.
+    await api('/api/accounts', {
+      method: 'POST',
+      json: { name: 'PEA', type: 'investment', currency: 'EUR', openingBalance: '5000.00', openingDate: '2022-07-20', lockYears: 5 },
+    });
+    const r = await api<AccountsResp>('/api/accounts');
+    const pea = r.accounts.find((a) => a.name === 'PEA')!;
+    expect(pea.currentBalance).toBe('5000.00');
+    expect(pea.availableBalance).toBe('0.00');
+  });
+
+  it('GET /api/accounts frees the balance once the lock has expired', async () => {
+    // Opened 2020-01-01 + 5-year lock → unlocked since 2025-01-01 < SEED_TODAY.
+    await api('/api/accounts', {
+      method: 'POST',
+      json: { name: 'Vieux PEL', type: 'savings', currency: 'EUR', openingBalance: '3000.00', openingDate: '2020-01-01', lockYears: 5 },
+    });
+    const r = await api<AccountsResp>('/api/accounts');
+    const pel = r.accounts.find((a) => a.name === 'Vieux PEL')!;
+    expect(pel.availableBalance).toBe(pel.currentBalance);
+  });
+
+  it('GET /api/reports/balance: invested = available part of investment accounts only', async () => {
+    // Locked PEA (blocked, so not counted as invested) + unlocked LEP
+    // (investment → invested). The seeded savings account must NOT count as
+    // invested. Mirrors backend reports/balance.ts.
+    await api('/api/accounts', {
+      method: 'POST',
+      json: { name: 'PEA', type: 'investment', currency: 'EUR', openingBalance: '5000.00', openingDate: '2022-07-20', lockYears: 5 },
+    });
+    await api('/api/accounts', {
+      method: 'POST',
+      json: { name: 'LEP', type: 'investment', currency: 'EUR', openingBalance: '10000.00', openingDate: '2026-07-01' },
+    });
+    const r = await api<BalanceResp>('/api/reports/balance');
+    const eur = r.perCurrency[0];
+    expect(eur.invested).toBe('10000.00');
+    // blocked (total - available) is exactly the locked PEA balance.
+    expect(Number(eur.total) - Number(eur.available)).toBeCloseTo(5000, 2);
   });
 
   it('GET /api/reports/timeseries', async () => {

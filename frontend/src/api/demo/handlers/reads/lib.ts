@@ -59,21 +59,46 @@ export function nextDueFrom(lastSeen: string, cadenceDays: number, today: string
   return next;
 }
 
+// Add years to an ISO YYYY-MM-DD, clamping to the target month's last day
+// (Feb 29 + 1 year → Feb 28) the way Postgres `date + interval 'N years'`
+// does — the backend lock computations use that operator.
+export function addYearsIso(iso: string, years: number): string {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  const target = y + years;
+  const lastDay = new Date(Date.UTC(target, m, 0)).getUTCDate();
+  const pad = (n: number) => (n < 10 ? '0' + n : String(n));
+  return `${target}-${pad(m)}-${pad(Math.min(d, lastDay))}`;
+}
+
 // Enrich an account row with computed currentBalance (opening + counted
 // deltas), transactionCount (raw), countedTransactionCount (post-openingDate),
-// and availableBalance (mirrors currentBalance in demo — no held-until
-// distinction).
+// and availableBalance. The available/blocked decomposition mirrors the
+// backend (accounts/list.ts): the opening balance is available iff the
+// account-level lock is absent or expired; each transaction follows its own
+// lockYears when set, else the account's.
 export function enrichAccount(acc: Account, allTx: Transaction[]): Account {
   const opening = Number(acc.openingBalance);
   const mine = allTx.filter((t) => t.accountId === acc.id);
   const counted = mine.filter((t) => t.date >= acc.openingDate);
   const currentBalance = counted.reduce((s, t) => s + Number(t.amount), opening);
+  const today = todayIso();
+  const accountUnlocked =
+    acc.lockYears == null || addYearsIso(acc.openingDate, acc.lockYears) <= today;
+  const availableBalance = counted.reduce(
+    (s, t) => {
+      const unlocked = t.lockYears != null
+        ? addYearsIso(t.date, t.lockYears) <= today
+        : accountUnlocked;
+      return unlocked ? s + Number(t.amount) : s;
+    },
+    accountUnlocked ? opening : 0,
+  );
   return {
     ...acc,
     currentBalance: money(currentBalance),
     transactionCount: mine.length,
     countedTransactionCount: counted.length,
-    availableBalance: money(currentBalance),
+    availableBalance: money(availableBalance),
   };
 }
 

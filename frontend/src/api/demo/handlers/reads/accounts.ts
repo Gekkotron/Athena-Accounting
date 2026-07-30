@@ -27,8 +27,10 @@ function handleReportsBalance() {
     const bucket = byCurrency.get(cur) ?? { currency: cur, total: 0, available: 0, invested: 0, account_count: 0 };
     bucket.total += Number(a.currentBalance ?? 0);
     bucket.available += Number(a.availableBalance ?? 0);
-    if (a.type === 'savings' || a.type === 'investment') {
-      bucket.invested += Number(a.currentBalance ?? 0);
+    // Mirrors backend reports/balance.ts: invested is the available part of
+    // investment-type accounts only (their locked part counts as blocked).
+    if (a.type === 'investment') {
+      bucket.invested += Number(a.availableBalance ?? 0);
     }
     bucket.account_count += 1;
     byCurrency.set(cur, bucket);
