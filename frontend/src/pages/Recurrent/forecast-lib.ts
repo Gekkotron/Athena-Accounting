@@ -1,4 +1,5 @@
 import type { RecurringSeries } from '../../api/types';
+import { toLocalIso, todayLocalIso } from '../../lib/dates';
 
 export type Horizon = 30 | 60 | 90 | 180;
 export const HORIZONS: Horizon[] = [30, 60, 90, 180];
@@ -6,18 +7,14 @@ export const HORIZONS: Horizon[] = [30, 60, 90, 180];
 // Historical window shown on the chart before the projection kicks in.
 export const HISTORICAL_WINDOW_DAYS = 90;
 
+// Local calendar day — a UTC day would start the projection on tomorrow's
+// date for evening users east of Greenwich.
 export function todayIso(): string {
-  const d = new Date();
-  const pad = (n: number) => (n < 10 ? '0' + n : String(n));
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+  return todayLocalIso();
 }
 
 export function isoDaysAgo(days: number): string {
-  const d = new Date();
-  const t = d.getTime() - days * 86_400_000;
-  const dt = new Date(t);
-  const pad = (n: number) => (n < 10 ? '0' + n : String(n));
-  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+  return toLocalIso(new Date(Date.now() - days * 86_400_000));
 }
 
 // Series feeding the projection counter. `activeSeries` is already

@@ -2,6 +2,7 @@ import type { Account, Transaction } from '../../../types';
 import { getState, setState } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
 import { nextId } from './lib';
+import { todayLocalIso } from '../../../../lib/dates';
 
 interface AccountCreateBody {
   name: string;
@@ -21,7 +22,7 @@ function handleAccountCreate(req: DemoRequest) {
     type: body.type ?? 'checking',
     currency: body.currency ?? 'EUR',
     openingBalance: body.openingBalance ?? '0.00',
-    openingDate: body.openingDate ?? new Date().toISOString().slice(0, 10),
+    openingDate: body.openingDate ?? todayLocalIso(),
     displayOrder: body.displayOrder ?? getState().accounts.length,
     lockYears: body.lockYears ?? null,
     createdAt: new Date().toISOString(),

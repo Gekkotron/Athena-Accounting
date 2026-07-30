@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseDecimal } from '../../lib/format';
+import { todayLocalIso } from '../../lib/dates';
 import { InfoTip } from '../../components/InfoTip';
 
 const ACCOUNT_TYPES = ['checking', 'savings', 'investment', 'credit', 'other'] as const;
@@ -151,7 +152,7 @@ export function AccountForm({
   const [currency, setCurrency] = useState(initial?.currency ?? 'EUR');
   const [openingBalance, setOpeningBalance] = useState(initial?.openingBalance ?? '0.00');
   const [openingDate, setOpeningDate] = useState(
-    initial?.openingDate ?? new Date().toISOString().slice(0, 10)
+    initial?.openingDate ?? todayLocalIso()
   );
   const [lockYearsInput, setLockYearsInput] = useState(
     initial?.lockYears == null ? '' : String(initial.lockYears),

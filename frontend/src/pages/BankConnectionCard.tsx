@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { Account } from '../api/types';
 import { formatDate } from '../lib/format';
+import { todayLocalIso } from '../lib/dates';
 import {
   bankAccountLabel,
   connectionChipState,
@@ -32,7 +33,7 @@ export function BankConnectionCard({
   onMap: (bankAccountUid: string, accountId: number | null) => void;
 }): JSX.Element {
   const { t } = useTranslation('settings');
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayLocalIso();
   const chip = connectionChipState(conn.status, conn.validUntil, todayIso);
 
   return (

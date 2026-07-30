@@ -1,5 +1,6 @@
 import type { Account, Category, Transaction } from '../../../types';
 import { getState, type DemoState } from '../../store';
+import { todayLocalIso } from '../../../../lib/dates';
 
 // Amounts are stored as fixed-point strings; conversion to Number for
 // aggregation is safe within the demo's small dataset. When emitting a
@@ -44,7 +45,7 @@ export function todayIso(): string {
   // views render with the same anchor the transaction seed uses.
   const state = getState();
   const s = state.settings as { seedTodayForDemo?: string };
-  return s.seedTodayForDemo ?? new Date().toISOString().slice(0, 10);
+  return s.seedTodayForDemo ?? todayLocalIso();
 }
 
 // Recompute next_due_at at read time when ?upcoming=N is set. Walks forward

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { todayLocalIso } from '../../lib/dates';
 
 interface BackupResult {
   imported: {
@@ -64,7 +65,7 @@ export function BackupPanel(): JSX.Element {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocalIso();
       a.download = `athena-backup-${today}.enc.json`;
       document.body.appendChild(a);
       a.click();

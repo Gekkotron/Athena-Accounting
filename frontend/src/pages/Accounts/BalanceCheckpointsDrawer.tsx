@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client';
 import { listCheckpoints, createCheckpoint, updateCheckpoint, deleteCheckpoint } from '../../api/checkpoints';
 import type { BalanceCheckpoint } from '../../api/types';
 import { parseDecimal } from '../../lib/format';
+import { todayLocalIso } from '../../lib/dates';
 import { CheckpointRow } from './CheckpointRow';
 
 // Translate a checkpoint-endpoint error into an actionable, localized
@@ -76,7 +77,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
     queryFn: () => listCheckpoints(accountId),
   });
 
-  const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newDate, setNewDate] = useState(todayLocalIso());
   const [newAmount, setNewAmount] = useState('');
   const [newNote, setNewNote] = useState('');
   const [mutationError, setMutationError] = useState<string | null>(null);

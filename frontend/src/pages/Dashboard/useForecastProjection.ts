@@ -8,6 +8,7 @@ import {
   type AverageProjectionPoint,
 } from '../../lib/average-forecast';
 import { computeMonthlyStats } from './monthly-stats';
+import { todayLocalIso } from '../../lib/dates';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 
 export interface ForecastProjection {
@@ -54,7 +55,7 @@ export function useForecastProjection({
 
   return useMemo(() => {
     if (!enabled) return undefined;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalIso();
     // Anchor the projection to today's total for the current scope.
     let startBalance: number;
     let avgMonthlyIncome: number;
