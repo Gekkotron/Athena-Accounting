@@ -17,6 +17,8 @@ L'import est le cœur d'Athena. Cette page couvre tous les formats acceptés, l'
 
 Vous pouvez déposer un **fichier unique**, **plusieurs fichiers d'un coup**, ou **un dossier entier**. Les fichiers sont traités séquentiellement et chacun reçoit son propre résumé sur une ligne : insérés / sautés / modèle-requis / en erreur.
 
+Vous préférez vous passer de fichiers ? La [synchronisation bancaire](./bank-sync.md) peut récupérer les transactions directement auprès de votre banque, via le même pipeline d'import.
+
 ## Avant d'importer
 
 Créez d'abord le compte de destination (*Comptes → Ajouter*). Le solde d'ouverture et la date d'ouverture sont obligatoires — chaque solde affiché est calculé comme `solde_ouverture + SUM(montant WHERE date >= date_ouverture)`.

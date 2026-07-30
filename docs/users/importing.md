@@ -22,6 +22,9 @@ You can drop a **single file**, **several files at once**, or **a
 whole folder**. Files are processed sequentially and each one gets its
 own one-line summary: inserted / skipped / needs-template / errored.
 
+Prefer no files at all? [Bank sync](./bank-sync.md) can pull
+transactions directly from your bank through the same import pipeline.
+
 ## Before you import
 
 Create the destination account first (*Accounts → Add*). The
