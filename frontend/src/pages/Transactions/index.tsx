@@ -19,6 +19,8 @@ import { parseAmountQuery } from './parseAmountQuery';
 import { BulkSelectionBar } from './BulkSelectionBar';
 import { buildExportUrl, readIntParam, sortCategoriesForPicker, toggleInSet } from './lib';
 import { useCheckpoints } from './useCheckpoints';
+import { useDeferredDelete } from './useDeferredDelete';
+import { UndoToast } from './UndoToast';
 import { ErrorState } from '../../components/StateBlocks';
 import { useSettings } from '../../lib/useSettings';
 
@@ -153,7 +155,13 @@ export function Transactions() {
     () => sortCategoriesForPicker(categories, catById),
     [categories, catById],
   );
+  const deferredDelete = useDeferredDelete();
   const txs = txQ.data?.transactions ?? [];
+  // Rows sitting in the undo window read as already deleted.
+  const visibleTxs = useMemo(
+    () => txs.filter((tx) => !deferredDelete.hiddenIds.has(tx.id)),
+    [txs, deferredDelete.hiddenIds],
+  );
   const total = txQ.data?.pagination.total ?? 0;
 
   const accountById = new Map(accounts.map((a) => [a.id, a] as const));
@@ -252,7 +260,7 @@ export function Transactions() {
         />
       ) : (
         <TransactionsTable
-          transactions={txs}
+          transactions={visibleTxs}
           categories={categories}
           accountById={accountById}
           checkpointByDate={checkpointByDate}
@@ -267,7 +275,7 @@ export function Transactions() {
           onToggleSelectAll={(checked) => {
             setSelectedIds((s) => {
               let next = s;
-              for (const t of txs) next = toggleInSet(next, t.id, checked);
+              for (const t of visibleTxs) next = toggleInSet(next, t.id, checked);
               return next;
             });
           }}
@@ -305,7 +313,12 @@ export function Transactions() {
         deletingTx={deletingTx}
         deleteError={deleteError}
         isDeleting={deleteTransaction.isPending}
-        onConfirmDelete={() => deletingTx && deleteTransaction.mutate(deletingTx.id)}
+        onConfirmDelete={() => {
+          if (!deletingTx) return;
+          const id = deletingTx.id;
+          setDeletingTx(null);
+          deferredDelete.begin([id], 'single', () => deleteTransaction.mutate(id));
+        }}
         onCancelDelete={() => {
           setDeletingTx(null);
           setDeleteError(null);
@@ -314,12 +327,29 @@ export function Transactions() {
         bulkDeleteCount={selectedIds.size}
         bulkDeleteError={bulkDeleteError}
         isBulkDeleting={bulkDelete.isPending}
-        onConfirmBulkDelete={() => bulkDelete.mutate(Array.from(selectedIds))}
+        onConfirmBulkDelete={() => {
+          const ids = Array.from(selectedIds);
+          setConfirmBulkDelete(false);
+          setSelectedIds(new Set());
+          deferredDelete.begin(ids, 'bulk', () => bulkDelete.mutate(ids));
+        }}
         onCancelBulkDelete={() => {
           setConfirmBulkDelete(false);
           setBulkDeleteError(null);
         }}
       />
+
+      {deferredDelete.pending && (
+        <UndoToast
+          label={
+            deferredDelete.pending.kind === 'single'
+              ? t('undo.deletedSingle')
+              : t('undo.deletedBulk', { count: deferredDelete.pending.ids.length })
+          }
+          actionLabel={t('undo.action')}
+          onUndo={deferredDelete.undo}
+        />
+      )}
     </div>
   );
 }

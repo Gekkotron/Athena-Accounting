@@ -157,5 +157,11 @@
       "removeSplit": "Supprimer la ventilation",
       "removeLine": "Retirer cette ligne"
     }
+  },
+  "undo": {
+    "deletedSingle": "Transaction supprimée",
+    "deletedBulk_one": "{{count}} transaction supprimée",
+    "deletedBulk_other": "{{count}} transactions supprimées",
+    "action": "Annuler"
   }
 }

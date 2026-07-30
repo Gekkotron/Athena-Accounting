@@ -157,5 +157,11 @@
       "removeSplit": "Remove the split",
       "removeLine": "Remove this line"
     }
+  },
+  "undo": {
+    "deletedSingle": "Transaction deleted",
+    "deletedBulk_one": "{{count}} transaction deleted",
+    "deletedBulk_other": "{{count}} transactions deleted",
+    "action": "Undo"
   }
 }
