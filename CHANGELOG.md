@@ -13,6 +13,11 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 ## [Unreleased]
 
 ### Added
+- Synchronisation bancaire optionnelle via Enable Banking (identifiants
+  personnels, lecture seule) : onglet *Données → Synchronisation
+  bancaire*, synchro nocturne désactivable (`BANK_SYNC_AUTO=0`), même
+  pipeline que les imports de fichiers (déduplication, règles,
+  virements, récurrences). Voir `docs/users/bank-sync.md`.
 - Publication d'une release GitHub à partir d'un tag `vX.Y.Z`
   (`.github/workflows/release.yml`), avec extraction automatique
   des notes depuis ce fichier.

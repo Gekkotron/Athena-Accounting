@@ -64,6 +64,13 @@ a reference bucket (configuration, API, glossary).
 - Database-level deduplication on re-imports, plus an import audit trail
   and a "read but deduped" count in each import summary.
 
+**Bank sync (optional)**
+
+- Pull transactions straight from your bank via
+  [Enable Banking](https://enablebanking.com), with your own free
+  credentials — read-only, pass-through, nothing stored outside your
+  machine. See [docs/users/bank-sync.md](docs/users/bank-sync.md).
+
 **Categorisation**
 
 - Configurable rule engine with sign guards and accent/case-insensitive
@@ -388,6 +395,9 @@ for what's landed, [`STATUS.md`](STATUS.md) for the most recent work, and
       scripted round-trip drill, backup docs per OS.
 - [x] **Trust polish** — LICENSE (MIT), SECURITY, CONTRIBUTING, CoC,
       restyled docs site, screenshotted user walkthroughs.
+- [x] **Bank sync** — optional Enable Banking pull with your own
+      credentials, nightly scheduler, consent lifecycle, same import
+      pipeline as files ([docs](docs/users/bank-sync.md)).
 
 ### Possible next steps (v2)
 
@@ -470,9 +480,13 @@ full brainstorm with per-item context.
 To keep expectations honest — these are deliberate scope choices, not
 oversights.
 
-- **Bank sync via cloud aggregators** (GoCardless, SimpleFIN, Nordigen,
-  Plaid). All of them route data through a third-party cloud, which
-  breaks the LAN-only guarantee. Import files instead.
+- **Bank sync through credential-holding cloud aggregators**
+  (GoCardless, SimpleFIN, Plaid). Athena does ship an optional
+  [bank sync](docs/users/bank-sync.md), but only as a
+  bring-your-own-credentials pass-through (Enable Banking): you own the
+  application keys, access is read-only, and no third party stores your
+  transactions. Anything that parks your bank data or credentials in
+  someone else's cloud stays out.
 - **Multi-device sync via a hosted server.** Every browser on your LAN
   already talks to the same self-hosted Athena; there's no per-device
   local state to reconcile.

@@ -15,6 +15,7 @@ Vous avez installé Athena (ou vous prévoyez de le faire) et vous voulez le com
 
 - **[Démarrage](users/getting-started.md)** — installation, onboarding initial, vos dix premières minutes.
 - **[Importer](users/importing.md)** — relevés bancaires OFX, CSV français et PDF, incluant l'assistant interactif de modèles.
+- **[Synchronisation bancaire](users/bank-sync.md)** — récupération automatique optionnelle des transactions via Enable Banking, avec vos propres identifiants.
 - **[Catégorisation](users/categorization.md)** — règles, onglet Tri, détection des virements internes.
 - **[Tableau de bord](users/dashboard.md)** — courbe du solde, donut par catégorie, insights, Sankey, budgets.
 - **[Comptes et données](users/accounts-and-data.md)** — multi-comptes, points de contrôle du solde, argent bloqué, sauvegardes.
