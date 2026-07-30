@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { Account } from '../api/types';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SettingsBankSyncCredentials } from './SettingsBankSyncCredentials';
 import { BankConnectionCard } from './BankConnectionCard';
 import {
+  consentRedirectUrl,
   extractAuthCode,
   type BankConnection,
   type BankSyncStatus,
@@ -57,7 +58,16 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
     onSuccess: ({ url }) => {
       window.location.assign(url);
     },
-    onError: () => setConnectError(t('settings.bankSync.errors.generic')),
+    onError: (err) => {
+      // Surface the Enable Banking status when we have it — "generic error"
+      // is undiagnosable from a screenshot.
+      const upstream =
+        err instanceof ApiError &&
+        typeof (err.data as { upstreamStatus?: unknown } | null)?.upstreamStatus === 'number'
+          ? ` (Enable Banking HTTP ${(err.data as { upstreamStatus: number }).upstreamStatus})`
+          : '';
+      setConnectError(t('settings.bankSync.errors.generic') + upstream);
+    },
   });
 
   // --- Manual consent finalization --------------------------------------------
@@ -126,7 +136,7 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bank-sync-connections'] }),
   });
 
-  const redirectUrl = `${window.location.origin}/bank-sync/callback`;
+  const redirectUrl = consentRedirectUrl(window.location.origin);
 
   return (
     <section data-testid="bank-sync-section" className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">

@@ -59,6 +59,17 @@ export function connectionChipState(
   return 'ok';
 }
 
+// Mirror of the backend's redirect-URL logic (http/routes/bank-sync.ts):
+// Enable Banking's Control Panel refuses plain http:// except localhost, so
+// the URL we display for whitelisting — and the one the backend requests —
+// is the https twin of a plain-http LAN origin.
+export function consentRedirectUrl(origin: string): string {
+  const url = new URL(origin);
+  const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  const scheme = url.protocol === 'http:' && !isLocal ? 'https:' : url.protocol;
+  return `${scheme}//${url.host}/bank-sync/callback`;
+}
+
 // Manual consent finalization: the bank's redirect can land on an
 // unreachable page (e.g. the whitelisted URL doesn't match the address the
 // user browses Athena at) — the authorization code is still in that page's

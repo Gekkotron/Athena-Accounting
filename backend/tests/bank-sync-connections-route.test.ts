@@ -150,6 +150,34 @@ describe.skipIf(!RUN)('/api/bank-sync connections', () => {
     expect(body.psu_type).toBe('personal');
   });
 
+  it('requests the https twin of a plain-http LAN origin as redirect_url', async () => {
+    // Enable Banking's Control Panel refuses whitelisting http:// (except
+    // localhost), so the whitelist necessarily holds the https twin and the
+    // requested redirect_url must byte-match it.
+    ebRoutes([['/auth', 200, { url: 'https://bank.example/consent' }]]);
+    await app.inject({
+      method: 'POST',
+      url: '/api/bank-sync/connect',
+      headers: { cookie: cookieA, origin: 'http://192.168.1.91:8000' },
+      payload: { aspspName: 'CIC' },
+    });
+    expect(JSON.parse(String(calls[0]!.init?.body)).redirect_url).toBe(
+      'https://192.168.1.91:8000/bank-sync/callback',
+    );
+
+    // localhost keeps plain http — panels accept it and the redirect works.
+    ebRoutes([['/auth', 200, { url: 'https://bank.example/consent' }]]);
+    await app.inject({
+      method: 'POST',
+      url: '/api/bank-sync/connect',
+      headers: { cookie: cookieA, origin: 'http://localhost:8000' },
+      payload: { aspspName: 'CIC' },
+    });
+    expect(JSON.parse(String(calls[0]!.init?.body)).redirect_url).toBe(
+      'http://localhost:8000/bank-sync/callback',
+    );
+  });
+
   it('exchanges the code, persists the connection and returns its accounts', async () => {
     ebRoutes([['/sessions', 200, SESSION_FIXTURE]]);
     const res = await app.inject({

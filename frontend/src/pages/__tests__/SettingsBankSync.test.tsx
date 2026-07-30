@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { SettingsBankSync } from '../SettingsBankSync';
-import { extractAuthCode } from '../SettingsBankSync-lib';
+import { consentRedirectUrl, extractAuthCode } from '../SettingsBankSync-lib';
 import type { Account } from '../../api/types';
 import { pinLocale } from '../../test/i18n';
 
@@ -65,6 +65,20 @@ function renderSection() {
 
 beforeEach(() => {
   apiMock.mockReset();
+});
+
+describe('consentRedirectUrl', () => {
+  it('upgrades a plain-http LAN origin to its https twin', () => {
+    expect(consentRedirectUrl('http://192.168.1.91:8000')).toBe(
+      'https://192.168.1.91:8000/bank-sync/callback',
+    );
+  });
+
+  it('keeps http for localhost and https as-is', () => {
+    expect(consentRedirectUrl('http://localhost:8000')).toBe('http://localhost:8000/bank-sync/callback');
+    expect(consentRedirectUrl('http://127.0.0.1:5173')).toBe('http://127.0.0.1:5173/bank-sync/callback');
+    expect(consentRedirectUrl('https://athena.example')).toBe('https://athena.example/bank-sync/callback');
+  });
 });
 
 describe('extractAuthCode', () => {
