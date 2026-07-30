@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -20,6 +20,7 @@ import { BulkSelectionBar } from './BulkSelectionBar';
 import { buildExportUrl, readIntParam, sortCategoriesForPicker, toggleInSet } from './lib';
 import { useCheckpoints } from './useCheckpoints';
 import { useDeferredDelete } from './useDeferredDelete';
+import { useTransactionShortcuts } from './useTransactionShortcuts';
 import { UndoToast } from './UndoToast';
 import { ErrorState } from '../../components/StateBlocks';
 import { useSettings } from '../../lib/useSettings';
@@ -166,6 +167,19 @@ export function Transactions() {
 
   const accountById = new Map(accounts.map((a) => [a.id, a] as const));
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { cursorId } = useTransactionShortcuts({
+    rows: visibleTxs,
+    // Inert while any modal/dialog is open — typing guards live in the hook.
+    disabled: modalTx !== undefined || deletingTx !== null || confirmBulkDelete,
+    onEdit: (tx) => setModalTx(tx),
+    onDelete: (tx) => {
+      setDeleteError(null);
+      setDeletingTx(tx);
+    },
+    focusSearch: () => searchInputRef.current?.focus(),
+  });
+
   const { checkpointByDate, onToggleCheckpoint } = useCheckpoints({
     accountId: filters.accountId,
     createCheckpointM,
@@ -216,6 +230,7 @@ export function Transactions() {
             setFilters((f) => ({ ...f, ...patch }));
           }}
           onSearchInputChange={onSearchChange}
+          searchInputRef={searchInputRef}
         />
       </div>
 
@@ -290,8 +305,11 @@ export function Transactions() {
           }}
           firstRowRef={rowAnchor}
           multiSelectRef={multiAnchor}
+          cursorId={cursorId}
         />
       )}
+
+      <p className="hidden md:block text-[11px] text-ink-600">{t('shortcutsHint')}</p>
 
       <TransactionsPagination
         total={total}

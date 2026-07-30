@@ -163,5 +163,6 @@
     "deletedBulk_one": "{{count}} transaction deleted",
     "deletedBulk_other": "{{count}} transactions deleted",
     "action": "Undo"
-  }
+  },
+  "shortcutsHint": "Shortcuts: j/k navigate · e edit · d delete · / search"
 }

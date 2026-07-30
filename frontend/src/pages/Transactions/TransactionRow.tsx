@@ -22,6 +22,8 @@ export type TransactionRowProps = {
   checkpoint: BalanceCheckpoint | undefined;
   checkpointPending: boolean;
   onToggleCheckpoint: (tx: Transaction, checked: boolean) => void;
+  // Visual keyboard cursor (j/k) — independent from checkbox selection.
+  cursor?: boolean;
 };
 
 export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProps>(
@@ -43,6 +45,7 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
       checkpoint,
       checkpointPending,
       onToggleCheckpoint,
+      cursor = false,
     },
     ref,
   ) {
@@ -71,7 +74,7 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
     : null;
   return (
     <>
-      <tr ref={ref} className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''}`}>
+      <tr ref={ref} className={`group border-b border-ink-800/40 last:border-0 hover:bg-ink-850/40 transition ${selected ? 'bg-sage-900/10' : ''} ${cursor ? 'ring-1 ring-inset ring-sage-700/60 bg-ink-850/60' : ''}`}>
         <td className="px-2 py-2.5 text-center">
           <input
             type="checkbox"

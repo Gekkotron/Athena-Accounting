@@ -29,6 +29,7 @@ export function TransactionsTable({
   onToggleCheckpoint,
   firstRowRef,
   multiSelectRef,
+  cursorId = null,
 }: {
   transactions: Transaction[];
   categories: Category[];
@@ -54,6 +55,8 @@ export function TransactionsTable({
   // can render the table without wiring the tour system.
   firstRowRef?: (el: HTMLTableRowElement | null) => void;
   multiSelectRef?: (el: HTMLElement | null) => void;
+  // Visual j/k keyboard cursor — highlights (not selects) one row.
+  cursorId?: number | null;
 }) {
   const { t } = useTranslation(['transactions', 'common']);
   const visibleSelected = transactions.filter((tx) => selectedIds.has(tx.id)).length;
@@ -117,6 +120,7 @@ export function TransactionsTable({
                   account={accountById.get(tx.accountId)}
                   categories={categories}
                   selected={selectedIds.has(tx.id)}
+                  cursor={tx.id === cursorId}
                   expanded={expandedIds.has(tx.id)}
                   showBalance={showBalance}
                   isEndOfDay={endOfDayIds.has(tx.id)}

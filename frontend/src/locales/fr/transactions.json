@@ -163,5 +163,6 @@
     "deletedBulk_one": "{{count}} transaction supprimée",
     "deletedBulk_other": "{{count}} transactions supprimées",
     "action": "Annuler"
-  }
+  },
+  "shortcutsHint": "Raccourcis : j/k naviguer · e modifier · d supprimer · / rechercher"
 }

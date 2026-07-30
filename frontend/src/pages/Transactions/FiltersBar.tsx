@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Account, Category } from '../../api/types';
 import type { Filters } from './filters';
@@ -13,6 +13,7 @@ export function FiltersBar({
   showAdvanced,
   onFilterChange,
   onSearchInputChange,
+  searchInputRef,
 }: {
   filters: Filters;
   searchInput: string;
@@ -22,6 +23,8 @@ export function FiltersBar({
   onToggleAdvanced: () => void;
   onFilterChange: (patch: Partial<Filters>) => void;
   onSearchInputChange: (value: string) => void;
+  // Lets the page's `/` shortcut focus the search field.
+  searchInputRef?: Ref<HTMLInputElement>;
 }) {
   const { t } = useTranslation('transactions');
   const byId = useMemo(
@@ -46,6 +49,7 @@ export function FiltersBar({
           <label className="label">{t('filters.labels.search')}</label>
           <div className="relative">
             <input
+              ref={searchInputRef}
               className="input pr-20"
               placeholder={t('filters.placeholders.search')}
               value={searchInput}
