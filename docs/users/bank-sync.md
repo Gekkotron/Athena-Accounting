@@ -107,6 +107,17 @@ path and bank sync is an optional layer on top.
 - **The bank isn't in the list** — the list shows French banks by
   default; check the bank exists in Enable Banking's
   [coverage](https://enablebanking.com/coverage/).
+- **"URL uses unsupported scheme" when whitelisting the redirect URL** —
+  the Enable Banking Control Panel refuses plain `http://` addresses.
+  Whitelist the `https://` twin of your Athena address (e.g.
+  `https://192.168.1.20:8080/bank-sync/callback`) — the panel never
+  contacts it, so it doesn't need to exist. After approving the consent,
+  the browser fails to load that `https://` page; the single-use code is
+  still in the address bar. Change `https` back to `http` there and press
+  Enter (you land on Athena's mapping page), or paste the full URL into
+  *"Finaliser manuellement"*. Alternatively `http://localhost:<port>/bank-sync/callback`
+  may be accepted — usable directly on the server or through an SSH
+  tunnel.
 - **The redirect never reaches Athena** (the whitelisted URL doesn't
   match the address you browse Athena at, or the Control Panel refused
   your LAN URL) — the authorization code is still in the final page's
