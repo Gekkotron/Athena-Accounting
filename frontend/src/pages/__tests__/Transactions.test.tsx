@@ -178,6 +178,12 @@ describe('Transactions page (characterization)', () => {
     await screen.findByText('Aucune transaction.');
 
     const accountSelect = fieldFor('Compte');
+    // The accounts query resolves independently of the transactions one the
+    // findByText above awaited — under a slow (CI/coverage) runner the
+    // options may not exist yet, so wait for them before selecting.
+    await waitFor(() => {
+      expect(accountSelect.querySelectorAll('option').length).toBeGreaterThan(1);
+    });
     await user.selectOptions(accountSelect, '2');
 
     await waitFor(() => {
