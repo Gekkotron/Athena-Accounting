@@ -602,3 +602,61 @@ export const bankSyncCredentials = pgTable('bank_sync_credentials', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// bank_connections — one row per authorized Enable Banking consent session
+// (migration 0029). The PSD2 consent expires at valid_until (90–180 days);
+// expiry or revocation flips status to 'needs_reconnect' so the UI can
+// prompt for re-authorization instead of surfacing errors.
+// ---------------------------------------------------------------------------
+
+export const bankConnectionStatusEnum = pgEnum('bank_connection_status', [
+  'active',
+  'needs_reconnect',
+]);
+
+export const bankConnections = pgTable(
+  'bank_connections',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id').notNull(),
+    aspspName: text('aspsp_name').notNull(),
+    aspspCountry: text('aspsp_country').notNull().default('FR'),
+    validUntil: date('valid_until').notNull(),
+    status: bankConnectionStatusEnum('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    idxUser: index('bank_connections_user_idx').on(t.userId),
+  }),
+);
+
+// Accounts returned by Enable Banking at session creation, plus the user's
+// mapping to an Athena account. account_id NULL = unmapped (sync skips it);
+// ON DELETE SET NULL keeps the connection alive when an account is removed.
+export const bankConnectionAccounts = pgTable(
+  'bank_connection_accounts',
+  {
+    id: serial('id').primaryKey(),
+    connectionId: integer('connection_id')
+      .notNull()
+      .references(() => bankConnections.id, { onDelete: 'cascade' }),
+    bankAccountUid: text('bank_account_uid').notNull(),
+    iban: text('iban'),
+    name: text('name'),
+    currency: text('currency'),
+    accountId: integer('account_id').references(() => accounts.id, { onDelete: 'set null' }),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  },
+  (t) => ({
+    uqConnectionUid: uniqueIndex('bank_connection_accounts_connection_uid_uq').on(
+      t.connectionId,
+      t.bankAccountUid,
+    ),
+    idxConnection: index('bank_connection_accounts_connection_idx').on(t.connectionId),
+  }),
+);
