@@ -1,13 +1,13 @@
+import { useTranslation } from 'react-i18next';
+import type { PendingDelete } from './useDeferredDelete';
+
 // Bottom-center toast shown while a deletion sits in its undo window.
-export function UndoToast({
-  label,
-  actionLabel,
-  onUndo,
-}: {
-  label: string;
-  actionLabel: string;
-  onUndo: () => void;
-}) {
+export function UndoToast({ pending, onUndo }: { pending: PendingDelete; onUndo: () => void }) {
+  const { t } = useTranslation('transactions');
+  const label =
+    pending.kind === 'single'
+      ? t('undo.deletedSingle')
+      : t('undo.deletedBulk', { count: pending.ids.length });
   return (
     <div
       role="status"
@@ -15,7 +15,7 @@ export function UndoToast({
     >
       <span className="text-sm text-ink-200">{label}</span>
       <button className="btn-secondary text-xs" onClick={onUndo}>
-        {actionLabel}
+        {t('undo.action')}
       </button>
     </div>
   );

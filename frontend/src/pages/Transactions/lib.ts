@@ -48,3 +48,10 @@ export function toggleInSet<T>(set: Set<T>, id: T, on: boolean): Set<T> {
   else next.delete(id);
   return next;
 }
+
+// Batch variant backing the header select-all checkbox.
+export function toggleAllInSet<T>(set: Set<T>, ids: T[], on: boolean): Set<T> {
+  let next = set;
+  for (const id of ids) next = toggleInSet(next, id, on);
+  return next;
+}

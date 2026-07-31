@@ -6,7 +6,7 @@ import { api } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
-import { TourReplayIcon } from '../../components/TourReplayIcon';
+import { TransactionsHeader } from './TransactionsHeader';
 import { TransactionsTable } from './TransactionsTable';
 import { FiltersBar } from './FiltersBar';
 import { TransactionModal } from './TransactionModal';
@@ -17,7 +17,7 @@ import { useTransactionsMutations } from './useTransactionsMutations';
 import { useDefaultAccountResolver } from './useDefaultAccountResolver';
 import { parseAmountQuery } from './parseAmountQuery';
 import { BulkSelectionBar } from './BulkSelectionBar';
-import { buildExportUrl, readIntParam, sortCategoriesForPicker, toggleInSet } from './lib';
+import { readIntParam, sortCategoriesForPicker, toggleAllInSet, toggleInSet } from './lib';
 import { useCheckpoints } from './useCheckpoints';
 import { useDeferredDelete } from './useDeferredDelete';
 import { useTransactionShortcuts } from './useTransactionShortcuts';
@@ -31,8 +31,7 @@ import type { Filters } from './filters';
 const PAGE = 50;
 
 export function Transactions() {
-  const { t, i18n } = useTranslation(['transactions', 'common']);
-  const locale = i18n.language.startsWith('en') ? 'en-US' : 'fr-FR';
+  const { t } = useTranslation(['transactions', 'common']);
   const [searchParams] = useSearchParams();
   // Pick up an optional ?accountId=… / ?sourceFileId=… from the URL so
   // links from Dashboard or Imports land on the right pre-filtered view.
@@ -157,7 +156,7 @@ export function Transactions() {
     [categories, catById],
   );
   const deferredDelete = useDeferredDelete();
-  const txs = txQ.data?.transactions ?? [];
+  const txs = useMemo(() => txQ.data?.transactions ?? [], [txQ.data]);
   // Rows sitting in the undo window read as already deleted.
   const visibleTxs = useMemo(
     () => txs.filter((tx) => !deferredDelete.hiddenIds.has(tx.id)),
@@ -189,33 +188,13 @@ export function Transactions() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="page-header">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="page-title">{t('title')}</h1>
-            <TourReplayIcon pageId="transactions" />
-          </div>
-          <p className="page-subtitle">
-            {t('subtitle', { count: total, formatted: total.toLocaleString(locale) })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn-secondary md:hidden" onClick={() => setShowFilters((s) => !s)}>
-            {showFilters ? t('filtersToggle.hide') : t('filtersToggle.show')}
-          </button>
-          {import.meta.env.VITE_DEMO !== '1' && (
-            <a className="btn-secondary" href={buildExportUrl(filters)} download>
-              {t('actions.exportCsv')}
-            </a>
-          )}
-          <button className="btn-primary" onClick={() => setModalTx(null)}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-              <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            {t('actions.newTransaction')}
-          </button>
-        </div>
-      </div>
+      <TransactionsHeader
+        total={total}
+        filters={filters}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters((s) => !s)}
+        onNewTransaction={() => setModalTx(null)}
+      />
 
       <div ref={searchAnchor}>
         <FiltersBar
@@ -287,13 +266,9 @@ export function Transactions() {
           setOffset={setOffset}
           selectedIds={selectedIds}
           onToggleSelect={(id, checked) => setSelectedIds((s) => toggleInSet(s, id, checked))}
-          onToggleSelectAll={(checked) => {
-            setSelectedIds((s) => {
-              let next = s;
-              for (const t of visibleTxs) next = toggleInSet(next, t.id, checked);
-              return next;
-            });
-          }}
+          onToggleSelectAll={(checked) =>
+            setSelectedIds((s) => toggleAllInSet(s, visibleTxs.map((tx) => tx.id), checked))
+          }
           onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
           onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
           expandedIds={expandedIds}
@@ -358,15 +333,7 @@ export function Transactions() {
       />
 
       {deferredDelete.pending && (
-        <UndoToast
-          label={
-            deferredDelete.pending.kind === 'single'
-              ? t('undo.deletedSingle')
-              : t('undo.deletedBulk', { count: deferredDelete.pending.ids.length })
-          }
-          actionLabel={t('undo.action')}
-          onUndo={deferredDelete.undo}
-        />
+        <UndoToast pending={deferredDelete.pending} onUndo={deferredDelete.undo} />
       )}
     </div>
   );

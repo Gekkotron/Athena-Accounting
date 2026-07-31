@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, render, screen } from '@testing-library/react';
 import { useDeferredDelete, UNDO_WINDOW_MS } from '../useDeferredDelete';
 import { UndoToast } from '../UndoToast';
+import { pinLocale } from '../../../test/i18n';
+
+// UndoToast renders French strings by default — preload the namespace so
+// useTranslation never suspends mid-render.
+pinLocale('transactions');
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -76,12 +81,21 @@ describe('useDeferredDelete', () => {
 });
 
 describe('UndoToast', () => {
-  it('renders the label and fires onUndo on click', () => {
+  it('renders the single-delete label and fires onUndo on click', () => {
     const onUndo = vi.fn();
-    render(<UndoToast label="Transaction supprimée" actionLabel="Annuler" onUndo={onUndo} />);
+    render(
+      <UndoToast pending={{ ids: [1], kind: 'single', execute: () => {} }} onUndo={onUndo} />,
+    );
 
     expect(screen.getByRole('status')).toHaveTextContent('Transaction supprimée');
     screen.getByRole('button', { name: 'Annuler' }).click();
     expect(onUndo).toHaveBeenCalled();
+  });
+
+  it('renders the plural bulk label', () => {
+    render(
+      <UndoToast pending={{ ids: [1, 2, 3], kind: 'bulk', execute: () => {} }} onUndo={() => {}} />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('3 transactions supprimées');
   });
 });

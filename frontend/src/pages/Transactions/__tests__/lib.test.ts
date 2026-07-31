@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildExportUrl, readIntParam, truncate, sortCategoriesForPicker, toggleInSet } from '../lib';
+import { buildExportUrl, readIntParam, truncate, sortCategoriesForPicker, toggleAllInSet, toggleInSet } from '../lib';
 import type { Category } from '../../../api/types';
 import type { Filters } from '../filters';
 
@@ -125,5 +125,22 @@ describe('toggleInSet', () => {
     const next = toggleInSet(src, 2, true);
     src.add(99);
     expect(next.has(99)).toBe(false);
+  });
+});
+
+describe('toggleAllInSet', () => {
+  it('adds every id when on=true, preserving existing members', () => {
+    const next = toggleAllInSet(new Set([1]), [2, 3], true);
+    expect([...next].sort()).toEqual([1, 2, 3]);
+  });
+
+  it('removes every id when on=false and leaves others untouched', () => {
+    const next = toggleAllInSet(new Set([1, 2, 3]), [1, 3], false);
+    expect([...next]).toEqual([2]);
+  });
+
+  it('returns the original set unchanged when ids is empty', () => {
+    const src = new Set([1]);
+    expect(toggleAllInSet(src, [], true)).toBe(src);
   });
 });
