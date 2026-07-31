@@ -207,6 +207,51 @@ jobs:
           path: ${{ steps.artifact.outputs.path }}
           if-no-files-found: error
 
+      # ── Layer 2: installed-app smoke ────────────────────────────────────
+      # Install the exact artifact this job just built, launch it the way a
+      # user would, and drive the running app through its HTTP surface with
+      # the Playwright suite in frontend/e2e-installed/. This is the layer
+      # the bundled-sidecar smoke above can't reach: installer packaging,
+      # the shell↔sidecar spawn/port contract, and the WebView runtime of
+      # the final artifact. Placed after the workflow-artifact upload so a
+      # red smoke still leaves the installer downloadable for debugging —
+      # but before (and therefore gating) the release attach.
+      - name: Install Playwright browser for installed-app smoke
+        working-directory: frontend
+        shell: bash
+        run: npx playwright install --with-deps chromium
+
+      - name: Installed-app smoke (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          EXPECTED_VERSION="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")" \
+            bash desktop/scripts/smoke-installed.sh "${{ steps.artifact.outputs.path }}"
+
+      - name: Installed-app smoke (Linux, under Xvfb)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get install -y xvfb
+          EXPECTED_VERSION="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")" \
+            xvfb-run -a bash desktop/scripts/smoke-installed.sh "${{ steps.artifact.outputs.path }}"
+
+      - name: Installed-app smoke (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $expected = node -p "require('./desktop/src-tauri/tauri.conf.json').version"
+          pwsh -File desktop/scripts/smoke-installed.ps1 -Installer "${{ steps.artifact.outputs.path }}" -ExpectedVersion $expected
+
+      - name: Upload installed-smoke Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-smoke-report-${{ matrix.tauri_target }}
+          path: frontend/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Attach to draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
