@@ -157,6 +157,70 @@ jobs:
         if: always() && steps.codecov-upload.outcome == 'success'
         run: date -u +%Y-%m-%dT%H:%M:%SZ > .codecov-marker-frontend
 
+  fullstack-e2e:
+    name: Full-stack e2e (backend + Postgres + browser)
+    runs-on: ubuntu-latest
+
+    # Same image/creds shape as backend-tests, but a distinct database name:
+    # this job boots the real server against it and registers a user through
+    # the UI, so it must never share state with the unit-test job.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: athena
+          POSTGRES_PASSWORD: athena
+          POSTGRES_DB: athena_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U athena -d athena_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full-stack Playwright suite
+        working-directory: frontend
+        env:
+          E2E_DATABASE_URL: postgres://athena:athena@localhost:5432/athena_e2e
+          E2E_SKIP_BUILD: '1'
+        run: npx playwright test -c playwright.fullstack.config.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-fullstack-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
   frontend-e2e:
     name: Frontend e2e (browser-only demo)
     runs-on: ubuntu-latest
