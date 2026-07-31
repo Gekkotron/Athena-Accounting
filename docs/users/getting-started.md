@@ -102,6 +102,17 @@ docker compose up --build
 The first build is slow (Node install, Postgres extensions). Later
 starts are fast.
 
+Don't want to build at all? Every release also publishes prebuilt
+multi-arch images to GHCR — start the same stack from those instead:
+
+```bash
+docker compose -f docker-compose.release.yml up -d
+```
+
+Pin a version with `ATHENA_VERSION=1.2.3` in `.env` (defaults to
+`latest`); upgrade with
+`docker compose -f docker-compose.release.yml pull` then `up -d`.
+
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## First-run onboarding

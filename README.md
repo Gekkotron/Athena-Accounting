@@ -185,6 +185,19 @@ a reference bucket (configuration, API, glossary).
 docker compose up --build
 ```
 
+**No-build alternative (prebuilt images).** Every release publishes
+multi-arch (amd64 + arm64) images to GHCR, so the host doesn't need to
+compile anything:
+
+```sh
+./install.sh
+docker compose -f docker-compose.release.yml up -d
+```
+
+Pin a version by setting `ATHENA_VERSION=1.2.3` in `.env` (defaults to
+`latest`); upgrade later with
+`docker compose -f docker-compose.release.yml pull` then `up -d`.
+
 Open <http://127.0.0.1:8000> — the first visit walks you through creating
 your username and password. Your password is hashed with argon2id
 (per-user salt) before being stored; only the hash ever touches the

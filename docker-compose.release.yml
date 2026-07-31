@@ -1,0 +1,67 @@
+# Run Athena from the prebuilt images published to GHCR by the Release
+# workflow — no Node toolchain, no source build on the host:
+#
+#   ./install.sh                                        # writes .env (secrets)
+#   docker compose -f docker-compose.release.yml up -d
+#
+# Pin a version by setting ATHENA_VERSION=1.2.3 in .env (defaults to
+# `latest`). Upgrade with:
+#
+#   docker compose -f docker-compose.release.yml pull
+#   docker compose -f docker-compose.release.yml up -d
+#
+# The build-from-source path stays in docker-compose.yml (contributors, or
+# anyone who prefers auditing and building locally). Service topology, env
+# vars, and port bindings are kept identical between the two files — the
+# frontend's nginx proxies /api/ to the service named `backend`, so the
+# names must not diverge.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      # Postgres stays bound to localhost only — the backend talks to it over
+      # the compose network, never via the host. If you don't want it on the
+      # host at all, comment this whole `ports` block out.
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    image: ghcr.io/gekkotron/athena-accounting-backend:${ATHENA_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SESSION_SECRET: ${SESSION_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Listens on all host interfaces so other machines on your LAN can hit
+      # the API directly (curl tests). The application is meant to be accessed
+      # through the frontend instead.
+      - "${BACKEND_PORT:-8001}:3000"
+
+  frontend:
+    image: ghcr.io/gekkotron/athena-accounting-frontend:${ATHENA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Listens on all host interfaces so other devices on your LAN can reach
+      # the app via http://<host-ip>:${FRONTEND_PORT}. Restrict with a host
+      # firewall if needed. Container port is 8080 because the image runs
+      # nginx as a non-root user (can't bind < 1024).
+      - "${FRONTEND_PORT:-8000}:8080"
