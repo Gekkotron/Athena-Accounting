@@ -1,4 +1,10 @@
-FROM node:22-alpine AS build
+# --platform=$BUILDPLATFORM: the build stage's output (static dist/) is
+# architecture-independent, so in a multi-arch `docker buildx` run it must
+# execute ONCE on the builder's native arch instead of once per target arch
+# under QEMU — the emulated npm install + tsc + vite build is what made the
+# first GHCR release run take 90+ minutes. Only the nginx runtime stage
+# below is per-architecture.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 
 # Build context is the repo root (see docker-compose.yml). Everything the

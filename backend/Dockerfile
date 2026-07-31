@@ -1,4 +1,10 @@
-FROM node:22-alpine AS build
+# --platform=$BUILDPLATFORM: this stage only compiles TypeScript to dist/
+# (architecture-independent), so in a multi-arch `docker buildx` run it
+# executes once on the builder's native arch instead of per target arch
+# under QEMU. The production stage below stays per-architecture — its
+# `npm install --omit=dev` resolves native prebuilds (argon2, canvas) for
+# the target platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
