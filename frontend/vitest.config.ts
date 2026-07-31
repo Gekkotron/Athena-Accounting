@@ -8,10 +8,18 @@ export default defineConfig({
     globals: true,
     passWithNoTests: true,
     setupFiles: ['./src/test/setup.ts'],
-    // Playwright specs live in `./e2e/*.spec.ts` — Vitest's default glob
-    // would pick them up and fail because they import from
+    // Playwright specs live in the `e2e*` directories — Vitest's default
+    // glob would pick them up and fail because they import from
     // `@playwright/test`, which is not a Vitest runner.
-    exclude: ['**/node_modules/**', '**/dist/**', '**/dist-demo/**', 'e2e/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/dist-demo/**',
+      'e2e/**',
+      'e2e-fullstack/**',
+      'e2e-installed/**',
+      'e2e-shared/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
