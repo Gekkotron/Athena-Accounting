@@ -12,15 +12,35 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-07-31
+
+Première release candidate du serveur familial (Docker). Les binaires
+desktop suivent leur propre canal de tags (`v*-desktop*`).
+
 ### Added
 - Synchronisation bancaire optionnelle via Enable Banking (identifiants
   personnels, lecture seule) : onglet *Données → Synchronisation
   bancaire*, synchro nocturne désactivable (`BANK_SYNC_AUTO=0`), même
   pipeline que les imports de fichiers (déduplication, règles,
   virements, récurrences). Voir `docs/users/bank-sync.md`.
+- Dashboard : projection du solde basée sur les moyennes mensuelles
+  par compte (courbe « dents de scie » raccordée sans saut vertical).
+- Transactions : raccourcis clavier sur la liste (navigation, édition,
+  suppression, recherche), annulation pendant 5 secondes après une
+  suppression simple ou groupée, avertissement ambre sur les
+  checkpoints divergents, date de checkpoint modifiable.
+- Règles : onglet « Virements » pour gérer les mots-clés de détection
+  des virements internes.
+- Comptes : info-bulle d'aide avec exemples sur le champ Type.
 - Publication d'une release GitHub à partir d'un tag `vX.Y.Z`
   (`.github/workflows/release.yml`), avec extraction automatique
   des notes depuis ce fichier.
+- Images Docker multi-arch (amd64 + arm64) publiées sur GHCR à chaque
+  release, et `docker-compose.release.yml` pour démarrer la pile sans
+  build local (version épinglable via `ATHENA_VERSION`).
+- Tests bout-en-bout : suite Playwright full-stack (vrai backend +
+  Postgres) dans la CI, et smoke de l'application installée
+  (dmg/AppImage/NSIS) dans le workflow de release desktop.
 
 ### Fixed
 - Tests backend en CI : sérialisation des fichiers de test
@@ -28,6 +48,14 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
   Postgres et plusieurs faisaient des `db.delete(users|accounts)`
   globaux, ce qui effaçait les fixtures des autres fichiers en
   parallèle et cassait ~65 tests avec des violations FK.
+- Champs « aujourd'hui » calculés sur le jour calendaire local plutôt
+  qu'UTC.
+- Aperçu d'import : tableau maintenu en ordre de date en présence de
+  doublons.
+- Type de compte traduit sur la carte de la page Comptes.
+
+### Changed
+- Node 20 → 22 dans les workflows CI et les images Docker de base.
 
 ## [1.0.0-desktop-rc1] - 2026-07-23
 
