@@ -1,6 +1,6 @@
 [package]
 name = "athena-desktop"
-version = "1.0.0-desktop-rc5"
+version = "1.0.0-rc.2"
 description = "Athena Accounting desktop shell"
 authors = ["Gekkotron"]
 edition = "2021"

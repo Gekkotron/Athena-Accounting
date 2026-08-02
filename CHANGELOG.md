@@ -12,6 +12,52 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] - 2026-08-03
+
+Première release **unifiée** : un seul tag `vX.Y.Z` publie désormais une
+seule page de release portant les installateurs desktop (`.dmg` macOS,
+`.AppImage` Linux, `.exe` Windows) en pièces jointes **et** les images
+Docker GHCR. Le canal de tags séparé `v*-desktop*` est retiré ; le badge
+« Latest » du dépôt pointera toujours sur la dernière version stable.
+
+### Added
+- Synchronisation bancaire : **heure de récupération configurable**
+  directement dans l'onglet *Données → Synchronisation bancaire*
+  (réglage par utilisateur, 02:00 par défaut). Le planificateur applique
+  un rattrapage au démarrage : un serveur allumé en continu synchronise
+  à l'heure choisie, l'app desktop fermée pendant la nuit rattrape à son
+  prochain lancement.
+- Synchronisation bancaire : affichage de la **dernière** et de la
+  **prochaine** récupération automatique dans l'onglet.
+- Synchronisation bancaire : **bandeau d'avertissement** quand un
+  consentement expire sous 14 jours — en plus de la pastille ambre déjà
+  présente sur chaque connexion — pour reconnecter la banque avant
+  l'interruption.
+
+### Fixed
+- Transactions : les épingles de point de contrôle et l'avertissement de
+  dérive ne s'affichent plus quand une recherche ou un filtre
+  (catégorie, montant, fichier source) tronque les journées visibles.
+  La « fin de journée » de la vue filtrée pouvait être une ligne de
+  milieu de journée : fausse dérive signalée, et une épingle posée là
+  aurait figé un solde intermédiaire. La colonne SOLDE reste affichée —
+  ses valeurs sont calculées côté serveur sur l'historique complet et
+  restent justes sous n'importe quel filtre.
+- Images Docker : étapes de build épinglées sur `$BUILDPLATFORM` — la
+  publication multi-arch passait 90+ minutes à émuler le build frontend
+  sous QEMU ; elle prend désormais ~2 minutes.
+- Tests backend : `npx vitest run` fonctionne à nouveau sans aucune
+  variable d'environnement (secret de session et driver PGlite par
+  défaut dans le setup de la suite).
+
+### Changed
+- Workflow de release unifié : la matrice desktop (build du sidecar,
+  smoke du bundle, build Tauri, smoke de l'application installée) vit
+  dans `release.yml` ; la publication est conditionnée à **tous** les
+  livrables.
+- Versioning desktop aligné sur le tag : `tauri.conf.json` porte
+  désormais le `X.Y.Z` nu (fini les versions `-desktop-rcN`).
+
 ## [1.0.0-rc.1] - 2026-07-31
 
 Première release candidate du serveur familial (Docker). Les binaires
