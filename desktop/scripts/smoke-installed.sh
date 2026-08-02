@@ -48,10 +48,16 @@ case "$(uname)" in
     DATA_DIR="$HOME/Library/Application Support/$IDENTIFIER"
     DMG_MOUNT="$WORK/dmg"
     hdiutil attach "$ARTIFACT" -nobrowse -readonly -mountpoint "$DMG_MOUNT" >/dev/null
-    cp -R "$DMG_MOUNT"/*.app "$WORK/"
-    hdiutil detach "$DMG_MOUNT" -quiet
-    DMG_MOUNT=""
-    APP_BIN="$(find "$WORK"/*.app/Contents/MacOS -maxdepth 1 -type f | head -n 1)"
+    # Run straight from the mounted dmg — a normal way to launch a mac app,
+    # and it removes the copy step entirely: on the CI runner a `cp -R` of
+    # the .app produced a bundle whose Contents/Resources was invisible to
+    # the app (tauri resource_dir() → UnknownPath) while the same dmg was
+    # verifiably complete. The app only writes to DATA_DIR, so a read-only
+    # bundle is fine. Cleanup kills the app before detaching.
+    APP_DIR="$(echo "$DMG_MOUNT"/*.app)"
+    echo "bundle tree:"
+    ls -la "$APP_DIR/Contents" "$APP_DIR/Contents/Resources" | head -30
+    APP_BIN="$(find "$APP_DIR/Contents/MacOS" -maxdepth 1 -type f | head -n 1)"
     ;;
   Linux)
     DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/$IDENTIFIER"
