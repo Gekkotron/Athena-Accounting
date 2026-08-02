@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { endOfDayRowIds } from '../endOfDay';
+import { endOfDayRowIds, hasCompleteDays } from '../endOfDay';
 
 describe('endOfDayRowIds', () => {
   it('picks the max-id row per date', () => {
@@ -23,5 +23,19 @@ describe('endOfDayRowIds', () => {
 
   it('returns an empty set for no rows', () => {
     expect(endOfDayRowIds([]).size).toBe(0);
+  });
+});
+
+describe('hasCompleteDays', () => {
+  it('true with no filters, an account filter, or a date range', () => {
+    expect(hasCompleteDays({})).toBe(true);
+    expect(hasCompleteDays({ search: undefined, amount: undefined })).toBe(true);
+  });
+
+  it('false for filters that punch holes inside a day', () => {
+    expect(hasCompleteDays({ search: 'carrefour' })).toBe(false);
+    expect(hasCompleteDays({ amount: '12,34' })).toBe(false);
+    expect(hasCompleteDays({ categoryId: 3 })).toBe(false);
+    expect(hasCompleteDays({ sourceFileId: 7 })).toBe(false);
   });
 });

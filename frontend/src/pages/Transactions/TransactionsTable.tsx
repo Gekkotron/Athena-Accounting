@@ -4,7 +4,7 @@ import type { Account, Category, Transaction, BalanceCheckpoint } from '../../ap
 import type { Filters } from './filters';
 import { Th } from './Th';
 import { TransactionRow } from './TransactionRow';
-import { endOfDayRowIds } from './endOfDay';
+import { endOfDayRowIds, hasCompleteDays } from './endOfDay';
 import { InfoTip } from '../../components/InfoTip';
 
 export function TransactionsTable({
@@ -63,7 +63,12 @@ export function TransactionsTable({
   const allSelected = transactions.length > 0 && visibleSelected === transactions.length;
   const partiallySelected = visibleSelected > 0 && !allSelected;
   const showBalance = filters.accountId != null && filters.sort === 'date';
-  const endOfDayIds = showBalance ? endOfDayRowIds(transactions) : new Set<number>();
+  // Checkpoint pins + drift indicators only when the visible days are
+  // complete (see hasCompleteDays) — the SOLDE column itself stays, its
+  // values are computed server-side over the full history and remain true
+  // under any filter.
+  const endOfDayIds =
+    showBalance && hasCompleteDays(filters) ? endOfDayRowIds(transactions) : new Set<number>();
 
   const headerCheckbox = useRef<HTMLInputElement>(null);
   useEffect(() => {

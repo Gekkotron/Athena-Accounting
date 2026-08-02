@@ -135,6 +135,31 @@ describe('TransactionsTable', () => {
     expect(tip).toBeInTheDocument();
   });
 
+  it('shows checkpoint pins on end-of-day rows when days are complete, hides them under search', () => {
+    const withBalance = rows.map((r) => ({ ...r, runningBalance: '100.00' }));
+    // Complete days: the pin renders on each date's end-of-day row.
+    renderTable({
+      transactions: withBalance,
+      filters: { ...baseFilters, accountId: 1 },
+    });
+    expect(screen.getAllByLabelText(/Valider le solde du/).length).toBeGreaterThan(0);
+  });
+
+  it('hides checkpoint pins but keeps SOLDE values when a search filter is active', () => {
+    const withBalance = rows.map((r) => ({ ...r, runningBalance: '100.00' }));
+    renderTable({
+      transactions: withBalance,
+      filters: { ...baseFilters, accountId: 1, search: 'car' },
+    });
+    // Pins (and thus drift chips) are gone — a filtered view can promote a
+    // mid-day row to end-of-day, which would false-flag drift.
+    expect(screen.queryByLabelText(/Valider le solde du/)).toBeNull();
+    // The SOLDE column itself stays: values come from the backend's
+    // full-history computation and remain correct under filters.
+    expect(screen.getByText('Solde')).toBeInTheDocument();
+    expect(screen.getAllByText(/100,00/).length).toBeGreaterThan(0);
+  });
+
   it('does not render the SOLDE info tip when no account is selected', () => {
     renderTable();
     expect(

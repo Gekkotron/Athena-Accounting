@@ -15,3 +15,26 @@ export function endOfDayRowIds(rows: { id: number; date: string }[]): Set<number
   }
   return new Set(maxByDate.values());
 }
+
+// Whether the active filters keep each visible day COMPLETE. Checkpoints
+// anchor to a date's true last transaction; filters that punch holes inside
+// a day (text search, amount search, category, source file) can promote a
+// mid-day row to "end of day" in the filtered view — its running balance is
+// still correct (the backend computes it over the full history), but it is
+// not the end-of-day amount a checkpoint froze, so the drift warning would
+// fire falsely and toggling the pin would freeze a mid-day amount. Date
+// range and account filters remove whole days, never rows within a day, so
+// they stay checkpoint-compatible.
+export function hasCompleteDays(filters: {
+  search?: string;
+  amount?: string;
+  categoryId?: number;
+  sourceFileId?: number;
+}): boolean {
+  return (
+    !filters.search &&
+    !filters.amount &&
+    filters.categoryId == null &&
+    filters.sourceFileId == null
+  );
+}
