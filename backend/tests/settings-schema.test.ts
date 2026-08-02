@@ -61,3 +61,20 @@ describe('mergeSettings', () => {
     expect(out.transactionsDefaultAccount).toBe('first-checking');
   });
 });
+
+describe('bankSyncHour', () => {
+  it('defaults to 2', () => {
+    expect(mergeSettings({}, {}).bankSyncHour).toBe(2);
+  });
+
+  it('accepts the full 0-23 range', () => {
+    expect(mergeSettings({ bankSyncHour: 0 }, {}).bankSyncHour).toBe(0);
+    expect(mergeSettings({ bankSyncHour: 23 }, {}).bankSyncHour).toBe(23);
+  });
+
+  it('rejects out-of-range or fractional hours (falls back to default)', () => {
+    expect(mergeSettings({ bankSyncHour: -1 }, {}).bankSyncHour).toBe(2);
+    expect(mergeSettings({ bankSyncHour: 24 }, {}).bankSyncHour).toBe(2);
+    expect(mergeSettings({ bankSyncHour: 1.5 }, {}).bankSyncHour).toBe(2);
+  });
+});

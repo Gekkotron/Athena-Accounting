@@ -15,6 +15,9 @@ export const DEFAULTS = {
   // means: auto-pick the earliest `type: 'checking'` account. Users can
   // pin a specific id or 'all' via Settings.
   transactionsDefaultAccount: 'first-checking',
+  // Local hour (0-23, server clock) of the unattended bank sync. 02:00 by
+  // default — banks have usually booked the previous day by then.
+  bankSyncHour: 2,
 } as const;
 
 export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';

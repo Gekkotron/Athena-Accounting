@@ -6,9 +6,13 @@ import type { Account } from '../api/types';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SettingsBankSyncCredentials } from './SettingsBankSyncCredentials';
 import { BankConnectionCard } from './BankConnectionCard';
+import { BankSyncSchedule } from './BankSyncSchedule';
+import { formatDate } from '../lib/format';
+import { todayLocalIso } from '../lib/dates';
 import {
   consentRedirectUrl,
   extractAuthCode,
+  soonestExpiring,
   type BankConnection,
   type BankSyncStatus,
   type SyncConnectionResult,
@@ -143,6 +147,7 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
   });
 
   const redirectUrl = consentRedirectUrl(window.location.origin);
+  const expiring = soonestExpiring(connections, todayLocalIso());
 
   return (
     <section data-testid="bank-sync-section" className="flex flex-col gap-4">
@@ -163,6 +168,17 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
           {saveOk && (
             <div className="rounded-lg border border-sage-800/50 bg-sage-900/15 px-3 py-2 text-sm text-sage-200">
               {t('settings.bankSync.saveSuccess')}
+            </div>
+          )}
+          {expiring && (
+            <div
+              data-testid="bank-sync-expiry-banner"
+              className="rounded-lg border border-amber-800/50 bg-amber-900/25 px-3 py-2 text-sm text-amber-200"
+            >
+              {t('settings.bankSync.expiryBanner', {
+                name: expiring.aspspName,
+                date: formatDate(expiring.validUntil),
+              })}
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
@@ -247,6 +263,8 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
               </div>
             </details>
           </div>
+
+          <BankSyncSchedule auto={statusQ.data?.autoSync} />
 
           <div className="flex flex-col gap-3">
             <div className="label">{t('settings.bankSync.connections.label')}</div>

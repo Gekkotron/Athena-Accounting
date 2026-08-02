@@ -105,7 +105,17 @@
         "error": "The connection failed. Start the connection again from Données → Synchronisation bancaire.",
         "noCode": "No authorization code in the URL — start the connection again from Données → Synchronisation bancaire.",
         "backToSettings": "Back to bank sync"
-      }
+      },
+      "schedule": {
+        "label": "Automatic sync",
+        "hourLabel": "Retrieval time",
+        "disabled": "Disabled on this server (BANK_SYNC_AUTO=0). Manual syncs still work.",
+        "lastRun": "Last retrieval: {{date}}",
+        "neverRun": "No retrieval yet.",
+        "nextRun": "Next retrieval: {{date}}",
+        "hint": "Server local time. If the app is off at that time, the retrieval happens on the next launch."
+      },
+      "expiryBanner": "The {{name}} consent expires on {{date}} — reconnect the bank to avoid a sync interruption."
     },
     "reset": {
       "button": "Reset to defaults",

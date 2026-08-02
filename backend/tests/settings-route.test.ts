@@ -44,6 +44,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       duplicateSimilarityThreshold: 0,
       showForecast: false,
       transactionsDefaultAccount: 'first-checking',
+      bankSyncHour: 2,
     });
   });
 
@@ -60,6 +61,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       duplicateSimilarityThreshold: 0,
       showForecast: false,
       transactionsDefaultAccount: 'first-checking',
+      bankSyncHour: 2,
     });
   });
 

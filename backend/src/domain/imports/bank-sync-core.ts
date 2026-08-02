@@ -90,3 +90,32 @@ export function firstSyncStart(
   // previous sync, which is the realistic case.
   return from > todayIso ? todayIso : from;
 }
+
+// --- Auto-sync schedule -------------------------------------------------------
+// The unattended sync fires at a user-configured local hour
+// (settings.bankSyncHour). Occurrence math is local-time on purpose: the
+// deployment targets are a home server and the desktop app, where "02:00"
+// means the machine's own clock. Pure and injectable for tests.
+
+// Most recent moment the schedule fired (hour:00 local) at or before `now`.
+export function lastScheduledOccurrence(hour: number, now: Date): Date {
+  const occ = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
+  if (occ.getTime() > now.getTime()) occ.setDate(occ.getDate() - 1);
+  return occ;
+}
+
+// Next moment the schedule will fire strictly after `now`.
+export function nextScheduledOccurrence(hour: number, now: Date): Date {
+  const occ = lastScheduledOccurrence(hour, now);
+  occ.setDate(occ.getDate() + 1);
+  return occ;
+}
+
+// Catch-up dueness: a user is due when their last attempt predates the most
+// recent scheduled occurrence. Covers both deployments — an always-on server
+// syncs within one tick of hour:00; a desktop app that was closed overnight
+// catches up on the first tick after launch. `lastAttemptMs` of 0/undefined
+// (never attempted this process lifetime) is always due.
+export function isAutoSyncDue(hour: number, now: Date, lastAttemptMs: number | undefined): boolean {
+  return (lastAttemptMs ?? 0) < lastScheduledOccurrence(hour, now).getTime();
+}

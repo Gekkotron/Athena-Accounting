@@ -116,8 +116,21 @@ describe.skipIf(!RUN)('/api/bank-sync credentials', () => {
       headers: { cookie: cookieA },
     });
     expect(status.statusCode).toBe(200);
-    expect(status.json()).toEqual({ configured: true, applicationId: APP_ID });
+    expect(status.json()).toMatchObject({ configured: true, applicationId: APP_ID });
     expect(status.body).not.toContain('PRIVATE KEY');
+
+    // Auto-sync block: default hour, no sync yet, next occurrence computed
+    // (or null when BANK_SYNC_AUTO is off in the test env).
+    const auto = status.json().autoSync;
+    expect(auto).toBeDefined();
+    expect(auto.hour).toBe(2);
+    expect(auto.lastSyncedAt).toBeNull();
+    expect(typeof auto.enabled).toBe('boolean');
+    if (auto.enabled) {
+      expect(new Date(auto.nextAt).getTime()).toBeGreaterThan(Date.now());
+    } else {
+      expect(auto.nextAt).toBeNull();
+    }
   });
 
   it('persists the key encrypted at rest, and the store round-trips it', async () => {
@@ -143,7 +156,7 @@ describe.skipIf(!RUN)('/api/bank-sync credentials', () => {
       url: '/api/bank-sync/status',
       headers: { cookie: cookieB },
     });
-    expect(res.json()).toEqual({ configured: false, applicationId: null });
+    expect(res.json()).toMatchObject({ configured: false, applicationId: null });
   });
 
   it('requires auth on every route', async () => {
@@ -169,6 +182,6 @@ describe.skipIf(!RUN)('/api/bank-sync credentials', () => {
       url: '/api/bank-sync/status',
       headers: { cookie: cookieA },
     });
-    expect(status.json()).toEqual({ configured: false, applicationId: null });
+    expect(status.json()).toMatchObject({ configured: false, applicationId: null });
   });
 });

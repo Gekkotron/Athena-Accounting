@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { SettingsBankSync } from '../SettingsBankSync';
-import { consentRedirectUrl, extractAuthCode } from '../SettingsBankSync-lib';
+import { consentRedirectUrl, extractAuthCode, soonestExpiring } from '../SettingsBankSync-lib';
 import type { Account } from '../../api/types';
 import { pinLocale } from '../../test/i18n';
 
@@ -259,5 +259,83 @@ describe('SettingsBankSync', () => {
 
     expect(await screen.findByText(/Reconnexion requise avant le/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reconnecter' })).toBeInTheDocument();
+    // Tab-level banner mirrors the chip so the warning is visible without
+    // scanning individual cards.
+    expect(screen.getByTestId('bank-sync-expiry-banner')).toHaveTextContent(/CIC/);
+    expect(screen.getByTestId('bank-sync-expiry-banner')).toHaveTextContent(/expire le/);
+  });
+
+  it('renders the auto-sync schedule and saves a new hour', async () => {
+    const user = userEvent.setup();
+    routeApi({
+      'GET /api/bank-sync/status': {
+        configured: true,
+        applicationId: 'app-123',
+        autoSync: {
+          enabled: true,
+          hour: 2,
+          lastSyncedAt: '2026-08-02T02:00:05.000Z',
+          nextAt: '2026-08-04T02:00:00.000Z',
+        },
+      },
+      'GET /api/bank-sync/connections': { connections: [] },
+      'GET /api/bank-sync/aspsps': { aspsps: [] },
+      'GET /api/settings': { settings: { bankSyncHour: 2 } },
+      'PATCH /api/settings': { settings: { bankSyncHour: 5 } },
+    });
+
+    renderSection();
+
+    const schedule = await screen.findByTestId('bank-sync-schedule');
+    expect(schedule).toHaveTextContent('Dernière récupération');
+    expect(schedule).toHaveTextContent('Prochaine récupération');
+
+    const select = screen.getByRole('combobox', { name: 'Heure de récupération' });
+    await waitFor(() => expect(select).toBeEnabled());
+    await user.selectOptions(select, '5');
+    await waitFor(() => {
+      expect(apiMock).toHaveBeenCalledWith('/api/settings', {
+        method: 'PATCH',
+        json: { bankSyncHour: 5 },
+      });
+    });
+  });
+
+  it('shows the disabled notice when the operator turned auto-sync off', async () => {
+    routeApi({
+      'GET /api/bank-sync/status': {
+        configured: true,
+        applicationId: 'app-123',
+        autoSync: { enabled: false, hour: 2, lastSyncedAt: null, nextAt: null },
+      },
+      'GET /api/bank-sync/connections': { connections: [] },
+      'GET /api/bank-sync/aspsps': { aspsps: [] },
+      'GET /api/settings': { settings: {} },
+    });
+
+    renderSection();
+
+    const schedule = await screen.findByTestId('bank-sync-schedule');
+    expect(schedule).toHaveTextContent('BANK_SYNC_AUTO=0');
+    expect(schedule).not.toHaveTextContent('Prochaine récupération');
+  });
+});
+
+describe('soonestExpiring', () => {
+  const today = '2026-08-03';
+  const conn = (id: number, validUntil: string, status: 'active' | 'needs_reconnect' = 'active') =>
+    ({ ...CONNECTION, id, validUntil, status });
+
+  it('null when nothing is inside the warning window', () => {
+    expect(soonestExpiring([conn(1, '2099-01-01')], today)).toBeNull();
+  });
+
+  it('picks the soonest of several expiring connections', () => {
+    const picked = soonestExpiring([conn(1, '2026-08-14'), conn(2, '2026-08-08')], today);
+    expect(picked?.id).toBe(2);
+  });
+
+  it('ignores connections already flagged needs_reconnect', () => {
+    expect(soonestExpiring([conn(1, '2026-08-08', 'needs_reconnect')], today)).toBeNull();
   });
 });

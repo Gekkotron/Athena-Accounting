@@ -22,6 +22,7 @@ export const SettingsSchema = z
         z.number().int().positive(),
       ])
       .optional(),
+    bankSyncHour: z.number().int().min(0).max(23).optional(),
   })
   .strict();
 
@@ -34,6 +35,7 @@ export type FullSettings = {
   duplicateSimilarityThreshold: number;
   showForecast: boolean;
   transactionsDefaultAccount: TransactionsDefaultAccount;
+  bankSyncHour: number;
 };
 
 // Merges DEFAULTS <- stored (unvalidated JSONB) <- patch. `stored` is

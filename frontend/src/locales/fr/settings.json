@@ -105,7 +105,17 @@
         "error": "La connexion a échoué. Relancez la connexion depuis Données → Synchronisation bancaire.",
         "noCode": "Code d'autorisation absent de l'URL — relancez la connexion depuis Données → Synchronisation bancaire.",
         "backToSettings": "Retour à la synchronisation bancaire"
-      }
+      },
+      "schedule": {
+        "label": "Synchronisation automatique",
+        "hourLabel": "Heure de récupération",
+        "disabled": "Désactivée sur ce serveur (BANK_SYNC_AUTO=0). Les synchronisations manuelles restent possibles.",
+        "lastRun": "Dernière récupération : {{date}}",
+        "neverRun": "Aucune récupération pour l'instant.",
+        "nextRun": "Prochaine récupération : {{date}}",
+        "hint": "Heure locale du serveur. Si l'application est éteinte à cette heure, la récupération a lieu au prochain démarrage."
+      },
+      "expiryBanner": "Le consentement {{name}} expire le {{date}} — reconnectez la banque pour éviter une interruption de la synchronisation."
     },
     "reset": {
       "button": "Réinitialiser aux valeurs par défaut",

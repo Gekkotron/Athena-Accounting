@@ -7,6 +7,7 @@ import {
   bankConnectionAccounts,
   bankSyncCredentials,
   transactions,
+  userSettings,
 } from '../../db/schema.js';
 import { env } from '../../env.js';
 import { markDirty } from '../../db/snapshotScheduler.js';
@@ -17,7 +18,13 @@ import {
   type EnableBankingClient,
 } from '../../services/enable-banking/client.js';
 import { runImport } from './import-service.js';
-import { firstSyncStart, normalizeEbTransaction, syncWindowStart } from './bank-sync-core.js';
+import {
+  firstSyncStart,
+  isAutoSyncDue,
+  normalizeEbTransaction,
+  syncWindowStart,
+} from './bank-sync-core.js';
+import { mergeSettings } from '../settings/schema.js';
 
 // Sync engine: pulls booked transactions for every mapped account of every
 // active connection and feeds them through runImport, so dedup, rule
@@ -206,17 +213,33 @@ export async function syncUserConnections(
 
 // --- Scheduler ---------------------------------------------------------------
 
-// Nightly unattended sync, modeled on the watch-folder poller: overlap-
-// guarded, unref'd, cleared onClose. First run is delayed after boot so a
-// crash-looping process never hammers the Enable Banking API. Disabled with
-// BANK_SYNC_AUTO=0 and never active under tests; a user with no stored
-// credentials costs one SELECT per day.
-const SYNC_INTERVAL_MS = 24 * 3_600_000;
+// Unattended sync at the user-configured local hour (settings.bankSyncHour,
+// default 02:00). The loop ticks every 15 minutes and applies catch-up
+// dueness (see isAutoSyncDue): an always-on server syncs within one tick of
+// the configured hour; a desktop app that was closed overnight catches up on
+// the first tick after launch. Overlap-guarded, unref'd, cleared onClose.
+// First tick is delayed after boot so a crash-looping process never hammers
+// the Enable Banking API. Disabled with BANK_SYNC_AUTO=0 and never active
+// under tests; a user with no stored credentials costs one SELECT per tick.
+const TICK_INTERVAL_MS = 15 * 60_000;
 const BOOT_DELAY_MS = 5 * 60_000;
+
+async function syncHourFor(uid: number): Promise<number> {
+  const [row] = await db
+    .select({ settings: userSettings.settings })
+    .from(userSettings)
+    .where(eq(userSettings.userId, uid));
+  return mergeSettings(row?.settings ?? {}).bankSyncHour;
+}
 
 export function startBankSyncScheduler(app: FastifyInstance): void {
   if (env.NODE_ENV === 'test' || !env.BANK_SYNC_AUTO) return;
   let running = false;
+  // Per-user last attempt, ms epoch. In-memory on purpose: a restart at
+  // worst repeats one sync (self-deduped by the overlap window), and the
+  // map is what guarantees at most one attempt per user per occurrence —
+  // including users whose sync fails or writes nothing.
+  const lastAttempt = new Map<number, number>();
   const tick = (): void => {
     if (running) return;
     running = true;
@@ -225,7 +248,11 @@ export function startBankSyncScheduler(app: FastifyInstance): void {
         .select({ userId: bankSyncCredentials.userId })
         .from(bankSyncCredentials);
       let imported = 0;
+      const now = new Date();
       for (const { userId } of credRows) {
+        const hour = await syncHourFor(userId);
+        if (!isAutoSyncDue(hour, now, lastAttempt.get(userId))) continue;
+        lastAttempt.set(userId, now.getTime());
         const creds = await getCredentials(userId);
         if (!creds) continue;
         const results = await syncUserConnections(userId, createEnableBankingClient(creds));
@@ -249,7 +276,7 @@ export function startBankSyncScheduler(app: FastifyInstance): void {
   };
   const boot = setTimeout(tick, BOOT_DELAY_MS);
   boot.unref();
-  const handle = setInterval(tick, SYNC_INTERVAL_MS);
+  const handle = setInterval(tick, TICK_INTERVAL_MS);
   handle.unref();
   app.addHook('onClose', async () => {
     clearTimeout(boot);

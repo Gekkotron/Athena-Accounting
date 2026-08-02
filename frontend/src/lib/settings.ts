@@ -19,6 +19,8 @@ export interface Settings {
   // means: auto-pick the earliest `type: 'checking'` account. Users can
   // pin a specific id or 'all' via Settings.
   transactionsDefaultAccount: TransactionsDefaultAccount;
+  // Local hour (0-23, server clock) of the unattended bank sync.
+  bankSyncHour: number;
 }
 
 export const DEFAULTS: Settings = {
@@ -28,4 +30,5 @@ export const DEFAULTS: Settings = {
   duplicateSimilarityThreshold: 0,
   showForecast: false,
   transactionsDefaultAccount: 'first-checking',
+  bankSyncHour: 2,
 };

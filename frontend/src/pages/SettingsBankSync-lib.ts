@@ -1,8 +1,21 @@
 // Pure helpers for the bank-sync settings section — no React imports.
 
+export interface BankSyncAutoInfo {
+  // False when the operator disabled the scheduler (BANK_SYNC_AUTO=0).
+  enabled: boolean;
+  // Configured local hour (server clock) — mirror of settings.bankSyncHour.
+  hour: number;
+  // Newest lastSyncedAt across the user's mapped accounts (previous fetch).
+  lastSyncedAt: string | null;
+  // Next scheduled occurrence; null when the scheduler is disabled.
+  nextAt: string | null;
+}
+
 export interface BankSyncStatus {
   configured: boolean;
   applicationId: string | null;
+  // Optional: absent on responses cached before the field shipped.
+  autoSync?: BankSyncAutoInfo;
 }
 
 export interface BankConnectionAccount {
@@ -97,4 +110,18 @@ export function extractAuthCode(input: string): string | null {
 export function bankAccountLabel(a: BankConnectionAccount): string {
   const name = a.name?.trim() || a.iban?.trim() || a.bankAccountUid;
   return a.currency ? `${name} (${a.currency})` : name;
+}
+
+// Soonest-expiring connection still inside the pre-expiry warning window —
+// drives the tab-level reconnect banner. Connections already flagged
+// needs_reconnect have their own 'required' chip and are excluded here.
+export function soonestExpiring(
+  connections: BankConnection[],
+  todayIso: string,
+): BankConnection | null {
+  const soon = connections.filter(
+    (c) => connectionChipState(c.status, c.validUntil, todayIso) === 'soon',
+  );
+  if (soon.length === 0) return null;
+  return soon.reduce((a, b) => (a.validUntil <= b.validUntil ? a : b));
 }

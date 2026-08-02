@@ -1,12 +1,52 @@
 import type { FastifyInstance } from 'fastify';
 import { createPrivateKey } from 'node:crypto';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { db } from '../../../db/client.js';
+import { bankConnections, bankConnectionAccounts, userSettings } from '../../../db/schema.js';
+import { env } from '../../../env.js';
 import { userId } from '../../plugins/auth.js';
 import {
   createEnableBankingClient,
   EnableBankingError,
 } from '../../../services/enable-banking/client.js';
 import { setCredentials, deleteCredentials, getStatus } from '../../../domain/bank-sync/store.js';
+import { nextScheduledOccurrence } from '../../../domain/imports/bank-sync-core.js';
+import { mergeSettings } from '../../../domain/settings/schema.js';
+
+// Auto-sync block of GET /api/bank-sync/status: the configured hour (from
+// user settings), whether the scheduler is active at all (BANK_SYNC_AUTO),
+// the newest lastSyncedAt across the user's mapped accounts (previous
+// fetch), and the next scheduled occurrence (server-local clock).
+async function autoSyncInfo(uid: number): Promise<{
+  enabled: boolean;
+  hour: number;
+  lastSyncedAt: string | null;
+  nextAt: string | null;
+}> {
+  const [row] = await db
+    .select({ settings: userSettings.settings })
+    .from(userSettings)
+    .where(eq(userSettings.userId, uid));
+  const hour = mergeSettings(row?.settings ?? {}).bankSyncHour;
+  const [last] = await db
+    .select({ last: sql<Date | null>`max(${bankConnectionAccounts.lastSyncedAt})` })
+    .from(bankConnectionAccounts)
+    .where(
+      inArray(
+        bankConnectionAccounts.connectionId,
+        db.select({ id: bankConnections.id }).from(bankConnections).where(eq(bankConnections.userId, uid)),
+      ),
+    );
+  const enabled = env.BANK_SYNC_AUTO;
+  const lastSyncedAt = last?.last ? new Date(last.last).toISOString() : null;
+  return {
+    enabled,
+    hour,
+    lastSyncedAt,
+    nextAt: enabled ? nextScheduledOccurrence(hour, new Date()).toISOString() : null,
+  };
+}
 
 const CredentialsBody = z.object({
   applicationId: z.string().trim().min(1).max(200),
@@ -48,7 +88,9 @@ export function registerCredentials(app: FastifyInstance): void {
   });
 
   app.get('/api/bank-sync/status', async (req) => {
-    return await getStatus(userId(req));
+    const uid = userId(req);
+    const base = await getStatus(uid);
+    return { ...base, autoSync: await autoSyncInfo(uid) };
   });
 
   app.delete('/api/bank-sync/credentials', async (req) => {
