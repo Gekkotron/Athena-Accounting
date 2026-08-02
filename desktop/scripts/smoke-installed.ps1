@@ -65,6 +65,11 @@ try {
     throw "version $($health.version) != expected $ExpectedVersion"
   }
 
+  # Fast signal before the browser suite: the app must serve the SPA at /,
+  # not just the API.
+  $root = Invoke-WebRequest -Uri "$base/" -TimeoutSec 30 -UseBasicParsing
+  if ($root.StatusCode -ne 200) { throw "GET / returned $($root.StatusCode) — SPA not served" }
+
   Push-Location (Join-Path $PSScriptRoot '..\..\frontend')
   try {
     $env:ATHENA_SMOKE_URL = $base

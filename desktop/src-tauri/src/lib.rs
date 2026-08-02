@@ -22,13 +22,29 @@ fn sidecar_dir(app: &tauri::AppHandle) -> PathBuf {
     // In production the sidecar/ folder is bundled as a resource; in dev the
     // developer runs `cargo tauri dev` from desktop/src-tauri, and the sidecar
     // lives one level up at ../sidecar.
-    if let Ok(resource_dir) = app.path().resource_dir() {
+    let resource = app.path().resource_dir();
+    if let Ok(resource_dir) = &resource {
         let bundled = resource_dir.join("sidecar");
         if bundled.join("entry.js").exists() {
             return bundled;
         }
     }
-    // Dev fallback: <cargo manifest>/../sidecar
+    // The bundled sidecar was not found. In a RELEASE build this must be
+    // loud and fatal: the CI installed-app smoke once fell through to the
+    // dev fallback below (the compile-time repo path happened to exist on
+    // the runner), booted the repo's sidecar with the wrong cwd, and served
+    // a bare 404 instead of the SPA — a silent wrong-app instead of a
+    // diagnosable crash. Print exactly what was resolved so the failure is
+    // debuggable from a job log.
+    eprintln!(
+        "[shell] bundled sidecar not found: resource_dir={:?} exe={:?}",
+        resource,
+        std::env::current_exe(),
+    );
+    if !cfg!(debug_assertions) {
+        panic!("bundled sidecar missing from app resources (see resource_dir above)");
+    }
+    // Dev fallback (debug builds only): <cargo manifest>/../sidecar
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("desktop/src-tauri has a parent")

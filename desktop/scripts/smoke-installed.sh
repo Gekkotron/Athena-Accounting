@@ -105,6 +105,14 @@ HEALTH_JSON="$HEALTH" node -e '
   if (want && h.version !== want) throw new Error(`version ${h.version} != expected ${want}`);
 '
 
+# Fast, unambiguous signal before the browser suite: the sidecar must serve
+# the SPA at /, not just the API (a wrong static root shows up here as a
+# one-line failure instead of three Playwright timeouts).
+curl -fsS -o /dev/null "$BASE_URL/" || {
+  echo "GET / failed — the app is up but does not serve the SPA (static root?)" >&2
+  exit 1
+}
+
 (
   cd "$REPO_ROOT/frontend"
   ATHENA_SMOKE_URL="$BASE_URL" ATHENA_EXPECT_VERSION="${EXPECTED_VERSION:-}" \
