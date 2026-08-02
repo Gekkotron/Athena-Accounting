@@ -1,17 +1,22 @@
 name: Release
 
-# Publish a GitHub Release from a version tag.
+# ONE tag → ONE release carrying everything: Docker images on GHCR, the
+# three desktop installers (.dmg / .AppImage / .exe) as attached assets,
+# and release notes extracted from CHANGELOG.md.
 #
 # Trigger with:
-#   git tag v0.2.0 && git push origin v0.2.0
+#   git tag v1.2.3 && git push origin v1.2.3
 #
-# The tag body comes from CHANGELOG.md — the section headed
-# "## [0.2.0] - YYYY-MM-DD" is extracted and used as the release notes,
-# so the same source of truth ships in-repo and on the Releases page.
+# Before tagging:
+#   - CHANGELOG.md must contain a "## [1.2.3] - YYYY-MM-DD" section (the
+#     notes job fails hard without it).
+#   - desktop/src-tauri/tauri.conf.json `version` must equal 1.2.3 (the
+#     desktop job asserts it — a mismatch is how a stale build ships).
 #
-# Build verification runs first (same steps as CI) so a bad tag can't
-# publish a release. `permissions: contents: write` is what lets
-# softprops/action-gh-release open the release; nothing else needs it.
+# The legacy split `v*-desktop*` channel is retired; the exclusion below
+# stays so an old-style tag can't half-trigger this workflow. macOS
+# code-signing is still ad-hoc (`signingIdentity: "-"`) — users see the
+# "unidentified developer" dialog; see docs/standalone-app-distribution.md.
 
 on:
   push:
@@ -79,10 +84,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # arm64 layers build under QEMU emulation — slow (the frontend
-      # tsc + vite build especially) but this only runs on release tags.
-      # The backend's native deps (@node-rs/argon2, @napi-rs/canvas) ship
-      # linux-arm64 prebuilds, so npm install doesn't compile from source.
+      # Build stages are pinned to $BUILDPLATFORM in both Dockerfiles, so
+      # QEMU only executes the thin per-arch runtime layers — the heavy
+      # npm/tsc/vite work runs once, natively.
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
@@ -117,19 +121,234 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
+  desktop:
+    name: Desktop — ${{ matrix.label }}
+    needs: verify-build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS (arm64)
+            tauri_target: aarch64-apple-darwin
+            tauri_bundles: dmg
+            artifact_glob: 'desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg'
+          - os: ubuntu-latest
+            label: Linux (x64)
+            tauri_target: x86_64-unknown-linux-gnu
+            tauri_bundles: appimage
+            artifact_glob: 'desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage'
+          - os: windows-latest
+            label: Windows (x64)
+            tauri_target: x86_64-pc-windows-msvc
+            # NSIS only — MSI/WiX requires a numeric-only pre-release
+            # identifier (`rc.1` is rejected). NSIS accepts the full
+            # SemVer string and still produces a signed-able .exe installer.
+            tauri_bundles: nsis
+            artifact_glob: 'desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.tauri_target }}
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          # Icons/tauri.conf.json included in the key: Tauri embeds the .ico
+          # into the Windows .exe via a resource file emitted by
+          # tauri-build's build.rs. If those inputs change but cargo restores
+          # a cached target/, the pre-built .exe keeps the OLD icon. Hashing
+          # them into the key forces a clean rebuild whenever bundle metadata
+          # (icons, product name, version, bundle config) shifts.
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock', 'desktop/src-tauri/Cargo.toml', 'desktop/src-tauri/tauri.conf.json', 'desktop/src-tauri/icons/**') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Tauri on Linux needs webkit2gtk + a few X libs. macOS/Windows runners
+      # ship everything Tauri needs preinstalled.
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend (npm run build)
+        working-directory: frontend
+        run: npm run build
+
+      # The pushed tag must match the version compiled into the app — a
+      # mismatch here means someone forgot the version bump (or tagged the
+      # wrong commit), which is exactly how a stale build ships.
+      - name: Assert tag matches tauri.conf.json version
+        shell: bash
+        run: |
+          conf="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")"
+          tag="${GITHUB_REF#refs/tags/}"
+          if [ "v$conf" != "$tag" ]; then
+            echo "tag $tag does not match tauri.conf.json version v$conf" >&2
+            exit 1
+          fi
+
+      - name: Build sidecar for host platform
+        shell: bash
+        run: node desktop/scripts/build-sidecar.mjs
+
+      # Layer 1: smoke the exact bundle that ships — the pinned Node binary,
+      # the esbuild entry.js, and the production node_modules tree. Windows
+      # is skipped (the script's process/signal semantics don't translate to
+      # Git Bash); the installed-app smoke below covers it.
+      - name: Smoke-test bundled sidecar
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: SIDECAR_DIR="$PWD/desktop/sidecar" bash desktop/scripts/smoke-encryption.sh
+
+      # Tauri CLI v2. Pinned to the same major the shell was authored against.
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2.0.0
+
+      # The cargo cache above restores `desktop/src-tauri/target/`, which
+      # includes any bundle output from prior runs. When the version bumps,
+      # tauri produces a *new* installer alongside the stale one — and the
+      # "Collect installer artifact" glob (`*.exe`, `*.dmg`, `*.AppImage`)
+      # then picks whichever sorts first, which can be the stale file. Wipe
+      # the bundle dir before every build so the glob only ever sees the
+      # artifact tauri just produced.
+      - name: Clean stale bundle output from cache
+        shell: bash
+        run: rm -rf "desktop/src-tauri/target/${{ matrix.tauri_target }}/release/bundle"
+
+      - name: Build Tauri app
+        working-directory: desktop/src-tauri
+        # No Apple Developer ID yet. `bundle.macOS.signingIdentity` is set to
+        # `"-"` in tauri.conf.json so tauri runs `codesign -s -` (ad-hoc). This
+        # is what avoids the "app is damaged" Gatekeeper message on macOS 14+;
+        # without any signature the OS refuses to launch a quarantined app.
+        # Users still see the softer "unidentified developer" dialog on first
+        # launch — bypass via right-click → Open (docs/standalone-app-distribution.md).
+        # APPLE_* env vars stay unset (they trigger `security import`).
+        run: tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.tauri_bundles }}
+
+      - name: Collect installer artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          matches=( ${{ matrix.artifact_glob }} )
+          if [ ${#matches[@]} -eq 0 ]; then
+            echo "No artifacts matched ${{ matrix.artifact_glob }}" >&2
+            find desktop/src-tauri/target/release/bundle -maxdepth 4 -type f >&2 || true
+            exit 1
+          fi
+          # Belt-and-braces against the stale-cache class of bugs: the
+          # artifact filename must carry the version tauri.conf.json declares.
+          conf="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")"
+          case "$(basename "${matches[0]}")" in
+            *"$conf"*) ;;
+            *)
+              echo "artifact $(basename "${matches[0]}") does not carry version $conf — stale build output?" >&2
+              exit 1
+              ;;
+          esac
+          echo "path=${matches[0]}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${matches[0]}")" >> "$GITHUB_OUTPUT"
+
+      # Uploaded before the installed-app smoke so a red smoke still leaves
+      # the installer downloadable for debugging — but the job (and thus the
+      # release) stays failed.
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.tauri_target }}
+          path: ${{ steps.artifact.outputs.path }}
+          if-no-files-found: error
+
+      # ── Layer 2: installed-app smoke ────────────────────────────────────
+      # Install the exact artifact this job just built, launch it the way a
+      # user would, and drive the running app through its HTTP surface with
+      # the Playwright suite in frontend/e2e-installed/. This is the layer
+      # the bundled-sidecar smoke above can't reach: installer packaging,
+      # the shell↔sidecar spawn/port contract, and the WebView runtime of
+      # the final artifact.
+      - name: Install Playwright browser for installed-app smoke
+        working-directory: frontend
+        shell: bash
+        run: npx playwright install --with-deps chromium
+
+      - name: Installed-app smoke (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          EXPECTED_VERSION="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")" \
+            bash desktop/scripts/smoke-installed.sh "${{ steps.artifact.outputs.path }}"
+
+      - name: Installed-app smoke (Linux, under Xvfb)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get install -y xvfb
+          EXPECTED_VERSION="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")" \
+            xvfb-run -a bash desktop/scripts/smoke-installed.sh "${{ steps.artifact.outputs.path }}"
+
+      - name: Installed-app smoke (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $expected = node -p "require('./desktop/src-tauri/tauri.conf.json').version"
+          pwsh -File desktop/scripts/smoke-installed.ps1 -Installer "${{ steps.artifact.outputs.path }}" -ExpectedVersion $expected
+
+      - name: Upload installed-smoke Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-smoke-report-${{ matrix.tauri_target }}
+          path: frontend/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    # Gated on the images: a release page must never advertise pull
-    # commands for images that failed to publish.
-    needs: [verify-build, docker-images]
+    # Gated on every deliverable: the release page must never advertise
+    # images that failed to push or installers that failed their smoke.
+    needs: [verify-build, docker-images, desktop]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Extract version from tag
         id: version
-        # ${GITHUB_REF#refs/tags/v} → "0.2.0" from "refs/tags/v0.2.0"
+        # ${GITHUB_REF#refs/tags/v} → "1.2.3" from "refs/tags/v1.2.3"
         run: |
           version="${GITHUB_REF#refs/tags/v}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
@@ -157,12 +376,25 @@ jobs:
           cat release-notes.md
           echo "-----------------------"
 
-      - name: Append Docker image pointers to the release notes
+      - name: Download desktop installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: desktop-assets
+          merge-multiple: true
+
+      - name: Append install pointers to the release notes
         run: |
           version="${{ steps.version.outputs.version }}"
           {
             echo ""
-            echo "## Docker images"
+            echo "## Desktop app"
+            echo ""
+            echo "Installers attached below: \`.dmg\` (macOS arm64), \`.AppImage\` (Linux x64), \`.exe\` (Windows x64)."
+            echo ""
+            echo "**macOS**: not code-signed yet — first launch triggers Gatekeeper's \"unidentified developer\" dialog. Right-click the app in Finder and choose *Open* to bypass (see \`docs/standalone-app-distribution.md\`)."
+            echo ""
+            echo "## Docker images (family server)"
             echo ""
             echo "Prebuilt multi-arch images (amd64 + arm64) for this release:"
             echo ""
@@ -180,5 +412,9 @@ jobs:
           name: v${{ steps.version.outputs.version }}
           body_path: release-notes.md
           draft: false
-          # Pre-release when the version has a hyphen (v1.0.0-rc.1, etc.).
+          # Pre-release when the version has a hyphen (v1.0.0-rc.1, etc.) —
+          # prereleases never take the repo's "Latest" badge, so Latest
+          # always points at the newest stable.
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          files: desktop-assets/*
+          fail_on_unmatched_files: true

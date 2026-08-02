@@ -26,8 +26,9 @@ Pick the file for your OS from the latest release:
 | Windows 10 / 11 (x64) | `Athena-Accounting_<version>_x64-setup.exe` |
 | Linux (x64) | `Athena-Accounting_<version>_amd64.AppImage` |
 
-Each artifact is built by the `desktop-release` GitHub Actions workflow
-straight from a tagged commit on `main`. Checksums are published next to
+Each artifact is built by the `Release` GitHub Actions workflow straight
+from a tagged commit on `main` — the same `vX.Y.Z` release also carries
+the Docker images for the family-server path. Checksums are published next to
 the artifacts on the same release page.
 
 ## First run
