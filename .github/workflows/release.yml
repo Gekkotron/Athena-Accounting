@@ -412,20 +412,11 @@ jobs:
           name: v${{ steps.version.outputs.version }}
           body_path: release-notes.md
           draft: false
-          # Pre-release when the version has a hyphen (v1.0.0-rc.1, etc.) —
-          # prereleases never take the repo's "Latest" badge, so Latest
-          # always points at the newest stable.
-          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          # Deliberately NOT flagged as a pre-release, even for -rc versions:
+          # every published release is fully smoked (unit suites, full-stack
+          # e2e, installed-app smokes on all three OSes) before this job
+          # runs, and the maintainer wants the newest release to carry the
+          # repo's "Latest" badge so visitors land on something installable.
+          prerelease: false
           files: desktop-assets/*
           fail_on_unmatched_files: true
-
-      # Belt-and-braces: v1.0.0-rc.1, v1.0.0-rc.2, and the old desktop RCs
-      # were all CREATED with prerelease:true above yet landed with the flag
-      # unset (softprops received the input — the job log proves it — but
-      # the release came out prerelease=false). Enforce it explicitly so a
-      # hyphenated version can never wear the repo's "Latest" badge.
-      - name: Enforce prerelease flag
-        if: contains(steps.version.outputs.version, '-')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release edit "v${{ steps.version.outputs.version }}" --repo "${{ github.repository }}" --prerelease
