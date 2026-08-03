@@ -29,6 +29,21 @@ fn sidecar_dir(app: &tauri::AppHandle) -> PathBuf {
             return bundled;
         }
     }
+    // macOS: tauri's resource_dir() canonicalizes `exe_dir/../Resources`,
+    // and realpath(3) fails for .app bundles running under $TMPDIR
+    // (/var/folders/…/T/…) — observed on GitHub runners and reproduced on a
+    // workstation — even though plain stat on the same paths succeeds.
+    // Resolve the bundle layout lexically instead:
+    // Contents/MacOS/<exe> → Contents/Resources/sidecar.
+    #[cfg(target_os = "macos")]
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(contents) = exe.parent().and_then(|d| d.parent()) {
+            let bundled = contents.join("Resources").join("sidecar");
+            if bundled.join("entry.js").exists() {
+                return bundled;
+            }
+        }
+    }
     // The bundled sidecar was not found. In a RELEASE build this must be
     // loud and fatal: the CI installed-app smoke once fell through to the
     // dev fallback below (the compile-time repo path happened to exist on
@@ -36,10 +51,15 @@ fn sidecar_dir(app: &tauri::AppHandle) -> PathBuf {
     // a bare 404 instead of the SPA — a silent wrong-app instead of a
     // diagnosable crash. Print exactly what was resolved so the failure is
     // debuggable from a job log.
+    let exe = std::env::current_exe();
     eprintln!(
-        "[shell] bundled sidecar not found: resource_dir={:?} exe={:?}",
+        "[shell] bundled sidecar not found: resource_dir={:?} exe={:?} canonicalize(../Resources)={:?}",
         resource,
-        std::env::current_exe(),
+        exe,
+        exe.as_ref()
+            .ok()
+            .and_then(|e| e.parent())
+            .map(|d| std::fs::canonicalize(d.join("../Resources"))),
     );
     if !cfg!(debug_assertions) {
         panic!("bundled sidecar missing from app resources (see resource_dir above)");

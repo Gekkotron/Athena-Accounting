@@ -38,7 +38,10 @@ cleanup() {
     done
     kill -9 "$APP_PID" 2>/dev/null || true
   fi
-  if [ -n "$DMG_MOUNT" ]; then hdiutil detach "$DMG_MOUNT" -quiet || true; fi
+  if [ -n "$DMG_MOUNT" ]; then
+    hdiutil detach "$DMG_MOUNT" -quiet || true
+    rmdir "$DMG_MOUNT" 2>/dev/null || true
+  fi
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -46,17 +49,19 @@ trap cleanup EXIT
 case "$(uname)" in
   Darwin)
     DATA_DIR="$HOME/Library/Application Support/$IDENTIFIER"
-    DMG_MOUNT="$WORK/dmg"
+    # The mountpoint must have NO symlink among its ancestors: tauri's
+    # resource resolution goes through tauri_utils::platform::current_exe(),
+    # which on macOS refuses an exe path containing a symlinked ancestor (a
+    # symlink-attack guard) — and $TMPDIR lives under /var, which IS a
+    # symlink to /private/var. An app launched from a `mktemp -d` path
+    # therefore fails resource_dir() with UnknownPath while the same bundle
+    # works from /Applications. /private/tmp is symlink-free.
+    DMG_MOUNT="$(mktemp -d /private/tmp/athena-smoke-dmg.XXXXXX)"
     hdiutil attach "$ARTIFACT" -nobrowse -readonly -mountpoint "$DMG_MOUNT" >/dev/null
-    # Run straight from the mounted dmg — a normal way to launch a mac app,
-    # and it removes the copy step entirely: on the CI runner a `cp -R` of
-    # the .app produced a bundle whose Contents/Resources was invisible to
-    # the app (tauri resource_dir() → UnknownPath) while the same dmg was
-    # verifiably complete. The app only writes to DATA_DIR, so a read-only
-    # bundle is fine. Cleanup kills the app before detaching.
+    # Run straight from the mounted dmg (a normal way to launch a mac app —
+    # the app only writes to DATA_DIR). Cleanup kills the app first, then
+    # detaches.
     APP_DIR="$(echo "$DMG_MOUNT"/*.app)"
-    echo "bundle tree:"
-    ls -la "$APP_DIR/Contents" "$APP_DIR/Contents/Resources" | head -30
     APP_BIN="$(find "$APP_DIR/Contents/MacOS" -maxdepth 1 -type f | head -n 1)"
     ;;
   Linux)
