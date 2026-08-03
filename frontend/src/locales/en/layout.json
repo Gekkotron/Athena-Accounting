@@ -59,5 +59,13 @@
  },
  "subNav": {
   "ariaLabel": "Sub-navigation {{title}}"
+ },
+ "lock": {
+  "screenTitle": "Screen locked",
+  "passwordLabel": "Password",
+  "unlock": "Unlock",
+  "wrongPassword": "Incorrect password.",
+  "rateLimited": "Too many attempts — try again in a minute.",
+  "forgotHint": "Forgot your password? See the “Security & privacy” docs for the reset procedure."
  }
 }

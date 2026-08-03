@@ -59,5 +59,13 @@
  },
  "subNav": {
   "ariaLabel": "Sous-navigation {{title}}"
+ },
+ "lock": {
+  "screenTitle": "Écran verrouillé",
+  "passwordLabel": "Mot de passe",
+  "unlock": "Déverrouiller",
+  "wrongPassword": "Mot de passe incorrect.",
+  "rateLimited": "Trop de tentatives — réessayez dans une minute.",
+  "forgotHint": "Mot de passe oublié ? Consultez la documentation « Sécurité et confidentialité » pour la procédure de réinitialisation."
  }
 }

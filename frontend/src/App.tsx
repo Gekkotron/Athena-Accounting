@@ -8,6 +8,7 @@ import { LockProvider } from './contexts/LockContext';
 import { TipsProvider } from './contexts/TipsContext';
 import { TourProvider } from './contexts/TourContext';
 import { TourBubble } from './components/TourBubble';
+import { LockScreen } from './components/LockScreen';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
 import { Login } from './pages/Login';
@@ -112,6 +113,7 @@ export default function App() {
       <TipsProvider>
         <TourProvider>
           <TourBubble />
+          <LockScreen username={user.username} />
           <Routes>
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route element={<Layout user={user} />}>
