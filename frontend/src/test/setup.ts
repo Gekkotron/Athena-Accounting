@@ -1,6 +1,18 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
+
+// @testing-library/react's waitFor() only recognizes fake timers via a
+// hard-coded `typeof jest !== 'undefined'` check (dom-testing-library
+// predates Vitest support) and then calls `jest.advanceTimersByTime` to
+// drain its internal microtask-queue tick. Under Vitest's `vi.useFakeTimers()`
+// with no `jest` global, that check is false, so the internal
+// `setTimeout(..., 0)` never fires and any `waitFor()` call issued while fake
+// timers are active hangs until the real per-test timeout. Stubbing a
+// minimal `jest` shim that forwards to `vi` fixes detection everywhere,
+// without needing every test file to know about this.
+// See https://github.com/testing-library/dom-testing-library/issues/830
+vi.stubGlobal('jest', { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) });
 
 // Node 25 ships an experimental global `localStorage` that lacks the
 // standard Storage methods and shadows jsdom's Storage impl. Replace it

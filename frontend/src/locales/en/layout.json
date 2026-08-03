@@ -52,10 +52,9 @@
   "editProfile": "Edit my profile",
   "settings": "Settings",
   "logout": "Sign out",
-  "privacy": {
-   "show": "Show amounts",
-   "hideTitle": "Hide amounts (auto after 5 min)",
-   "hide": "Hide amounts"
+  "lock": {
+   "button": "Lock the screen",
+   "title": "Lock the screen (auto after 5 min idle)"
   }
  },
  "subNav": {

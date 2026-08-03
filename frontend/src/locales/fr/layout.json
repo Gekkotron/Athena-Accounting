@@ -52,10 +52,9 @@
   "editProfile": "Modifier mon profil",
   "settings": "Réglages",
   "logout": "Se déconnecter",
-  "privacy": {
-   "show": "Afficher les montants",
-   "hideTitle": "Masquer les montants (auto après 5 min)",
-   "hide": "Masquer les montants"
+  "lock": {
+   "button": "Verrouiller l'écran",
+   "title": "Verrouiller l'écran (auto après 5 min d'inactivité)"
   }
  },
  "subNav": {

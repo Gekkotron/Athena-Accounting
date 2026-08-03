@@ -1,17 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { User } from '../../api/types';
-import { usePrivacy } from '../../contexts/PrivacyContext';
+import { useLock } from '../../contexts/LockContext';
 import { LanguageSwitcher } from '../../i18n/LanguageSwitcher';
-
-function EyeOpenIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <path d="M1.5 7C2.7 4.5 4.7 3 7 3s4.3 1.5 5.5 4c-1.2 2.5-3.2 4-5.5 4S2.7 9.5 1.5 7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-      <circle cx="7" cy="7" r="1.5" fill="currentColor" />
-    </svg>
-  );
-}
 
 function EyeClosedIcon() {
   return (
@@ -38,7 +29,7 @@ function GearIcon() {
 
 export function UserCard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation('layout');
-  const privacy = usePrivacy();
+  const lock = useLock();
   return (
     <div className="mt-auto pt-6 border-t border-ink-800/60">
       <div className="flex items-center justify-between mb-1">
@@ -70,14 +61,16 @@ export function UserCard({ user, onLogout }: { user: User; onLogout: () => void 
           <GearIcon />
         </NavLink>
       </div>
-      <button
-        className="btn-ghost w-full justify-start text-xs mb-1"
-        onClick={privacy.toggle}
-        title={privacy.hidden ? t('user.privacy.show') : t('user.privacy.hideTitle')}
-      >
-        {privacy.hidden ? <EyeOpenIcon /> : <EyeClosedIcon />}
-        {privacy.hidden ? t('user.privacy.show') : t('user.privacy.hide')}
-      </button>
+      {lock.lockAvailable && (
+        <button
+          className="btn-ghost w-full justify-start text-xs mb-1"
+          onClick={lock.lockNow}
+          title={t('user.lock.title')}
+        >
+          <EyeClosedIcon />
+          {t('user.lock.button')}
+        </button>
+      )}
       <button className="btn-ghost w-full justify-start text-xs" onClick={onLogout}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2M9 9l3-2-3-2M12 7H6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />

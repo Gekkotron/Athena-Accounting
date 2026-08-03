@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
-import { PrivacyProvider } from './contexts/PrivacyContext';
+import { LockProvider } from './contexts/LockContext';
 import { TipsProvider } from './contexts/TipsContext';
 import { TourProvider } from './contexts/TourContext';
 import { TourBubble } from './components/TourBubble';
@@ -108,7 +108,7 @@ export default function App() {
   }
 
   return (
-    <PrivacyProvider>
+    <LockProvider>
       <TipsProvider>
         <TourProvider>
           <TourBubble />
@@ -159,6 +159,6 @@ export default function App() {
           </Routes>
         </TourProvider>
       </TipsProvider>
-    </PrivacyProvider>
+    </LockProvider>
   );
 }

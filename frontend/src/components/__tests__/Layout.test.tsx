@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Layout } from '../Layout';
-import { PrivacyProvider } from '../../contexts/PrivacyContext';
+import { LockProvider } from '../../contexts/LockContext';
 import { pinLocale } from '../../test/i18n';
 
 vi.mock('../../api/client', async () => {
@@ -27,15 +27,16 @@ function renderLayout(initialEntries: string[] = ['/']) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
-        <PrivacyProvider>
+        <LockProvider>
           <Layout user={user} />
-        </PrivacyProvider>
+        </LockProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => { apiMock.mockReset(); });
+afterEach(() => { document.documentElement.classList.remove('privacy-on'); });
 
 describe('Layout', () => {
   it('renders each section header once (desktop sidebar)', () => {
@@ -90,14 +91,26 @@ describe('Layout', () => {
     await waitFor(() => expect(apiMock).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' }));
   });
 
-  it('privacy toggle button label reflects the current state', async () => {
+  it('lock button appears when a lock is configured and locks the screen on click', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/auth/lock-status') return { mode: 'session', lockConfigured: true };
+      return { ok: true };
+    });
     const u = userEvent.setup();
     renderLayout();
-    // Initially: not hidden → button says "Masquer".
-    const toggle = screen.getByRole('button', { name: /masquer les montants/i });
-    await u.click(toggle);
-    // After click, both the mobile and desktop toggles say "Afficher".
-    expect(screen.getAllByRole('button', { name: /afficher les montants/i }).length).toBeGreaterThan(0);
+    const lockBtn = await screen.findByRole('button', { name: /verrouiller l'écran/i });
+    await u.click(lockBtn);
+    expect(document.documentElement.classList.contains('privacy-on')).toBe(true);
+  });
+
+  it('hides the lock button when no lock is configured', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/auth/lock-status') return { mode: 'none', lockConfigured: false };
+      return { ok: true };
+    });
+    renderLayout();
+    await waitFor(() => expect(apiMock).toHaveBeenCalledWith('/api/auth/lock-status'));
+    expect(screen.queryByRole('button', { name: /verrouiller l'écran/i })).not.toBeInTheDocument();
   });
 
   it('mobile drawer opens on menu tap and closes on ✕', async () => {

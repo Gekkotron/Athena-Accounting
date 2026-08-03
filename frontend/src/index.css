@@ -63,9 +63,10 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Privacy mode: when <html class="privacy-on"> is set (by PrivacyContext after
- * 5 min of idle), blur every element that displays a monetary amount. We
- * target the two consistent class combinations used across the app for money:
+ * Privacy mode: when <html class="privacy-on"> is set (by LockContext once
+ * the screen locks, after 5 min of idle or on demand), blur every element
+ * that displays a monetary amount. We target the two consistent class
+ * combinations used across the app for money:
  *   - .display.tabular-nums   (hero figures: dashboard solde net, cards…)
  *   - .font-mono.tabular-nums (table cells, ledger-style amounts)
  * Plus an opt-in escape hatch (.private) for places that don't match those.

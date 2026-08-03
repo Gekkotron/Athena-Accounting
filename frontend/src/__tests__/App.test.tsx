@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../App';
-import { PrivacyProvider } from '../contexts/PrivacyContext';
+import { LockProvider } from '../contexts/LockContext';
 import { pinLocale } from '../test/i18n';
 
 // App now reads a couple of translated strings directly (the loader text +
@@ -49,9 +49,9 @@ function renderApp(path = '/') {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
-        <PrivacyProvider>
+        <LockProvider>
           <App />
-        </PrivacyProvider>
+        </LockProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );

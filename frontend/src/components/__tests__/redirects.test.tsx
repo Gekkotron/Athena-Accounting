@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Outlet } from 'react-router-dom';
 import App from '../../App';
-import { PrivacyProvider } from '../../contexts/PrivacyContext';
+import { LockProvider } from '../../contexts/LockContext';
 
 // Stub every page with a marker so the assertions target routing behavior,
 // not page internals — mirrors the pattern in src/__tests__/App.test.tsx.
@@ -37,7 +37,13 @@ function TestOutlet() {
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
-  return { ...actual, api: vi.fn().mockResolvedValue({ user: { id: 1, username: 'julien' } }) };
+  return {
+    ...actual,
+    api: vi.fn(async (path: string) => {
+      if (path === '/api/auth/lock-status') return { mode: 'session', lockConfigured: true };
+      return { user: { id: 1, username: 'julien' } };
+    }),
+  };
 });
 
 function renderAt(url: string) {
@@ -50,11 +56,11 @@ function renderAt(url: string) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[url]}>
-        <PrivacyProvider>
+        <LockProvider>
           <Suspense fallback={<div />}>
             <App />
           </Suspense>
-        </PrivacyProvider>
+        </LockProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
