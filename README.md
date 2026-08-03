@@ -182,21 +182,19 @@ a reference bucket (configuration, API, glossary).
 
 ```sh
 ./install.sh                  # generates .env with strong random secrets
-docker compose up --build
+./update-release.sh           # pulls the newest prebuilt images and starts
 ```
 
-**No-build alternative (prebuilt images).** Every release publishes
-multi-arch (amd64 + arm64) images to GHCR, so the host doesn't need to
-compile anything:
+`update-release.sh` resolves the newest published
+[release](https://github.com/Gekkotron/Athena-Accounting/releases), pins
+it in `.env`, pulls the multi-arch (amd64 + arm64) images from GHCR, and
+starts the stack — re-run it any time to update (it backs up the
+database first). Set `TZ=Europe/Paris` (your zone) in `.env` so
+scheduled jobs follow your wall clock.
 
-```sh
-./install.sh
-docker compose -f docker-compose.release.yml up -d
-```
-
-Pin a version by setting `ATHENA_VERSION=1.2.3` in `.env` (defaults to
-`latest`); upgrade later with
-`docker compose -f docker-compose.release.yml pull` then `up -d`.
+Prefer building from source instead? `docker compose up --build` runs
+the same stack from the local checkout, and `./update.sh` keeps it
+updated.
 
 Open <http://127.0.0.1:8000> — the first visit walks you through creating
 your username and password. Your password is hashed with argon2id

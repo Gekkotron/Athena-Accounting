@@ -93,25 +93,40 @@ cd Athena-Accounting
 (session key, DB password) and locks it to mode `600`. It does **not**
 create a user; you do that on first visit.
 
-Bring the stack up:
+Then bring the stack up — two options:
+
+### Option A — prebuilt images (recommended)
+
+Every [release](https://github.com/Gekkotron/Athena-Accounting/releases)
+publishes multi-arch (amd64 + arm64) Docker images to GHCR, so the host
+needs no Node and compiles nothing:
+
+```bash
+./update-release.sh
+```
+
+The script resolves the newest published version from GitHub, pins it
+as `ATHENA_VERSION` in `.env`, pulls the images, starts the stack
+(`docker-compose.release.yml`), and waits for the backend to report
+healthy. Re-run it any time to update.
+
+Two `.env` settings worth knowing:
+
+- `ATHENA_VERSION` — the pinned version. The script manages it, but you
+  can set it by hand to any tag from the releases page.
+- `TZ` (e.g. `TZ=Europe/Paris`) — without it the containers run on UTC,
+  so schedule-based features (the bank-sync retrieval hour) fire at UTC
+  hours instead of your wall-clock time.
+
+### Option B — build from source
 
 ```bash
 docker compose up --build
 ```
 
-The first build is slow (Node install, Postgres extensions). Later
-starts are fast.
-
-Don't want to build at all? Every release also publishes prebuilt
-multi-arch images to GHCR — start the same stack from those instead:
-
-```bash
-docker compose -f docker-compose.release.yml up -d
-```
-
-Pin a version with `ATHENA_VERSION=1.2.3` in `.env` (defaults to
-`latest`); upgrade with
-`docker compose -f docker-compose.release.yml pull` then `up -d`.
+The first build is slow (Node install, Postgres extensions); later
+starts are fast. Pick this to audit or modify the code you run —
+otherwise Option A gives the same stack in a fraction of the time.
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
@@ -163,6 +178,16 @@ and is **not** rebuilt, so your data volume is preserved untouched.
 The script is safe to re-run — if there are no new commits and both
 containers are already up, it exits early without touching anything. If
 the pull brought no changes but a container is stopped, it starts it.
+
+### Migrating a source install to prebuilt images
+
+Already running the stack built from source? `./update-release.sh`
+performs the whole switch in one run: it writes a `pg_dump` backup,
+pins the newest version, pulls the images, and swaps the app containers
+in place. Postgres keeps running on the same `./postgres-data`
+directory and your `.env` is reused — keep `SESSION_SECRET` unchanged
+(it encrypts stored bank-sync credentials), and never run
+`docker compose down -v`.
 
 You can wire it to a cron for a light-touch homelab auto-update; a
 sensible cadence is once a day off-peak:

@@ -76,13 +76,30 @@ cd Athena-Accounting
 
 `install.sh` génère un fichier `.env` avec des secrets aléatoires solides (clé de session, mot de passe de la base) et le verrouille en mode `600`. Il **ne** crée **pas** d'utilisateur ; vous le faites à la première visite.
 
-Lancez la stack :
+Puis lancez la stack — deux options :
+
+### Option A — images précompilées (recommandé)
+
+Chaque [release](https://github.com/Gekkotron/Athena-Accounting/releases) publie des images Docker multi-arch (amd64 + arm64) sur GHCR : rien à compiler sur l'hôte, pas besoin de Node :
+
+```bash
+./update-release.sh
+```
+
+Le script détermine la dernière version publiée via l'API GitHub, l'épingle dans `.env` (`ATHENA_VERSION`), télécharge les images, démarre la stack (`docker-compose.release.yml`) et attend que le backend réponde sain. Relancez-le à tout moment pour mettre à jour.
+
+Deux réglages `.env` à connaître :
+
+- `ATHENA_VERSION` — la version épinglée. Le script la gère, mais vous pouvez la fixer à la main sur n'importe quel tag de la page Releases.
+- `TZ` (ex. `TZ=Europe/Paris`) — sans lui, les conteneurs tournent en UTC et les fonctions planifiées (l'heure de récupération de la synchronisation bancaire) se déclenchent à des heures UTC au lieu de votre heure locale.
+
+### Option B — build depuis les sources
 
 ```bash
 docker compose up --build
 ```
 
-Le premier build est lent (installation Node, extensions Postgres). Les démarrages suivants sont rapides.
+Le premier build est lent (installation Node, extensions Postgres) ; les démarrages suivants sont rapides. Choisissez cette option pour auditer ou modifier le code que vous exécutez — sinon l'option A fournit la même stack en une fraction du temps.
 
 Ouvrez [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
@@ -97,7 +114,17 @@ Choisissez un mot de passe solide et stockez-le dans un gestionnaire de mots de 
 
 ## Mettre à jour
 
-Depuis le dossier du checkout, lancez :
+Deux scripts, un par mode d'installation — les deux se lancent depuis le dossier du checkout et laissent vos données Postgres intactes :
+
+**Images précompilées** (`docker-compose.release.yml`) :
+
+```bash
+./update-release.sh
+```
+
+Il résout la dernière release publiée via l'API GitHub (la dernière stable dès qu'il y en a une ; la RC la plus récente en attendant), écrit une sauvegarde `pg_dump` dans `./backups/`, épingle `ATHENA_VERSION` dans `.env`, télécharge les images, redémarre la stack et attend `/health`. Relancé alors que tout est à jour, il se termine tôt. `--no-backup` saute la sauvegarde.
+
+**Build depuis les sources** (`docker-compose.yml`) :
 
 ```bash
 ./update.sh
@@ -106,6 +133,10 @@ Depuis le dossier du checkout, lancez :
 `update.sh` fait un `git pull --rebase` en fast-forward, reconstruit les conteneurs `backend` et `frontend` avec `--no-cache`, relance la stack en tâche de fond (`docker compose up -d --build`), et supprime les images orphelines laissées par le rebuild. Postgres est une image standard et **n'est pas** reconstruit, votre volume de données est donc préservé intact.
 
 Le script est safe à rejouer — s'il n'y a pas de nouveaux commits et que les deux conteneurs sont déjà up, il se termine tôt sans rien toucher. Si le pull n'a rien apporté mais qu'un conteneur est arrêté, il le démarre.
+
+### Migrer une installation « sources » vers les images
+
+Vous faites déjà tourner la stack construite depuis les sources ? `./update-release.sh` fait toute la bascule en une exécution : sauvegarde `pg_dump`, épinglage de la dernière version, téléchargement des images et remplacement des conteneurs applicatifs en place. Postgres continue sur le même dossier `./postgres-data` et votre `.env` est réutilisé — gardez `SESSION_SECRET` inchangé (il chiffre les identifiants de synchronisation bancaire stockés), et ne lancez jamais `docker compose down -v`.
 
 Vous pouvez le brancher sur un cron pour un auto-update homelab léger ; une cadence raisonnable est une fois par jour aux heures creuses :
 
