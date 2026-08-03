@@ -16,7 +16,7 @@ export const LOCAL_USERNAME = 'local';
 // in `none` mode — but the column is NOT NULL. A dummy string keeps schema
 // invariants intact without importing @node-rs/argon2 for something no code
 // will ever verify.
-const LOCAL_PLACEHOLDER_HASH = '$argon2id$local-user-no-login';
+export const LOCAL_PLACEHOLDER_HASH = '$argon2id$local-user-no-login';
 
 export async function ensureLocalUser(): Promise<void> {
   const existing = await db

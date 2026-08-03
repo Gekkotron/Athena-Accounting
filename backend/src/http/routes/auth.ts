@@ -4,6 +4,8 @@ import { hash, verify, Algorithm } from '@node-rs/argon2';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
+import { env } from '../../env.js';
+import { LOCAL_USER_ID, LOCAL_PLACEHOLDER_HASH } from '../../domain/auth/localUser.js';
 
 const ARGON2_OPTS = {
   algorithm: Algorithm.Argon2id,
@@ -163,5 +165,23 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const ok = await verify(user.passwordHash, parsed.data.password).catch(() => false);
     if (!ok) return reply.code(401).send({ error: 'invalid credentials' });
     return { ok: true };
+  });
+
+  // Tells the frontend whether a lock password exists at all. In session
+  // mode the account password is the lock; in none mode (desktop) the lock
+  // is opt-in and lives in the local row's passwordHash.
+  app.get('/api/auth/lock-status', { preHandler: app.requireAuth }, async () => {
+    if (env.AUTH_MODE !== 'none') {
+      return { mode: 'session' as const, lockConfigured: true };
+    }
+    const [user] = await db
+      .select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, LOCAL_USER_ID))
+      .limit(1);
+    return {
+      mode: 'none' as const,
+      lockConfigured: !!user && user.passwordHash !== LOCAL_PLACEHOLDER_HASH,
+    };
   });
 }
