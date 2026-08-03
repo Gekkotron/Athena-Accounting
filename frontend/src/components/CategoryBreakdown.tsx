@@ -71,9 +71,14 @@ export function CategoryBreakdown({
     const byCatId = new Map(cats.map((c) => [c.id, c] as const));
 
     // Aggregate the per-month rows into a single total per category, filtered
-    // by sign so the donut only shows expenses or only revenues.
+    // by sign so the donut only shows expenses or only revenues. Categories
+    // flagged is_internal_transfer are money moving between the user's own
+    // accounts — neither income nor expense — and every other dashboard
+    // surface (Moyennes tiles, Insights, Sankey) already excludes them, so
+    // the donut must too or its total contradicts N × the monthly average.
     const aggregated = new Map<number | null, number>();
     for (const row of rows) {
+      if (row.category_is_internal_transfer) continue;
       const amt = Number(row.total);
       if (!Number.isFinite(amt) || amt === 0) continue;
       if (mode === 'expense' && amt >= 0) continue;
