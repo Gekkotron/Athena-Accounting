@@ -138,4 +138,30 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
     },
   );
+
+  const VerifyBody = z.object({ password: z.string().min(1) });
+
+  // Re-authentication for the lock screen: proves the person at the keyboard
+  // knows the password without touching the session. Same rate limit as
+  // login — it is the same brute-force surface.
+  app.post('/api/auth/verify', {
+    preHandler: app.requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    const parsed = VerifyBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid input' });
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, req.session.userId!))
+      .limit(1);
+    if (!user) return reply.code(401).send({ error: 'invalid credentials' });
+
+    // .catch(false): the desktop placeholder hash is not a valid argon2
+    // string and makes verify() throw rather than return false.
+    const ok = await verify(user.passwordHash, parsed.data.password).catch(() => false);
+    if (!ok) return reply.code(401).send({ error: 'invalid credentials' });
+    return { ok: true };
+  });
 }
