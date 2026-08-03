@@ -157,6 +157,22 @@
       }
     }
   },
+  "lock": {
+    "title": "Mot de passe de verrouillage",
+    "description": "Protège l'écran après 5 minutes d'inactivité. Sans mot de passe, le verrouillage est désactivé.",
+    "currentLabel": "Mot de passe actuel",
+    "newLabel": "Nouveau mot de passe",
+    "confirmLabel": "Confirmer le nouveau mot de passe",
+    "set": "Définir le verrouillage",
+    "change": "Modifier",
+    "remove": "Supprimer le verrouillage",
+    "saved": "Mot de passe de verrouillage enregistré.",
+    "removed": "Verrouillage supprimé.",
+    "errors": {
+      "tooShort": "8 caractères minimum.",
+      "mismatch": "Les mots de passe ne correspondent pas."
+    }
+  },
   "login": {
     "tagline": "Comptabilité auto-hébergée",
     "onboarding": {

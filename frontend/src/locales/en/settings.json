@@ -157,6 +157,22 @@
       }
     }
   },
+  "lock": {
+    "title": "Lock password",
+    "description": "Protects the screen after 5 minutes of inactivity. Without a password, locking is disabled.",
+    "currentLabel": "Current password",
+    "newLabel": "New password",
+    "confirmLabel": "Confirm new password",
+    "set": "Set up locking",
+    "change": "Change",
+    "remove": "Remove locking",
+    "saved": "Lock password saved.",
+    "removed": "Locking removed.",
+    "errors": {
+      "tooShort": "At least 8 characters.",
+      "mismatch": "The passwords do not match."
+    }
+  },
   "login": {
     "tagline": "Self-hosted accounting",
     "onboarding": {

@@ -12,6 +12,7 @@ import { useTips } from '../contexts/TipsContext';
 import { LoadingBlock } from '../components/StateBlocks';
 import { NumberField, SavedChip } from './Settings-fields';
 import { SettingsSecurity } from './SettingsSecurity';
+import { SettingsLock } from './SettingsLock';
 
 export function Settings(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -233,6 +234,8 @@ export function Settings(): JSX.Element {
         </section>
 
         <SettingsSecurity />
+
+        <SettingsLock />
 
         <section className="pt-4 border-t border-ink-800/60">
           <button className="btn-ghost" onClick={() => setConfirmReset(true)}>
