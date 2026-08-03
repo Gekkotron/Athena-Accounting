@@ -41,6 +41,7 @@ export function LockScreen({ username }: { username: string }) {
         setError(t('lock.rateLimited'));
       } else if (err instanceof ApiError && err.status === 401 && err.message === 'authentication required') {
         // Session died while idle — fall back to the login screen.
+        localStorage.removeItem(LOCK_FLAG_KEY);
         qc.clear();
         qc.setQueryData(['me'], { user: null });
         return;

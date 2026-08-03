@@ -68,4 +68,27 @@ describe('LockScreen', () => {
     mount();
     expect(await screen.findByText(/se déconnecter/i)).toBeInTheDocument();
   });
+
+  it('clears the lock flag and boots to the login screen when the session died while idle', async () => {
+    // The string 'authentication required' is a cross-service contract:
+    // it must match the 401 body requireAuth sends in backend/src/http/plugins/auth.ts.
+    mockedApi.mockImplementation(async (path: string) => {
+      if (path === '/api/auth/lock-status') return { mode: 'session', lockConfigured: true };
+      if (path === '/api/auth/verify') throw new ApiError('authentication required', 401, undefined);
+      throw new Error(`unexpected api call: ${path}`);
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <LockProvider>
+          <LockScreen username="julien" />
+          <div data-testid="app">app content</div>
+        </LockProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.change(await screen.findByLabelText(/mot de passe/i), { target: { value: 'whatever' } });
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form')!);
+    await waitFor(() => expect(localStorage.getItem(LOCK_FLAG_KEY)).toBeNull());
+    expect(qc.getQueryData(['me'])).toEqual({ user: null });
+  });
 });

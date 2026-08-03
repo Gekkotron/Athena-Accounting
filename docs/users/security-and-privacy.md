@@ -78,6 +78,9 @@ machine, which resets the lock password back to unset:
 curl -X POST http://localhost:<port>/api/auth/lock-password/reset
 ```
 
+Then quit and relaunch the app — the lock state is re-read at startup, so
+the running app won't notice the reset until it restarts.
+
 Replace `<port>` with the sidecar's port for this install: the desktop
 app binds to an OS-assigned port and writes it to a `.mcp-port` file
 next to `athena.db` in its data directory (see [MCP access](mcp.md) for

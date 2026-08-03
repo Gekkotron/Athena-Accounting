@@ -29,7 +29,7 @@ You installed Athena (or plan to) and want to understand it.
 - **[Accounts & data](users/accounts-and-data.md)** — multi-account,
   balance checkpoints, locked money, backups.
 - **[Security & privacy](users/security-and-privacy.md)** — argon2id,
-  sessions, privacy mode, LAN-only posture.
+  sessions, screen lock, LAN-only posture.
 - **[MCP access](users/mcp.md)** — optional local Model Context
   Protocol server for LLM access.
 - **[Troubleshooting](users/troubleshooting.md)** — FAQ and common

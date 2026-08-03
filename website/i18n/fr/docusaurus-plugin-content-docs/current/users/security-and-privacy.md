@@ -88,6 +88,10 @@ défini :
 curl -X POST http://localhost:<port>/api/auth/lock-password/reset
 ```
 
+Puis quittez et relancez l'application — l'état de verrouillage est relu
+au démarrage, l'application déjà lancée ne remarquera pas la
+réinitialisation avant son redémarrage.
+
 Remplacez `<port>` par le port du sidecar pour cette installation :
 l'application de bureau se lie à un port assigné par l'OS et l'écrit
 dans un fichier `.mcp-port` à côté d'`athena.db`, dans son dossier de

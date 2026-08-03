@@ -13,7 +13,7 @@ Vous avez installé Athena, ou vous vous apprêtez à le faire. Commencez ici.
 - **[Catégorisation](categorization.md)** — règles, onglet Tri, détection des virements internes.
 - **[Tableau de bord](dashboard.md)** — graphiques, insights, Sankey, budgets.
 - **[Comptes et données](accounts-and-data.md)** — comptes, points de contrôle, argent bloqué, sauvegardes.
-- **[Sécurité et confidentialité](security-and-privacy.md)** — authentification, sessions, mode confidentialité.
+- **[Sécurité et confidentialité](security-and-privacy.md)** — authentification, sessions, verrouillage d'écran.
 - **[Chiffrement au repos](encryption-at-rest.md)** — chiffrement de la base de données bureau, et chiffrement du volume Postgres sur Docker/LAN.
 - **[Accès MCP](mcp.md)** — accès LLM local optionnel.
 - **[Dépannage](troubleshooting.md)** — FAQ et problèmes connus.

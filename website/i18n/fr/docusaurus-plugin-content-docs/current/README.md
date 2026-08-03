@@ -19,7 +19,7 @@ Vous avez installé Athena (ou vous prévoyez de le faire) et vous voulez le com
 - **[Catégorisation](users/categorization.md)** — règles, onglet Tri, détection des virements internes.
 - **[Tableau de bord](users/dashboard.md)** — courbe du solde, donut par catégorie, insights, Sankey, budgets.
 - **[Comptes et données](users/accounts-and-data.md)** — multi-comptes, points de contrôle du solde, argent bloqué, sauvegardes.
-- **[Sécurité et confidentialité](users/security-and-privacy.md)** — argon2id, sessions, mode confidentialité, posture LAN-only.
+- **[Sécurité et confidentialité](users/security-and-privacy.md)** — argon2id, sessions, verrouillage d'écran, posture LAN-only.
 - **[Accès MCP](users/mcp.md)** — serveur Model Context Protocol local optionnel pour l'accès LLM.
 - **[Dépannage](users/troubleshooting.md)** — FAQ et problèmes courants.
 
