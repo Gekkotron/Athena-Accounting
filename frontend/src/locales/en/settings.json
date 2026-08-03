@@ -169,6 +169,7 @@
     "saved": "Lock password saved.",
     "removed": "Locking removed.",
     "errors": {
+      "currentRequired": "Current password required.",
       "tooShort": "At least 8 characters.",
       "mismatch": "The passwords do not match."
     }

@@ -19,10 +19,9 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler;
 }
 function reportUnauthorized(path: string): void {
-  // The initial auth-me probe returning 401 is the "not logged in" signal
-  // App is designed to handle by itself — don't recurse it through the
-  // global handler. /api/auth/me 401s are the normal "not logged in" probe,
-  // and a wrong lock-screen password must not be treated as a dead session.
+  // Both are expected 401s App handles itself, not signs of a dead session:
+  // /api/auth/me is the normal "not logged in" probe, and /api/auth/verify
+  // 401s just mean a wrong lock-screen password was typed.
   if (path === '/api/auth/me' || path === '/api/auth/verify') return;
   if (onUnauthorized) onUnauthorized();
 }

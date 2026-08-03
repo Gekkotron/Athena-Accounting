@@ -38,6 +38,7 @@ export function SettingsLock() {
   function submit(e: FormEvent) {
     e.preventDefault();
     setError(null); setOk(null);
+    if (configured && !current) { setError(t('lock.errors.currentRequired')); return; }
     if (next.length < 8) { setError(t('lock.errors.tooShort')); return; }
     if (next !== confirm) { setError(t('lock.errors.mismatch')); return; }
     mut.mutate(configured ? { currentPassword: current, newPassword: next } : { newPassword: next });
@@ -84,6 +85,7 @@ export function SettingsLock() {
             onChange={(e) => setNext(e.target.value)}
             autoComplete="new-password"
             minLength={8}
+            required
           />
         </div>
 
@@ -100,6 +102,7 @@ export function SettingsLock() {
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"
               minLength={8}
+              required
             />
           </div>
         )}

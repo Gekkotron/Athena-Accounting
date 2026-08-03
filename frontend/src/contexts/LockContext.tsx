@@ -1,7 +1,9 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -47,10 +49,10 @@ export function LockProvider({ children }: { children: ReactNode }) {
   });
   const lockAvailable = status.data?.lockConfigured ?? false;
 
-  function engage() {
+  const engage = useCallback(() => {
     localStorage.setItem(LOCK_FLAG_KEY, '1');
     setLocked(true);
-  }
+  }, []);
 
   useEffect(() => {
     // Mirror the React state onto <html> so global CSS hides amounts in the
@@ -88,18 +90,22 @@ export function LockProvider({ children }: { children: ReactNode }) {
         timerRef.current = null;
       }
     };
+    // `engage` is deliberately omitted: it only closes over the stable
+    // setLocked/localStorage calls, so it never changes across renders and
+    // including it would add nothing but review noise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locked, lockAvailable]);
 
-  const value: LockContextValue = {
-    locked,
-    lockAvailable,
-    lockNow: engage,
-    unlock: async (password: string) => {
-      await api<{ ok: boolean }>('/api/auth/verify', { method: 'POST', json: { password } });
-      localStorage.removeItem(LOCK_FLAG_KEY);
-      setLocked(false);
-    },
-  };
+  const unlock = useCallback(async (password: string) => {
+    await api<{ ok: boolean }>('/api/auth/verify', { method: 'POST', json: { password } });
+    localStorage.removeItem(LOCK_FLAG_KEY);
+    setLocked(false);
+  }, []);
+
+  const value = useMemo<LockContextValue>(
+    () => ({ locked, lockAvailable, lockNow: engage, unlock }),
+    [locked, lockAvailable, engage, unlock],
+  );
 
   return <LockCtx.Provider value={value}>{children}</LockCtx.Provider>;
 }

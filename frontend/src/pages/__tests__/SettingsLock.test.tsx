@@ -59,6 +59,16 @@ describe('SettingsLock', () => {
     expect(screen.getByRole('button', { name: /supprimer/i })).toBeInTheDocument();
   });
 
+  it('rejects a change submit with no current password client-side', async () => {
+    mockedApi.mockResolvedValue({ mode: 'none', lockConfigured: true });
+    mount();
+    fireEvent.change(await screen.findByLabelText(/nouveau mot de passe/i), { target: { value: 'desk-lock-123' } });
+    fireEvent.change(screen.getByLabelText(/confirmer/i), { target: { value: 'desk-lock-123' } });
+    fireEvent.click(screen.getByRole('button', { name: /modifier/i }));
+    expect(await screen.findByText(/mot de passe actuel requis/i)).toBeInTheDocument();
+    expect(mockedApi).not.toHaveBeenCalledWith('/api/auth/lock-password', expect.anything());
+  });
+
   it('rejects a mismatched confirmation client-side', async () => {
     mockedApi.mockResolvedValue({ mode: 'none', lockConfigured: false });
     mount();

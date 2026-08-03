@@ -69,6 +69,29 @@ describe('LockScreen', () => {
     expect(await screen.findByText(/se déconnecter/i)).toBeInTheDocument();
   });
 
+  it('shows the rate-limited message on 429 and stays locked', async () => {
+    mockedApi.mockImplementation(async (path: string) => {
+      if (path === '/api/auth/lock-status') return { mode: 'session', lockConfigured: true };
+      if (path === '/api/auth/verify') throw new ApiError('too many requests', 429, undefined);
+      throw new Error(`unexpected api call: ${path}`);
+    });
+    mount();
+    fireEvent.change(await screen.findByLabelText(/mot de passe/i), { target: { value: 'whatever' } });
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form')!);
+    expect(await screen.findByText('Trop de tentatives — réessayez dans une minute.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('desktop mode (none, configured) shows the forgot-password hint and no logout button', async () => {
+    mockedApi.mockImplementation(async (path: string) => {
+      if (path === '/api/auth/lock-status') return { mode: 'none', lockConfigured: true };
+      throw new Error(`unexpected api call: ${path}`);
+    });
+    mount();
+    expect(await screen.findByText(/mot de passe oublié/i)).toBeInTheDocument();
+    expect(screen.queryByText(/se déconnecter/i)).not.toBeInTheDocument();
+  });
+
   it('clears the lock flag and boots to the login screen when the session died while idle', async () => {
     // The string 'authentication required' is a cross-service contract:
     // it must match the 401 body requireAuth sends in backend/src/http/plugins/auth.ts.

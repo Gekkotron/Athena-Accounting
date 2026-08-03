@@ -169,6 +169,7 @@
     "saved": "Mot de passe de verrouillage enregistré.",
     "removed": "Verrouillage supprimé.",
     "errors": {
+      "currentRequired": "Mot de passe actuel requis.",
       "tooShort": "8 caractères minimum.",
       "mismatch": "Les mots de passe ne correspondent pas."
     }

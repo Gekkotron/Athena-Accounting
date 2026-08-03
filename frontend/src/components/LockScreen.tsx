@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../api/client';
@@ -16,6 +16,7 @@ export function LockScreen({ username }: { username: string }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   const logout = useMutation({
     mutationFn: () => api<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
@@ -27,6 +28,28 @@ export function LockScreen({ username }: { username: string }) {
   });
 
   if (!locked) return null;
+
+  // Minimal focus trap: while the overlay is up, Tab/Shift+Tab must cycle
+  // only among its own focusable elements so focus can't escape into the
+  // blurred app underneath.
+  function trapFocus(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'Tab') return;
+    const focusable = overlayRef.current?.querySelectorAll<HTMLElement>(
+      'input, button, [href], select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable || focusable.length === 0) return;
+    const elements = Array.from(focusable).filter((el) => !el.hasAttribute('disabled'));
+    if (elements.length === 0) return;
+    const first = elements[0]!;
+    const last = elements[elements.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -56,10 +79,12 @@ export function LockScreen({ username }: { username: string }) {
 
   return (
     <div
+      ref={overlayRef}
       role="dialog"
       aria-modal="true"
       aria-label={t('lock.screenTitle')}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/95 backdrop-blur"
+      onKeyDown={trapFocus}
     >
       <form onSubmit={submit} className="surface w-full max-w-xs p-6 text-center">
         <h1 className="text-lg font-semibold text-ink-50 mb-1">{t('lock.screenTitle')}</h1>
@@ -74,6 +99,7 @@ export function LockScreen({ username }: { username: string }) {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={busy}
           className="input mb-3"
         />
         {error && (
@@ -88,6 +114,7 @@ export function LockScreen({ username }: { username: string }) {
           <button
             type="button"
             className="btn-ghost w-full justify-center text-xs mt-3"
+            disabled={logout.isPending}
             onClick={() => logout.mutate()}
           >
             {t('user.logout')}
