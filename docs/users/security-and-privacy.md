@@ -44,6 +44,47 @@ no login screen, a single hard-coded local user is seeded on first boot.
 That trade-off is safe because the backend never leaves `127.0.0.1` — no
 other process on the LAN can reach it.
 
+## Screen lock
+
+After 5 minutes of no mouse, keyboard, scroll, or touch activity, Athena
+shows a full-screen lock overlay. Your session and everything you were
+doing — current page, filters, unsaved form drafts — survive the lock;
+only the view is hidden. The eye button in the layout locks the screen
+immediately, on demand.
+
+**Unlocking needs a password, verified server-side.** On the LAN
+(`AUTH_MODE=session`) that's your account password, checked against the
+same argon2id hash used at login — there is no separate PIN to remember.
+On the desktop app (`AUTH_MODE=none`, no login screen, no account
+password to reuse) the lock is **opt-in**: set one from Réglages under
+"Mot de passe de verrouillage." Until you set a desktop lock password,
+the idle timer never arms and the eye button stays hidden — there is
+nothing to lock.
+
+**Honest threat model.** This is a client-enforced lock, not a
+server-enforced one: it protects against someone else picking up your
+keyboard while you've stepped away, not against someone with access to
+your disk or database file — the underlying data is exactly as protected
+(or not) as described elsewhere on this page regardless of whether the
+screen is locked. A locked flag also persists to `localStorage` so an F5
+or an app relaunch boots back into the locked state instead of quietly
+handing over an already-open session.
+
+**Desktop recovery.** If you forget your desktop lock password, there is
+no email-reset flow — the fix is a local `curl` command run on the same
+machine, which resets the lock password back to unset:
+
+```bash
+curl -X POST http://localhost:<port>/api/auth/lock-password/reset
+```
+
+Replace `<port>` with the sidecar's port for this install: the desktop
+app binds to an OS-assigned port and writes it to a `.mcp-port` file
+next to `athena.db` in its data directory (see [MCP access](mcp.md) for
+the per-OS paths). Because this only works from `127.0.0.1`, running it
+already requires the kind of local access that could read the database
+directly — it doesn't weaken the desktop trust model described above.
+
 ## Network boundary
 
 **Postgres bound to 127.0.0.1.** In the shipped Docker Compose file the

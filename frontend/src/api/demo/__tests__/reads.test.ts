@@ -38,6 +38,12 @@ describe('demo read handlers', () => {
     expect(r.needsOnboarding).toBe(false);
   });
 
+  it('GET /api/auth/lock-status disarms the idle lock in demo mode', async () => {
+    const r = await api<{ mode: string; lockConfigured: boolean }>('/api/auth/lock-status');
+    expect(r.mode).toBe('session');
+    expect(r.lockConfigured).toBe(false);
+  });
+
   it('GET /health', async () => {
     const r = await api<{ ok: boolean; mode: string }>('/health');
     expect(r.ok).toBe(true);

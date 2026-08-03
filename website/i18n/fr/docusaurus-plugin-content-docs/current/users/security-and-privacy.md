@@ -49,6 +49,54 @@ cookies, pas d'écran de connexion, un unique utilisateur local est semé
 au premier démarrage. Ce compromis est sûr parce que le backend ne quitte
 jamais `127.0.0.1` — aucun autre processus du LAN ne peut l'atteindre.
 
+## Verrouillage d'écran
+
+Après 5 minutes sans activité (souris, clavier, défilement, écran
+tactile), Athena affiche un écran de verrouillage plein écran. Votre
+session et tout ce que vous étiez en train de faire — page courante,
+filtres, brouillons de formulaire non enregistrés — survivent au
+verrouillage : seul l'affichage est masqué. Le bouton œil dans la mise
+en page verrouille l'écran immédiatement, à la demande.
+
+**Déverrouiller nécessite un mot de passe, vérifié côté serveur.** Sur
+le LAN (`AUTH_MODE=session`), c'est votre mot de passe de compte,
+vérifié contre le même hash argon2id qu'à la connexion — il n'y a pas
+de PIN séparé à retenir. Sur l'application de bureau (`AUTH_MODE=none`,
+pas d'écran de connexion, pas de mot de passe de compte à réutiliser),
+le verrouillage est **opt-in** : définissez-en un depuis Réglages, sous
+« Mot de passe de verrouillage ». Tant qu'aucun mot de passe de
+verrouillage bureau n'est défini, le minuteur d'inactivité ne s'arme
+jamais et le bouton œil reste masqué — il n'y a rien à verrouiller.
+
+**Modèle de menace honnête.** Il s'agit d'un verrouillage appliqué côté
+client, pas côté serveur : il protège contre quelqu'un qui reprendrait
+votre clavier pendant votre absence, pas contre quelqu'un ayant accès à
+votre disque ou au fichier de base de données — les données sous-jacentes
+sont exactement aussi protégées (ou non) que décrit ailleurs sur cette
+page, que l'écran soit verrouillé ou non. Un indicateur de verrouillage
+est aussi persisté dans `localStorage`, si bien qu'un F5 ou un
+redémarrage de l'application redémarre bien en état verrouillé au lieu
+de rendre discrètement la main sur une session déjà ouverte.
+
+**Récupération côté bureau.** Si vous oubliez votre mot de passe de
+verrouillage bureau, il n'y a pas de flux de réinitialisation par email
+— la solution est une commande `curl` locale exécutée sur la même
+machine, qui réinitialise le mot de passe de verrouillage à l'état non
+défini :
+
+```bash
+curl -X POST http://localhost:<port>/api/auth/lock-password/reset
+```
+
+Remplacez `<port>` par le port du sidecar pour cette installation :
+l'application de bureau se lie à un port assigné par l'OS et l'écrit
+dans un fichier `.mcp-port` à côté d'`athena.db`, dans son dossier de
+données (voir [Accès MCP](mcp.md) pour les chemins par OS). Comme cela
+ne fonctionne que depuis `127.0.0.1`, exécuter cette commande suppose
+déjà le type d'accès local qui permettrait de lire directement la base
+de données — cela n'affaiblit pas le modèle de confiance bureau décrit
+ci-dessus.
+
 ## Frontière réseau
 
 **Postgres lié à 127.0.0.1.** Dans le fichier Docker Compose livré, le
