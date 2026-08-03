@@ -6,6 +6,21 @@
 //   - `DB_DRIVER=pglite`: no external DB needed. We auto-enable RUN_DB_TESTS,
 //     seed a placeholder DATABASE_URL/SESSION_SECRET so `env.ts` parses, and
 //     apply migrations against the embedded PGlite instance once per worker.
+//
+// Per-file env overrides: the `runMigrations()` call below imports the
+// migrate -> client -> env chain for every test file (vitest gives each file
+// its own module registry, and this setupFile re-runs per file), which means
+// `env.ts` has already parsed `process.env` by the time a test file's own
+// top-level code runs. A test file that does `process.env.AUTH_MODE = 'none'`
+// (or any other `env.*` key) at its top therefore has no effect on its own —
+// it must call `refreshEnvForTests()` from `../src/env.js` right after
+// mutating `process.env` and before anything that reads `env.*` downstream
+// (e.g. before dynamically importing buildServer.js). See
+// tests/security-routes.pglite.test.ts. That helper only patches scalar
+// values re-read at call time; a module that already built an object off an
+// old env value at its OWN import time (like db/client.ts's top-level-await
+// db/pool singleton) needs `vi.resetModules()` instead — see
+// src/db/__tests__/clientMemoryMode.test.ts.
 
 // env.ts requires SESSION_SECRET >=32 chars regardless of driver — supply a
 // placeholder so unit tests that don't touch the DB still boot cleanly on a

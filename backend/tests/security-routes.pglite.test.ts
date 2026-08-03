@@ -4,20 +4,27 @@
 // Tauri entry point (src/entry/tauri.ts) uses: pin env -> runMigrations ->
 // ensureLocalUser -> build().
 //
-// Env is set BEFORE any of these modules are imported: env.ts and client.ts
-// both do top-level work keyed off process.env at import time. Vitest gives
-// this file its own module registry (isolate: true is the default), so the
-// dynamic imports below are fresh regardless of what other test files did —
-// but process.env itself is real Node global state shared by the whole
-// worker process, so every key this file touches is saved up front and
-// restored in afterAll (see src/db/__tests__/clientMemoryMode.test.ts for
-// the same pattern).
+// Env is set BEFORE any of these modules are imported, but that alone isn't
+// enough: `tests/setup.ts` (a shared setupFile) already imported the
+// migrate -> client -> env chain for this file before this file's top-level
+// code ran, so `env.ts` had already parsed the OLD process.env (AUTH_MODE
+// still 'session', etc). `refreshEnvForTests()` re-parses process.env and
+// patches the already-imported `env` object in place, so `authPlugin`
+// (which reads `env.AUTH_MODE` when build() registers it, not at import
+// time) sees the override. See tests/setup.ts and src/env.ts for the full
+// mechanism.
+//
+// process.env itself is real Node global state shared by the whole worker
+// process, so every key this file touches is saved up front and restored in
+// afterAll (see src/db/__tests__/clientMemoryMode.test.ts for the same
+// pattern).
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { refreshEnvForTests } from '../src/env.js';
 
 const MUTATED_ENV_KEYS = [
   'DB_DRIVER', 'AUTH_MODE', 'SESSION_SECRET', 'DATA_DIR', 'PGLITE_PATH',
@@ -33,6 +40,7 @@ process.env.DB_DRIVER = 'pglite';
 process.env.AUTH_MODE = 'none';
 process.env.SESSION_SECRET = 'x'.repeat(32);
 process.env.ATHENA_APP_VERSION = '9.9.9-test';
+refreshEnvForTests();
 
 let tmp: string;
 let app: FastifyInstance;
@@ -63,6 +71,7 @@ describe('/api/security (pglite, AUTH_MODE=none)', () => {
       if (val === undefined) delete process.env[key];
       else process.env[key] = val;
     }
+    refreshEnvForTests();
   });
 
   it('GET /api/security reports the initial (unencrypted) state', async () => {

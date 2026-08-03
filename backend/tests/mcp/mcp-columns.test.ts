@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-const RUN = !!process.env.RUN_DB_TESTS;
+// Talks to Postgres directly via a raw `pg.Pool` against DATABASE_URL — not
+// an env-caching issue, this test is inherently postgres-only and was never
+// gated on driver. Under DB_DRIVER=pglite there is no DATABASE_URL to
+// connect to, so it must skip rather than attempt (and fail) a real TCP
+// connection.
+const RUN = !!process.env.RUN_DB_TESTS && process.env.DB_DRIVER !== 'pglite';
 
 describe.skipIf(!RUN)('user_settings mcp columns', () => {
   let pool: import('pg').Pool;

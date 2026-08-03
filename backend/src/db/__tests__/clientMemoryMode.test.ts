@@ -5,10 +5,22 @@
 // pointing PGlite at a plaintext `dataDir` on disk.
 //
 // Env must be set BEFORE the dynamic import of '../client.js' — client.ts
-// does a top-level-await build keyed off `env` (read at import time), and
-// vitest gives this file its own worker/module registry, so the singleton
-// import here is fresh regardless of what other test files did.
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// does a top-level-await build keyed off `env` (read at import time). Vitest
+// gives this file its own worker/module registry, but that registry isn't
+// untouched by the time this test runs: `tests/setup.ts` (a shared
+// setupFile) already imports migrate.js -> client.js under the ambient
+// DB_DRIVER=pglite before this file's own code runs, so client.js's
+// top-level-await `db`/`pool`/`dbDriver` singleton is already built from
+// that earlier (unrelated) boot. A plain `await import('../client.js')`
+// below would just return that cached instance — built before
+// `__athenaLoadDataDir`/PGLITE_PATH were set — not a fresh one reflecting
+// this test's overrides. `vi.resetModules()` clears the registry so the
+// import below re-runs client.js's (and env.js's) top-level code against
+// the current process.env, the same escape hatch `refreshEnvForTests()`
+// (src/env.ts) provides for scalar env reads — this one's needed instead
+// because client.ts builds real objects (a Pool/PGlite instance), not just
+// scalars, at import time.
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -70,6 +82,10 @@ describe('client.ts in-memory PGlite handoff', () => {
     process.env.PGLITE_PATH = unusedDataDir;
     process.env.SESSION_SECRET = 'a'.repeat(32);
 
+    // Force a fresh client.js (and the env.js it imports) so its top-level
+    // build actually observes __athenaLoadDataDir and the overrides above,
+    // instead of returning the instance tests/setup.ts already built.
+    vi.resetModules();
     const { pool, getPglite, dbDriver } = await import('../client.js');
 
     expect(dbDriver).toBe('pglite');

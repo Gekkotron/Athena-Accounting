@@ -50,13 +50,43 @@ const Env = z
     path: ['DATABASE_URL'],
   });
 
-const parsed = Env.safeParse(process.env);
-if (!parsed.success) {
-  console.error('Invalid environment configuration:');
-  for (const issue of parsed.error.issues) {
-    console.error(`  ${issue.path.join('.')}: ${issue.message}`);
+function parseEnv() {
+  const parsed = Env.safeParse(process.env);
+  if (!parsed.success) {
+    console.error('Invalid environment configuration:');
+    for (const issue of parsed.error.issues) {
+      console.error(`  ${issue.path.join('.')}: ${issue.message}`);
+    }
+    process.exit(1);
   }
-  process.exit(1);
+  return parsed.data;
 }
 
-export const env = parsed.data;
+export const env = parseEnv();
+
+// Test-only escape hatch. `env` above is parsed once, at module-import time,
+// and reused for the lifetime of this module instance — correct for
+// production (process.env doesn't change after boot) but a trap in tests:
+// vitest gives each test file its own module registry, but `tests/setup.ts`
+// (a shared `setupFiles` entry) already imports the migrate -> client -> env
+// chain for every file before that file's own top-level code runs. So a test
+// file that does `process.env.AUTH_MODE = 'none'` at its top has no effect —
+// this module already parsed and cached the old value.
+//
+// Call this *after* mutating `process.env` and *before* anything that reads
+// `env.*` (e.g. before dynamically importing buildServer.js / auth.ts) to
+// make the override actually take effect. It mutates the exported `env`
+// object in place — same reference every importer already holds — so no
+// caller needs to re-import anything. See tests/security-routes.pglite.test.ts
+// for the pattern.
+//
+// This only patches scalar config values re-read at call time (e.g.
+// `authPlugin` reads `env.AUTH_MODE` when `build()` registers it, not at
+// import time). It cannot rebuild objects other modules already constructed
+// from an old env value at their own import time (e.g. `db/client.ts`'s
+// top-level-await `db`/`pool`/`dbDriver` singleton) — those need
+// `vi.resetModules()` in the test file instead so the next dynamic import
+// re-runs that module's top-level code against the refreshed process.env.
+export function refreshEnvForTests(): void {
+  Object.assign(env, parseEnv());
+}
