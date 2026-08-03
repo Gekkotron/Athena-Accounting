@@ -35,7 +35,20 @@ function renderLayout(initialEntries: string[] = ['/']) {
   );
 }
 
-beforeEach(() => { apiMock.mockReset(); });
+beforeEach(() => {
+  apiMock.mockReset();
+  // Default: lock is configured, same as the LAN-session default most tests
+  // exercise. LockContext's useQuery(['lock-status']) fires on every render
+  // regardless of what a given test is asserting on — without a default
+  // implementation here, react-query resolves it to `undefined` and logs
+  // "Query data cannot be undefined" noise on every test that doesn't touch
+  // auth/lock explicitly. Tests that care about the unconfigured case
+  // override this per-test.
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/auth/lock-status') return { mode: 'session', lockConfigured: true };
+    return { ok: true };
+  });
+});
 afterEach(() => { document.documentElement.classList.remove('privacy-on'); });
 
 describe('Layout', () => {
@@ -84,7 +97,6 @@ describe('Layout', () => {
   });
 
   it('logout POSTs to /api/auth/logout', async () => {
-    apiMock.mockResolvedValue({ ok: true });
     const u = userEvent.setup();
     renderLayout();
     await u.click(screen.getByRole('button', { name: /se déconnecter/i }));
@@ -92,10 +104,6 @@ describe('Layout', () => {
   });
 
   it('lock button appears when a lock is configured and locks the screen on click', async () => {
-    apiMock.mockImplementation(async (path: string) => {
-      if (path === '/api/auth/lock-status') return { mode: 'session', lockConfigured: true };
-      return { ok: true };
-    });
     const u = userEvent.setup();
     renderLayout();
     const lockBtn = await screen.findByRole('button', { name: /verrouiller l'écran/i });
