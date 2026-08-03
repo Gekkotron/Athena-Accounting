@@ -3,20 +3,24 @@ import type { TFunction } from 'i18next';
 
 export type RangeKey = '30d' | '3m' | '6m' | '12m' | 'all';
 
-interface RangeSpec { key: RangeKey; days: number | null }
+// `days` → trailing window of N days; `monthsBack` → calendar window starting
+// on the 1st of the month N months back (the in-progress month counts as the
+// last one, so "6m" = 5 complete months + the current month). Month ranges
+// used to be fixed day counts (180/365), which chopped the start of the
+// oldest month — a salary landing on the 1st silently vanished from the
+// donut/Sankey while the Moyennes tiles still counted it. Neither field →
+// "all time" (no lower bound). The display label and "sur X" suffix are
+// translated — see rangeSuffixLabel() below — keyed off `charts.rangePicker`
+// using a translation-key-safe id (RANGES[i].key with the leading digit
+// dropped, e.g. '30d' -> 'd30') since i18next keys can't start with a digit.
+interface RangeSpec { key: RangeKey; days?: number; monthsBack?: number }
 
-// Days = null → "all time" (no lower bound). Kept as the source of truth for
-// the lookup window (~90 days) so it never drifts from the range key. The
-// display label and "sur X" suffix are translated — see rangeLabel() /
-// rangeSuffixLabel() below — keyed off `charts.rangePicker` using a
-// translation-key-safe id (RANGES[i].key with the leading digit dropped,
-// e.g. '30d' -> 'd30') since i18next keys can't start with a digit.
 export const RANGES: readonly RangeSpec[] = [
-  { key: '30d', days: 30  },
-  { key: '3m',  days: 90  },
-  { key: '6m',  days: 180 },
-  { key: '12m', days: 365 },
-  { key: 'all', days: null },
+  { key: '30d', days: 30 },
+  { key: '3m',  monthsBack: 2 },
+  { key: '6m',  monthsBack: 5 },
+  { key: '12m', monthsBack: 11 },
+  { key: 'all' },
 ] as const;
 
 const LABEL_KEY: Record<RangeKey, string> = {
@@ -33,11 +37,18 @@ function todayMinusDays(days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function firstOfMonthMinus(monthsBack: number): string {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 /** ISO YYYY-MM-DD lower bound for a range key, or undefined for 'all'. */
 export function fromDateFor(range: RangeKey): string | undefined {
   const r = RANGES.find((x) => x.key === range);
-  if (!r || r.days === null) return undefined;
-  return todayMinusDays(r.days);
+  if (r?.monthsBack !== undefined) return firstOfMonthMinus(r.monthsBack);
+  if (r?.days !== undefined) return todayMinusDays(r.days);
+  return undefined;
 }
 
 /** Short human label for the "sur X" affordance ("sur 30 j" / "depuis l'ouverture").
