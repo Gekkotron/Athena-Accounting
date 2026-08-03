@@ -45,3 +45,82 @@ describe.skipIf(!RUN)('AUTH_MODE=none — auth is a no-op', () => {
     expect(res.json().user.username).toBe('local');
   });
 });
+
+describe.skipIf(!RUN)('AUTH_MODE=none — desktop lock password', () => {
+  let app2: FastifyInstance;
+
+  beforeAll(async () => {
+    const { buildApp } = await import('./helpers/build-app.js');
+    const { ensureLocalUser } = await import('../src/domain/auth/localUser.js');
+    await ensureLocalUser();
+    app2 = await buildApp();
+  });
+
+  it('lock-status starts unconfigured (placeholder hash)', async () => {
+    const res = await app2.inject({ method: 'GET', url: '/api/auth/lock-status' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ mode: 'none', lockConfigured: false });
+  });
+
+  it('verify against the placeholder is a plain 401, not a crash', async () => {
+    const res = await app2.inject({
+      method: 'POST', url: '/api/auth/verify', payload: { password: 'anything' },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('set: newPassword only while unconfigured', async () => {
+    const res = await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { newPassword: 'desk-lock-123' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().lockConfigured).toBe(true);
+    const status = await app2.inject({ method: 'GET', url: '/api/auth/lock-status' });
+    expect(status.json().lockConfigured).toBe(true);
+  });
+
+  it('verify now accepts the lock password', async () => {
+    const ok = await app2.inject({
+      method: 'POST', url: '/api/auth/verify', payload: { password: 'desk-lock-123' },
+    });
+    expect(ok.statusCode).toBe(200);
+    const bad = await app2.inject({
+      method: 'POST', url: '/api/auth/verify', payload: { password: 'wrong' },
+    });
+    expect(bad.statusCode).toBe(401);
+  });
+
+  it('change: requires the current password', async () => {
+    const refused = await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { currentPassword: 'wrong', newPassword: 'new-lock-456' },
+    });
+    expect(refused.statusCode).toBe(401);
+    const changed = await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { currentPassword: 'desk-lock-123', newPassword: 'new-lock-456' },
+    });
+    expect(changed.statusCode).toBe(200);
+  });
+
+  it('remove: currentPassword only → back to unconfigured', async () => {
+    const res = await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { currentPassword: 'new-lock-456' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().lockConfigured).toBe(false);
+  });
+
+  it('reset: recovery endpoint restores the placeholder', async () => {
+    await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { newPassword: 'forgotten-789' },
+    });
+    const reset = await app2.inject({ method: 'POST', url: '/api/auth/lock-password/reset' });
+    expect(reset.statusCode).toBe(200);
+    const status = await app2.inject({ method: 'GET', url: '/api/auth/lock-status' });
+    expect(status.json().lockConfigured).toBe(false);
+  });
+});

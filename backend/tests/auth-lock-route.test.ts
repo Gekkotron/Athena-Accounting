@@ -66,4 +66,16 @@ describe.skipIf(!RUN)('lock routes — session mode', () => {
     const res = await app.inject({ method: 'GET', url: '/api/auth/lock-status' });
     expect(res.statusCode).toBe(401);
   });
+
+  it('lock-password routes do not exist in session mode', async () => {
+    const put = await app.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      headers: { cookie }, payload: { newPassword: 'whatever-123' },
+    });
+    expect(put.statusCode).toBe(404);
+    const reset = await app.inject({
+      method: 'POST', url: '/api/auth/lock-password/reset', headers: { cookie },
+    });
+    expect(reset.statusCode).toBe(404);
+  });
 });

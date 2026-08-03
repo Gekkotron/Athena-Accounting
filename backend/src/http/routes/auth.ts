@@ -184,4 +184,54 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       lockConfigured: !!user && user.passwordHash !== LOCAL_PLACEHOLDER_HASH,
     };
   });
+
+  // Desktop-only lock password management. In session mode the account
+  // password fills this role (PATCH /api/auth/me) and these routes 404.
+  const LockPasswordBody = z.object({
+    currentPassword: z.string().min(1).optional(),
+    newPassword: z.string().min(8).max(256).optional(),
+  });
+
+  app.put('/api/auth/lock-password', {
+    preHandler: app.requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    if (env.AUTH_MODE !== 'none') return reply.code(404).send({ error: 'not found' });
+    const parsed = LockPasswordBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid input' });
+    const { currentPassword, newPassword } = parsed.data;
+
+    const [user] = await db.select().from(users).where(eq(users.id, LOCAL_USER_ID)).limit(1);
+    if (!user) return reply.code(500).send({ error: 'local user missing' });
+    const configured = user.passwordHash !== LOCAL_PLACEHOLDER_HASH;
+
+    if (configured) {
+      if (!currentPassword) return reply.code(400).send({ error: 'current password required' });
+      const ok = await verify(user.passwordHash, currentPassword).catch(() => false);
+      if (!ok) return reply.code(401).send({ error: 'current password incorrect' });
+    }
+    if (!newPassword && !configured) {
+      return reply.code(400).send({ error: 'nothing to change' });
+    }
+
+    const passwordHash = newPassword
+      ? await hash(newPassword, ARGON2_OPTS)
+      : LOCAL_PLACEHOLDER_HASH; // remove → back to "no lock"
+    await db.update(users).set({ passwordHash }).where(eq(users.id, LOCAL_USER_ID));
+    return { lockConfigured: !!newPassword };
+  });
+
+  // Documented "forgot my desktop lock password" recovery (curl with
+  // physical access). A curl-capable intruder could read the local DB
+  // anyway, so this adds no surface beyond the desktop trust model.
+  app.post('/api/auth/lock-password/reset', {
+    preHandler: app.requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
+    if (env.AUTH_MODE !== 'none') return reply.code(404).send({ error: 'not found' });
+    await db.update(users)
+      .set({ passwordHash: LOCAL_PLACEHOLDER_HASH })
+      .where(eq(users.id, LOCAL_USER_ID));
+    return { ok: true };
+  });
 }
