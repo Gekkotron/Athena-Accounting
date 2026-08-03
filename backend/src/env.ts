@@ -88,5 +88,11 @@ export const env = parseEnv();
 // `vi.resetModules()` in the test file instead so the next dynamic import
 // re-runs that module's top-level code against the refreshed process.env.
 export function refreshEnvForTests(): void {
+  // Cheap guard against accidental non-test use: this mutates the shared,
+  // process-wide `env` singleton in place, which is only ever safe inside a
+  // test's own module registry.
+  if (!process.env.VITEST && process.env.NODE_ENV !== 'test') {
+    throw new Error('refreshEnvForTests() must only be called in tests (VITEST or NODE_ENV=test)');
+  }
   Object.assign(env, parseEnv());
 }

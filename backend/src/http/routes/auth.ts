@@ -153,10 +153,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const parsed = VerifyBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid input' });
 
+    // The MCP internal-auth path satisfies requireAuth via req.mcpUserId and
+    // leaves session.userId undefined — eq(col, undefined) would throw. A
+    // machine-to-machine caller has no session to unlock, so treat it as a
+    // plain auth failure rather than crash.
+    if (!req.session.userId) return reply.code(401).send({ error: 'invalid credentials' });
+
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.id, req.session.userId!))
+      .where(eq(users.id, req.session.userId))
       .limit(1);
     if (!user) return reply.code(401).send({ error: 'invalid credentials' });
 

@@ -69,6 +69,14 @@ describe.skipIf(!RUN)('AUTH_MODE=none — desktop lock password', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it('set: a 7-char newPassword is rejected (zod min 8)', async () => {
+    const res = await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { newPassword: 'short7c' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('set: newPassword only while unconfigured', async () => {
     const res = await app2.inject({
       method: 'PUT', url: '/api/auth/lock-password',
@@ -102,6 +110,14 @@ describe.skipIf(!RUN)('AUTH_MODE=none — desktop lock password', () => {
       payload: { currentPassword: 'desk-lock-123', newPassword: 'new-lock-456' },
     });
     expect(changed.statusCode).toBe(200);
+  });
+
+  it('remove-attempt: wrong currentPassword and no newPassword → 401', async () => {
+    const res = await app2.inject({
+      method: 'PUT', url: '/api/auth/lock-password',
+      payload: { currentPassword: 'definitely-wrong' },
+    });
+    expect(res.statusCode).toBe(401);
   });
 
   it('remove: currentPassword only → back to unconfigured', async () => {

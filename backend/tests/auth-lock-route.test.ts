@@ -56,6 +56,14 @@ describe.skipIf(!RUN)('lock routes — session mode', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('verify: missing password field → 400', async () => {
+    const res = await app.inject({
+      method: 'POST', url: '/api/auth/verify',
+      headers: { cookie }, payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('lock-status: session mode → lock always configured', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/auth/lock-status', headers: { cookie } });
     expect(res.statusCode).toBe(200);
