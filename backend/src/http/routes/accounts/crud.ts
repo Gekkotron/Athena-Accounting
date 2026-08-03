@@ -79,8 +79,11 @@ export function registerCrud(app: FastifyInstance): void {
       if (!deleted) return reply.code(404).send({ error: 'not found' });
       return { ok: true };
     } catch (err) {
-      // foreign_key_violation — transactions.account_id has ON DELETE RESTRICT
-      if (isPgError(err) && err.code === '23503') {
+      // foreign_key_violation — transactions.account_id has ON DELETE RESTRICT.
+      // pglite emits 23001 (restrict_violation) for this same ON DELETE
+      // RESTRICT case where real Postgres emits 23503 (foreign_key_violation);
+      // both mean "account still referenced" here, so map both to 409.
+      if (isPgError(err) && (err.code === '23503' || err.code === '23001')) {
         return reply
           .code(409)
           .send({ error: 'account has transactions; remove them first' });
