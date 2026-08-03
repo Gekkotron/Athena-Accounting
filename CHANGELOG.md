@@ -12,6 +12,43 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.3] - 2026-08-03
+
+### Added
+- **Écran de verrouillage** : après 5 minutes d'inactivité (ou d'un clic
+  sur le bouton œil), l'application se verrouille derrière une saisie de
+  mot de passe vérifiée côté serveur — il remplace l'ancien mode
+  confidentialité qui se contentait de flouter les montants et se
+  dévoilait sans authentification. La page, les filtres et les brouillons
+  en cours survivent au verrouillage ; un rechargement (F5) ou un
+  relancement de l'app démarre verrouillé. Navigation clavier piégée dans
+  la boîte de dialogue (le focus ne s'échappe pas vers l'app floutée).
+- Desktop : **mot de passe de verrouillage** optionnel, à définir dans
+  *Réglages → Mot de passe de verrouillage* (définir / modifier /
+  supprimer). Tant qu'aucun mot de passe n'est défini, le verrouillage
+  est inactif. Procédure de récupération documentée dans
+  *Sécurité et confidentialité* en cas d'oubli.
+- Documentation *Sécurité et confidentialité* (FR + EN) mise à jour :
+  fonctionnement du verrouillage, modèle de menace honnête (protège
+  contre la personne de passage au clavier, pas contre un accès disque),
+  récupération desktop.
+
+### Changed
+- Le bouton œil **verrouille immédiatement** — plus de masquage/affichage
+  sans authentification ; masqué signifie désormais verrouillé.
+- Démo en ligne : verrouillage désactivé (aucun mot de passe à saisir).
+
+### Fixed
+- Tests backend : la suite complète PGlite (`RUN_DB_TESTS=1`) repasse au
+  vert — l'environnement se fige au premier import et ignorait les
+  surcharges `AUTH_MODE` des fichiers de test (mécanisme de
+  rafraîchissement réservé aux tests), et PGlite émet le code SQL `23001`
+  là où Postgres émet `23503` pour une suppression de compte encore
+  référencé (les deux renvoient maintenant le 409 attendu).
+- API : la vérification du mot de passe ne peut plus renvoyer une erreur
+  500 quand elle est appelée via le canal MCP interne (garde explicite,
+  401 propre).
+
 ## [1.0.0-rc.2] - 2026-08-03
 
 Première release **unifiée** : un seul tag `vX.Y.Z` publie désormais une
