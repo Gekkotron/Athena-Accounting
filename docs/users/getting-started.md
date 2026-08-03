@@ -133,7 +133,22 @@ no "forgot my password" email flow because it doesn't send email.
 
 ## Updating
 
-From the checkout directory, run:
+Two scripts, one per install flavour — both run from the checkout
+directory and both leave your Postgres data untouched:
+
+**Prebuilt images** (`docker-compose.release.yml`):
+
+```bash
+./update-release.sh
+```
+
+It resolves the newest published release from the GitHub API (latest
+stable once one exists; the newest RC until then), writes a `pg_dump`
+safety backup into `./backups/`, pins `ATHENA_VERSION` in `.env`, pulls
+the images, restarts the stack, and waits for `/health`. Re-running when
+already up to date exits early. `--no-backup` skips the dump.
+
+**Built from source** (`docker-compose.yml`):
 
 ```bash
 ./update.sh
