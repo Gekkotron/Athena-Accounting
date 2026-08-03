@@ -90,7 +90,6 @@
         "disconnectDialogDescription": "Mapped accounts will stop syncing. Already-imported transactions are kept.",
         "unmapped": "— Skip —",
         "mappingLabel": "Athena account for",
-        "lastSynced": "Last sync: {{date}}",
         "syncResult": "{{imported}} transaction(s) imported, {{deduped}} duplicate(s) skipped.",
         "duplicatesSummary": "Show skipped duplicates ({{count}})",
         "duplicatesMore": "… and {{count}} more"

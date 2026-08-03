@@ -90,7 +90,6 @@
         "disconnectDialogDescription": "Les comptes associés ne seront plus synchronisés. Les transactions déjà importées sont conservées.",
         "unmapped": "— Ignorer —",
         "mappingLabel": "Compte Athena pour",
-        "lastSynced": "Dernière synchro : {{date}}",
         "syncResult": "{{imported}} transaction(s) importée(s), {{deduped}} doublon(s) ignoré(s).",
         "duplicatesSummary": "Voir les doublons ignorés ({{count}})",
         "duplicatesMore": "… et {{count}} autre(s)"

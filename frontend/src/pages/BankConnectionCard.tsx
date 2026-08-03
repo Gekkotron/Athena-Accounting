@@ -96,11 +96,6 @@ export function BankConnectionCard({
                 </option>
               ))}
             </select>
-            {a.lastSyncedAt && (
-              <span className="text-xs text-ink-400">
-                {t('settings.bankSync.connections.lastSynced', { date: formatDate(a.lastSyncedAt.slice(0, 10)) })}
-              </span>
-            )}
           </div>
         ))}
       </div>
