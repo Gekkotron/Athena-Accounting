@@ -28,6 +28,9 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       NODE_ENV: production
       PORT: 3000
+      # Wall-clock features (bank-sync retrieval hour) follow this timezone;
+      # containers default to UTC otherwise. Node honors TZ without tzdata.
+      TZ: ${TZ:-UTC}
     depends_on:
       db:
         condition: service_healthy
