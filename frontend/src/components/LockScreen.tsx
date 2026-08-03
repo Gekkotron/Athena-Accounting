@@ -39,7 +39,7 @@ export function LockScreen({ username }: { username: string }) {
     );
     if (!focusable || focusable.length === 0) return;
     const elements = Array.from(focusable).filter((el) => !el.hasAttribute('disabled'));
-    if (elements.length === 0) return;
+    if (elements.length === 0) { e.preventDefault(); return; }
     const first = elements[0]!;
     const last = elements[elements.length - 1]!;
     if (e.shiftKey && document.activeElement === first) {

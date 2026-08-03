@@ -90,11 +90,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
         timerRef.current = null;
       }
     };
-    // `engage` is deliberately omitted: it only closes over the stable
-    // setLocked/localStorage calls, so it never changes across renders and
-    // including it would add nothing but review noise.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked, lockAvailable]);
+  }, [locked, lockAvailable, engage]);
 
   const unlock = useCallback(async (password: string) => {
     await api<{ ok: boolean }>('/api/auth/verify', { method: 'POST', json: { password } });
