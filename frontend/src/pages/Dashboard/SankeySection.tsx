@@ -6,6 +6,7 @@ import type { Account, Category, CategoryReportRow } from '../../api/types';
 import {
   RangePicker,
   fromDateFor,
+  toDateFor,
   rangeSuffixLabel,
   type RangeKey,
 } from '../../components/RangePicker';
@@ -39,7 +40,10 @@ export function SankeySection({
 }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
   const { t: tCharts } = useTranslation('charts');
+  // Month ranges are bounded on BOTH sides (last N complete months) so the
+  // flow totals stay reconcilable with the Moyennes mensuelles tiles.
   const fromDate = fromDateFor(range);
+  const toDate = toDateFor(range);
   const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
 
   const catListQ = useQuery({
@@ -50,12 +54,13 @@ export function SankeySection({
     queryKey: [
       'reports',
       'categories',
-      { fromDate: fromDate ?? 'all', accountId: scopedAccountId ?? 'all' },
+      { fromDate: fromDate ?? 'all', toDate: toDate ?? 'all', accountId: scopedAccountId ?? 'all' },
     ],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
         query: {
           ...(fromDate ? { fromDate } : {}),
+          ...(toDate ? { toDate } : {}),
           ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
         },
       }),

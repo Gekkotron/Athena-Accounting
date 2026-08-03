@@ -2,7 +2,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { RangeKey } from '../../../components/RangePicker';
+import { fromDateFor, toDateFor, type RangeKey } from '../../../components/RangePicker';
 import { SankeySection } from '../SankeySection';
 import { pinLocale } from '../../../test/i18n';
 
@@ -132,6 +132,22 @@ it('omits accountId when scope is "all"', async () => {
     const call = apiMock.mock.calls.find(([p]) => p === '/api/reports/categories');
     expect(call).toBeDefined();
     expect(call![1]?.query).not.toHaveProperty('accountId');
+  });
+});
+
+it('bounds the report window with both fromDate and toDate for month ranges', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    return { rows: [] } as any;
+  });
+  renderSection({ range: '6m' });
+  await waitFor(() => {
+    const call = apiMock.mock.calls.find(([p]) => p === '/api/reports/categories');
+    expect(call).toBeDefined();
+    expect(call![1]?.query).toMatchObject({
+      fromDate: fromDateFor('6m'),
+      toDate: toDateFor('6m'),
+    });
   });
 });
 

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { Category, CategoryReportRow } from '../api/types';
 import { CategoryDonut, type CategorySegment } from './CategoryDonut';
-import { RangePicker, fromDateFor, type RangeKey } from './RangePicker';
+import { RangePicker, fromDateFor, toDateFor, type RangeKey } from './RangePicker';
 
 export type { RangeKey } from './RangePicker';
 export type DonutMode = 'expense' | 'income';
@@ -39,19 +39,23 @@ export function CategoryBreakdown({
   const range = isControlled ? controlledRange : internalRange;
   const setRange = isControlled ? (onRangeChange ?? (() => {})) : setInternalRange;
 
+  // Month ranges are bounded on BOTH sides (last N complete months) so the
+  // totals stay reconcilable with the Moyennes mensuelles tiles.
   const fromDate = useMemo(() => fromDateFor(range), [range]);
+  const toDate = useMemo(() => toDateFor(range), [range]);
   const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
 
   const reportQ = useQuery({
     queryKey: [
       'reports',
       'categories',
-      { fromDate: fromDate ?? 'all', accountId: scopedAccountId ?? 'all' },
+      { fromDate: fromDate ?? 'all', toDate: toDate ?? 'all', accountId: scopedAccountId ?? 'all' },
     ],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
         query: {
           ...(fromDate ? { fromDate } : {}),
+          ...(toDate ? { toDate } : {}),
           ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
         },
       }),
