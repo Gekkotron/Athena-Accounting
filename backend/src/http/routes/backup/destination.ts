@@ -21,6 +21,7 @@ import {
   setDestination,
   type BackupDestinationRecord,
   type FolderConfig,
+  type FtpConfig,
   type WebdavConfig,
 } from '../../../domain/backup/store.js';
 
@@ -49,6 +50,19 @@ const PutBody = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('folder'),
     path: z.string().trim().min(1).refine(isAbsolute, { message: 'absolute path required' }),
+    ...shared,
+  }),
+  z.object({
+    kind: z.literal('ftp'),
+    host: z
+      .string()
+      .trim()
+      .min(1)
+      .refine((h) => !h.includes('://'), { message: 'hostname without a scheme' }),
+    port: z.number().int().min(1).max(65535).default(21),
+    username: z.string().trim().min(1),
+    password: z.string().min(1),
+    subdir: z.string().trim().optional(),
     ...shared,
   }),
 ]);
@@ -106,7 +120,7 @@ export function registerDestinationRoutes(app: FastifyInstance): void {
     }
     const uid = userId(req);
     const body = parsed.data;
-    const config: WebdavConfig | FolderConfig =
+    const config: WebdavConfig | FolderConfig | FtpConfig =
       body.kind === 'webdav'
         ? {
             url: body.url,
@@ -114,8 +128,16 @@ export function registerDestinationRoutes(app: FastifyInstance): void {
             subdir: body.subdir?.trim() || null,
             keepLast: body.keepLast,
           }
-        : { path: body.path, keepLast: body.keepLast };
-    const secret = body.kind === 'webdav' ? body.password : null;
+        : body.kind === 'ftp'
+          ? {
+              host: body.host,
+              port: body.port,
+              username: body.username,
+              subdir: body.subdir?.trim() || null,
+              keepLast: body.keepLast,
+            }
+          : { path: body.path, keepLast: body.keepLast };
+    const secret = body.kind === 'folder' ? null : body.password;
     const candidate: BackupDestinationRecord = {
       kind: body.kind,
       config,

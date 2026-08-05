@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { eq } from 'drizzle-orm';
 import { __setBackupFetchForTests } from '../src/domain/backup/providers.js';
 import { decryptEnvelope, type EncryptedEnvelope } from '../src/http/routes/backup/crypto.js';
+import { startFakeFtp, type FakeFtp } from './helpers/fake-ftp.js';
 
 const RUN = !!process.env.RUN_DB_TESTS;
 
@@ -241,6 +242,95 @@ describe.skipIf(!RUN)('/api/backup/destination', () => {
     });
     expect(res.statusCode).toBe(502);
     expect(res.json().detail).toMatch(/authentication failed/i);
+  });
+
+  it('stores an ftp destination after a live probe, and run-now pushes a decryptable file', async () => {
+    const ftp: FakeFtp = await startFakeFtp();
+    try {
+      const put = await app.inject({
+        method: 'PUT',
+        url: '/api/backup/destination',
+        headers: { cookie: cookieA },
+        payload: {
+          kind: 'ftp',
+          host: '127.0.0.1',
+          port: ftp.port,
+          username: 'freebox',
+          password: 'p4ss',
+          subdir: 'athena',
+          keepLast: 5,
+          passphrase: PASSPHRASE,
+        },
+      });
+      expect(put.statusCode).toBe(200);
+      expect(put.json()).toMatchObject({
+        configured: true,
+        kind: 'ftp',
+        config: { host: '127.0.0.1', port: ftp.port, username: 'freebox', subdir: 'athena', keepLast: 5 },
+      });
+      expect(put.body).not.toContain('p4ss');
+      expect(ftp.files.size).toBe(0); // probe file cleaned up
+
+      const run = await app.inject({
+        method: 'POST',
+        url: '/api/backup/destination/run-now',
+        headers: { cookie: cookieA },
+      });
+      expect(run.statusCode).toBe(200);
+      const { filename } = run.json();
+      const stored = ftp.files.get(filename);
+      expect(stored).toBeDefined();
+      const dump = JSON.parse(decryptEnvelope(JSON.parse(stored!.toString()) as EncryptedEnvelope, PASSPHRASE));
+      expect(dump.instance).toBe('athena-accounting');
+
+      // Password encrypted at rest.
+      const rows = await db
+        .select()
+        .from(schema.backupDestinations)
+        .where(eq(schema.backupDestinations.userId, userAId));
+      expect(rows[0].secretEncrypted).not.toContain('p4ss');
+    } finally {
+      await ftp.close();
+    }
+  });
+
+  it('an ftp probe against a dead port maps to 502', async () => {
+    const dead = await startFakeFtp();
+    const deadPort = dead.port;
+    await dead.close();
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/backup/destination',
+      headers: { cookie: cookieA },
+      payload: {
+        kind: 'ftp',
+        host: '127.0.0.1',
+        port: deadPort,
+        username: 'freebox',
+        password: 'p4ss',
+        keepLast: 5,
+        passphrase: PASSPHRASE,
+      },
+    });
+    expect(res.statusCode).toBe(502);
+    expect(res.json().error).toBe('destination test failed');
+  });
+
+  it('rejects an ftp host containing a scheme with 400', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/backup/destination',
+      headers: { cookie: cookieA },
+      payload: {
+        kind: 'ftp',
+        host: 'ftp://mafreebox.freebox.fr',
+        username: 'freebox',
+        password: 'p4ss',
+        keepLast: 5,
+        passphrase: PASSPHRASE,
+      },
+    });
+    expect(res.statusCode).toBe(400);
   });
 
   it('scopes per user — user B sees unconfigured', async () => {

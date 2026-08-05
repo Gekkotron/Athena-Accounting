@@ -9,11 +9,12 @@ import { backupSecretsKey, encryptSecret, decryptSecret } from './secrets.js';
 
 export type WebdavConfig = { url: string; username: string; subdir: string | null; keepLast: number };
 export type FolderConfig = { path: string; keepLast: number };
+export type FtpConfig = { host: string; port: number; username: string; subdir: string | null; keepLast: number };
 
 export type BackupDestinationRecord = {
-  kind: 'webdav' | 'folder';
-  config: WebdavConfig | FolderConfig;
-  secret: string | null; // decrypted WebDAV password
+  kind: 'webdav' | 'folder' | 'ftp';
+  config: WebdavConfig | FolderConfig | FtpConfig;
+  secret: string | null; // decrypted WebDAV/FTP password
   passphrase: string; // decrypted enc1 passphrase
   enabled: boolean;
   lastRunAt: Date | null;
@@ -28,8 +29,8 @@ export async function getDestination(userId: number): Promise<BackupDestinationR
   if (!row) return null;
   const key = backupSecretsKey(env.SESSION_SECRET);
   return {
-    kind: row.kind as 'webdav' | 'folder',
-    config: row.config as WebdavConfig | FolderConfig,
+    kind: row.kind as 'webdav' | 'folder' | 'ftp',
+    config: row.config as WebdavConfig | FolderConfig | FtpConfig,
     secret: row.secretEncrypted ? decryptSecret(key, userId, 'secret', row.secretEncrypted) : null,
     passphrase: decryptSecret(key, userId, 'passphrase', row.passphraseEncrypted),
     enabled: row.enabled,
@@ -41,8 +42,8 @@ export async function getDestination(userId: number): Promise<BackupDestinationR
 export async function setDestination(
   userId: number,
   input: {
-    kind: 'webdav' | 'folder';
-    config: WebdavConfig | FolderConfig;
+    kind: 'webdav' | 'folder' | 'ftp';
+    config: WebdavConfig | FolderConfig | FtpConfig;
     secret: string | null;
     passphrase: string;
     enabled: boolean;

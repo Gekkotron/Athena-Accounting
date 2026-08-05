@@ -26,8 +26,9 @@ function errMsg(err: unknown): string {
 }
 
 // Names come from our own stamp or the PUT-validation probe; anything with
-// a path separator is refused outright.
-function assertPlainName(name: string): void {
+// a path separator is refused outright. Shared with the FTP provider
+// (ftp.ts).
+export function assertPlainName(name: string): void {
   if (name.includes('/') || name.includes('\\') || name.includes('..')) {
     throw new BackupProviderError(`invalid backup filename: ${name}`);
   }

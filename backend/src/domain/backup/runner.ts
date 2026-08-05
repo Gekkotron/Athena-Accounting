@@ -1,11 +1,13 @@
 import { encryptEnvelope } from '../../http/routes/backup/crypto.js';
 import { buildDump, backupFilename } from './dump.js';
 import { createFolderProvider, createWebdavProvider, type BackupProvider } from './providers.js';
+import { createFtpProvider } from './ftp.js';
 import {
   getDestination,
   recordRun,
   type BackupDestinationRecord,
   type FolderConfig,
+  type FtpConfig,
   type WebdavConfig,
 } from './store.js';
 
@@ -20,9 +22,9 @@ export class BackupNotConfiguredError extends Error {
 }
 
 export function providerFor(dest: BackupDestinationRecord): BackupProvider {
-  return dest.kind === 'folder'
-    ? createFolderProvider((dest.config as FolderConfig).path)
-    : createWebdavProvider(dest.config as WebdavConfig, dest.secret ?? '');
+  if (dest.kind === 'folder') return createFolderProvider((dest.config as FolderConfig).path);
+  if (dest.kind === 'ftp') return createFtpProvider(dest.config as FtpConfig, dest.secret ?? '');
+  return createWebdavProvider(dest.config as WebdavConfig, dest.secret ?? '');
 }
 
 // Upload then trim to the newest keepLast files. The stamp format sorts
