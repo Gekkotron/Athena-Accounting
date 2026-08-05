@@ -18,6 +18,9 @@ export const DEFAULTS = {
   // Local hour (0-23, server clock) of the unattended bank sync. 02:00 by
   // default — banks have usually booked the previous day by then.
   bankSyncHour: 2,
+  // Local hour (0-23, server clock) of the unattended remote backup.
+  // 03:00 by default — after the 02:00 bank sync so the backup catches it.
+  backupHour: 3,
 } as const;
 
 export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';

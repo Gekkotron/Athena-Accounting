@@ -660,3 +660,26 @@ export const bankConnectionAccounts = pgTable(
     idxConnection: index('bank_connection_accounts_connection_idx').on(t.connectionId),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// backup_destinations — per-user remote backup destination (migration 0031).
+// One row per user: WebDAV or folder target for scheduled encrypted backups.
+// secret_encrypted (WebDAV password) and passphrase_encrypted (enc1 backup
+// passphrase) are AES-256-GCM-encrypted under a SESSION_SECRET-derived key
+// (see domain/backup/secrets.ts). Plaintext secrets never leave the backend.
+// ---------------------------------------------------------------------------
+
+export const backupDestinations = pgTable('backup_destinations', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  config: jsonb('config').notNull(),
+  secretEncrypted: text('secret_encrypted'),
+  passphraseEncrypted: text('passphrase_encrypted').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -21,6 +21,8 @@ export interface Settings {
   transactionsDefaultAccount: TransactionsDefaultAccount;
   // Local hour (0-23, server clock) of the unattended bank sync.
   bankSyncHour: number;
+  // Local hour (0-23, server clock) of the unattended remote backup.
+  backupHour: number;
 }
 
 export const DEFAULTS: Settings = {
@@ -31,4 +33,5 @@ export const DEFAULTS: Settings = {
   showForecast: false,
   transactionsDefaultAccount: 'first-checking',
   bankSyncHour: 2,
+  backupHour: 3,
 };

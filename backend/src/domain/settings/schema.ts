@@ -23,6 +23,7 @@ export const SettingsSchema = z
       ])
       .optional(),
     bankSyncHour: z.number().int().min(0).max(23).optional(),
+    backupHour: z.number().int().min(0).max(23).optional(),
   })
   .strict();
 
@@ -36,6 +37,7 @@ export type FullSettings = {
   showForecast: boolean;
   transactionsDefaultAccount: TransactionsDefaultAccount;
   bankSyncHour: number;
+  backupHour: number;
 };
 
 // Merges DEFAULTS <- stored (unvalidated JSONB) <- patch. `stored` is

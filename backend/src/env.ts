@@ -44,6 +44,10 @@ const Env = z
     // configured. On by default; set to 0/false to only sync on demand via
     // POST /api/bank-sync/sync.
     BANK_SYNC_AUTO: boolish.default(true),
+    // Nightly unattended remote backup for users with a backup destination
+    // configured (Sauvegarde → Sauvegarde distante). On by default; set to
+    // 0/false to only back up on demand via the run-now button.
+    BACKUP_AUTO: boolish.default(true),
   })
   .refine((v) => v.DB_DRIVER !== 'postgres' || !!v.DATABASE_URL, {
     message: 'DATABASE_URL is required when DB_DRIVER=postgres',
