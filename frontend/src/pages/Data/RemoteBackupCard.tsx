@@ -125,10 +125,15 @@ export function RemoteBackupCard(): JSX.Element {
   };
 
   const d = status.data;
-  const apiError =
-    (saveMut.error instanceof ApiError && saveMut.error.message) ||
-    (runMut.error instanceof ApiError && runMut.error.message) ||
-    null;
+  // The destination routes put the actionable part (connection refused,
+  // authentication failed, …) in `detail` next to the generic `error` —
+  // show both or the banner is useless for debugging.
+  const describeError = (err: unknown): string | null => {
+    if (!(err instanceof ApiError)) return null;
+    const detail = (err.data as { detail?: string } | null | undefined)?.detail;
+    return detail ? `${err.message} — ${detail}` : err.message;
+  };
+  const apiError = describeError(saveMut.error) ?? describeError(runMut.error);
 
   const field = (label: string, key: keyof RemoteBackupForm, type = 'text', extra?: object) => (
     <input

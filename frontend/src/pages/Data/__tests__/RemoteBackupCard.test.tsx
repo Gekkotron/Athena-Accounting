@@ -125,6 +125,28 @@ describe('RemoteBackupCard', () => {
     expect(await screen.findByText(/athena-backup-2026-08-05-140000\.enc\.json/)).toBeInTheDocument();
   });
 
+  it('shows the backend detail when the destination test fails', async () => {
+    const { ApiError } = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
+    apiMock.mockImplementation(async (path: string, init?: { method?: string }) => {
+      const key = `${init?.method ?? 'GET'} ${path}`;
+      if (key === 'GET /api/backup/destination') return UNCONFIGURED;
+      if (key === 'GET /api/settings') return { settings: { backupHour: 3 } };
+      if (key === 'PUT /api/backup/destination') {
+        throw new ApiError('destination test failed', 502, {
+          error: 'destination test failed',
+          detail: 'ftp login: authentication failed (530)',
+        });
+      }
+      throw new Error(`no mock for ${key}`);
+    });
+    renderCard();
+    await userEvent.click(await screen.findByRole('radio', { name: /dossier/i }));
+    await userEvent.type(screen.getByLabelText(/chemin/i), '/mnt/backups');
+    await userEvent.type(screen.getByLabelText(/phrase secrète/i), 'strong-backup-passphrase');
+    await userEvent.click(screen.getByRole('button', { name: /tester et enregistrer/i }));
+    expect(await screen.findByText(/authentication failed \(530\)/)).toBeInTheDocument();
+  });
+
   it('surfaces lastError from the status', async () => {
     routeApi({
       'GET /api/backup/destination': { ...CONFIGURED, lastError: 'webdav upload: HTTP 401' },
