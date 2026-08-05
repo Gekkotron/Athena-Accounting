@@ -1,4 +1,5 @@
 import { BackupPanel } from '../Imports/BackupPanel';
+import { RemoteBackupCard } from './RemoteBackupCard';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
@@ -20,6 +21,7 @@ export function Backup() {
       <div ref={exportAnchor}>
         <BackupPanel />
       </div>
+      <RemoteBackupCard />
     </>
   );
 }

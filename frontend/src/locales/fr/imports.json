@@ -103,6 +103,43 @@
       "label": "Phrase secrète (obligatoire, 8 caractères min.)",
       "tooShort": "La phrase secrète doit contenir au moins 8 caractères.",
       "mandatoryWarning": "Les sauvegardes sont toujours chiffrées. Sans cette phrase secrète, la sauvegarde est illisible — conservez-la précieusement."
+    },
+    "remote": {
+      "sectionTitle": "Sauvegarde distante",
+      "description": "Pousse automatiquement une sauvegarde chiffrée vers un serveur WebDAV (Freebox, Synology, Nextcloud…) ou un dossier local/monté.",
+      "kindLabel": "Type de destination",
+      "kindWebdav": "WebDAV",
+      "kindFolder": "Dossier local",
+      "url": "URL du serveur WebDAV",
+      "username": "Utilisateur",
+      "password": "Mot de passe WebDAV",
+      "subdir": "Sous-dossier (optionnel)",
+      "path": "Chemin absolu du dossier",
+      "keepLast": "Sauvegardes conservées",
+      "passphrase": "Phrase secrète de chiffrement",
+      "passphraseWarning": "Sans cette phrase secrète, les sauvegardes distantes sont irrécupérables — conservez-la précieusement.",
+      "httpWarning": "URL en http : le mot de passe circule en clair sur le réseau local. Le contenu des sauvegardes reste chiffré.",
+      "hourLabel": "Heure de la sauvegarde",
+      "save": "Tester et enregistrer",
+      "saving": "Test en cours…",
+      "runNow": "Sauvegarder maintenant",
+      "running": "Sauvegarde en cours…",
+      "runOk": "Sauvegarde envoyée : {{filename}}",
+      "lastRun": "Dernière sauvegarde : {{date}}",
+      "nextRun": "Prochaine sauvegarde : {{date}}",
+      "neverRan": "Aucune sauvegarde envoyée pour l'instant.",
+      "delete": "Supprimer la destination",
+      "deleteConfirmTitle": "Supprimer la destination ?",
+      "deleteConfirmDescription": "La configuration et ses secrets seront effacés. Les fichiers déjà poussés restent sur la destination.",
+      "deleteConfirmLabel": "Supprimer",
+      "errors": {
+        "url": "URL invalide — elle doit commencer par http:// ou https://.",
+        "username": "Utilisateur requis.",
+        "password": "Mot de passe requis.",
+        "path": "Chemin invalide — il doit être absolu (commencer par /).",
+        "keepLast": "Nombre de sauvegardes invalide — entier ≥ 1.",
+        "passphrase": "Phrase secrète trop courte (8 caractères minimum)."
+      }
     }
   },
   "duplicates": {

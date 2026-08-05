@@ -103,6 +103,43 @@
       "label": "Passphrase (required, min. 8 characters)",
       "tooShort": "The passphrase must be at least 8 characters long.",
       "mandatoryWarning": "Backups are always encrypted. Without this passphrase the backup is unreadable — keep it safe."
+    },
+    "remote": {
+      "sectionTitle": "Remote backup",
+      "description": "Automatically pushes an encrypted backup to a WebDAV server (Freebox, Synology, Nextcloud…) or a local/mounted folder.",
+      "kindLabel": "Destination type",
+      "kindWebdav": "WebDAV",
+      "kindFolder": "Local folder",
+      "url": "WebDAV server URL",
+      "username": "Username",
+      "password": "WebDAV password",
+      "subdir": "Subfolder (optional)",
+      "path": "Absolute folder path",
+      "keepLast": "Backups to keep",
+      "passphrase": "Encryption passphrase",
+      "passphraseWarning": "Without this passphrase, remote backups are unrecoverable — keep it safe.",
+      "httpWarning": "Plain-http URL: the password travels unencrypted on your local network. The backup contents stay encrypted.",
+      "hourLabel": "Backup hour",
+      "save": "Test and save",
+      "saving": "Testing…",
+      "runNow": "Back up now",
+      "running": "Backing up…",
+      "runOk": "Backup pushed: {{filename}}",
+      "lastRun": "Last backup: {{date}}",
+      "nextRun": "Next backup: {{date}}",
+      "neverRan": "No backup pushed yet.",
+      "delete": "Remove destination",
+      "deleteConfirmTitle": "Remove the destination?",
+      "deleteConfirmDescription": "The configuration and its secrets will be erased. Files already pushed stay on the destination.",
+      "deleteConfirmLabel": "Remove",
+      "errors": {
+        "url": "Invalid URL — it must start with http:// or https://.",
+        "username": "Username required.",
+        "password": "Password required.",
+        "path": "Invalid path — it must be absolute (start with /).",
+        "keepLast": "Invalid backup count — integer ≥ 1.",
+        "passphrase": "Passphrase too short (8 characters minimum)."
+      }
     }
   },
   "duplicates": {
