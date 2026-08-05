@@ -106,7 +106,7 @@
     },
     "remote": {
       "sectionTitle": "Remote backup",
-      "description": "Automatically pushes an encrypted backup to a WebDAV server (Freebox, Synology, Nextcloud…) or a local/mounted folder.",
+      "description": "Automatically pushes an encrypted backup to a WebDAV server (Synology, Nextcloud…) or a local/mounted folder (SMB mount of a Freebox, external disk…).",
       "kindLabel": "Destination type",
       "kindWebdav": "WebDAV",
       "kindFolder": "Local folder",

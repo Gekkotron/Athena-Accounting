@@ -40,15 +40,27 @@ One destination per user. Saving the card performs a **real test write** against
 
 Works with any WebDAV server. Common homes for it:
 
-- **Freebox** — enable WebDAV in Freebox OS (Paramètres → Mode avancé → Serveur WebDAV), then use the LAN URL, e.g. `http://mafreebox.freebox.fr/…`.
 - **Synology** — install the *WebDAV Server* package; the share is exposed on port 5005 (http) or 5006 (https).
 - **Nextcloud** — use the files DAV endpoint: `https://your-nextcloud/remote.php/dav/files/USERNAME/`.
+
+The **Freebox has no WebDAV server** (its disk only speaks FTP/SMB/AFP —
+WebDAV is a [long-open feature request](https://dev.freebox.fr/bugs/task/37418)).
+To back up onto a Freebox disk, use the folder destination over an SMB
+mount instead — see below.
 
 The optional *Subfolder* keeps Athena's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
 
 ### Folder destination
 
 An absolute path on the machine running the backend: an SMB/NFS mount, an external disk, a synced folder. The folder must already exist — Athena deliberately refuses to create it, so a missing network mount fails loudly instead of silently writing to a local stub. In Docker, mount the target into the backend container and point the path at the mount.
+
+**Freebox example** — enable *Partages Windows* in Freebox OS (Paramètres → Mode avancé), mount the share on the host (share name is typically `Disque dur`; `smbclient -L mafreebox.freebox.fr -N` lists it), e.g. in `/etc/fstab`:
+
+```
+//mafreebox.freebox.fr/Disque\040dur  /mnt/freebox  cifs  credentials=/etc/freebox-smb.cred,vers=3.0,iocharset=utf8,_netdev,x-systemd.automount  0  0
+```
+
+then bind-mount a subfolder into the backend container (`/mnt/freebox/athena-backups:/backups`) and use `/backups` as the folder path.
 
 Want an off-site copy without giving Athena cloud credentials? Point the folder destination at a directory that `rclone`, Syncthing, or your NAS's own cloud tooling replicates.
 

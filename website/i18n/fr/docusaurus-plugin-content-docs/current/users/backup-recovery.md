@@ -69,15 +69,27 @@ Une destination par utilisateur. L'enregistrement de la carte effectue une **vra
 
 Fonctionne avec n'importe quel serveur WebDAV. Emplacements courants :
 
-- **Freebox** — activez WebDAV dans Freebox OS (Paramètres → Mode avancé → Serveur WebDAV), puis utilisez l'URL LAN, p. ex. `http://mafreebox.freebox.fr/…`.
 - **Synology** — installez le paquet *WebDAV Server* ; le partage est exposé sur le port 5005 (http) ou 5006 (https).
 - **Nextcloud** — utilisez le point d'accès DAV des fichiers : `https://votre-nextcloud/remote.php/dav/files/UTILISATEUR/`.
+
+La **Freebox n'a pas de serveur WebDAV** (son disque ne parle que
+FTP/SMB/AFP — WebDAV est une [demande ouverte de longue date](https://dev.freebox.fr/bugs/task/37418)).
+Pour sauvegarder sur un disque Freebox, utilisez la destination dossier
+via un montage SMB — voir ci-dessous.
 
 Le *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
 
 ### Destination dossier
 
 Un chemin absolu sur la machine qui exécute le backend : un montage SMB/NFS, un disque externe, un dossier synchronisé. Le dossier doit déjà exister — Athena refuse volontairement de le créer, pour qu'un montage réseau absent échoue bruyamment au lieu d'écrire en silence dans un dossier local fantôme. Sous Docker, montez la cible dans le conteneur backend et pointez le chemin vers le montage.
+
+**Exemple Freebox** — activez *Partages Windows* dans Freebox OS (Paramètres → Mode avancé), montez le partage sur l'hôte (le nom du partage est en général `Disque dur` ; `smbclient -L mafreebox.freebox.fr -N` le liste), p. ex. dans `/etc/fstab` :
+
+```
+//mafreebox.freebox.fr/Disque\040dur  /mnt/freebox  cifs  credentials=/etc/freebox-smb.cred,vers=3.0,iocharset=utf8,_netdev,x-systemd.automount  0  0
+```
+
+puis bind-montez un sous-dossier dans le conteneur backend (`/mnt/freebox/athena-backups:/backups`) et utilisez `/backups` comme chemin de dossier.
 
 Envie d'une copie hors site sans confier d'identifiants cloud à Athena ? Pointez la destination dossier vers un répertoire que `rclone`, Syncthing ou l'outillage cloud de votre NAS réplique.
 
