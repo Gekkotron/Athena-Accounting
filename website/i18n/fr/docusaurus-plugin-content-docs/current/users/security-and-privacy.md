@@ -135,7 +135,7 @@ Les [sauvegardes distantes](backup-recovery.md#sauvegardes-distantes-planifiées
 planifiées poussent cette même enveloppe scellée vers votre serveur WebDAV
 ou votre dossier de sauvegarde — le fichier qui arrive sur la destination
 n'est jamais lisible sans la phrase secrète. Les secrets de la destination
-elle-même (le mot de passe WebDAV et la phrase secrète avec laquelle le
+elle-même (le mot de passe WebDAV ou FTP et la phrase secrète avec laquelle le
 planificateur scelle) sont stockés chiffrés au repos — AES-256-GCM sous
 une clé dérivée du `SESSION_SECRET` du serveur, liée à votre identifiant
 utilisateur — et aucune réponse d'API ne les renvoie jamais.

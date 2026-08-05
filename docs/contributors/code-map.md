@@ -49,7 +49,7 @@ nothing lower reaches back up.
 
 - **`domain/`** — business logic, framework-free. One folder per
   bounded context: `auth/` (local user, hashing), `backup/` (portable
-  dump builder plus the remote-backup stack: WebDAV/folder providers,
+  dump builder plus the remote-backup stack: WebDAV/FTP/folder providers,
   encrypted destination store, seal-upload-prune runner, nightly
   scheduler), `imports/` (CSV, OFX, PDF, and photo/OCR pipelines under
   `imports/ocr/`, `pdf/`, `photo/`), `reconcile/` (matching bank rows

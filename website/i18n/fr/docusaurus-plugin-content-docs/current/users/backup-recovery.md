@@ -74,8 +74,26 @@ Fonctionne avec n'importe quel serveur WebDAV. Emplacements courants :
 
 La **Freebox n'a pas de serveur WebDAV** (son disque ne parle que
 FTP/SMB/AFP — WebDAV est une [demande ouverte de longue date](https://dev.freebox.fr/bugs/task/37418)).
-Pour sauvegarder sur un disque Freebox, utilisez la destination dossier
-via un montage SMB — voir ci-dessous.
+Pour sauvegarder sur un disque Freebox, utilisez la destination FTP
+ci-dessous — ou la destination dossier via un montage SMB.
+
+### Destination FTP
+
+FTP simple en mode passif — pensé pour la Freebox, fonctionne avec
+n'importe quel serveur FTP du réseau local :
+
+- **Freebox** — activez le FTP dans Freebox OS (Paramètres de la Freebox →
+  Mode avancé → **FTP**) et définissez-y le mot de passe. Serveur :
+  `mafreebox.freebox.fr`, port `21`, utilisateur `freebox`. Le
+  *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre
+  répertoire (créé automatiquement au premier envoi).
+
+Le FTP envoie le **mot de passe** en clair sur votre réseau local (pas de
+FTPS) — même compromis que le WebDAV en http simple, acceptable sur un
+réseau domestique de confiance. Le **contenu** des sauvegardes est de
+toute façon toujours chiffré. Les fichiers sont écrits sous un nom
+temporaire puis renommés une fois complets : une connexion coupée ne
+laisse jamais une sauvegarde tronquée.
 
 Le *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
 

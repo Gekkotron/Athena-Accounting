@@ -45,8 +45,25 @@ Works with any WebDAV server. Common homes for it:
 
 The **Freebox has no WebDAV server** (its disk only speaks FTP/SMB/AFP —
 WebDAV is a [long-open feature request](https://dev.freebox.fr/bugs/task/37418)).
-To back up onto a Freebox disk, use the folder destination over an SMB
-mount instead — see below.
+To back up onto a Freebox disk, use the FTP destination below — or the
+folder destination over an SMB mount.
+
+### FTP destination
+
+Plain FTP in passive mode — made for the Freebox, works with any FTP
+server on the LAN:
+
+- **Freebox** — enable FTP in Freebox OS (Paramètres de la Freebox → Mode
+  avancé → **FTP**) and set the password there. Server:
+  `mafreebox.freebox.fr`, port `21`, user `freebox`. The optional
+  *Subfolder* keeps Athena's files in their own directory (created
+  automatically on first push).
+
+FTP sends the **password** unencrypted on your LAN (there is no FTPS
+support) — same trade-off as plain-http WebDAV, acceptable on a trusted
+home network. The backup **contents** are always encrypted regardless.
+Files are written under a temporary name and renamed once complete, so a
+dropped connection never leaves a truncated backup behind.
 
 The optional *Subfolder* keeps Athena's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
 

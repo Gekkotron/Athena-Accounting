@@ -248,7 +248,7 @@ Portable JSON dump / restore.
 | ------ | -------------------- | ------- |
 | `GET`  | `/api/backup/export` | Emits a JSON dump keyed by natural names (account / category names, no numeric ids). Multi-user safe — only the calling user's data is included. Transfer rules are intentionally omitted (superseded by category `is_internal_transfer`); older dumps still round-trip since the schema keeps the optional field. |
 | `POST` | `/api/backup/import` | REPLACE semantics, scoped to the caller. Wipes only this user's rows (in reverse dependency order) and reinserts every row from the dump under the caller's `user_id`. Body limit 50 MB. |
-| `GET`  | `/api/backup/destination` | Remote-backup destination status: kind (`webdav`/`folder`), non-secret config, schedule hour, last/next run, last error. Secrets (WebDAV password, backup passphrase) are never echoed. |
+| `GET`  | `/api/backup/destination` | Remote-backup destination status: kind (`webdav`/`folder`/`ftp`), non-secret config, schedule hour, last/next run, last error. Secrets (WebDAV password, backup passphrase) are never echoed. |
 | `PUT`  | `/api/backup/destination` | Configures the destination. Validates with a real probe write + delete against the target before persisting; 502 with a readable `detail` on failure. Secrets are encrypted at rest. |
 | `DELETE` | `/api/backup/destination` | Removes the destination and its encrypted secrets. Files already pushed stay on the destination. |
 | `POST` | `/api/backup/destination/run-now` | Runs one backup immediately with the stored config: builds the dump, seals it (`enc1`), uploads, prunes beyond `keepLast`. Returns the uploaded filename; 409 when unconfigured. |

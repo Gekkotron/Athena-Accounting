@@ -165,7 +165,7 @@ une machine déjà compromise.
 
 La destination de [sauvegarde distante](backup-recovery.md#sauvegardes-distantes-planifiées)
 stocke deux secrets côté serveur pour que le planificateur tourne sans
-intervention : le mot de passe WebDAV et la phrase secrète de sauvegarde.
+intervention : le mot de passe WebDAV ou FTP et la phrase secrète de sauvegarde.
 Les deux sont chiffrés au repos en AES-256-GCM sous une clé dérivée du
 `SESSION_SECRET` du serveur (HKDF-SHA256), liée à l'identifiant de
 l'utilisateur propriétaire — un chiffré copié sur la ligne d'un autre

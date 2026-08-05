@@ -150,7 +150,7 @@ compromised machine.
 
 The [remote backup](backup-recovery.md#remote-backups-scheduled)
 destination stores two secrets server-side so the scheduler can run
-unattended: the WebDAV password and the backup passphrase. Both are
+unattended: the WebDAV or FTP password and the backup passphrase. Both are
 encrypted at rest with AES-256-GCM under a key derived from the server's
 `SESSION_SECRET` (HKDF-SHA256), bound to the owning user id — a ciphertext
 copied onto another user's row fails to decrypt. No API response ever

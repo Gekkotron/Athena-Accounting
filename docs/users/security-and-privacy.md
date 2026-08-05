@@ -119,7 +119,7 @@ Restoring prompts for the same passphrase.
 Scheduled [remote backups](backup-recovery.md#remote-backups-scheduled)
 push that same sealed envelope to your WebDAV server or backup folder —
 the file that lands on the destination is never readable without the
-passphrase. The destination's own secrets (the WebDAV password and the
+passphrase. The destination's own secrets (the WebDAV or FTP password and the
 backup passphrase the scheduler seals with) are stored encrypted at rest
 — AES-256-GCM under a key derived from the server's `SESSION_SECRET`,
 bound to your user id — and no API response ever echoes them back.
