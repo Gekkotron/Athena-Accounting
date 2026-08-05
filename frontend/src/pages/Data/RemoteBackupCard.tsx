@@ -116,7 +116,9 @@ export function RemoteBackupCard(): JSX.Element {
   });
 
   const save = () => {
-    const built = buildPutPayload(form);
+    // On a configured destination, blank secret fields mean "keep the
+    // stored ones" — the backend fills them back in server-side.
+    const built = buildPutPayload(form, { configured: status.data?.configured ?? false });
     if (!built.ok) {
       setFormError(built.error);
       return;
@@ -135,18 +137,27 @@ export function RemoteBackupCard(): JSX.Element {
   };
   const apiError = describeError(saveMut.error) ?? describeError(runMut.error);
 
-  const field = (label: string, key: keyof RemoteBackupForm, type = 'text', extra?: object) => (
-    <input
-      type={type}
-      className="input"
-      aria-label={label}
-      placeholder={label}
-      value={form[key] as string}
-      onChange={(e) => set({ [key]: e.target.value })}
-      disabled={saveMut.isPending}
-      {...extra}
-    />
-  );
+  const field = (label: string, key: keyof RemoteBackupForm, type = 'text', extra?: object) => {
+    // Secrets are write-only: once configured, an empty field keeps the
+    // stored value — say so in the placeholder instead of demanding a
+    // retype on every edit.
+    const keepHint =
+      d?.configured && (key === 'password' || key === 'passphrase')
+        ? `${label} — ${t('backup.remote.keepStored')}`
+        : label;
+    return (
+      <input
+        type={type}
+        className="input"
+        aria-label={label}
+        placeholder={keepHint}
+        value={form[key] as string}
+        onChange={(e) => set({ [key]: e.target.value })}
+        disabled={saveMut.isPending}
+        {...extra}
+      />
+    );
+  };
 
   return (
     <section className="mt-8">

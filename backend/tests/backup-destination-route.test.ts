@@ -333,6 +333,87 @@ describe.skipIf(!RUN)('/api/backup/destination', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('re-saving without secrets reuses the stored password and passphrase', async () => {
+    const ftp: FakeFtp = await startFakeFtp();
+    try {
+      // First save carries both secrets.
+      const first = await app.inject({
+        method: 'PUT',
+        url: '/api/backup/destination',
+        headers: { cookie: cookieA },
+        payload: {
+          kind: 'ftp',
+          host: '127.0.0.1',
+          port: ftp.port,
+          username: 'freebox',
+          password: 'p4ss',
+          keepLast: 5,
+          passphrase: PASSPHRASE,
+        },
+      });
+      expect(first.statusCode).toBe(200);
+
+      // Second save omits them (the UI blanks the fields after a save) —
+      // stored secrets are reused, and only keepLast changes.
+      const second = await app.inject({
+        method: 'PUT',
+        url: '/api/backup/destination',
+        headers: { cookie: cookieA },
+        payload: {
+          kind: 'ftp',
+          host: '127.0.0.1',
+          port: ftp.port,
+          username: 'freebox',
+          keepLast: 7,
+        },
+      });
+      expect(second.statusCode).toBe(200);
+      expect(second.json().config.keepLast).toBe(7);
+
+      // The reused secrets are the real ones: run-now logs in with the
+      // stored password and seals with the original passphrase.
+      const run = await app.inject({
+        method: 'POST',
+        url: '/api/backup/destination/run-now',
+        headers: { cookie: cookieA },
+      });
+      expect(run.statusCode).toBe(200);
+      const stored = ftp.files.get(run.json().filename);
+      const dump = JSON.parse(decryptEnvelope(JSON.parse(stored!.toString()) as EncryptedEnvelope, PASSPHRASE));
+      expect(dump.instance).toBe('athena-accounting');
+    } finally {
+      await ftp.close();
+      await db.delete(schema.backupDestinations).where(eq(schema.backupDestinations.userId, userAId));
+    }
+  });
+
+  it('a first save without a passphrase or password is a 400', async () => {
+    const noPassphrase = await app.inject({
+      method: 'PUT',
+      url: '/api/backup/destination',
+      headers: { cookie: cookieA },
+      payload: { kind: 'folder', path: dir, keepLast: 30 },
+    });
+    expect(noPassphrase.statusCode).toBe(400);
+    expect(noPassphrase.json().error).toMatch(/passphrase required/);
+
+    const noPassword = await app.inject({
+      method: 'PUT',
+      url: '/api/backup/destination',
+      headers: { cookie: cookieA },
+      payload: {
+        kind: 'ftp',
+        host: '127.0.0.1',
+        port: 2121,
+        username: 'freebox',
+        keepLast: 5,
+        passphrase: PASSPHRASE,
+      },
+    });
+    expect(noPassword.statusCode).toBe(400);
+    expect(noPassword.json().error).toMatch(/password required/);
+  });
+
   it('scopes per user — user B sees unconfigured', async () => {
     const res = await app.inject({
       method: 'GET',

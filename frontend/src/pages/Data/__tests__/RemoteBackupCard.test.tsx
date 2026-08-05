@@ -125,6 +125,29 @@ describe('RemoteBackupCard', () => {
     expect(await screen.findByText(/athena-backup-2026-08-05-140000\.enc\.json/)).toBeInTheDocument();
   });
 
+  it('re-saving a configured destination with blank secrets omits them from the PUT', async () => {
+    routeApi({
+      'GET /api/backup/destination': CONFIGURED,
+      'GET /api/settings': { settings: { backupHour: 3 } },
+      'PUT /api/backup/destination': CONFIGURED,
+    });
+    renderCard();
+    // Wait for hydration (path pre-filled from the stored config), then
+    // save without typing either secret.
+    const pathInput = await screen.findByLabelText(/chemin/i);
+    await waitFor(() => expect(pathInput).toHaveValue('/mnt/nas/backups'));
+    await userEvent.click(screen.getByRole('button', { name: /tester et enregistrer/i }));
+    await waitFor(() => {
+      const put = apiMock.mock.calls.find(([, init]) => (init as { method?: string })?.method === 'PUT');
+      expect(put).toBeDefined();
+      expect((put![1] as { json: unknown }).json).toEqual({
+        kind: 'folder',
+        path: '/mnt/nas/backups',
+        keepLast: 30,
+      });
+    });
+  });
+
   it('shows the backend detail when the destination test fails', async () => {
     const { ApiError } = await vi.importActual<typeof import('../../../api/client')>('../../../api/client');
     apiMock.mockImplementation(async (path: string, init?: { method?: string }) => {

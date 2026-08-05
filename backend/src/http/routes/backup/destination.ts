@@ -29,9 +29,14 @@ import {
 // backup passphrase) travel only in the PUT body and are never echoed by
 // any response.
 
+// password/passphrase are optional on PUT: when a destination is already
+// configured, omitting them means "keep the stored ones" — the UI blanks
+// the secret fields after every save (they are never echoed back), and
+// forcing a retype just to change keepLast or the hour would be hostile.
+// A first save still requires both (enforced in the handler).
 const shared = {
   keepLast: z.number().int().min(1).max(365).default(30),
-  passphrase: z.string().min(8).max(1024),
+  passphrase: z.string().min(8).max(1024).optional(),
   enabled: z.boolean().default(true),
 };
 
@@ -43,7 +48,7 @@ const PutBody = z.discriminatedUnion('kind', [
       .url()
       .refine((u) => /^https?:\/\//.test(u), { message: 'http(s) URL required' }),
     username: z.string().trim().min(1),
-    password: z.string().min(1),
+    password: z.string().min(1).optional(),
     subdir: z.string().trim().optional(),
     ...shared,
   }),
@@ -61,7 +66,7 @@ const PutBody = z.discriminatedUnion('kind', [
       .refine((h) => !h.includes('://'), { message: 'hostname without a scheme' }),
     port: z.number().int().min(1).max(65535).default(21),
     username: z.string().trim().min(1),
-    password: z.string().min(1),
+    password: z.string().min(1).optional(),
     subdir: z.string().trim().optional(),
     ...shared,
   }),
@@ -121,6 +126,11 @@ export function registerDestinationRoutes(app: FastifyInstance): void {
     }
     const uid = userId(req);
     const body = parsed.data;
+    const existing = await getDestination(uid);
+    const passphrase = body.passphrase ?? existing?.passphrase;
+    if (!passphrase) {
+      return reply.code(400).send({ error: 'passphrase required' });
+    }
     const config: WebdavConfig | FolderConfig | FtpConfig =
       body.kind === 'webdav'
         ? {
@@ -138,12 +148,15 @@ export function registerDestinationRoutes(app: FastifyInstance): void {
               keepLast: body.keepLast,
             }
           : { path: body.path, keepLast: body.keepLast };
-    const secret = body.kind === 'folder' ? null : body.password;
+    const secret = body.kind === 'folder' ? null : (body.password ?? existing?.secret ?? null);
+    if (body.kind !== 'folder' && !secret) {
+      return reply.code(400).send({ error: 'password required' });
+    }
     const candidate: BackupDestinationRecord = {
       kind: body.kind,
       config,
       secret,
-      passphrase: body.passphrase,
+      passphrase,
       enabled: body.enabled,
       lastRunAt: null,
       lastError: null,
@@ -159,7 +172,7 @@ export function registerDestinationRoutes(app: FastifyInstance): void {
       kind: body.kind,
       config,
       secret,
-      passphrase: body.passphrase,
+      passphrase,
       enabled: body.enabled,
     });
     return statusFor(uid, await getDestination(uid));

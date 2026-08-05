@@ -145,7 +145,8 @@
       "kindFtp": "FTP",
       "host": "FTP server",
       "port": "Port",
-      "ftpWarning": "FTP: the password travels unencrypted on your local network. The backup contents stay encrypted."
+      "ftpWarning": "FTP: the password travels unencrypted on your local network. The backup contents stay encrypted.",
+      "keepStored": "leave blank to keep the current one"
     }
   },
   "duplicates": {

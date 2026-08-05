@@ -145,7 +145,8 @@
       "kindFtp": "FTP",
       "host": "Serveur FTP",
       "port": "Port",
-      "ftpWarning": "FTP : le mot de passe circule en clair sur le réseau local. Le contenu des sauvegardes reste chiffré."
+      "ftpWarning": "FTP : le mot de passe circule en clair sur le réseau local. Le contenu des sauvegardes reste chiffré.",
+      "keepStored": "laissez vide pour conserver l'actuel"
     }
   },
   "duplicates": {

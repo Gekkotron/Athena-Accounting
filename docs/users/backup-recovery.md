@@ -34,7 +34,7 @@ Athena can push an encrypted backup to a remote destination **automatically, onc
 
 Files are named `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`. Retention keeps the newest N files (*Backups to keep*, default 30); pruning only ever touches files matching that exact name pattern, so anything else living in the same folder is never deleted.
 
-One destination per user. Saving the card performs a **real test write** against the destination before storing anything — a typo'd URL, a wrong password, or an unmounted folder is rejected immediately with the underlying error.
+One destination per user. Saving the card performs a **real test write** against the destination before storing anything — a typo'd URL, a wrong password, or an unmounted folder is rejected immediately with the underlying error. When editing an already-configured destination, leaving the password and passphrase fields blank keeps the stored ones (they are never displayed back).
 
 ### WebDAV destination
 
@@ -42,6 +42,8 @@ Works with any WebDAV server. Common homes for it:
 
 - **Synology** — install the *WebDAV Server* package; the share is exposed on port 5005 (http) or 5006 (https).
 - **Nextcloud** — use the files DAV endpoint: `https://your-nextcloud/remote.php/dav/files/USERNAME/`.
+
+The optional *Subfolder* keeps Athena's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
 
 The **Freebox has no WebDAV server** (its disk only speaks FTP/SMB/AFP —
 WebDAV is a [long-open feature request](https://dev.freebox.fr/bugs/task/37418)).
@@ -64,8 +66,6 @@ support) — same trade-off as plain-http WebDAV, acceptable on a trusted
 home network. The backup **contents** are always encrypted regardless.
 Files are written under a temporary name and renamed once complete, so a
 dropped connection never leaves a truncated backup behind.
-
-The optional *Subfolder* keeps Athena's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
 
 ### Folder destination
 

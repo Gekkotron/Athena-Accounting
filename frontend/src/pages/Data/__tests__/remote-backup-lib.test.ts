@@ -83,6 +83,33 @@ describe('buildPutPayload', () => {
   });
 });
 
+describe('buildPutPayload on an already-configured destination', () => {
+  it('omits blank secrets so the stored ones are kept', () => {
+    const r = buildPutPayload({ ...base, kind: 'ftp', password: '', passphrase: '' }, { configured: true });
+    expect(r).toEqual({
+      ok: true,
+      payload: {
+        kind: 'ftp',
+        host: 'mafreebox.freebox.fr',
+        port: 21,
+        username: 'julien',
+        subdir: 'athena',
+        keepLast: 30,
+      },
+    });
+  });
+  it('still validates secrets when they are typed', () => {
+    expect(buildPutPayload({ ...base, passphrase: 'short' }, { configured: true })).toEqual({
+      ok: false,
+      error: 'passphrase',
+    });
+  });
+  it('unconfigured still requires both secrets', () => {
+    expect(buildPutPayload({ ...base, password: '' })).toEqual({ ok: false, error: 'password' });
+    expect(buildPutPayload({ ...base, passphrase: '' })).toEqual({ ok: false, error: 'passphrase' });
+  });
+});
+
 describe('isPlainHttp', () => {
   it('flags http but not https', () => {
     expect(isPlainHttp('http://freebox.local/dav')).toBe(true);

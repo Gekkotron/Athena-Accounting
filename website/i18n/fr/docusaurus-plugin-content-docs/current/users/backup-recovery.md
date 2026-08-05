@@ -63,7 +63,7 @@ Athena peut pousser une sauvegarde chiffrée vers une destination distante **aut
 
 Les fichiers sont nommés `athena-backup-AAAA-MM-JJ-HHMMSS.enc.json`. La rétention garde les N fichiers les plus récents (*Sauvegardes conservées*, 30 par défaut) ; le nettoyage ne touche que les fichiers correspondant exactement à ce motif de nom — tout autre fichier présent dans le même dossier n'est jamais supprimé.
 
-Une destination par utilisateur. L'enregistrement de la carte effectue une **vraie écriture de test** vers la destination avant de rien stocker — une URL erronée, un mauvais mot de passe ou un dossier non monté est rejeté immédiatement avec l'erreur sous-jacente.
+Une destination par utilisateur. L'enregistrement de la carte effectue une **vraie écriture de test** vers la destination avant de rien stocker — une URL erronée, un mauvais mot de passe ou un dossier non monté est rejeté immédiatement avec l'erreur sous-jacente. Lors de la modification d'une destination déjà configurée, laisser le mot de passe et la phrase secrète vides conserve ceux déjà enregistrés (ils ne sont jamais réaffichés).
 
 ### Destination WebDAV
 
@@ -71,6 +71,8 @@ Fonctionne avec n'importe quel serveur WebDAV. Emplacements courants :
 
 - **Synology** — installez le paquet *WebDAV Server* ; le partage est exposé sur le port 5005 (http) ou 5006 (https).
 - **Nextcloud** — utilisez le point d'accès DAV des fichiers : `https://votre-nextcloud/remote.php/dav/files/UTILISATEUR/`.
+
+Le *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
 
 La **Freebox n'a pas de serveur WebDAV** (son disque ne parle que
 FTP/SMB/AFP — WebDAV est une [demande ouverte de longue date](https://dev.freebox.fr/bugs/task/37418)).
@@ -94,8 +96,6 @@ réseau domestique de confiance. Le **contenu** des sauvegardes est de
 toute façon toujours chiffré. Les fichiers sont écrits sous un nom
 temporaire puis renommés une fois complets : une connexion coupée ne
 laisse jamais une sauvegarde tronquée.
-
-Le *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
 
 ### Destination dossier
 
