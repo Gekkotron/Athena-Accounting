@@ -146,6 +146,17 @@ running host — encryption at rest is about protecting data **at rest**
 (powered off, disk removed, drive stolen), not about sandboxing a
 compromised machine.
 
+## Remote backup secrets
+
+The [remote backup](backup-recovery.md#remote-backups-scheduled)
+destination stores two secrets server-side so the scheduler can run
+unattended: the WebDAV password and the backup passphrase. Both are
+encrypted at rest with AES-256-GCM under a key derived from the server's
+`SESSION_SECRET` (HKDF-SHA256), bound to the owning user id — a ciphertext
+copied onto another user's row fails to decrypt. No API response ever
+returns them, and every dump pushed to the destination is itself sealed
+with the backup passphrase.
+
 ## See also
 
 - [Security and privacy](security-and-privacy.md) — the wider security

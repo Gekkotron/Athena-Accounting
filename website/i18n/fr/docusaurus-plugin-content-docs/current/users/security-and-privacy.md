@@ -120,27 +120,25 @@ depuis Réglages → MCP. Chaque jeton est **chiffré au repos** avec
 si bien qu'un observateur sur le fil ne voit que du texte chiffré.
 Révoquer un jeton depuis Réglages l'invalide immédiatement.
 
-## Les sauvegardes sont en clair par défaut
+## Les sauvegardes sont toujours chiffrées
 
 L'export de sauvegarde d'Athena (`/api/backup/export`, ou le bouton dans
-l'onglet Données) écrit une enveloppe JSON contenant tous les comptes,
-transactions, catégories, règles, budgets et points de contrôle **en
-clair**. C'est volontaire — la récupération après sinistre devient
-triviale, et on peut differ des exports historiques avec n'importe quel
-outil texte — mais cela veut dire que le fichier de sauvegarde est aussi
-sensible que la base elle-même. Rangez-le comme vous rangeriez l'export
-d'un gestionnaire de mots de passe : une image disque chiffrée, un disque
-externe chiffré, ou un dossier cloud personnel lui-même chiffré au repos.
-Ne vous l'envoyez pas par email en clair.
+l'onglet Données) exige une phrase secrète : le dump — tous les comptes,
+transactions, catégories, règles, budgets et points de contrôle — est
+scellé en AES-256-GCM avec une clé dérivée par scrypt (N=2¹⁵, r=8, p=1),
+ce qui le rend illisible et inviolable sans la phrase secrète. Il n'existe
+pas d'option JSON en clair, ni de récupération de phrase secrète ; perdre
+la phrase, c'est perdre la sauvegarde. La restauration demande la même
+phrase secrète.
 
-Si vous préférez que le fichier se protège lui-même, renseignez le champ
-optionnel de phrase secrète à côté du bouton d'export : le dump est alors
-chiffré en AES-256-GCM avec une clé dérivée par scrypt (N=2¹⁵, r=8, p=1),
-ce qui le rend illisible et inviolable sans la phrase secrète. Les
-sauvegardes en clair et chiffrées se restaurent par le même flux d'import
-— un fichier chiffré demande simplement sa phrase secrète d'abord. Il
-n'existe aucune récupération de phrase secrète ; la perdre, c'est perdre
-la sauvegarde.
+Les [sauvegardes distantes](backup-recovery.md#sauvegardes-distantes-planifiées)
+planifiées poussent cette même enveloppe scellée vers votre serveur WebDAV
+ou votre dossier de sauvegarde — le fichier qui arrive sur la destination
+n'est jamais lisible sans la phrase secrète. Les secrets de la destination
+elle-même (le mot de passe WebDAV et la phrase secrète avec laquelle le
+planificateur scelle) sont stockés chiffrés au repos — AES-256-GCM sous
+une clé dérivée du `SESSION_SECRET` du serveur, liée à votre identifiant
+utilisateur — et aucune réponse d'API ne les renvoie jamais.
 
 Voir [Sauvegarde et restauration](backup-recovery.md) pour le tour
 complet et le playbook de récupération d'un fichier corrompu.

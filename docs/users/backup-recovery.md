@@ -28,9 +28,44 @@ Export files contain the full set of your accounts, transactions, rules and budg
 
 Under the hood: export is a `POST /api/backup/export` with the passphrase in the request body (never a query string, so it never lands in access logs or browser history), which serialises your user with every relation using natural keys (account names, category names) and then seals the result. The plain `GET /api/backup/export` this used to be now returns `410 Gone`.
 
-## Schedule regular exports
+## Remote backups (scheduled)
 
-Athena doesn't schedule automatic exports — this is deliberate, to avoid the file landing somewhere you don't control. Two common approaches:
+Athena can push an encrypted backup to a remote destination **automatically, once a night**, from **Settings → Data → Backup**, *Remote backup* card. Every pushed file is the same always-encrypted `.enc.json` envelope as a manual export — the passphrase you configure on the card seals each dump, and there is **no recovery** if you lose it.
+
+Files are named `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`. Retention keeps the newest N files (*Backups to keep*, default 30); pruning only ever touches files matching that exact name pattern, so anything else living in the same folder is never deleted.
+
+One destination per user. Saving the card performs a **real test write** against the destination before storing anything — a typo'd URL, a wrong password, or an unmounted folder is rejected immediately with the underlying error.
+
+### WebDAV destination
+
+Works with any WebDAV server. Common homes for it:
+
+- **Freebox** — enable WebDAV in Freebox OS (Paramètres → Mode avancé → Serveur WebDAV), then use the LAN URL, e.g. `http://mafreebox.freebox.fr/…`.
+- **Synology** — install the *WebDAV Server* package; the share is exposed on port 5005 (http) or 5006 (https).
+- **Nextcloud** — use the files DAV endpoint: `https://your-nextcloud/remote.php/dav/files/USERNAME/`.
+
+The optional *Subfolder* keeps Athena's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
+
+### Folder destination
+
+An absolute path on the machine running the backend: an SMB/NFS mount, an external disk, a synced folder. The folder must already exist — Athena deliberately refuses to create it, so a missing network mount fails loudly instead of silently writing to a local stub. In Docker, mount the target into the backend container and point the path at the mount.
+
+Want an off-site copy without giving Athena cloud credentials? Point the folder destination at a directory that `rclone`, Syncthing, or your NAS's own cloud tooling replicates.
+
+### Schedule, retention and status
+
+- The backup hour (server local time, default 03:00) is picked on the card; the scheduler checks every 15 minutes and runs **at most one backup per user per day**.
+- A failed run (destination down, mount missing) is retried on the next 15-minute tick until one succeeds; the card shows the last error.
+- The card's status line shows the last successful push and the next scheduled one.
+- `BACKUP_AUTO=0` disables the scheduler entirely ([configuration reference](../reference/configuration.md)); the *Back up now* button still works.
+
+### Restoring from a remote copy
+
+Download the `.enc.json` file from your destination (any WebDAV client or file browser), then follow the normal [Restore](#restore-via-the-ui) flow — it prompts for the same passphrase the card stores. Test this once after setting up: a backup you've never restored is a hope, not a backup.
+
+## Schedule regular exports (DIY alternative)
+
+Prefer the built-in remote backups above. If you want full control over transport and destination, a scripted export still works:
 
 - **macOS/Linux (cron).** A weekly `curl` script that POSTs a passphrase and drops the result into a folder:
   ```sh

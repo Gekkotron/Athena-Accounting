@@ -106,25 +106,23 @@ is encrypted at rest using `pgcrypto` and the request/response envelope is
 encrypted with the same key so an inspector on the wire only sees ciphertext.
 Revoking a token from Settings invalidates it immediately.
 
-## Backups are cleartext by default
+## Backups are always encrypted
 
 Athena's backup export (`/api/backup/export`, or the button on the Data
-tab) writes a JSON envelope containing every account, transaction,
-category, rule, budget, and checkpoint in the clear. That's intentional —
-it makes disaster recovery trivial and lets you diff historical exports
-with any text tool — but it means the backup file is as sensitive as the
-database itself. Store it somewhere you'd store a password manager export:
-an encrypted disk image, an encrypted external drive, or a personal cloud
-folder that is itself encrypted at rest. Do not email it to yourself in
-the clear.
+tab) requires a passphrase: the dump — every account, transaction,
+category, rule, budget, and checkpoint — is sealed with AES-256-GCM under
+a scrypt-derived key (N=2¹⁵, r=8, p=1), which makes it both unreadable and
+tamper-evident without the passphrase. There is no plain-JSON option, and
+no passphrase recovery; losing the passphrase means losing the backup.
+Restoring prompts for the same passphrase.
 
-If you'd rather the file protect itself, fill in the optional passphrase
-field next to the export button: the dump is then encrypted with
-AES-256-GCM under a scrypt-derived key (N=2¹⁵, r=8, p=1), which makes it
-both unreadable and tamper-evident without the passphrase. Plain and
-encrypted backups restore through the same import flow — an encrypted file
-simply prompts for its passphrase first. There is no passphrase recovery;
-losing it means losing the backup.
+Scheduled [remote backups](backup-recovery.md#remote-backups-scheduled)
+push that same sealed envelope to your WebDAV server or backup folder —
+the file that lands on the destination is never readable without the
+passphrase. The destination's own secrets (the WebDAV password and the
+backup passphrase the scheduler seals with) are stored encrypted at rest
+— AES-256-GCM under a key derived from the server's `SESSION_SECRET`,
+bound to your user id — and no API response ever echoes them back.
 
 See [Backup and recovery](backup-recovery.md) for the full round-trip and
 the corrupt-file recovery playbook.

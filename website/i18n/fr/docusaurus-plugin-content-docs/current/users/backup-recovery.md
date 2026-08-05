@@ -57,11 +57,44 @@ toutes ses relations en clés naturelles (noms de comptes, noms de
 catégories) puis scelle le résultat. L'ancien `GET /api/backup/export`
 en clair renvoie désormais `410 Gone`.
 
-## Planifier des exports réguliers
+## Sauvegardes distantes (planifiées)
 
-Athena ne planifie pas d'export automatique — c'est volontaire, pour
-éviter que le fichier ne se retrouve à un endroit sur lequel vous
-n'avez pas la main. Deux approches courantes :
+Athena peut pousser une sauvegarde chiffrée vers une destination distante **automatiquement, une fois par nuit**, depuis **Réglages → Données → Sauvegarde**, carte *Sauvegarde distante*. Chaque fichier poussé est la même enveloppe `.enc.json` toujours chiffrée qu'un export manuel — la phrase secrète configurée sur la carte scelle chaque dump, et il n'existe **aucune récupération** en cas de perte.
+
+Les fichiers sont nommés `athena-backup-AAAA-MM-JJ-HHMMSS.enc.json`. La rétention garde les N fichiers les plus récents (*Sauvegardes conservées*, 30 par défaut) ; le nettoyage ne touche que les fichiers correspondant exactement à ce motif de nom — tout autre fichier présent dans le même dossier n'est jamais supprimé.
+
+Une destination par utilisateur. L'enregistrement de la carte effectue une **vraie écriture de test** vers la destination avant de rien stocker — une URL erronée, un mauvais mot de passe ou un dossier non monté est rejeté immédiatement avec l'erreur sous-jacente.
+
+### Destination WebDAV
+
+Fonctionne avec n'importe quel serveur WebDAV. Emplacements courants :
+
+- **Freebox** — activez WebDAV dans Freebox OS (Paramètres → Mode avancé → Serveur WebDAV), puis utilisez l'URL LAN, p. ex. `http://mafreebox.freebox.fr/…`.
+- **Synology** — installez le paquet *WebDAV Server* ; le partage est exposé sur le port 5005 (http) ou 5006 (https).
+- **Nextcloud** — utilisez le point d'accès DAV des fichiers : `https://votre-nextcloud/remote.php/dav/files/UTILISATEUR/`.
+
+Le *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
+
+### Destination dossier
+
+Un chemin absolu sur la machine qui exécute le backend : un montage SMB/NFS, un disque externe, un dossier synchronisé. Le dossier doit déjà exister — Athena refuse volontairement de le créer, pour qu'un montage réseau absent échoue bruyamment au lieu d'écrire en silence dans un dossier local fantôme. Sous Docker, montez la cible dans le conteneur backend et pointez le chemin vers le montage.
+
+Envie d'une copie hors site sans confier d'identifiants cloud à Athena ? Pointez la destination dossier vers un répertoire que `rclone`, Syncthing ou l'outillage cloud de votre NAS réplique.
+
+### Horaire, rétention et statut
+
+- L'heure de sauvegarde (heure locale du serveur, 03:00 par défaut) se choisit sur la carte ; le planificateur vérifie toutes les 15 minutes et exécute **au plus une sauvegarde par utilisateur et par jour**.
+- Une exécution échouée (destination injoignable, montage absent) est retentée au tick suivant (15 minutes) jusqu'à réussite ; la carte affiche la dernière erreur.
+- La ligne de statut de la carte montre le dernier envoi réussi et le prochain planifié.
+- `BACKUP_AUTO=0` désactive complètement le planificateur ([référence de configuration](../reference/configuration.md)) ; le bouton *Sauvegarder maintenant* reste fonctionnel.
+
+### Restaurer depuis une copie distante
+
+Téléchargez le fichier `.enc.json` depuis votre destination (n'importe quel client WebDAV ou explorateur de fichiers), puis suivez le flux normal de [Restauration](#restaurer-via-linterface) — il demande la même phrase secrète que celle stockée sur la carte. Testez-le une fois après la mise en place : une sauvegarde jamais restaurée est un espoir, pas une sauvegarde.
+
+## Planifier des exports réguliers (alternative manuelle)
+
+Préférez les sauvegardes distantes intégrées ci-dessus. Pour garder la main complète sur le transport et la destination, un export scripté fonctionne toujours :
 
 - **macOS/Linux (cron).** Un script `curl` hebdomadaire qui envoie une
   phrase secrète en `POST` et dépose le résultat dans un dossier :

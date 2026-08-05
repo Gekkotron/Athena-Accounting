@@ -161,6 +161,18 @@ l'hôte en cours d'exécution — le chiffrement au repos protège les
 données **au repos** (machine éteinte, disque retiré, disque volé), pas
 une machine déjà compromise.
 
+## Secrets des sauvegardes distantes
+
+La destination de [sauvegarde distante](backup-recovery.md#sauvegardes-distantes-planifiées)
+stocke deux secrets côté serveur pour que le planificateur tourne sans
+intervention : le mot de passe WebDAV et la phrase secrète de sauvegarde.
+Les deux sont chiffrés au repos en AES-256-GCM sous une clé dérivée du
+`SESSION_SECRET` du serveur (HKDF-SHA256), liée à l'identifiant de
+l'utilisateur propriétaire — un chiffré copié sur la ligne d'un autre
+utilisateur ne se déchiffre pas. Aucune réponse d'API ne les renvoie
+jamais, et chaque dump poussé vers la destination est lui-même scellé
+avec la phrase secrète de sauvegarde.
+
 ## Voir aussi
 
 - [Sécurité et confidentialité](security-and-privacy.md) — le modèle de

@@ -48,13 +48,16 @@ nothing lower reaches back up.
   `backend/src/db/schema.ts`.
 
 - **`domain/`** — business logic, framework-free. One folder per
-  bounded context: `auth/` (local user, hashing), `imports/` (CSV,
-  OFX, PDF, and photo/OCR pipelines under `imports/ocr/`, `pdf/`,
-  `photo/`), `reconcile/` (matching bank rows against expected
-  entries), `rules/` (auto-categorization), `settings/` (encrypted
-  key-value store with `crypto.ts`), and `transfers/` (inter-account
-  transfer detection). No Fastify or HTTP imports allowed here. Open
-  first: `backend/src/domain/imports/import-service.ts`.
+  bounded context: `auth/` (local user, hashing), `backup/` (portable
+  dump builder plus the remote-backup stack: WebDAV/folder providers,
+  encrypted destination store, seal-upload-prune runner, nightly
+  scheduler), `imports/` (CSV, OFX, PDF, and photo/OCR pipelines under
+  `imports/ocr/`, `pdf/`, `photo/`), `reconcile/` (matching bank rows
+  against expected entries), `rules/` (auto-categorization),
+  `settings/` (encrypted key-value store with `crypto.ts`), and
+  `transfers/` (inter-account transfer detection). No Fastify or HTTP
+  imports allowed here. Open first:
+  `backend/src/domain/imports/import-service.ts`.
 
 - **`http/`** — the Fastify surface. `routes/` has one file per
   resource (`accounts.ts`, `budgets.ts`, `reports.ts`,
