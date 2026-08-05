@@ -19,4 +19,11 @@ export function registerSimpleHandlers(): void {
   // partial demo seed never leaves consumers with undefined standard keys
   // (e.g. dashboardChartScope, which scopes the Évolution chart).
   registerHandler('GET', '/api/settings', () => ({ settings: { ...DEFAULTS, ...getState().settings } }));
+  // Sauvegarde distante: plausible fake status that round-trips the demo
+  // write handlers (writes/settings.ts). Secrets are never stored.
+  registerHandler('GET', '/api/backup/destination', () => {
+    const dest = getState().backupDestination;
+    const auto = { enabled: true, hour: 3, nextAt: null as string | null };
+    return dest ? { configured: true, ...dest, auto } : { configured: false, auto };
+  });
 }

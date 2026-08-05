@@ -36,6 +36,16 @@ export interface DemoState {
   // handlers default missing/undefined to [].
   recurring?: RecurringSeries[];
   settings: Record<string, unknown>;
+  // Remote-backup destination (Sauvegarde distante card). Non-secret parts
+  // only — the demo never stores passwords or passphrases. Optional so
+  // older localStorage snapshots still hydrate.
+  backupDestination?: {
+    kind: 'webdav' | 'folder';
+    config: Record<string, unknown>;
+    enabled: boolean;
+    lastRunAt: string | null;
+    lastError: string | null;
+  };
 }
 
 type Mutator = (draft: DemoState) => void;
