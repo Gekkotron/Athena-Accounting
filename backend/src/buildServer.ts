@@ -21,6 +21,7 @@ import { categoriesRoutes } from './http/routes/categories.js';
 import { startDraftSweeper } from './domain/imports/pdf/draft-sweeper.js';
 import { startWatchFolder } from './domain/imports/watch-folder.js';
 import { startBankSyncScheduler } from './domain/imports/bank-sync.js';
+import { startBackupScheduler } from './domain/backup/scheduler.js';
 import { rulesRoutes } from './http/routes/rules.js';
 import { transferRulesRoutes } from './http/routes/transfer-rules.js';
 import { transactionsRoutes } from './http/routes/transactions/index.js';
@@ -155,6 +156,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   startDraftSweeper(app);
   startWatchFolder(app);
   startBankSyncScheduler(app);
+  startBackupScheduler(app);
 
   // v2 orphan-key sweep: strip pre-v2 tip ids ('welcome_tour', 'section:*')
   // from every user's dismissed_tips jsonb. One-shot at boot. Failures are
