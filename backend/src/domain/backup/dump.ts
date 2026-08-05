@@ -1,0 +1,180 @@
+import { eq } from 'drizzle-orm';
+import { db } from '../../db/client.js';
+import {
+  accounts,
+  accountFilenamePatterns,
+  balanceCheckpoints,
+  categories,
+  categoryBudgets,
+  fileImports,
+  rules,
+  transactions,
+  transactionSplits,
+} from '../../db/schema.js';
+import { VERSION, fileImportKey } from '../../http/routes/backup/schema.js';
+
+// Emits a portable JSON dump using natural keys (account / category names).
+// Multi-user safe: only the calling user's data is included. Shared by the
+// manual export route and the scheduled remote-backup runner.
+//
+// Transfer rules are intentionally NOT emitted — they've been superseded by
+// the `is_internal_transfer` flag on categories, and every restore of an
+// old dump still re-inserts them via the optional schema field, so historic
+// backups keep round-tripping cleanly.
+export async function buildDump(uid: number) {
+  {
+    const [accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets] = await Promise.all([
+      db.select().from(accounts).where(eq(accounts.userId, uid)),
+      db.select().from(categories).where(eq(categories.userId, uid)),
+      db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
+      db.select().from(rules).where(eq(rules.userId, uid)),
+      db.select().from(transactions).where(eq(transactions.userId, uid)),
+      db.select().from(fileImports).where(eq(fileImports.userId, uid)),
+      db.select().from(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid)),
+      db
+        .select()
+        .from(transactionSplits)
+        .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+        .where(eq(transactions.userId, uid))
+        .then((rows) => rows.map((r) => r.transaction_splits)),
+      db.select().from(categoryBudgets).where(eq(categoryBudgets.userId, uid)),
+    ]);
+
+    const accountById = new Map(accs.map((a) => [a.id, a]));
+    const categoryById = new Map(cats.map((c) => [c.id, c]));
+    const fileImportById = new Map(fimps.map((f) => [f.id, f]));
+
+    // Disambiguates same-name sub-categories under different parents in the
+    // downstream refs below (rules/transactions/splits/budgets).
+    function categoryParentName(catId: number | null): string | null {
+      if (catId == null) return null;
+      const c = categoryById.get(catId);
+      if (!c || c.parentId == null) return null;
+      return categoryById.get(c.parentId)?.name ?? null;
+    }
+    const splitsByTx = new Map<number, Array<typeof splits[number]>>();
+    for (const s of splits) {
+      const arr = splitsByTx.get(s.transactionId) ?? [];
+      arr.push(s);
+      splitsByTx.set(s.transactionId, arr);
+    }
+
+    const dump = {
+      version: VERSION,
+      exportedAt: new Date().toISOString(),
+      instance: 'athena-accounting',
+      counts: {
+        accounts: accs.length,
+        categories: cats.length,
+        rules: rls.length,
+        transactions: txs.length,
+        accountFilenamePatterns: patterns.length,
+        fileImports: fimps.length,
+        balanceCheckpoints: checkpoints.length,
+        budgets: budgets.length,
+      },
+      accounts: accs.map((a) => ({
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        openingBalance: a.openingBalance,
+        openingDate: a.openingDate,
+        displayOrder: a.displayOrder,
+        lockYears: a.lockYears,
+      })),
+      categories: cats.map((c) => ({
+        name: c.name,
+        kind: c.kind,
+        color: c.color,
+        parent: c.parentId ? categoryById.get(c.parentId)?.name ?? null : null,
+        isDefault: c.isDefault,
+        isInternalTransfer: c.isInternalTransfer,
+      })),
+      accountFilenamePatterns: patterns.map((p) => ({
+        pattern: p.pattern,
+        account: accountById.get(p.accountId)?.name ?? null,
+        priority: p.priority,
+      })),
+      rules: rls.map((r) => ({
+        keyword: r.keyword,
+        category: categoryById.get(r.categoryId)?.name ?? null,
+        categoryParent: categoryParentName(r.categoryId),
+        signConstraint: r.signConstraint,
+        matchMode: r.matchMode,
+        priority: r.priority,
+        enabled: r.enabled,
+      })),
+      transactions: txs.map((t) => {
+        const src = t.sourceFileId ? fileImportById.get(t.sourceFileId) : undefined;
+        const rows = splitsByTx.get(t.id) ?? [];
+        return {
+          account: accountById.get(t.accountId)?.name ?? null,
+          date: t.date,
+          amount: t.amount,
+          rawLabel: t.rawLabel,
+          normalizedLabel: t.normalizedLabel,
+          memo: t.memo,
+          notes: t.notes,
+          fitid: t.fitid,
+          dedupKey: t.dedupKey,
+          category: t.categoryId ? categoryById.get(t.categoryId)?.name ?? null : null,
+          categoryParent: categoryParentName(t.categoryId),
+          categorySource: t.categorySource,
+          transferGroupId: t.transferGroupId,
+          sourceFileKey: src ? fileImportKey(src.filename, src.importedAt.toISOString()) : null,
+          notDuplicate: t.notDuplicate,
+          lockYears: t.lockYears,
+          splits: rows.length === 0 ? undefined : rows.map((s) => ({
+            category: s.categoryId ? categoryById.get(s.categoryId)?.name ?? null : null,
+            categoryParent: categoryParentName(s.categoryId),
+            amount: s.amount,
+            memo: s.memo,
+          })),
+        };
+      }),
+      fileImports: fimps.map((f) => ({
+        account: accountById.get(f.accountId)?.name ?? null,
+        filename: f.filename,
+        format: f.format,
+        importedAt: f.importedAt.toISOString(),
+        totalLines: f.totalLines,
+        insertedCount: f.insertedCount,
+        dedupSkipped: f.dedupSkipped,
+        statedBalance: f.statedBalance,
+        statedBalanceDate: f.statedBalanceDate,
+      })),
+      balanceCheckpoints: checkpoints.map((c) => ({
+        account: accountById.get(c.accountId)?.name ?? null,
+        checkpointDate: c.checkpointDate,
+        expectedAmount: c.expectedAmount,
+        note: c.note,
+      })),
+      budgets: budgets.map((b) => ({
+        category: categoryById.get(b.categoryId)?.name ?? null,
+        categoryParent: categoryParentName(b.categoryId),
+        monthlyLimit: b.monthlyLimit,
+        currency: b.currency,
+        period: b.period,
+        account: b.accountId != null ? (accountById.get(b.accountId)?.name ?? null) : null,
+      })),
+    };
+
+    return dump;
+  }
+}
+
+// Local-time stamp so multiple backups on the same day stay distinct.
+// Shape: athena-backup-YYYY-MM-DD-HHMMSS.enc.json
+export function backupFilename(now: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const stamp =
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `athena-backup-${stamp}.enc.json`;
+}
+
+// Retention pruning filters on this before deleting ANYTHING — a foreign
+// file sitting in the destination directory must never match.
+export function isBackupFilename(name: string): boolean {
+  return /^athena-backup-\d{4}-\d{2}-\d{2}-\d{6}\.enc\.json$/.test(name);
+}
