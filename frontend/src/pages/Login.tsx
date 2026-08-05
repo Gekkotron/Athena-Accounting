@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../api/client';
 import type { User } from '../api/types';
+import { LOCK_FLAG_KEY } from '../contexts/LockContext';
 import { Logo } from '../components/Logo';
 
 export function Login() {
@@ -28,23 +29,27 @@ export function Login() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // A fresh authentication just proved the password, so any leftover lock
+  // flag is stale (the app locked itself, then the session expired before
+  // it was unlocked). Clear it BEFORE LockProvider mounts — its initial
+  // state reads localStorage — or the lock overlay pops right after login.
+  const onAuthed = (data: { user: User }) => {
+    localStorage.removeItem(LOCK_FLAG_KEY);
+    qc.setQueryData(['me'], { user: data.user });
+    navigate('/', { replace: true });
+  };
+
   const login = useMutation({
     mutationFn: (input: { username: string; password: string }) =>
       api<{ user: User }>('/api/auth/login', { method: 'POST', json: input }),
-    onSuccess: (data) => {
-      qc.setQueryData(['me'], { user: data.user });
-      navigate('/', { replace: true });
-    },
+    onSuccess: onAuthed,
     onError: (err: ApiError) => setError(err.message),
   });
 
   const create = useMutation({
     mutationFn: (input: { username: string; password: string }) =>
       api<{ user: User }>('/api/onboarding/create', { method: 'POST', json: input }),
-    onSuccess: (data) => {
-      qc.setQueryData(['me'], { user: data.user });
-      navigate('/', { replace: true });
-    },
+    onSuccess: onAuthed,
     onError: (err: ApiError) => setError(err.message),
   });
 

@@ -67,6 +67,29 @@ describe('Login', () => {
     await waitFor(() => expect(posted).toEqual([{ username: 'julien', password: 'secretpwd' }]));
   });
 
+  it('clears a stale lock flag on successful login', async () => {
+    // If the app locked itself and the session later expired, the
+    // localStorage flag outlives the session — without clearing it here,
+    // LockProvider boots locked and the user is asked for the password
+    // again right after typing it into the login form.
+    localStorage.setItem('athena.locked', '1');
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/onboarding/status') return { needsOnboarding: false };
+      if (path === '/api/auth/login') return { user: { id: 1, username: 'julien' } };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderLogin();
+    await screen.findByRole('heading', { name: /bon retour/i });
+    const inputs = screen.getAllByRole('textbox').concat(
+      Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[],
+    );
+    await u.type(inputs[0]!, 'julien');
+    await u.type(inputs[1]!, 'secretpwd');
+    await u.click(screen.getByRole('button', { name: /se connecter/i }));
+    await waitFor(() => expect(localStorage.getItem('athena.locked')).toBeNull());
+  });
+
   it('shows the error message when login fails', async () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/onboarding/status') return { needsOnboarding: false };
