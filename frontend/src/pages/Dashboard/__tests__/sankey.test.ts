@@ -90,6 +90,24 @@ describe('buildSankeyModel', () => {
     expect(m.totalIncome).toBe(1000);
   });
 
+  it('trusts the row-level effective internal flag over the raw category flag', () => {
+    // The backend reports an EFFECTIVE flag (a child inherits its parent's
+    // is_internal_transfer), so a row can be flagged while the category
+    // object in the client list is not. The row must win.
+    const cats = [
+      cat(1, 'Salaire', 'income'),
+      cat(2, 'Economie', 'expense', { isInternalTransfer: true }),
+      cat(3, 'PEA', 'expense', { parentId: 2 }), // unflagged child
+    ];
+    const rows = [
+      row(1, 'income', '1000'),
+      { ...row(3, 'expense', '-200'), category_is_internal_transfer: true },
+    ];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    expect(m.totalExpense).toBe(0);
+    expect(m.totalIncome).toBe(1000);
+  });
+
   it('conserves flow: left total equals right total', () => {
     const cats = [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')];
     const m = buildSankeyModel([row(1, 'income', '3000'), row(2, 'expense', '-800')], cats, 'EUR');

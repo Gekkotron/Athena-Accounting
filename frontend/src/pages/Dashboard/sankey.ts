@@ -92,7 +92,9 @@ export function buildSankeyModel(
   for (const r of rows) {
     if (r.category_id == null) continue;
     const cat = byId.get(r.category_id);
-    if (!cat || cat.isInternalTransfer) continue;
+    // The row flag is the backend's EFFECTIVE value (a child inherits its
+    // parent's is_internal_transfer) — trust it over the raw category flag.
+    if (!cat || cat.isInternalTransfer || r.category_is_internal_transfer) continue;
     if (r.category_kind !== 'income' && r.category_kind !== 'expense') continue;
     const parsed = Number(r.total);
     if (!Number.isFinite(parsed)) continue;

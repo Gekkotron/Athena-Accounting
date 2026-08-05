@@ -44,12 +44,17 @@ function handleReportsCategories(req: DemoRequest) {
     const month = t.date.slice(0, 7);
     const catId = t.categoryId;
     const cat = categoryById(catId, state);
+    // Mirror the backend's EFFECTIVE internal-transfer flag: a child
+    // inherits its parent's is_internal_transfer (hierarchy is 2 levels).
+    const parent = cat?.parentId != null ? categoryById(cat.parentId, state) : null;
     const key = `${catId ?? 'null'}|${month}`;
     const row = perKey.get(key)?.row ?? {
       category_id: catId,
       category_name: cat?.name ?? null,
       category_kind: cat?.kind ?? null,
-      category_is_internal_transfer: cat?.isInternalTransfer ?? null,
+      category_is_internal_transfer: cat
+        ? cat.isInternalTransfer || (parent?.isInternalTransfer ?? false)
+        : null,
       month,
       total: '0.00',
       transaction_count: 0,

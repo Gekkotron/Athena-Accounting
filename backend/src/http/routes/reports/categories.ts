@@ -35,18 +35,24 @@ export function registerCategoriesReportRoute(app: FastifyInstance): void {
         c.id AS category_id,
         c.name AS category_name,
         c.kind AS category_kind,
-        c.is_internal_transfer AS category_is_internal_transfer,
+        -- EFFECTIVE internal-transfer flag: a child inherits its parent's
+        -- flag (hierarchy is capped at 2 levels by the categories routes,
+        -- so one parent hop covers the whole ancestry). NULL OR false
+        -- stays NULL, preserving null for uncategorised rows.
+        (c.is_internal_transfer OR COALESCE(cp.is_internal_transfer, false))
+          AS category_is_internal_transfer,
         to_char(date_trunc('month', e.date::timestamp), 'YYYY-MM') AS month,
         SUM(e.amount)::text AS total,
         COUNT(*)::int AS transaction_count
       FROM tx_effective e
       LEFT JOIN categories c ON c.id = e.category_id
+      LEFT JOIN categories cp ON cp.id = c.parent_id
       WHERE e.user_id = ${uid}
         AND e.transfer_group_id IS NULL
         ${fromDate ? sql`AND e.date >= ${fromDate}` : sql``}
         ${toDate ? sql`AND e.date <= ${toDate}` : sql``}
         ${accountId ? sql`AND e.account_id = ${accountId}` : sql``}
-      GROUP BY c.id, c.name, c.kind, month
+      GROUP BY c.id, c.name, c.kind, cp.is_internal_transfer, month
       ORDER BY month DESC, total ASC
     `);
 

@@ -188,6 +188,44 @@ describe.skipIf(!RUN)('/api/reports', () => {
       expect(res.statusCode).toBe(400);
     });
 
+    it('child categories inherit is_internal_transfer from a flagged parent', async () => {
+      // A user who flags the parent ("Economie") expects the whole subtree
+      // to be treated as internal — the reported flag must be the EFFECTIVE
+      // one (own flag OR parent's), not the raw column, or transactions
+      // categorised under an unflagged child leak into spend/income totals.
+      const parentRes = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'RepEconomie', kind: 'expense', isInternalTransfer: true },
+      });
+      const parentId = parentRes.json().category.id as number;
+      const childRes = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'RepPEA', kind: 'expense', parentId },
+      });
+      const childId = childRes.json().category.id as number;
+      const plainRes = await app.inject({
+        method: 'POST', url: '/api/categories', headers: { cookie },
+        payload: { name: 'RepPlain', kind: 'expense' },
+      });
+      const plainId = plainRes.json().category.id as number;
+
+      await makeTx({ accountId: accountEURId, date: '2026-05-10', amount: '-200.00', rawLabel: 'to pea', categoryId: childId });
+      await makeTx({ accountId: accountEURId, date: '2026-05-11', amount: '-40.00', rawLabel: 'shop', categoryId: plainId });
+
+      const res = await app.inject({
+        method: 'GET', url: '/api/reports/categories?fromDate=2026-05-01&toDate=2026-05-31',
+        headers: { cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().rows as Array<{
+        category_id: number | null; category_is_internal_transfer: boolean | null;
+      }>;
+      const child = rows.find((r) => r.category_id === childId)!;
+      const plain = rows.find((r) => r.category_id === plainId)!;
+      expect(child.category_is_internal_transfer).toBe(true);
+      expect(plain.category_is_internal_transfer).toBe(false);
+    });
+
     it('splits contribute to their split category, parent contributes nothing', async () => {
       // 1) Plain -50 tx tagged to categoryId (baseline).
       await makeTx({
