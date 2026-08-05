@@ -140,7 +140,7 @@ export function createWebdavProvider(
       // varies by server (d:, D:, none), so match on the local name.
       const names: string[] = [];
       for (const m of xml.matchAll(/<[^<>]*href[^<>]*>([^<]+)<\/[^<>]*href[^<>]*>/gi)) {
-        const decoded = decodeURIComponent(m[1].trim());
+        const decoded = decodeURIComponent((m[1] ?? '').trim());
         const basename = decoded.split('/').filter(Boolean).pop() ?? '';
         if (isBackupFilename(basename)) names.push(basename);
       }
