@@ -100,9 +100,10 @@ async function statusFor(uid: number, dest: BackupDestinationRecord | null) {
 // Real write + delete against the destination before persisting anything —
 // same philosophy as bank-sync validating credentials live. The probe name
 // deliberately does NOT match the backup filename pattern, so it can never
-// be counted or pruned as a backup.
+// be counted or pruned as a backup — and carries no leading dot, which the
+// Freebox FTP server refuses (dev.freebox.fr FS#3196).
 async function probe(provider: BackupProvider): Promise<void> {
-  const name = `.athena-destination-test-${randomUUID()}`;
+  const name = `athena-destination-test-${randomUUID()}.tmp`;
   await provider.upload(name, Buffer.from('athena backup destination probe'));
   await provider.remove(name);
 }

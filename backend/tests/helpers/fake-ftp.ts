@@ -14,7 +14,7 @@ export type FakeFtp = {
   close(): Promise<void>;
 };
 
-export async function startFakeFtp(opts: { password?: string } = {}): Promise<FakeFtp> {
+export async function startFakeFtp(opts: { password?: string; readOnly?: boolean } = {}): Promise<FakeFtp> {
   const files = new Map<string, Buffer>();
   const dirs = new Set<string>();
   const log: string[] = [];
@@ -83,6 +83,14 @@ export async function startFakeFtp(opts: { password?: string } = {}): Promise<Fa
           pendingData = null;
           if (!pd) {
             send('425 no data connection');
+            break;
+          }
+          // The real Freebox FTP server refuses dot-prefixed (hidden) names
+          // outright — mimic it so the client can never regress into using
+          // them (dev.freebox.fr FS#3196).
+          if (arg.startsWith('.') || opts.readOnly) {
+            pd.server.close();
+            send(`550 ${arg}: access denied`);
             break;
           }
           send('150 ok to send');

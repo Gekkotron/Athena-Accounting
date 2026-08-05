@@ -22,16 +22,29 @@ const cfg = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('ftp provider', () => {
-  it('logs in, sets binary mode, and uploads via temp name + rename', async () => {
+  it('logs in, sets binary mode, and uploads via a dot-free temp name + rename', async () => {
+    // The fake server rejects dot-prefixed names like the real Freebox does
+    // (dev.freebox.fr FS#3196) — this test fails if the temp name regresses
+    // to a hidden-file convention.
     const p = createFtpProvider(cfg(), 'p4ss');
     await p.upload(NAME, Buffer.from('{"v":"enc1"}'));
     expect(ftp.files.get(NAME)?.toString()).toBe('{"v":"enc1"}');
-    expect(ftp.files.has(`.tmp-${NAME}`)).toBe(false);
+    expect(ftp.files.has(`athena-tmp-${NAME}`)).toBe(false);
     expect(ftp.log).toContain('USER freebox');
     expect(ftp.log).toContain('TYPE I');
-    expect(ftp.log).toContain(`STOR .tmp-${NAME}`);
-    expect(ftp.log).toContain(`RNFR .tmp-${NAME}`);
+    expect(ftp.log).toContain(`STOR athena-tmp-${NAME}`);
+    expect(ftp.log).toContain(`RNFR athena-tmp-${NAME}`);
     expect(ftp.log).toContain(`RNTO ${NAME}`);
+  });
+
+  it('a refused upload surfaces the server reply text, not just a code', async () => {
+    const ro = await startFakeFtp({ readOnly: true });
+    try {
+      const p = createFtpProvider({ ...cfg(), port: ro.port }, 'p4ss');
+      await expect(p.upload(NAME, Buffer.from('x'))).rejects.toThrow(/550 .*access denied/);
+    } finally {
+      await ro.close();
+    }
   });
 
   it('creates the subdir with MKD when CWD fails, then retries', async () => {

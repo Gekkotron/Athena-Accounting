@@ -24,6 +24,12 @@ export type FtpDialConfig = {
 
 type Reply = { code: number; text: string };
 
+// First line of a reply — servers put the actionable part there (e.g. the
+// Freebox's "550 /Disque dur/x: access denied").
+function replyLine(r: Reply): string {
+  return r.text.split('\n')[0] ?? String(r.code);
+}
+
 function dial(host: string, port: number, what: string): Promise<Socket> {
   return new Promise((resolve, reject) => {
     const s = createConnection({ host, port });
@@ -101,7 +107,7 @@ class FtpConn {
 
   async cmdExpect(command: string, okCodes: number[], what: string): Promise<Reply> {
     const r = await this.cmd(command);
-    if (!okCodes.includes(r.code)) throw new BackupProviderError(`ftp ${what}: unexpected reply ${r.code}`);
+    if (!okCodes.includes(r.code)) throw new BackupProviderError(`ftp ${what}: ${replyLine(r)}`);
     return r;
   }
 
@@ -122,7 +128,7 @@ class FtpConn {
 async function pasv(conn: FtpConn, host: string): Promise<Socket> {
   const r = await conn.cmd('PASV');
   const m = /\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/.exec(r.text);
-  if (r.code !== 227 || !m) throw new BackupProviderError(`ftp pasv: unexpected reply ${r.code}`);
+  if (r.code !== 227 || !m) throw new BackupProviderError(`ftp pasv: ${replyLine(r)}`);
   const port = Number(m[5]) * 256 + Number(m[6]);
   return dial(host, port, 'data connection');
 }
@@ -151,7 +157,7 @@ async function withFtp<T>(
   const conn = new FtpConn(socket);
   try {
     const greeting = await conn.response();
-    if (greeting.code !== 220) throw new BackupProviderError(`ftp greeting: unexpected reply ${greeting.code}`);
+    if (greeting.code !== 220) throw new BackupProviderError(`ftp greeting: ${replyLine(greeting)}`);
     let r = await conn.cmd(`USER ${cfg.username}`);
     if (r.code === 331) r = await conn.cmd(`PASS ${password}`);
     if (r.code !== 230) throw new BackupProviderError(`ftp login: authentication failed (${r.code})`);
@@ -184,17 +190,21 @@ export function createFtpProvider(cfg: FtpDialConfig, password: string): BackupP
     async upload(name, bytes) {
       assertPlainName(name);
       await withFtp(cfg, password, async (conn) => {
-        const tmp = `.tmp-${name}`;
+        // No leading dot: the Freebox FTP server refuses hidden names
+        // outright (dev.freebox.fr FS#3196). The prefix keeps the partial
+        // file out of isBackupFilename's pattern, so pruning and restore
+        // guidance never see it.
+        const tmp = `athena-tmp-${name}`;
         const data = await pasv(conn, cfg.host);
         const r = await conn.cmd(`STOR ${tmp}`);
         if (r.code !== 125 && r.code !== 150) {
           data.destroy();
-          throw new BackupProviderError(`ftp upload: unexpected reply ${r.code}`);
+          throw new BackupProviderError(`ftp upload: ${replyLine(r)}`);
         }
         await sendAll(data, bytes);
         const done = await conn.response();
         if (done.code !== 226 && done.code !== 250) {
-          throw new BackupProviderError(`ftp upload: unexpected reply ${done.code}`);
+          throw new BackupProviderError(`ftp upload: ${replyLine(done)}`);
         }
         await conn.cmdExpect(`RNFR ${tmp}`, [350], 'rename');
         await conn.cmdExpect(`RNTO ${name}`, [250], 'rename');
@@ -212,12 +222,12 @@ export function createFtpProvider(cfg: FtpDialConfig, password: string): BackupP
         }
         if (r.code !== 125 && r.code !== 150) {
           data.destroy();
-          throw new BackupProviderError(`ftp list: unexpected reply ${r.code}`);
+          throw new BackupProviderError(`ftp list: ${replyLine(r)}`);
         }
         const listing = await readAll(data);
         const done = await conn.response();
         if (done.code !== 226 && done.code !== 250) {
-          throw new BackupProviderError(`ftp list: unexpected reply ${done.code}`);
+          throw new BackupProviderError(`ftp list: ${replyLine(done)}`);
         }
         return listing
           .toString('latin1')
@@ -235,7 +245,7 @@ export function createFtpProvider(cfg: FtpDialConfig, password: string): BackupP
         // 550 = already gone — deletion is idempotent, same as the other
         // providers.
         if (r.code !== 250 && r.code !== 550) {
-          throw new BackupProviderError(`ftp delete: unexpected reply ${r.code}`);
+          throw new BackupProviderError(`ftp delete: ${replyLine(r)}`);
         }
       });
     },
