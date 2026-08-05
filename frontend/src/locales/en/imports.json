@@ -106,13 +106,13 @@
     },
     "remote": {
       "sectionTitle": "Remote backup",
-      "description": "Automatically pushes an encrypted backup to a WebDAV server (Synology, Nextcloud…) or a local/mounted folder (SMB mount of a Freebox, external disk…).",
+      "description": "Automatically pushes an encrypted backup to a WebDAV server (Synology, Nextcloud…), an FTP server (Freebox…) or a local/mounted folder.",
       "kindLabel": "Destination type",
       "kindWebdav": "WebDAV",
       "kindFolder": "Local folder",
       "url": "WebDAV server URL",
       "username": "Username",
-      "password": "WebDAV password",
+      "password": "Password",
       "subdir": "Subfolder (optional)",
       "path": "Absolute folder path",
       "keepLast": "Backups to keep",
@@ -138,8 +138,14 @@
         "password": "Password required.",
         "path": "Invalid path — it must be absolute (start with /).",
         "keepLast": "Invalid backup count — integer ≥ 1.",
-        "passphrase": "Passphrase too short (8 characters minimum)."
-      }
+        "passphrase": "Passphrase too short (8 characters minimum).",
+        "host": "Invalid FTP server — hostname without a scheme (e.g. mafreebox.freebox.fr).",
+        "port": "Invalid port — integer between 1 and 65535."
+      },
+      "kindFtp": "FTP",
+      "host": "FTP server",
+      "port": "Port",
+      "ftpWarning": "FTP: the password travels unencrypted on your local network. The backup contents stay encrypted."
     }
   },
   "duplicates": {

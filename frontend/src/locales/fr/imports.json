@@ -106,13 +106,13 @@
     },
     "remote": {
       "sectionTitle": "Sauvegarde distante",
-      "description": "Pousse automatiquement une sauvegarde chiffrée vers un serveur WebDAV (Synology, Nextcloud…) ou un dossier local/monté (montage SMB d'une Freebox, disque externe…).",
+      "description": "Pousse automatiquement une sauvegarde chiffrée vers un serveur WebDAV (Synology, Nextcloud…), un serveur FTP (Freebox…) ou un dossier local/monté.",
       "kindLabel": "Type de destination",
       "kindWebdav": "WebDAV",
       "kindFolder": "Dossier local",
       "url": "URL du serveur WebDAV",
       "username": "Utilisateur",
-      "password": "Mot de passe WebDAV",
+      "password": "Mot de passe",
       "subdir": "Sous-dossier (optionnel)",
       "path": "Chemin absolu du dossier",
       "keepLast": "Sauvegardes conservées",
@@ -138,8 +138,14 @@
         "password": "Mot de passe requis.",
         "path": "Chemin invalide — il doit être absolu (commencer par /).",
         "keepLast": "Nombre de sauvegardes invalide — entier ≥ 1.",
-        "passphrase": "Phrase secrète trop courte (8 caractères minimum)."
-      }
+        "passphrase": "Phrase secrète trop courte (8 caractères minimum).",
+        "host": "Serveur FTP invalide — nom d'hôte sans schéma (p. ex. mafreebox.freebox.fr).",
+        "port": "Port invalide — entier entre 1 et 65535."
+      },
+      "kindFtp": "FTP",
+      "host": "Serveur FTP",
+      "port": "Port",
+      "ftpWarning": "FTP : le mot de passe circule en clair sur le réseau local. Le contenu des sauvegardes reste chiffré."
     }
   },
   "duplicates": {

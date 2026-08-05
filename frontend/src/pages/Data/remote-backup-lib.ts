@@ -2,13 +2,15 @@
 // No React imports — unit-tested without a DOM.
 
 export type RemoteBackupForm = {
-  kind: 'webdav' | 'folder';
+  kind: 'webdav' | 'folder' | 'ftp';
   url: string;
+  host: string;
+  port: string; // raw text-input value (never <input type="number">)
   username: string;
   password: string;
   subdir: string;
   path: string;
-  keepLast: string; // raw text-input value (never <input type="number">)
+  keepLast: string; // raw text-input value
   passphrase: string;
 };
 
@@ -22,9 +24,27 @@ export type PutPayload =
       keepLast: number;
       passphrase: string;
     }
-  | { kind: 'folder'; path: string; keepLast: number; passphrase: string };
+  | { kind: 'folder'; path: string; keepLast: number; passphrase: string }
+  | {
+      kind: 'ftp';
+      host: string;
+      port: number;
+      username: string;
+      password: string;
+      subdir?: string;
+      keepLast: number;
+      passphrase: string;
+    };
 
-export type FormError = 'url' | 'username' | 'password' | 'path' | 'keepLast' | 'passphrase';
+export type FormError =
+  | 'url'
+  | 'host'
+  | 'port'
+  | 'username'
+  | 'password'
+  | 'path'
+  | 'keepLast'
+  | 'passphrase';
 
 // A plain-http WebDAV URL sends the password unencrypted on the LAN — the
 // card shows a warning line (the backup payload itself is always sealed).
@@ -44,6 +64,32 @@ export function buildPutPayload(
     const path = form.path.trim();
     if (!path.startsWith('/')) return { ok: false, error: 'path' };
     return { ok: true, payload: { kind: 'folder', path, keepLast, passphrase } };
+  }
+  if (form.kind === 'ftp') {
+    // Be forgiving with a pasted ftp:// URL — the backend wants a bare host.
+    const host = form.host.trim().replace(/^ftp:\/\//i, '').replace(/\/+$/, '');
+    if (!host || host.includes('://') || host.includes('/')) return { ok: false, error: 'host' };
+    const portRaw = form.port.trim();
+    if (!/^\d+$/.test(portRaw)) return { ok: false, error: 'port' };
+    const port = Number(portRaw);
+    if (port < 1 || port > 65535) return { ok: false, error: 'port' };
+    const username = form.username.trim();
+    if (!username) return { ok: false, error: 'username' };
+    if (!form.password) return { ok: false, error: 'password' };
+    const subdir = form.subdir.trim();
+    return {
+      ok: true,
+      payload: {
+        kind: 'ftp',
+        host,
+        port,
+        username,
+        password: form.password,
+        ...(subdir ? { subdir } : {}),
+        keepLast,
+        passphrase,
+      },
+    };
   }
   const url = form.url.trim();
   if (!/^https?:\/\//i.test(url)) return { ok: false, error: 'url' };

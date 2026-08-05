@@ -86,6 +86,34 @@ describe('RemoteBackupCard', () => {
     });
   });
 
+  it('saving an ftp destination PUTs the built payload', async () => {
+    routeApi({
+      'GET /api/backup/destination': UNCONFIGURED,
+      'GET /api/settings': { settings: { backupHour: 3 } },
+      'PUT /api/backup/destination': { ...CONFIGURED, kind: 'ftp' },
+    });
+    renderCard();
+    await userEvent.click(await screen.findByRole('radio', { name: /ftp/i }));
+    await userEvent.type(screen.getByLabelText(/serveur ftp/i), 'mafreebox.freebox.fr');
+    await userEvent.type(screen.getByLabelText(/utilisateur/i), 'freebox');
+    await userEvent.type(screen.getByLabelText(/mot de passe/i), 'p4ss');
+    await userEvent.type(screen.getByLabelText(/phrase secrète/i), 'strong-backup-passphrase');
+    await userEvent.click(screen.getByRole('button', { name: /tester et enregistrer/i }));
+    await waitFor(() => {
+      const put = apiMock.mock.calls.find(([, init]) => (init as { method?: string })?.method === 'PUT');
+      expect(put).toBeDefined();
+      expect((put![1] as { json: unknown }).json).toEqual({
+        kind: 'ftp',
+        host: 'mafreebox.freebox.fr',
+        port: 21,
+        username: 'freebox',
+        password: 'p4ss',
+        keepLast: 30,
+        passphrase: 'strong-backup-passphrase',
+      });
+    });
+  });
+
   it('configured: shows last run and fires run-now', async () => {
     routeApi({
       'GET /api/backup/destination': CONFIGURED,

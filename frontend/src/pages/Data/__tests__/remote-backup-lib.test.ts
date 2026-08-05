@@ -4,6 +4,8 @@ import { buildPutPayload, isPlainHttp, type RemoteBackupForm } from '../remote-b
 const base: RemoteBackupForm = {
   kind: 'webdav',
   url: 'http://nas.local:5005/dav',
+  host: 'mafreebox.freebox.fr',
+  port: '21',
   username: 'julien',
   password: 'p4ss',
   subdir: ' athena ',
@@ -51,6 +53,28 @@ describe('buildPutPayload', () => {
   });
   it('rejects a short passphrase', () => {
     expect(buildPutPayload({ ...base, passphrase: 'short' })).toEqual({ ok: false, error: 'passphrase' });
+  });
+  it('builds an ftp payload, stripping an ftp:// prefix from the host', () => {
+    const r = buildPutPayload({ ...base, kind: 'ftp', host: 'ftp://mafreebox.freebox.fr' });
+    expect(r).toEqual({
+      ok: true,
+      payload: {
+        kind: 'ftp',
+        host: 'mafreebox.freebox.fr',
+        port: 21,
+        username: 'julien',
+        password: 'p4ss',
+        subdir: 'athena',
+        keepLast: 30,
+        passphrase: 'strong-backup-passphrase',
+      },
+    });
+  });
+  it('rejects a blank ftp host and an out-of-range port', () => {
+    expect(buildPutPayload({ ...base, kind: 'ftp', host: '  ' })).toEqual({ ok: false, error: 'host' });
+    for (const bad of ['', '0', '65536', 'vingt-et-un']) {
+      expect(buildPutPayload({ ...base, kind: 'ftp', port: bad })).toEqual({ ok: false, error: 'port' });
+    }
   });
   it('rejects a non-http url, a blank password, a relative path', () => {
     expect(buildPutPayload({ ...base, url: 'ftp://nas' })).toEqual({ ok: false, error: 'url' });

@@ -14,8 +14,16 @@ import {
 
 interface DestinationStatus {
   configured: boolean;
-  kind?: 'webdav' | 'folder';
-  config?: { url?: string; username?: string; subdir?: string | null; path?: string; keepLast?: number };
+  kind?: 'webdav' | 'folder' | 'ftp';
+  config?: {
+    url?: string;
+    host?: string;
+    port?: number;
+    username?: string;
+    subdir?: string | null;
+    path?: string;
+    keepLast?: number;
+  };
   enabled?: boolean;
   lastRunAt?: string | null;
   lastError?: string | null;
@@ -25,6 +33,8 @@ interface DestinationStatus {
 const EMPTY_FORM: RemoteBackupForm = {
   kind: 'webdav',
   url: '',
+  host: '',
+  port: '21',
   username: '',
   password: '',
   subdir: '',
@@ -32,6 +42,12 @@ const EMPTY_FORM: RemoteBackupForm = {
   keepLast: '30',
   passphrase: '',
 };
+
+const KIND_LABEL_KEYS = {
+  webdav: 'backup.remote.kindWebdav',
+  ftp: 'backup.remote.kindFtp',
+  folder: 'backup.remote.kindFolder',
+} as const;
 
 // "Sauvegarde distante" card on the Sauvegarde page: configure a WebDAV or
 // folder destination for scheduled encrypted backups, pick the hour, run
@@ -61,6 +77,8 @@ export function RemoteBackupCard(): JSX.Element {
       ...f,
       kind: d.kind!,
       url: d.config!.url ?? '',
+      host: d.config!.host ?? '',
+      port: String(d.config!.port ?? 21),
       username: d.config!.username ?? '',
       subdir: d.config!.subdir ?? '',
       path: d.config!.path ?? '',
@@ -132,7 +150,7 @@ export function RemoteBackupCard(): JSX.Element {
         <p className="text-sm text-ink-400 max-w-2xl">{t('backup.remote.description')}</p>
 
         <div className="flex items-center gap-4" role="radiogroup" aria-label={t('backup.remote.kindLabel')}>
-          {(['webdav', 'folder'] as const).map((k) => (
+          {(['webdav', 'ftp', 'folder'] as const).map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="radio"
@@ -141,28 +159,39 @@ export function RemoteBackupCard(): JSX.Element {
                 onChange={() => set({ kind: k })}
                 disabled={saveMut.isPending}
               />
-              {t(k === 'webdav' ? 'backup.remote.kindWebdav' : 'backup.remote.kindFolder')}
+              {t(KIND_LABEL_KEYS[k])}
             </label>
           ))}
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 max-w-3xl">
-          {form.kind === 'webdav' ? (
+          {form.kind === 'webdav' && (
             <>
               {field(t('backup.remote.url'), 'url')}
               {field(t('backup.remote.username'), 'username')}
               {field(t('backup.remote.password'), 'password', 'password')}
               {field(t('backup.remote.subdir'), 'subdir')}
             </>
-          ) : (
-            field(t('backup.remote.path'), 'path')
           )}
+          {form.kind === 'ftp' && (
+            <>
+              {field(t('backup.remote.host'), 'host')}
+              {field(t('backup.remote.port'), 'port', 'text', { inputMode: 'numeric' })}
+              {field(t('backup.remote.username'), 'username')}
+              {field(t('backup.remote.password'), 'password', 'password')}
+              {field(t('backup.remote.subdir'), 'subdir')}
+            </>
+          )}
+          {form.kind === 'folder' && field(t('backup.remote.path'), 'path')}
           {field(t('backup.remote.keepLast'), 'keepLast', 'text', { inputMode: 'numeric' })}
           {field(t('backup.remote.passphrase'), 'passphrase', 'password')}
         </div>
 
         {form.kind === 'webdav' && isPlainHttp(form.url) && (
           <p className="text-xs text-clay-300">{t('backup.remote.httpWarning')}</p>
+        )}
+        {form.kind === 'ftp' && (
+          <p className="text-xs text-clay-300">{t('backup.remote.ftpWarning')}</p>
         )}
         <p className="text-xs text-clay-300">{t('backup.remote.passphraseWarning')}</p>
 
