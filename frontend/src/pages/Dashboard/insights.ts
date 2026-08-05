@@ -26,8 +26,15 @@ export function priceCreepInsight(
   recurring: readonly RecurringSeries[],
   t: TFunction,
 ): Insight | null {
+  // Expense-direction series only: detectPriceCreep is magnitude-based, so
+  // an income series (salary) growing also reports deltaPct > 0 — good
+  // news, and certainly not an "abonnement" getting pricier.
   const creeping = recurring.filter(
-    (s) => s.status !== 'dismissed' && s.priceCreep && s.priceCreep.deltaPct > 0,
+    (s) =>
+      s.status !== 'dismissed' &&
+      Number(s.avgAmount) < 0 &&
+      s.priceCreep &&
+      s.priceCreep.deltaPct > 0,
   );
   if (creeping.length === 0) return null;
   const top = creeping.reduce((a, b) =>

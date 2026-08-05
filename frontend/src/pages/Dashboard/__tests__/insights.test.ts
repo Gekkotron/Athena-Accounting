@@ -284,6 +284,29 @@ describe('priceCreepInsight', () => {
     ).toBeNull();
   });
 
+  it('ignores income-direction series — a salary raise is not price creep', () => {
+    // detectPriceCreep is magnitude-based on purpose (the Récurrent page
+    // chips show both directions), but the Dashboard card says
+    // "abonnements ont augmenté" — an income series growing must not count.
+    expect(
+      priceCreepInsight(
+        [rec({ label: 'Salaire', avgAmount: '2500', priceCreep: { previousAvg: 2400, latest: 2650, deltaPct: 10.4 } })],
+        t,
+      ),
+    ).toBeNull();
+    // A mixed list only counts the expense-direction series.
+    const insight = priceCreepInsight(
+      [
+        rec({ id: 1, label: 'Salaire', avgAmount: '2500', priceCreep: { previousAvg: 2400, latest: 2650, deltaPct: 10.4 } }),
+        rec({ id: 2, label: 'EDF', avgAmount: '-80', priceCreep: { previousAvg: -80, latest: -95, deltaPct: 18.75 } }),
+      ],
+      t,
+    )!;
+    expect(insight).not.toBeNull();
+    expect(insight.headline).toContain('1 abonnement');
+    expect(insight.detail).toContain('EDF');
+  });
+
   it('ignores dismissed series entirely', () => {
     expect(
       priceCreepInsight(
