@@ -18,13 +18,22 @@ export function LockScreen({ username }: { username: string }) {
   const [busy, setBusy] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  // Tear the app back down to the Login gate. Order matters: setQueryData
+  // on ['me'] notifies the App-level observer so it unmounts LockProvider
+  // (and this overlay along with it); calling qc.clear() BEFORE the write
+  // destroys the observer's Query instance, so the subsequent setQueryData
+  // creates a fresh query the observer no longer sees — the overlay would
+  // stay stuck up. removeQueries with a predicate wipes the rest of the
+  // cache while keeping the ['me'] write intact.
+  const dropSession = () => {
+    localStorage.removeItem(LOCK_FLAG_KEY);
+    qc.setQueryData(['me'], { user: null });
+    qc.removeQueries({ predicate: (q) => !(Array.isArray(q.queryKey) && q.queryKey[0] === 'me') });
+  };
+
   const logout = useMutation({
     mutationFn: () => api<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
-    onSuccess: () => {
-      localStorage.removeItem(LOCK_FLAG_KEY);
-      qc.clear();
-      qc.setQueryData(['me'], { user: null });
-    },
+    onSuccess: dropSession,
   });
 
   if (!locked) return null;
@@ -64,9 +73,7 @@ export function LockScreen({ username }: { username: string }) {
         setError(t('lock.rateLimited'));
       } else if (err instanceof ApiError && err.status === 401 && err.message === 'authentication required') {
         // Session died while idle — fall back to the login screen.
-        localStorage.removeItem(LOCK_FLAG_KEY);
-        qc.clear();
-        qc.setQueryData(['me'], { user: null });
+        dropSession();
         return;
       } else {
         setError(t('lock.wrongPassword'));

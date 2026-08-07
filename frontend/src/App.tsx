@@ -64,12 +64,15 @@ export default function App() {
   ];
 
   // Global session-expiry redirect: any 401 from a non-auth-me endpoint
-  // clears the cache and sets me to a null user, which triggers the redirect
-  // to /login on the next render (same path as an explicit logout).
+  // sets me to a null user, which triggers the redirect to /login on the
+  // next render (same path as an explicit logout). Order matters —
+  // qc.clear() destroys THIS component's ['me'] observer's Query instance,
+  // so a follow-up setQueryData would land on a fresh query the observer
+  // no longer sees; we set ['me'] first, then wipe every OTHER key.
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      qc.clear();
       qc.setQueryData(['me'], { user: null });
+      qc.removeQueries({ predicate: (q) => !(Array.isArray(q.queryKey) && q.queryKey[0] === 'me') });
     });
     return () => setUnauthorizedHandler(null);
   }, [qc]);
