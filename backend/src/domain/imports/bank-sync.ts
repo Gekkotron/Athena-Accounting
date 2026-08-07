@@ -68,6 +68,26 @@ async function latestTransactionDate(userId: number, accountId: number): Promise
   return row?.maxDate ?? null;
 }
 
+// Newest lastSyncedAt across the user's mapped accounts, in ms epoch. Used
+// to seed the scheduler's in-memory lastAttempt map on first observation so
+// a container rebuild after today's scheduled sync does not clear that gate
+// and re-fire catch-up. undefined when no account has ever synced.
+async function latestAttemptMsFor(userId: number): Promise<number | undefined> {
+  const [row] = await db
+    .select({
+      lastMs: sql<
+        string | null
+      >`extract(epoch from max(${bankConnectionAccounts.lastSyncedAt})) * 1000`,
+    })
+    .from(bankConnectionAccounts)
+    .innerJoin(bankConnections, eq(bankConnectionAccounts.connectionId, bankConnections.id))
+    .where(eq(bankConnections.userId, userId));
+  const raw = row?.lastMs;
+  if (raw === null || raw === undefined) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Tx = PgTransaction<any, any, any>;
 
@@ -235,11 +255,14 @@ async function syncHourFor(uid: number): Promise<number> {
 export function startBankSyncScheduler(app: FastifyInstance): void {
   if (env.NODE_ENV === 'test' || !env.BANK_SYNC_AUTO) return;
   let running = false;
-  // Per-user last attempt, ms epoch. In-memory on purpose: a restart at
-  // worst repeats one sync (self-deduped by the overlap window), and the
-  // map is what guarantees at most one attempt per user per occurrence —
-  // including users whose sync fails or writes nothing.
+  // Per-user last attempt, ms epoch. In-memory, but seeded on first
+  // observation from the newest persisted lastSyncedAt across the user's
+  // mapped accounts — without that seed, a container rebuild after today's
+  // scheduled sync would clear the map and the 5-min post-boot tick would
+  // catch-up-fire an unwanted second sync. A user whose accounts have never
+  // synced seeds to undefined, so the very first sync still fires.
   const lastAttempt = new Map<number, number>();
+  const seededFromDb = new Set<number>();
   const tick = (): void => {
     if (running) return;
     running = true;
@@ -251,6 +274,11 @@ export function startBankSyncScheduler(app: FastifyInstance): void {
       const now = new Date();
       for (const { userId } of credRows) {
         const hour = await syncHourFor(userId);
+        if (!seededFromDb.has(userId)) {
+          const seed = await latestAttemptMsFor(userId);
+          if (seed !== undefined) lastAttempt.set(userId, seed);
+          seededFromDb.add(userId);
+        }
         if (!isAutoSyncDue(hour, now, lastAttempt.get(userId))) continue;
         lastAttempt.set(userId, now.getTime());
         const creds = await getCredentials(userId);

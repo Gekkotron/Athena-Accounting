@@ -12,6 +12,17 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Fixed
+- Synchronisation bancaire : un redémarrage du serveur après la
+  synchronisation planifiée du jour ne déclenche plus une seconde
+  synchronisation automatique 5 minutes après le boot. Le planificateur
+  amorce désormais son garde-fou anti-doublon depuis la dernière
+  `lastSyncedAt` persistée en base — si un compte a déjà été synchronisé
+  aujourd'hui, le rattrapage post-boot est sauté. Le rattrapage après
+  une nuit serveur éteint reste inchangé (la première synchronisation
+  d'un compte encore jamais synchronisé se déclenche toujours au
+  démarrage).
+
 ## [1.0.0-rc.3] - 2026-08-03
 
 ### Added

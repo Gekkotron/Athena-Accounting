@@ -56,10 +56,14 @@ synced. You can change the mapping at any time from Données → Synchronisation
 
 ## Syncing
 
-Once connected, Athena syncs automatically **once a night** (disable
-with `BANK_SYNC_AUTO=0`, see the
-[configuration reference](../reference/configuration.md)), and every
-connection card has a **Synchroniser** button for an immediate pull.
+Once connected, Athena syncs automatically **once a day at the hour you
+choose** in *Données → Synchronisation bancaire* (default 02:00; disable
+entirely with `BANK_SYNC_AUTO=0` — see the
+[configuration reference](../reference/configuration.md)). If the server
+or the desktop app was down at that hour, the sync catches up on the next
+launch — but a rebuild or restart made after a successful sync on the
+same day no longer triggers a second automatic run. Every connection
+card also has a **Synchroniser** button for an immediate pull.
 
 Synced transactions go through the exact same pipeline as file imports:
 deduplication, categorization rules, transfer detection, and
