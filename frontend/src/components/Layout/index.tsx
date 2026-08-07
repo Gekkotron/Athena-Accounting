@@ -55,7 +55,7 @@ export function Layout({ user }: { user: User }) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
-                <Brand />
+                <Brand onNavigate={() => setDrawerOpen(false)} />
                 <button
                   aria-label={t('close', { ns: 'common' })}
                   onClick={() => setDrawerOpen(false)}

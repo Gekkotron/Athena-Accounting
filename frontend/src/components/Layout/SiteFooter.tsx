@@ -8,20 +8,42 @@ function GitHubIcon() {
   );
 }
 
+function BookIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden>
+      <path d="M8 3.5C6.8 2.4 5.1 2 3 2v10.5c2.1 0 3.8.4 5 1.5 1.2-1.1 2.9-1.5 5-1.5V2c-2.1 0-3.8.4-5 1.5zM8 3.5V14" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const linkClass =
+  'inline-flex items-center gap-1.5 text-ink-400 transition hover:text-ink-100 underline-offset-2 hover:underline';
+
 export function SiteFooter() {
   const { t } = useTranslation('layout');
   return (
-    <footer className="mt-16 pt-6 border-t border-ink-800/60 flex items-center justify-center gap-1.5 text-xs text-ink-500">
-      <span>Athena Accounting</span>
-      <span aria-hidden>·</span>
+    <footer className="mt-16 pt-6 border-t border-ink-800/60 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-ink-500">
+      <div className="flex items-center gap-1.5">
+        <span>Athena Accounting</span>
+        <span aria-hidden>·</span>
+        <a
+          href="https://github.com/Gekkotron/Athena-Accounting"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+        >
+          <GitHubIcon />
+          {t('footer.githubLink')}
+        </a>
+      </div>
       <a
-        href="https://github.com/Gekkotron/Athena-Accounting"
+        href="https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-ink-400 transition hover:text-ink-100 underline-offset-2 hover:underline"
+        className={linkClass}
       >
-        <GitHubIcon />
-        {t('footer.githubLink')}
+        <BookIcon />
+        {t('footer.docsLink')}
       </a>
     </footer>
   );

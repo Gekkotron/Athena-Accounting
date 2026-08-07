@@ -46,7 +46,8 @@
   "connectedAs": "Signed in"
  },
  "footer": {
-  "githubLink": "View on GitHub"
+  "githubLink": "View on GitHub",
+  "docsLink": "Documentation"
  },
  "user": {
   "editProfile": "Edit my profile",

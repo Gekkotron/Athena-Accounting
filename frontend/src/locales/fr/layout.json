@@ -46,7 +46,8 @@
   "connectedAs": "Connecté"
  },
  "footer": {
-  "githubLink": "Projet sur GitHub"
+  "githubLink": "Projet sur GitHub",
+  "docsLink": "Documentation"
  },
  "user": {
   "editProfile": "Modifier mon profil",
