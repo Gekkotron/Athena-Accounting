@@ -43,7 +43,7 @@ export function Chip({
       </button>
       <button
         onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-ink-400 hover:text-clay-300 transition px-0.5 mr-0.5"
+        className="text-ink-500 hover:text-clay-300 transition px-0.5 mr-0.5"
         aria-label={t('delete', { ns: 'common' })}
         title={t('delete', { ns: 'common' })}
       >
