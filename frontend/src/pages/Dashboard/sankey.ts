@@ -38,7 +38,14 @@ export interface BuildOpts {
 export const DEFAULT_TOP_N_INCOME = 4;
 export const DEFAULT_TOP_N_EXPENSE = 6;
 
-interface Group { id: number; label: string; color: string | null; amount: number; }
+interface SubBucket { id: number; label: string; color: string | null; amount: number; }
+interface Group {
+  id: number; label: string; color: string | null; amount: number;
+  // Per-leaf-category rollup: each transaction is placed under its own
+  // category (whichever depth it sits at). A hover on the root reveals
+  // this map as the node's `breakdown`.
+  subs: Map<number, SubBucket>;
+}
 
 // Walk parentId chain to the top-most ancestor. Cycle-guarded.
 function rootOf(cat: Category, byId: Map<number, Category>): Category {
@@ -63,9 +70,22 @@ function bucketToNodes(
   const sorted = [...groups.values()].filter((g) => g.amount > 0).sort((a, b) => b.amount - a.amount);
   const head = sorted.slice(0, topN);
   const tail = sorted.slice(topN);
-  const nodes: SankeyNode[] = head.map((g) => ({
-    key: `${keyPrefix}:${g.id}`, label: g.label, amount: g.amount, color: g.color, tone: 'category',
-  }));
+  const nodes: SankeyNode[] = head.map((g) => {
+    const node: SankeyNode = {
+      key: `${keyPrefix}:${g.id}`, label: g.label, amount: g.amount, color: g.color, tone: 'category',
+    };
+    // Reveal sub-categories only when the root decomposes into more than one
+    // positive-net leaf. A root whose single sub-bucket is itself has nothing
+    // useful to say in the tooltip. Negative-net leaves are filtered out for
+    // the same reason we drop negative-net roots — no ribbon can carry them.
+    const subs = [...g.subs.values()]
+      .filter((s) => s.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+    if (subs.length > 1) {
+      node.breakdown = subs.map((s) => ({ label: s.label, amount: s.amount, color: s.color }));
+    }
+    return node;
+  });
   if (tail.length > 0) {
     nodes.push({
       key: `${keyPrefix}:autres`, label: otherLabel,
@@ -101,8 +121,13 @@ export function buildSankeyModel(
     const root = rootOf(cat, byId);
     const target = r.category_kind === 'income' ? income : expense;
     const value = r.category_kind === 'income' ? parsed : -parsed;
-    const g = target.get(root.id) ?? { id: root.id, label: root.name, color: root.color, amount: 0 };
+    const g = target.get(root.id) ?? {
+      id: root.id, label: root.name, color: root.color, amount: 0, subs: new Map<number, SubBucket>(),
+    };
     g.amount += value;
+    const sub = g.subs.get(cat.id) ?? { id: cat.id, label: cat.name, color: cat.color, amount: 0 };
+    sub.amount += value;
+    g.subs.set(cat.id, sub);
     target.set(root.id, g);
   }
 

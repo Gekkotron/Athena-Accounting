@@ -51,8 +51,64 @@ describe('buildSankeyModel', () => {
       { label: 'C3', amount: 120, color: '#333' },
       { label: 'C4', amount: 80, color: '#444' },
     ]);
-    // Top-N nodes must not carry a breakdown — only the aggregate does.
+    // Top-N nodes in this fixture are atomic roots (no children), so no
+    // sub-category breakdown appears on them. The "Autres" aggregate still
+    // carries its folded-root breakdown asserted just above.
     expect(m.expenseNodes.filter((n) => n.label !== 'Autres').every((n) => n.breakdown === undefined)).toBe(true);
+  });
+
+  it('attaches a sub-category breakdown on a root with multiple contributing leaves, sorted desc', () => {
+    const cats = [
+      cat(1, 'Maison', 'expense'),
+      cat(2, 'Loyer', 'expense', { parentId: 1, color: '#111' }),
+      cat(3, 'EDF', 'expense', { parentId: 1, color: '#222' }),
+    ];
+    const rows = [row(2, 'expense', '-500'), row(3, 'expense', '-100')];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    expect(m.expenseNodes).toHaveLength(1);
+    expect(m.expenseNodes[0]).toMatchObject({ label: 'Maison', amount: 600 });
+    expect(m.expenseNodes[0]!.breakdown).toEqual([
+      { label: 'Loyer', amount: 500, color: '#111' },
+      { label: 'EDF', amount: 100, color: '#222' },
+    ]);
+  });
+
+  it('buckets transactions posted directly on the root alongside its child leaves', () => {
+    const cats = [
+      cat(1, 'Maison', 'expense', { color: '#000' }),
+      cat(2, 'Loyer', 'expense', { parentId: 1, color: '#111' }),
+    ];
+    const rows = [row(1, 'expense', '-200'), row(2, 'expense', '-500')];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    expect(m.expenseNodes[0]!.breakdown).toEqual([
+      { label: 'Loyer', amount: 500, color: '#111' },
+      { label: 'Maison', amount: 200, color: '#000' },
+    ]);
+  });
+
+  it('does not attach a breakdown on an atomic root (single sub-bucket)', () => {
+    const cats = [cat(1, 'Salaire', 'income')];
+    const rows = [row(1, 'income', '3000')];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    expect(m.incomeNodes[0]!.breakdown).toBeUndefined();
+  });
+
+  it('drops negative-net leaves from a root breakdown (refund-heavy child)', () => {
+    // Maison root nets +400 (Loyer 500 - Remb 100 refunds vs 0). The child
+    // "Remb" nets negative, so it must not appear in the breakdown.
+    const cats = [
+      cat(1, 'Maison', 'expense'),
+      cat(2, 'Loyer', 'expense', { parentId: 1 }),
+      cat(3, 'Remb', 'expense', { parentId: 1 }),
+    ];
+    const rows = [
+      row(2, 'expense', '-500'),
+      row(3, 'expense', '100'), // refund only → sub nets -100
+    ];
+    const m = buildSankeyModel(rows, cats, 'EUR');
+    expect(m.expenseNodes[0]).toMatchObject({ label: 'Maison', amount: 400 });
+    // Only one positive-net leaf remains → below the >1 threshold, no breakdown.
+    expect(m.expenseNodes[0]!.breakdown).toBeUndefined();
   });
 
   it('does not attach a breakdown when nothing spills into the tail', () => {
