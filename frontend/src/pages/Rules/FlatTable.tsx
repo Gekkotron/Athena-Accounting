@@ -142,10 +142,14 @@ export function FlatTable({
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
-                      className="text-[11px] text-ink-500 hover:text-clay-300 transition"
+                      className="text-ink-500 hover:text-clay-300 transition px-1"
                       onClick={() => onRequestDelete(r)}
+                      aria-label={t('flatTable.deleteRow')}
+                      title={t('flatTable.deleteRow')}
                     >
-                      {t('flatTable.deleteRow')}
+                      <svg width="12" height="12" viewBox="0 0 11 11" fill="none" aria-hidden>
+                        <path d="M2 2l7 7M9 2L2 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                      </svg>
                     </button>
                   </td>
                 </tr>
