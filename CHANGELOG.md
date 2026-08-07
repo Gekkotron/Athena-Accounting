@@ -12,6 +12,37 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+- **Sauvegarde distante** (nouveau) : envoi programmé d'un dump chiffré
+  du journal vers un dossier local, un serveur **WebDAV**, ou une box
+  **FTP** (avec un client en mode passif natif, testé prioritairement
+  sur Freebox). Carte *Réglages → Sauvegarde distante* pour configurer
+  la destination, choisir l'heure quotidienne, lancer une sauvegarde
+  immédiate et consulter le statut de la dernière exécution. Secrets
+  (mot de passe, passphrase) chiffrés au repos en AES-256-GCM ;
+  planificateur désactivable via `BACKUP_AUTO=0`. Au ré-enregistrement
+  d'une destination, laisser le champ mot de passe vide conserve le
+  secret déjà stocké. Documentation utilisateur EN + FR, avec un guide
+  FTP dédié Freebox.
+- **Sankey** : le survol de n'importe quelle racine (Dépenses / Revenus)
+  déploie la répartition en sous-catégories dans l'infobulle, plus
+  seulement la queue « Autres ». Palette partagée pour des couleurs
+  cohérentes entre la racine et ses enfants.
+- **Barre de pied de page** : lien direct vers la documentation, avec
+  ancre calculée selon la route active (par exemple, sur *Règles*, le
+  lien pointe directement sur la section Règles). Le logo *Athena* du
+  pied de page renvoie au tableau de bord.
+
+### Changed
+- **Rapports — héritage `virement interne`** : quand une catégorie
+  parente est marquée comme virement interne (par ex. *Économie*), ses
+  enfants (Crypto, PEA…) sont désormais traités comme tels sans avoir
+  à cocher chacune. L'API `/api/reports/categories` renvoie l'indicateur
+  effectif (propre OU celui du parent, hiérarchie à 2 niveaux max), que
+  les tuiles *Moyennes*, la carte Insights, le donut par catégorie et
+  le Sankey consomment tels quels — plus de fuite dans les totaux de
+  dépenses / revenus.
+
 ### Fixed
 - Synchronisation bancaire : un redémarrage du serveur après la
   synchronisation planifiée du jour ne déclenche plus une seconde
@@ -22,6 +53,21 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
   une nuit serveur éteint reste inchangé (la première synchronisation
   d'un compte encore jamais synchronisé se déclenche toujours au
   démarrage).
+- Graphiques : les périodes « N derniers mois » couvrent désormais N
+  mois **calendaires complets** plutôt qu'une fenêtre glissante en jours
+  fixes ; un mois partiel en cours ne biaise plus les comparaisons.
+- Graphiques : le donut par catégorie exclut les catégories marquées
+  *virement interne*, qui gonflaient artificiellement le camembert.
+- Insights : la carte « hausse de prix » ne prend en compte que les
+  séries de dépenses (les revenus n'ont pas de « prix qui grimpe »).
+- Écran de verrouillage : le bouton *Déconnexion* de l'overlay tire
+  effectivement l'overlay derrière lui (redirection propre, plus
+  d'écran verrouillé orphelin après déconnexion).
+- Écran de verrouillage : une connexion réussie nettoie un éventuel
+  drapeau de verrouillage résiduel laissé par une session précédente.
+- Règles : la croix de suppression reste visible sur les puces de
+  règles (vue à plat et vue par catégorie), pour un affordance
+  cohérent avec les autres puces.
 
 ## [1.0.0-rc.3] - 2026-08-03
 
