@@ -20,8 +20,10 @@ export const CATEGORY_FALLBACK_PALETTE = [
 // Resolve a stable display color for a category: uses `c.color` when set,
 // otherwise a deterministic palette entry indexed by `c.id`. Stable across
 // views because it doesn't depend on sort order — a category that has no
-// explicit color will always render the same fallback.
-export function resolveCategoryColor(c: Category): string {
+// explicit color will always render the same fallback. Signature widened to
+// {id, color} so aggregate rollups (Sankey sub-buckets) can pass their
+// own carried id/color without a full Category lookup.
+export function resolveCategoryColor(c: { id: number; color: string | null }): string {
   if (c.color) return c.color;
   return CATEGORY_FALLBACK_PALETTE[c.id % CATEGORY_FALLBACK_PALETTE.length]!;
 }

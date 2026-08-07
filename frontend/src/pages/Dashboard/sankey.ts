@@ -1,9 +1,13 @@
 import type { Category, CategoryReportRow } from '../../api/types';
+import { resolveCategoryColor } from '../../lib/categories';
 
 export interface BreakdownItem {
   label: string;
   amount: number;
-  color: string | null;
+  // Always resolved via `resolveCategoryColor` at model-build time, so the
+  // tooltip swatch never has to fall back — an uncoloured category picks its
+  // stable palette entry just like Recurrent/Categories views.
+  color: string;
 }
 export interface SankeyNode {
   key: string;
@@ -38,7 +42,7 @@ export interface BuildOpts {
 export const DEFAULT_TOP_N_INCOME = 4;
 export const DEFAULT_TOP_N_EXPENSE = 6;
 
-interface SubBucket { id: number; label: string; color: string | null; amount: number; }
+interface SubBucket { id: number; label: string; color: string; amount: number; }
 interface Group {
   id: number; label: string; color: string | null; amount: number;
   // Per-leaf-category rollup: each transaction is placed under its own
@@ -90,7 +94,7 @@ function bucketToNodes(
     nodes.push({
       key: `${keyPrefix}:autres`, label: otherLabel,
       amount: tail.reduce((s, g) => s + g.amount, 0), color: null, tone: 'neutral',
-      breakdown: tail.map((g) => ({ label: g.label, amount: g.amount, color: g.color })),
+      breakdown: tail.map((g) => ({ label: g.label, amount: g.amount, color: resolveCategoryColor(g) })),
     });
   }
   return nodes;
@@ -125,7 +129,9 @@ export function buildSankeyModel(
       id: root.id, label: root.name, color: root.color, amount: 0, subs: new Map<number, SubBucket>(),
     };
     g.amount += value;
-    const sub = g.subs.get(cat.id) ?? { id: cat.id, label: cat.name, color: cat.color, amount: 0 };
+    const sub = g.subs.get(cat.id) ?? {
+      id: cat.id, label: cat.name, color: resolveCategoryColor(cat), amount: 0,
+    };
     sub.amount += value;
     g.subs.set(cat.id, sub);
     target.set(root.id, g);

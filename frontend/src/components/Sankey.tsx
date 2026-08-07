@@ -290,7 +290,7 @@ function BreakdownTooltip({
           <li key={`${it.label}-${i}`} className="flex items-center gap-2 text-[11px]">
             <span
               className="inline-block h-2 w-2 shrink-0 rounded-sm"
-              style={{ background: it.color ?? '#5b6478' }}
+              style={{ background: it.color }}
             />
             <span className="flex-1 truncate text-ink-200">{it.label}</span>
             <span className="tabular-nums text-ink-100">{formatAmount(it.amount, currency)}</span>
