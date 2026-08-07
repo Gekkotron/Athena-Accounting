@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
+import { docsUrlFor } from './docsUrl';
 
 function GitHubIcon() {
   return (
@@ -21,6 +23,8 @@ const linkClass =
 
 export function SiteFooter() {
   const { t } = useTranslation('layout');
+  const { pathname } = useLocation();
+  const docsHref = docsUrlFor(pathname);
   return (
     <footer className="mt-16 pt-6 border-t border-ink-800/60 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-ink-500">
       <div className="flex items-center gap-1.5">
@@ -37,7 +41,7 @@ export function SiteFooter() {
         </a>
       </div>
       <a
-        href="https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started"
+        href={docsHref}
         target="_blank"
         rel="noopener noreferrer"
         className={linkClass}
