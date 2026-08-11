@@ -201,9 +201,9 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   const gap = opts.gap ?? 10;
   // Room for the two-line label (name + amount) rendered inside each node.
   // The two 11-px text lines centred symmetrically around the node midline
-  // span 26 px; 28 px gives 1 px of slack top and bottom so the amount
-  // never bleeds outside the coloured ribbon.
-  const minNodeHeight = opts.minNodeHeight ?? 28;
+  // span 26 px; 40 px gives 7 px of slack top and bottom so the label
+  // breathes inside the coloured ribbon instead of butting against the edge.
+  const minNodeHeight = opts.minNodeHeight ?? 40;
   const poolLabel = opts.poolLabel ?? 'Income';
   const savingsLabel = opts.savingsLabel ?? 'Savings';
   const savingsWithdrawnLabel = opts.savingsWithdrawnLabel ?? 'Savings drawn down';
