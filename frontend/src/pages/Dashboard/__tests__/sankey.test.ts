@@ -291,7 +291,7 @@ describe('layoutSankey', () => {
   });
 
   it('grows layout.height when the min-floor bumps push a column past the requested height', () => {
-    // Six thin expense nodes each get floored to 24 → 6*24 + 5*6 gaps = 174.
+    // Six thin expense nodes each get floored to 28 → 6*28 + 5*10 gaps = 218.
     // Plus the savings node. Requested height is small (100) — layout grows.
     const cats = [
       cat(1, 'Salaire', 'income'),

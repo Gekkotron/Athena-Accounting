@@ -198,7 +198,7 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
   const width = opts.width ?? 640;
   const requestedHeight = opts.height ?? 320;
   const nodeWidth = opts.nodeWidth ?? 14;
-  const gap = opts.gap ?? 6;
+  const gap = opts.gap ?? 10;
   // Room for the two-line label (name + amount) rendered inside each node.
   // The two 11-px text lines centred symmetrically around the node midline
   // span 26 px; 28 px gives 1 px of slack top and bottom so the amount
