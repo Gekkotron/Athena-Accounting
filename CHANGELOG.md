@@ -12,6 +12,8 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.4] - 2026-08-12
+
 ### Added
 - **Sauvegarde distante** (nouveau) : envoi programmé d'un dump chiffré
   du journal vers un dossier local, un serveur **WebDAV**, ou une box
@@ -68,6 +70,14 @@ GitHub — garder ce format exact (`## [X.Y.Z] - YYYY-MM-DD`).
 - Règles : la croix de suppression reste visible sur les puces de
   règles (vue à plat et vue par catégorie), pour un affordance
   cohérent avec les autres puces.
+- Sankey : plus d'air entre les rubans (espacement vertical porté de
+  6 à 10 px) pour lever la sensation de nœuds tassés dans la colonne
+  des dépenses.
+- Sankey : les libellés « respirent » à l'intérieur des rubans
+  colorés — la hauteur minimum d'un nœud passe de 28 à 40 px, ce qui
+  donne 7 px de marge haut/bas autour du nom et du montant (contre 1
+  px auparavant) sur les petites catégories qui touchaient les bords
+  du ruban.
 
 ## [1.0.0-rc.3] - 2026-08-03
 
