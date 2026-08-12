@@ -6,6 +6,7 @@ import { api } from '../../api/client';
 import type { User } from '../../api/types';
 import { DemoBanner } from '../DemoBanner';
 import { DemoUnavailableModal } from '../DemoUnavailableModal';
+import { OfflineBanner } from '../OfflineBanner';
 import { nav } from './nav-config';
 import { NavTree } from './NavTree';
 import { Brand } from './Brand';
@@ -28,6 +29,7 @@ export function Layout({ user }: { user: User }) {
 
   return (
     <>
+      <OfflineBanner />
       <DemoBanner />
       <div className="min-h-screen flex flex-col md:flex-row">
         {/* Mobile top bar */}

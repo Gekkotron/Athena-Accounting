@@ -61,6 +61,9 @@
  "subNav": {
   "ariaLabel": "Sub-navigation {{title}}"
  },
+ "offline": {
+  "message": "You are offline — the Athena server may be unreachable."
+ },
  "lock": {
   "screenTitle": "Screen locked",
   "passwordLabel": "Password",
