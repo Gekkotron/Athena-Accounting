@@ -52,8 +52,36 @@ Common `type` values in use: `feat`, `fix`, `docs`, `chore`, `ci`, `style`,
 
 ## Development setup
 
-See [`docs/users/getting-started.md`](docs/users/getting-started.md) for how
-to get the app running locally (both the Docker path and the Desktop path).
+The contributor track lives under [`docs/contributors/`](docs/contributors/):
+
+- **[Development](docs/contributors/development.md)** — clone, `install.sh`,
+  `docker compose up --build`, Vite HMR loop, typecheck + lint commands.
+- **[Architecture](docs/contributors/architecture.md)** — the three-container
+  stack (frontend / backend / postgres), an optional MCP container, and a
+  worked example of an OFX import end-to-end.
+- **[Code map](docs/contributors/code-map.md)** — where each concern lives
+  in the tree, module by module.
+- **[Database](docs/contributors/database.md)** — schema highlights, the
+  hand-written SQL migration workflow, and what runs at server boot.
+
+If you just want to browse the source before deciding to contribute, start
+in **[Code map](docs/contributors/code-map.md)** — it's the fastest way
+to orient inside `backend/src/domain/` and `frontend/src/pages/`.
+
+## Testing matrix
+
+| Suite | Command | Needs | Notes |
+|-------|---------|-------|-------|
+| Backend unit + route (no DB) | `cd backend && npm test` | Node 20 | DB-gated tests show as *skipped* — expected. |
+| Backend DB-integration | `bash backend/scripts/test-db.sh` | Docker | Spins a throwaway Postgres; **never** point at your real DB. |
+| Frontend unit | `cd frontend && npm test` | Node 20 | Vitest, co-located `__tests__/` next to sources. |
+| Playwright — demo | `cd frontend && npx playwright test` | Node 20 | `playwright.config.ts`; runs the browser-only demo build. |
+| Playwright — fullstack | `npx playwright test -c playwright.fullstack.config.ts` | Docker | Boots the full server + SPA. |
+| Playwright — installed app | `npx playwright test -c playwright.installed.config.ts` | Built desktop bundle | Layer 2 smoke over the installed Tauri app. |
+
+CI (`.github/workflows/ci.yml`) runs the full grid on every push — so if a
+suite is red locally, it will be red in CI too. Run at least the backend
+unit + frontend unit suites before pushing.
 
 ## Maintainer bandwidth
 

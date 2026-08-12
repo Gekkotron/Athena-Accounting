@@ -37,6 +37,41 @@ how you want to use Athena:
 Both paths ship the same features, the same UI, and the same backup
 format. You can move a backup export between them freely.
 
+## How the pieces fit
+
+```mermaid
+flowchart LR
+    classDef browser fill:#ede9fe,stroke:#8b5cf6,color:#111
+    classDef server  fill:#dbeafe,stroke:#2563eb,color:#111
+    classDef store   fill:#fef3c7,stroke:#d97706,color:#111
+    classDef ext     fill:#f3f4f6,stroke:#6b7280,color:#111,stroke-dasharray:3 3
+
+    subgraph FAM["Family-server (Docker Compose)"]
+      direction LR
+      B1[Browser<br/>React SPA]:::browser -->|HTTP| N[nginx<br/>frontend]:::server
+      N -->|/api| F1[Fastify<br/>backend]:::server
+      F1 -->|SQL| P[(PostgreSQL 16<br/>pg_trgm · unaccent)]:::store
+    end
+
+    subgraph DESK["Desktop (Tauri)"]
+      direction LR
+      T[Tauri shell]:::browser --> W[WebView<br/>React SPA]:::browser
+      W -->|localhost| F2[Fastify<br/>sidecar]:::server
+      F2 -->|SQL| PG[(PGlite<br/>embedded)]:::store
+    end
+
+    M[Local LLM client<br/>Ollama · Claude Code · ...]:::ext -. encrypted MCP .-> F1
+    M -. encrypted MCP .-> F2
+    BANK[Enable Banking<br/>bring-your-own creds]:::ext -. read-only pull .-> F1
+    BANK -. read-only pull .-> F2
+```
+
+Same TypeScript backend runs in both paths — only the packaging, the
+database driver, and the HTTP hop differ. See
+[**docs/contributors/architecture.md**](docs/contributors/architecture.md)
+for the deep read (component split, request flow of a real OFX import,
+libraries and why each one).
+
 ## Documentation
 
 Read the docs online at
@@ -300,32 +335,47 @@ valeur *par défaut*, passez par Réglages.
 
 ```
 .
-├── install.sh                         # secret generator (chmod 600 .env)
+├── install.sh                          # secret generator (chmod 600 .env)
 ├── docker-compose.yml
 ├── .env.example
-├── backend/
-│   ├── Dockerfile
+├── backend/                            # Fastify 5 + Drizzle + Postgres / PGlite
 │   ├── src/
-│   │   ├── server.ts
+│   │   ├── entry/                      # server.ts (Docker), tauri.ts (sidecar)
+│   │   ├── buildServer.ts              # route registration
 │   │   ├── env.ts
-│   │   ├── db/                        # Drizzle schema + SQL migrations
-│   │   ├── domain/                    # business logic
-│   │   │   ├── imports/               # OFX/CSV parsers, normalise, dedup
-│   │   │   ├── rules/                 # matcher + retroactive recategorize
-│   │   │   └── transfers/             # internal transfer detection
+│   │   ├── db/                         # Drizzle schema + hand-written SQL migrations
+│   │   ├── domain/                     # business logic
+│   │   │   ├── auth/                   # session cookie + argon2id + onboarding
+│   │   │   ├── imports/                # OFX / CSV / PDF parsers, dedup
+│   │   │   ├── rules/                  # matcher + retroactive recategorize
+│   │   │   ├── transfers/              # internal transfer detection
+│   │   │   ├── bank-sync/              # Enable Banking pull + scheduler
+│   │   │   ├── reconcile/              # balance checkpoints
+│   │   │   ├── backup/                 # export / import + optional AES-256-GCM
+│   │   │   ├── mcp/                    # MCP payload encryption
+│   │   │   └── settings/               # per-user JSONB defaults
 │   │   └── http/
-│   │       ├── plugins/auth.ts        # session cookie + argon2id
-│   │       └── routes/                # one file per resource
-│   └── tests/
-└── frontend/
-    ├── Dockerfile                     # multi-stage Vite build + nginx
-    ├── nginx.conf                     # SPA fallback + /api proxy
-    └── src/
-        ├── App.tsx                    # route guard via /api/auth/me
-        ├── api/                       # typed fetch client
-        ├── components/                # Layout, BalanceChart
-        ├── lib/format.ts              # currency / date helpers
-        └── pages/                     # Login, Dashboard, Transactions, …
+│   │       ├── plugins/                # auth cookie, rate limit, metrics
+│   │       └── routes/                 # one file per resource
+│   └── tests/                          # Vitest — RUN_DB_TESTS=1 gates integration
+├── frontend/                           # React 18 + Vite + Tailwind + TanStack Query
+│   ├── src/
+│   │   ├── main.tsx  App.tsx           # router + auth guard via /api/auth/me
+│   │   ├── api/                        # typed fetch client
+│   │   ├── components/                 # Sankey, BalanceChart, CategoryDonut, Layout
+│   │   ├── pages/                      # Login, Dashboard, Transactions, Comptes, …
+│   │   ├── lib/                        # format helpers, French decimal parser
+│   │   ├── contexts/  hooks/           # auth, privacy blur, settings
+│   │   └── i18n/  locales/             # EN + FR, 12 namespaces
+│   ├── nginx.conf                      # SPA fallback + /api proxy (Docker)
+│   ├── e2e/                            # Playwright — demo build
+│   ├── e2e-fullstack/                  # Playwright — full server + SPA
+│   └── e2e-installed/                  # Playwright — installed-app smoke
+├── shared/                             # api-contracts.ts — canonical entity shapes
+├── desktop/                            # Tauri 2 shell + bundled sidecar (Node + PGlite)
+├── mcp/                                # stdio MCP server — crypto-authed to backend
+├── website/                            # Docusaurus marketing + docs site
+└── docs/                               # users/ · contributors/ · reference/
 ```
 
 ## API surface (auth-protected unless noted)
