@@ -50,6 +50,13 @@
     @apply outline-none ring-2 ring-sage-300/40;
   }
 
+  /* Chromium doesn't paint box-shadow on inner SVG elements, so the ring-2
+     above is invisible on focusable SVG groups (Sankey nodes). Fall back to
+     outline, which Chromium does paint on SVG since M120. */
+  svg g[role="button"]:focus-visible {
+    @apply outline outline-2 outline-sage-300/60 outline-offset-2;
+  }
+
   /* Native selects pick up our theme. */
   select option {
     background-color: theme('colors.ink.900');
