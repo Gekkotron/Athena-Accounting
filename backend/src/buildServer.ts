@@ -1,5 +1,6 @@
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
+import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
@@ -81,6 +82,25 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
       // the running artifact matches the tag. Absent on the LAN server.
       ...(process.env.ATHENA_APP_VERSION ? { version: process.env.ATHENA_APP_VERSION } : {}),
     };
+  });
+
+  // Security headers. The Docker path also has an nginx layer that stamps
+  // CSP + X-Frame-Options; the desktop path (Tauri sidecar) has no proxy in
+  // front, so helmet here is what guards it. Kept minimal on purpose:
+  // - CSP off — nginx handles it for Docker; the Tauri WebView loads from
+  //   localhost with its own document policy.
+  // - HSTS off — the app is LAN-only and mostly served over http://.
+  // - COOP/COEP/CORP off — would break tesseract.js and pdfjs workers.
+  // What we do want: X-Frame-Options: DENY, X-Content-Type-Options: nosniff,
+  // Referrer-Policy: no-referrer — matching the nginx layer for parity.
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    strictTransportSecurity: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+    frameguard: { action: 'deny' },
+    referrerPolicy: { policy: 'no-referrer' },
   });
 
   await app.register(multipart);
