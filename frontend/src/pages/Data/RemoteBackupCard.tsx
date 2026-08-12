@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { formatDateTime } from '../../lib/format';
 import { useSettings } from '../../lib/useSettings';
 import {
@@ -158,6 +159,30 @@ export function RemoteBackupCard(): JSX.Element {
       />
     );
   };
+
+  // Silent-error guard: without this, a failed status fetch renders the
+  // "first-time setup" form, which is destructive-looking to a user who has
+  // already configured a destination.
+  if (status.isLoading) {
+    return (
+      <section className="mt-8">
+        <div className="section-rule mb-4">{t('backup.remote.sectionTitle')}</div>
+        <LoadingBlock height="min-h-40" />
+      </section>
+    );
+  }
+  if (status.isError) {
+    return (
+      <section className="mt-8">
+        <div className="section-rule mb-4">{t('backup.remote.sectionTitle')}</div>
+        <ErrorState
+          title={t('backup.remote.errorTitle')}
+          error={status.error}
+          onRetry={() => void status.refetch()}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8">

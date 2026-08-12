@@ -106,6 +106,7 @@
     },
     "remote": {
       "sectionTitle": "Sauvegarde distante",
+      "errorTitle": "Impossible de charger la destination de sauvegarde",
       "description": "Pousse automatiquement une sauvegarde chiffrée vers un serveur WebDAV (Synology, Nextcloud…), un serveur FTP (Freebox…) ou un dossier local/monté.",
       "kindLabel": "Type de destination",
       "kindWebdav": "WebDAV",

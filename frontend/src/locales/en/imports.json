@@ -106,6 +106,7 @@
     },
     "remote": {
       "sectionTitle": "Remote backup",
+      "errorTitle": "Could not load the backup destination",
       "description": "Automatically pushes an encrypted backup to a WebDAV server (Synology, Nextcloud…), an FTP server (Freebox…) or a local/mounted folder.",
       "kindLabel": "Destination type",
       "kindWebdav": "WebDAV",

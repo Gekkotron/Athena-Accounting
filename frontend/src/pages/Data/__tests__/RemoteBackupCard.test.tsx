@@ -178,4 +178,27 @@ describe('RemoteBackupCard', () => {
     renderCard();
     expect(await screen.findByText(/HTTP 401/)).toBeInTheDocument();
   });
+
+  // Without this guard the card renders the "first-time setup" form on a
+  // failed status fetch — telling a user with an already-configured
+  // destination that their config is gone.
+  it('shows a retry-able error when the destination status fails to load', async () => {
+    const { ApiError } = await vi.importActual<typeof import('../../../api/client')>(
+      '../../../api/client',
+    );
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/backup/destination') {
+        throw new ApiError('boom', 500, { error: 'boom' });
+      }
+      if (path === '/api/settings') return { settings: { backupHour: 3 } };
+      throw new Error(`no mock for ${path}`);
+    });
+    renderCard();
+    expect(
+      await screen.findByText(/Impossible de charger la destination de sauvegarde/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Réessayer/i })).toBeInTheDocument();
+    // The setup form must not render — that is the whole point of the guard.
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
 });

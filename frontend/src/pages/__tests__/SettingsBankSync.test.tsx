@@ -301,6 +301,34 @@ describe('SettingsBankSync', () => {
     });
   });
 
+  // Without this guard the section renders the credentials form on a failed
+  // status fetch, telling an already-configured user that their credentials
+  // are gone.
+  it('shows a retry-able error when the status query fails', async () => {
+    const { ApiError } = await vi.importActual<typeof import('../../api/client')>(
+      '../../api/client',
+    );
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/bank-sync/status') {
+        throw new ApiError('status boom', 500, { error: 'status boom' });
+      }
+      throw new Error(`no mock for ${path}`);
+    });
+
+    renderSection();
+
+    expect(
+      await screen.findByText(
+        /Impossible de charger l'état de la synchronisation bancaire/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Réessayer/i })).toBeInTheDocument();
+    // Credentials form must NOT render on error — that's the silent-error bug.
+    expect(
+      screen.queryByLabelText("Identifiant d'application"),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows the disabled notice when the operator turned auto-sync off', async () => {
     routeApi({
       'GET /api/bank-sync/status': {

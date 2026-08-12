@@ -44,6 +44,7 @@
     "bankSync": {
       "sectionLabel": "Synchronisation bancaire",
       "description": "Connectez vos banques via Enable Banking (PSD2) pour importer automatiquement vos transactions.",
+      "statusError": "Impossible de charger l'état de la synchronisation bancaire",
       "guide": "Créez un compte gratuit sur enablebanking.com, liez vos propres comptes bancaires (mode « restricted production »), créez une application avec l'URL de redirection ci-dessous, puis collez son identifiant et sa clé privée ici. La clé est chiffrée et ne quitte jamais votre serveur.",
       "redirectUrlLabel": "URL de redirection à déclarer dans votre application Enable Banking :",
       "applicationIdLabel": "Identifiant d'application",
