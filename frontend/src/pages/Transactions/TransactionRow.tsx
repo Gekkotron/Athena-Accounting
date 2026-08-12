@@ -1,4 +1,4 @@
-import { forwardRef, useMemo } from 'react';
+import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
@@ -8,7 +8,11 @@ import { isCheckpointDrifted } from '../../components/BalanceChart/checkpoints';
 export type TransactionRowProps = {
   tx: Transaction;
   account: Account | undefined;
-  categories: Category[];
+  // Categories sorted for the picker select and a lookup map keyed by id.
+  // Both are hoisted to the Transactions page so all rows share the same
+  // memoized values — sorting/rebuilding once per render, not once per row.
+  sortedCategories: Category[];
+  catById: Map<number, Category>;
   selected: boolean;
   onToggleSelect: (id: number, checked: boolean) => void;
   onUpdateCategory: (id: number, patch: { categoryId: number | null }) => void;
@@ -31,7 +35,8 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
     {
       tx,
       account,
-      categories,
+      sortedCategories,
+      catById,
       selected,
       onToggleSelect,
       onUpdateCategory,
@@ -50,7 +55,6 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
     ref,
   ) {
   const { t } = useTranslation(['transactions', 'common']);
-  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const currency = account?.currency ?? 'EUR';
   // Amber warning when the saved checkpoint no longer matches the recomputed
   // running balance — a transaction was edited, deleted, or back-imported
@@ -120,17 +124,11 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
                 }
               >
                 <option value="">—</option>
-                {[...categories]
-                  .sort((a, b) => {
-                    const pa = a.parentId != null ? catById.get(a.parentId)?.name ?? '' : a.name;
-                    const pb = b.parentId != null ? catById.get(b.parentId)?.name ?? '' : b.name;
-                    return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-                  })
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {formatCategoryPath(c, catById)}
-                    </option>
-                  ))}
+                {sortedCategories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {formatCategoryPath(c, catById)}
+                  </option>
+                ))}
               </select>
               {tx.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">{t('row.manualTag')}</div>}
             </>

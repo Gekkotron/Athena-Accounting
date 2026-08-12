@@ -99,7 +99,8 @@ function renderRow(
         <TransactionRow
           tx={tx}
           account={acc}
-          categories={cats}
+          sortedCategories={cats}
+          catById={new Map(cats.map((c) => [c.id, c]))}
           selected={overrides.selected ?? false}
           onToggleSelect={onToggleSelect}
           onUpdateCategory={onUpdateCategory}

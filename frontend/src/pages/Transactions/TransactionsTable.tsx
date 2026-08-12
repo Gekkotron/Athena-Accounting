@@ -9,7 +9,8 @@ import { InfoTip } from '../../components/InfoTip';
 
 export function TransactionsTable({
   transactions,
-  categories,
+  sortedCategories,
+  catById,
   accountById,
   isLoading,
   filters,
@@ -32,7 +33,8 @@ export function TransactionsTable({
   cursorId = null,
 }: {
   transactions: Transaction[];
-  categories: Category[];
+  sortedCategories: Category[];
+  catById: Map<number, Category>;
   accountById: Map<number, Account>;
   isLoading: boolean;
   filters: Filters;
@@ -123,7 +125,8 @@ export function TransactionsTable({
                   ref={idx === 0 ? firstRowRef : undefined}
                   tx={tx}
                   account={accountById.get(tx.accountId)}
-                  categories={categories}
+                  sortedCategories={sortedCategories}
+                  catById={catById}
                   selected={selectedIds.has(tx.id)}
                   cursor={tx.id === cursorId}
                   expanded={expandedIds.has(tx.id)}

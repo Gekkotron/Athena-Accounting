@@ -255,7 +255,8 @@ export function Transactions() {
       ) : (
         <TransactionsTable
           transactions={visibleTxs}
-          categories={categories}
+          sortedCategories={sortedCategories}
+          catById={catById}
           accountById={accountById}
           checkpointByDate={checkpointByDate}
           pendingCheckpointDate={pendingCheckpointDate}

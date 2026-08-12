@@ -64,7 +64,8 @@ function renderTable(overrides: Partial<{
   render(
     <TransactionsTable
       transactions={overrides.transactions ?? rows}
-      categories={cats}
+      sortedCategories={cats}
+      catById={new Map(cats.map((c) => [c.id, c]))}
       accountById={accountById}
       isLoading={overrides.isLoading ?? false}
       filters={overrides.filters ?? baseFilters}
