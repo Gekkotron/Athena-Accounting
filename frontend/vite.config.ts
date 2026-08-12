@@ -20,6 +20,32 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: isDemo ? 'dist-demo' : 'dist',
+      // Split hot vendor deps out of the main entry so the browser can cache
+      // them independently of app code. React updates rarely; app routes ship
+      // every release. Route-level chunks are already produced automatically
+      // by the dynamic imports in App.tsx — this only touches node_modules.
+      rollupOptions: {
+        output: {
+          // Function form (not object) so we grab whole node_modules subtrees,
+          // not just the entry re-exports. Object form left the real react
+          // runtime bundled into the main index chunk.
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+              return 'react-vendor';
+            }
+            if (id.includes('react-router')) return 'router';
+            if (id.includes('@tanstack/react-query')) return 'query';
+            if (id.includes('@dnd-kit')) return 'dnd';
+            if (id.includes('@floating-ui')) return 'floating';
+            if (
+              id.includes('/i18next') ||
+              id.includes('react-i18next') ||
+              id.includes('i18next-browser-languagedetector')
+            ) return 'i18n';
+          },
+        },
+      },
     },
     server: {
       host: '0.0.0.0',
