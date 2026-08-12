@@ -83,6 +83,10 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
       {/* SVG donut */}
       <div className="relative mx-auto">
         <svg
+          role="img"
+          aria-label={t('categoryDonut.chartAriaLabel', {
+            total: formatAmount(total, currency),
+          })}
           viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
           className="block"
           style={{ width: 220, height: 220 }}
@@ -172,11 +176,20 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
         {segments.map((s, i) => (
           <li
             key={`${s.id ?? 'null'}-${i}`}
-            className={`group flex items-baseline gap-3 rounded-md px-2 py-1.5 text-sm transition cursor-default ${
+            tabIndex={0}
+            aria-label={t('categoryDonut.segmentAriaLabel', {
+              name: s.name,
+              amount: formatAmount(s.amount, currency),
+              percent: Math.round(s.fraction * 100),
+            })}
+            className={`group flex items-baseline gap-3 rounded-md px-2 py-1.5 text-sm transition cursor-default focus:outline-none focus:ring-2 focus:ring-ink-500 ${
               hovered === i ? 'bg-ink-850' : ''
             }`}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
+            onFocus={() => setHovered(i)}
+            onBlur={() => setHovered(null)}
+            onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }}
           >
             <span
               className="h-2 w-2 rounded-full shrink-0"

@@ -138,6 +138,15 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
     <div ref={containerRef} className="w-full relative">
       <svg
         ref={svgRef}
+        role="img"
+        aria-label={t('balanceChart.chartAriaLabel', {
+          count: data.length,
+          from: formatDateShort(data[0]!.date),
+          to: formatDateShort(data[data.length - 1]!.date),
+          current: formatAmountCompact(data[data.length - 1]!.value, currency),
+          min: formatAmountCompact(minY, currency),
+          max: formatAmountCompact(maxY, currency),
+        })}
         viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="xMidYMid meet"
         className="w-full"

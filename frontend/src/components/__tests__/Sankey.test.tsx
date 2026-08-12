@@ -28,3 +28,20 @@ it('renders node labels including the Revenus pool and Épargne', () => {
   expect(screen.getByText('Épargne')).toBeInTheDocument();
   expect(screen.getByRole('img')).toHaveAttribute('aria-label');
 });
+
+it('exposes each Sankey node as a keyboard-reachable button with a descriptive aria-label', () => {
+  const model = buildSankeyModel(
+    [row(1, 'income', '3000'), row(2, 'expense', '-800')],
+    [cat(1, 'Salaire', 'income'), cat(2, 'Courses', 'expense')],
+    'EUR',
+  );
+  render(<Sankey model={model} />);
+  const nodes = screen.getAllByRole('button');
+  // At minimum: Salaire (income) + Courses (expense) + Épargne node — the
+  // central pool spine is not a node. Each is tabbable and carries a label.
+  expect(nodes.length).toBeGreaterThanOrEqual(3);
+  for (const n of nodes) {
+    expect(n).toHaveAttribute('tabindex', '0');
+    expect(n.getAttribute('aria-label')).toMatch(/\d+/); // amount is in the label
+  }
+});

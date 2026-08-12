@@ -1,6 +1,7 @@
 {
   "balanceChart": {
     "notEnoughData": "Not enough data yet to draw a curve.",
+    "chartAriaLabel": "Balance chart with {{count}} points from {{from}} to {{to}}, current {{current}}, range {{min}} to {{max}}",
     "zoomReset": {
       "button": "Reset zoom",
       "title": "Double-click the chart for the same action"
@@ -21,6 +22,7 @@
     "savings": "Savings",
     "savingsWithdrawn": "Savings drawn down",
     "ariaLabel": "Flow: {{income}} in income, {{expense}} in expenses",
+    "nodeAriaLabel": "{{label}}: {{amount}}, {{percent}}% of income",
     "breakdownCount_one": "{{count}} item",
     "breakdownCount_other": "{{count}} items"
   },
@@ -31,7 +33,9 @@
   },
   "categoryDonut": {
     "empty": "No data to display yet.",
-    "total": "Total"
+    "total": "Total",
+    "chartAriaLabel": "Category donut chart, total {{total}}",
+    "segmentAriaLabel": "{{name}}: {{amount}}, {{percent}}%"
   },
   "rangePicker": {
     "ariaLabel": "Displayed period",

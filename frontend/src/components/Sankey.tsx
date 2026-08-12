@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { layoutSankey, type SankeyModel, type LaidOutNode } from '../pages/Dashboard/sankey';
 import { formatAmount } from '../lib/format';
+import { SankeyBreakdownTooltip } from './SankeyBreakdownTooltip';
 
 const VIEW_W = 720;
 const VIEW_H = 360;
@@ -87,13 +88,23 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
   // Floating tooltip for the aggregated "Autres" node — reveals the detail
   // of what got bundled into the tail. Pointer coords are tracked relative
   // to the wrapper so the tooltip lands next to the cursor regardless of
-  // where the SVG sits on the page.
+  // where the SVG sits on the page. Keyboard focus reuses the same slot,
+  // anchoring the tooltip to the focused node's own bounding rect.
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = wrapperRef.current?.getBoundingClientRect();
     if (!rect) return;
     setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+  const handleNodeFocus = (n: LaidOutNode, target: SVGGElement) => {
+    setHoveredKey(n.key);
+    if (!n.breakdown) return;
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const wr = wrapper.getBoundingClientRect();
+    const nr = target.getBoundingClientRect();
+    setPointer({ x: nr.left + nr.width / 2 - wr.left, y: nr.top + nr.height / 2 - wr.top });
   };
 
   const ariaLabel = t('sankey.ariaLabel', {
@@ -188,12 +199,24 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
             const isRight = n.column === 'right';
             const labelX = isRight ? n.x - 8 : n.x + n.w + 8;
             const anchor: 'start' | 'end' = isRight ? 'end' : 'start';
+            const percent = Math.round((n.amount / (model.totalIncome || 1)) * 100);
+            const nodeAria = t('sankey.nodeAriaLabel', {
+              label: n.label,
+              amount: formatAmount(n.amount, model.currency),
+              percent,
+            });
             return (
               <g
                 key={n.key}
+                role="button"
+                tabIndex={0}
+                aria-label={nodeAria}
                 onMouseEnter={() => setHoveredKey(n.key)}
                 onMouseLeave={() => { setHoveredKey(null); setPointer(null); }}
                 onMouseMove={n.breakdown ? handleMouseMove : undefined}
+                onFocus={(e) => handleNodeFocus(n, e.currentTarget)}
+                onBlur={() => { setHoveredKey(null); setPointer(null); }}
+                onKeyDown={(e) => { if (e.key === 'Escape') e.currentTarget.blur(); }}
                 style={{ transition: 'opacity 180ms ease-out', cursor: 'default' }}
                 opacity={isDim ? 0.45 : 1}
               >
@@ -244,7 +267,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
       </svg>
 
       {hoveredNode?.breakdown && pointer && (
-        <BreakdownTooltip
+        <SankeyBreakdownTooltip
           node={hoveredNode}
           pointer={pointer}
           wrapperWidth={wrapperRef.current?.clientWidth ?? 0}
@@ -252,63 +275,6 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
           currency={model.currency}
         />
       )}
-    </div>
-  );
-}
-
-function BreakdownTooltip({
-  node, pointer, wrapperWidth, wrapperHeight, currency,
-}: {
-  node: LaidOutNode;
-  pointer: { x: number; y: number };
-  wrapperWidth: number;
-  wrapperHeight: number;
-  currency: string;
-}): JSX.Element {
-  const { t } = useTranslation('charts');
-  const items = node.breakdown ?? [];
-  // Flip to the left of the cursor when close to the right edge so the
-  // panel never overflows the wrapper. 220 px is the tooltip's target width.
-  const flipLeft = pointer.x + 220 + 16 > wrapperWidth;
-  // Flip above the cursor when the tooltip would overflow the wrapper's
-  // bottom. The wrapper has `overflow-x-auto` for the min-width SVG, which
-  // per spec promotes overflow-y to auto too — so a tooltip drawn past the
-  // bottom edge gets clipped rather than spilling over. Height is estimated
-  // from item count (40 px chrome + header, ~20 px per row) with a small
-  // safety margin so the flip triggers before the clip does.
-  const estHeight = 40 + items.length * 20;
-  const flipUp = pointer.y + estHeight + 12 > wrapperHeight;
-  const style: React.CSSProperties = {
-    position: 'absolute',
-    ...(flipUp
-      ? { bottom: Math.max(0, wrapperHeight - pointer.y + 12) }
-      : { top: pointer.y + 12 }),
-    ...(flipLeft ? { right: Math.max(0, wrapperWidth - pointer.x + 12) } : { left: pointer.x + 12 }),
-    pointerEvents: 'none',
-    width: 220,
-  };
-  return (
-    <div
-      role="tooltip"
-      style={style}
-      className="z-10 rounded-md border border-ink-700 bg-ink-900/95 px-3 py-2 shadow-lg backdrop-blur-sm"
-    >
-      <div className="label mb-1.5 flex items-baseline justify-between gap-2">
-        <span>{node.label}</span>
-        <span className="text-[10px] text-ink-400">{t('sankey.breakdownCount', { count: items.length })}</span>
-      </div>
-      <ul className="space-y-1">
-        {items.map((it, i) => (
-          <li key={`${it.label}-${i}`} className="flex items-center gap-2 text-[11px]">
-            <span
-              className="inline-block h-2 w-2 shrink-0 rounded-sm"
-              style={{ background: it.color }}
-            />
-            <span className="flex-1 truncate text-ink-200">{it.label}</span>
-            <span className="tabular-nums text-ink-100">{formatAmount(it.amount, currency)}</span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

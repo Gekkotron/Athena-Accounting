@@ -1,6 +1,7 @@
 {
   "balanceChart": {
     "notEnoughData": "Pas encore assez de données pour tracer une courbe.",
+    "chartAriaLabel": "Graphique de solde, {{count}} points du {{from}} au {{to}}, actuel {{current}}, entre {{min}} et {{max}}",
     "zoomReset": {
       "button": "Réinitialiser le zoom",
       "title": "Double-cliquez sur le graphique pour la même action"
@@ -21,6 +22,7 @@
     "savings": "Épargne",
     "savingsWithdrawn": "Épargne puisée",
     "ariaLabel": "Flux : {{income}} de revenus, {{expense}} de dépenses",
+    "nodeAriaLabel": "{{label}} : {{amount}}, {{percent}} % des revenus",
     "breakdownCount_one": "{{count}} poste",
     "breakdownCount_other": "{{count}} postes"
   },
@@ -31,7 +33,9 @@
   },
   "categoryDonut": {
     "empty": "Pas encore de données à représenter ici.",
-    "total": "Total"
+    "total": "Total",
+    "chartAriaLabel": "Diagramme circulaire par poste, total {{total}}",
+    "segmentAriaLabel": "{{name}} : {{amount}}, {{percent}} %"
   },
   "rangePicker": {
     "ariaLabel": "Période affichée",
