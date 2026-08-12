@@ -12,6 +12,11 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Fixed
+- **Sankey**: the breakdown tooltip now flips above the pointer when the
+  hovered node sits near the bottom of the chart, so it can no longer be
+  clipped by the wrapper's implicit vertical overflow.
+
 ## [1.0.0-rc.4] - 2026-08-12
 
 ### Added

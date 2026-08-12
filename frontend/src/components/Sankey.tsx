@@ -248,6 +248,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
           node={hoveredNode}
           pointer={pointer}
           wrapperWidth={wrapperRef.current?.clientWidth ?? 0}
+          wrapperHeight={wrapperRef.current?.clientHeight ?? 0}
           currency={model.currency}
         />
       )}
@@ -256,11 +257,12 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
 }
 
 function BreakdownTooltip({
-  node, pointer, wrapperWidth, currency,
+  node, pointer, wrapperWidth, wrapperHeight, currency,
 }: {
   node: LaidOutNode;
   pointer: { x: number; y: number };
   wrapperWidth: number;
+  wrapperHeight: number;
   currency: string;
 }): JSX.Element {
   const { t } = useTranslation('charts');
@@ -268,9 +270,19 @@ function BreakdownTooltip({
   // Flip to the left of the cursor when close to the right edge so the
   // panel never overflows the wrapper. 220 px is the tooltip's target width.
   const flipLeft = pointer.x + 220 + 16 > wrapperWidth;
+  // Flip above the cursor when the tooltip would overflow the wrapper's
+  // bottom. The wrapper has `overflow-x-auto` for the min-width SVG, which
+  // per spec promotes overflow-y to auto too — so a tooltip drawn past the
+  // bottom edge gets clipped rather than spilling over. Height is estimated
+  // from item count (40 px chrome + header, ~20 px per row) with a small
+  // safety margin so the flip triggers before the clip does.
+  const estHeight = 40 + items.length * 20;
+  const flipUp = pointer.y + estHeight + 12 > wrapperHeight;
   const style: React.CSSProperties = {
     position: 'absolute',
-    top: pointer.y + 12,
+    ...(flipUp
+      ? { bottom: Math.max(0, wrapperHeight - pointer.y + 12) }
+      : { top: pointer.y + 12 }),
     ...(flipLeft ? { right: Math.max(0, wrapperWidth - pointer.x + 12) } : { left: pointer.x + 12 }),
     pointerEvents: 'none',
     width: 220,
