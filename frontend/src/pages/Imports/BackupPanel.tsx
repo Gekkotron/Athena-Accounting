@@ -11,9 +11,6 @@ interface BackupResult {
     categories: number;
     accountFilenamePatterns: number;
     rules: number;
-    // Legacy — kept in the response for backward compat with backups that
-    // still carry transfer rules. New exports emit 0 here.
-    transferRules: number;
     // Per-account balance checkpoints restored from the dump.
     balanceCheckpoints?: number;
     transactions: number;
@@ -179,9 +176,6 @@ export function BackupPanel(): JSX.Element {
                 )}
                 {backupResult.imported.balanceCheckpoints !== undefined && (
                   <> · {t('backup.result.checkpoints', { count: backupResult.imported.balanceCheckpoints })}</>
-                )}
-                {backupResult.imported.transferRules > 0 && (
-                  <> · {t('backup.result.transferRules', { count: backupResult.imported.transferRules })}</>
                 )}
               </div>
             </div>

@@ -106,13 +106,15 @@ means the dedup keys matched, not that something went wrong.
 
 ## Internal transfers
 
-If you have two accounts and move money between them, both legs will
-show up in their respective imports as ordinary expenses / incomes.
-Athena's transfer detector links them via a shared `transfer_group_id`
-and excludes them from income/expense aggregates. Configure the
-keyword pairs in **Rules** (the transfer-rules UI is minimal; the
-API is at `/api/transfer-rules`). Once matched, the importer looks for
-the mirror leg in the counterpart account within ±7 days.
+If you have two accounts and move money between them, both legs land
+in your imports as ordinary expenses / incomes. To keep them from
+inflating your income/expense totals, mark the category you assign
+to those movements (for example "Épargne" or "Virement interne") as
+an **internal transfer** in **Rules → Categories**. Transactions
+sitting in such a category are excluded from monthly averages and
+donut totals. The `transfer_group_id` column on transactions is kept
+for historical grouping, but Athena no longer auto-links mirror legs
+during import.
 
 ## The watch folder (automatic imports)
 

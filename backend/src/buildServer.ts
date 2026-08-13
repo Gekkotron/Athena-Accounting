@@ -24,7 +24,6 @@ import { startWatchFolder } from './domain/imports/watch-folder.js';
 import { startBankSyncScheduler } from './domain/imports/bank-sync.js';
 import { startBackupScheduler } from './domain/backup/scheduler.js';
 import { rulesRoutes } from './http/routes/rules.js';
-import { transferRulesRoutes } from './http/routes/transfer-rules.js';
 import { transactionsRoutes } from './http/routes/transactions/index.js';
 import { reportsRoutes } from './http/routes/reports/index.js';
 import { triRoutes } from './http/routes/tri.js';
@@ -141,7 +140,6 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(importsDeleteRoutes);
   await app.register(categoriesRoutes);
   await app.register(rulesRoutes);
-  await app.register(transferRulesRoutes);
   await app.register(transactionsRoutes);
   await app.register(reportsRoutes);
   await app.register(triRoutes);

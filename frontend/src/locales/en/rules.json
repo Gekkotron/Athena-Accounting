@@ -172,33 +172,5 @@
       "category": "Category"
     },
     "emptyState": "All transactions are categorized."
-  },
-  "transfers": {
-    "title": "Transfer rules",
-    "subtitle": "At import time, a transaction whose label contains one of these keywords is matched to its mirror leg (opposite amount, ±7 days); both legs are then linked and excluded from income/expense totals.",
-    "listErrorTitle": "Could not load transfer rules",
-    "emptyTitle": "No transfer rules",
-    "emptyDescription": "Add a keyword (e.g. \"INTERNAL TRANSFER\") so imports automatically detect transfers between your accounts.",
-    "form": {
-      "keywordLabel": "Keyword",
-      "keywordPlaceholder": "internal transfer",
-      "keywordHelp": "Accent- and case-insensitive comparison against the raw label.",
-      "counterpartLabel": "Counterpart account",
-      "anyAccount": "Any other account",
-      "submit": "Add",
-      "submitPending": "Adding…"
-    },
-    "row": {
-      "counterpart": "counterpart: {{account}}",
-      "anyAccount": "counterpart: any other account",
-      "enable": "Enable",
-      "disable": "Disable",
-      "delete": "Delete"
-    },
-    "deleteDialog": {
-      "title": "Delete the rule \"{{keyword}}\"?",
-      "description": "Already-linked transfers stay linked; only future imports are affected.",
-      "confirmLabel": "Delete"
-    }
   }
 }

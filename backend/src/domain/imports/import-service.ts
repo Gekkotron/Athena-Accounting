@@ -12,7 +12,6 @@ import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
 import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
-import { detectTransfers } from '../transfers/detector.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 
 export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync';
@@ -234,16 +233,6 @@ export async function runImport(opts: {
       .update(fileImports)
       .set({ insertedCount: inserted, dedupSkipped: skipped })
       .where(eq(fileImports.id, fileImport.id));
-
-    // Transfer detection runs *before* categorization so transfer legs end up
-    // with categoryId = null (and category_source = 'auto'); the rule engine
-    // then skips them because the bucketing code below only processes rows
-    // still in `insertedIds` that aren't linked.
-    if (insertedIds.length > 0) {
-      trace(`tx: detectTransfers over ${insertedIds.length} rows`);
-      await detectTransfers(tx, opts.userId, insertedIds);
-      trace('tx: detectTransfers done');
-    }
 
     // Apply the rule engine to freshly inserted rows. We do this *inside* the
     // import transaction so an import either lands fully categorized or not at all.

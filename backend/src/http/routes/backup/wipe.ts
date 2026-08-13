@@ -10,7 +10,6 @@ import {
   rules,
   transactions,
   transactionSplits,
-  transferRules,
   users,
 } from '../../../db/schema.js';
 
@@ -35,7 +34,7 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
       transaction_splits, recurring_series_transactions, recurring_series,
       envelope_assignments, envelope_category_settings,
       pdf_import_drafts, pdf_statement_templates,
-      transactions, file_imports, rules, transfer_rules,
+      transactions, file_imports, rules,
       balance_checkpoints, category_budgets, account_filename_patterns,
       categories, accounts CASCADE`);
     return;
@@ -49,7 +48,6 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   await tx.delete(transactions).where(eq(transactions.userId, uid));
   await tx.delete(fileImports).where(eq(fileImports.userId, uid));
   await tx.delete(rules).where(eq(rules.userId, uid));
-  await tx.delete(transferRules).where(eq(transferRules.userId, uid));
   await tx.delete(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid));
   await tx.delete(categoryBudgets).where(eq(categoryBudgets.userId, uid));
   await tx.delete(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid));

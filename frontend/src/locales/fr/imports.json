@@ -85,9 +85,7 @@
       "fileImports_one": "{{count}} import",
       "fileImports_other": "{{count}} imports",
       "checkpoints_one": "{{count}} point de contrôle",
-      "checkpoints_other": "{{count}} points de contrôle",
-      "transferRules_one": "{{count}} règle de transfert (héritée)",
-      "transferRules_other": "{{count}} règles de transfert (héritées)"
+      "checkpoints_other": "{{count}} points de contrôle"
     },
     "confirmDialog": {
       "title": "Importer cette sauvegarde ?",

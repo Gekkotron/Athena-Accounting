@@ -671,9 +671,10 @@ describe.skipIf(!RUN)('/api/transactions', () => {
 
       const plain = await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'plain' });
       const legA = await makeTx({ accountId: accountAId, date: '2026-06-16', amount: '-100.00', rawLabel: 'legA' });
-      // Mirror what detectTransfers does in production: mark as transfer leg
-      // AND clear any auto-assigned category (the POST /api/transactions path
-      // runs the rule engine, which will have set a default category here).
+      // Mark this row as a transfer leg — clear any auto-assigned category
+      // (the POST /api/transactions path runs the rule engine, which will
+      // have set a default category here) so the test starts from a clean
+      // linked state regardless of what the engine picked.
       await db.update(transactions)
         .set({ transferGroupId: randomUUID(), categoryId: null })
         .where(eq(transactions.id, legA));

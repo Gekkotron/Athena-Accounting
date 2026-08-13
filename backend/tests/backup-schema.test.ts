@@ -7,7 +7,6 @@ const minimalDump = {
   categories: [],
   accountFilenamePatterns: [],
   rules: [],
-  transferRules: [],
   transactions: [],
 };
 
@@ -109,11 +108,20 @@ describe('backup/schema.ts', () => {
     }
   });
 
-  it('accepts a dump that omits the legacy transferRules field entirely', () => {
-    const { transferRules: _tr, ...withoutTransferRules } = minimalDump;
-    void _tr;
-    const parsed = BackupBody.safeParse(withoutTransferRules);
+  it('silently strips a legacy transferRules field carried by an older dump', () => {
+    // v1–v4 dumps may still carry transferRules; the schema no longer defines
+    // the key, but zod's default .strip() drops unknown fields on parse so
+    // historical backups still validate. Restore also ignores the field.
+    const parsed = BackupBody.safeParse({
+      ...minimalDump,
+      transferRules: [
+        { keyword: 'VIR OLD', direction: 'outgoing', enabled: true },
+      ],
+    });
     expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect('transferRules' in parsed.data).toBe(false);
+    }
   });
 
   it('accepts a dump that carries balanceCheckpoints', () => {

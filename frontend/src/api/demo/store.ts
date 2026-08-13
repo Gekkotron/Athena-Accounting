@@ -9,14 +9,15 @@
 // so bulk mutations don't storm the disk. Subscribers are notified on
 // every setState, unbatched.
 
-import type { Account, Budget, Category, RecurringSeries, Rule, TransferRule } from '../types';
+import type { Account, Budget, Category, RecurringSeries, Rule } from '../types';
 
 // Bumped whenever the seed shape changes in a way that must reach every
 // visitor on their next tab open. Mismatch triggers a silent reseed.
 //   v=1 → v=2  Récurrent seed expanded to 12 series, 3 new categories
 //   v=2 → v=3  removed the "Virement Épargne" recurring (a transfer,
 //              not a real outflow — it made the forecast eat income)
-export const DEMO_SCHEMA_VERSION = 3;
+//   v=3 → v=4  transferRules feature removed; key dropped from state
+export const DEMO_SCHEMA_VERSION = 4;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -25,7 +26,6 @@ export interface DemoState {
   accounts: Account[];
   categories: Category[];
   rules: Rule[];
-  transferRules: TransferRule[];
   budgets: Budget[];
   // Transactions and reports use loose shapes here; individual handlers
   // narrow the type at the call site once the seed lands (Task 2).
@@ -66,7 +66,6 @@ function emptyState(): DemoState {
     accounts: [],
     categories: [],
     rules: [],
-    transferRules: [],
     budgets: [],
     transactions: [],
     balanceCheckpoints: [],

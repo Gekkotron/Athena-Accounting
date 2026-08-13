@@ -8,7 +8,6 @@ const categoryKind = z.enum(['expense', 'income', 'transfer', 'neutral']);
 const signConstraint = z.enum(['positive', 'negative', 'any']);
 const matchMode = z.enum(['word', 'substring', 'regex']);
 const categorySource = z.enum(['manual', 'auto', 'default', 'llm']);
-const transferDirection = z.enum(['outgoing', 'incoming']);
 
 export const BackupBody = z.object({
   version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
@@ -63,18 +62,8 @@ export const BackupBody = z.object({
       enabled: z.boolean(),
     }),
   ),
-  // Transfer rules are no longer emitted by the exporter (superseded by the
-  // `is_internal_transfer` flag on categories in migration 0012). The field
-  // stays optional so historical backups that still carry it can be
-  // restored without editing.
-  transferRules: z.array(
-    z.object({
-      keyword: z.string(),
-      direction: transferDirection,
-      counterpartAccount: z.string().nullable().optional(),
-      enabled: z.boolean(),
-    }),
-  ).optional(),
+  // (transferRules were dropped as a feature — any legacy field on an old dump
+  // is silently stripped by zod's default .strip() behavior on parse.)
   // Per-account balance checkpoints (migration 0009). Optional for
   // backward compatibility with pre-fix exports that omit the field.
   balanceCheckpoints: z.array(

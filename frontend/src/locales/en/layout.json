@@ -18,8 +18,7 @@
    "rules": {
     "sort": "Sort",
     "list": "Rules",
-    "categories": "Categories",
-    "transfers": "Transfers"
+    "categories": "Categories"
    },
    "recurrent": {
     "detected": "Detected",

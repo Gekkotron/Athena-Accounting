@@ -11,7 +11,6 @@ import {
   rules,
   transactions,
   transactionSplits,
-  transferRules,
 } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { wipeUserData } from './wipe.js';
@@ -184,20 +183,8 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         rulesInserted++;
       }
 
-      // transferRules is a legacy field — new exports don't emit it, but
-      // restoring an old dump still re-inserts them so no data is lost.
-      let transferRulesInserted = 0;
-      for (const r of dump.transferRules ?? []) {
-        const counterpartId = resolveNameToId(r.counterpartAccount, accountIdByName);
-        await tx.insert(transferRules).values({
-          userId: uid,
-          keyword: r.keyword,
-          direction: r.direction,
-          counterpartAccountId: counterpartId,
-          enabled: r.enabled,
-        });
-        transferRulesInserted++;
-      }
+      // transferRules were removed as a feature — any values present in an
+      // older dump are silently dropped on restore.
 
       let checkpointsInserted = 0;
       for (const c of dump.balanceCheckpoints ?? []) {
@@ -316,7 +303,6 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           categories: categoryIdByPath.size,
           accountFilenamePatterns: dump.accountFilenamePatterns.length,
           rules: rulesInserted,
-          transferRules: transferRulesInserted,
           balanceCheckpoints: checkpointsInserted,
           budgets: budgetsInserted,
           transactions: txCount,

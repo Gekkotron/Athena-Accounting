@@ -34,14 +34,6 @@ export interface Rule {
   createdAt: string;
 }
 
-export interface TransferRule {
-  id: number;
-  keyword: string;
-  direction: 'outgoing' | 'incoming';
-  counterpartAccountId: number | null;
-  enabled: boolean;
-}
-
 export interface AccountFilenamePattern {
   id: number;
   pattern: string;

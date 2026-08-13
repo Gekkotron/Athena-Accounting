@@ -1,4 +1,4 @@
-import type { Rule, Transaction, TransferRule } from '../../../types';
+import type { Rule, Transaction } from '../../../types';
 import { getState, setState } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
 import { matchesRule, nextId } from './lib';
@@ -66,47 +66,10 @@ function handleRulePreview(req: DemoRequest) {
   };
 }
 
-function handleTransferRuleCreate(req: DemoRequest) {
-  const body = (req.body ?? {}) as Partial<TransferRule>;
-  const tr: TransferRule = {
-    id: nextId(getState().transferRules),
-    keyword: body.keyword ?? '',
-    direction: body.direction ?? 'outgoing',
-    counterpartAccountId: body.counterpartAccountId ?? null,
-    enabled: body.enabled ?? true,
-  };
-  setState((s) => { s.transferRules.push(tr); });
-  return { transferRule: tr };
-}
-
-function handleTransferRuleUpdate(req: DemoRequest) {
-  const id = Number(req.query.id);
-  const patch = (req.body ?? {}) as Partial<TransferRule>;
-  let updated: TransferRule | null = null;
-  setState((s) => {
-    const idx = s.transferRules.findIndex((r) => r.id === id);
-    if (idx < 0) return;
-    s.transferRules[idx] = { ...s.transferRules[idx], ...patch };
-    updated = s.transferRules[idx];
-  });
-  return { transferRule: updated };
-}
-
-function handleTransferRuleDelete(req: DemoRequest) {
-  const id = Number(req.query.id);
-  setState((s) => { s.transferRules = s.transferRules.filter((r) => r.id !== id); });
-  return { ok: true };
-}
-
 export function registerRulesWriteHandlers(): void {
   registerHandler('POST', '/api/rules', handleRuleCreate);
   registerHandler('POST', '/api/rules/preview', handleRulePreview);
   registerHandler('PUT', '/api/rules/:id', handleRuleUpdate);
   registerHandler('PATCH', '/api/rules/:id', handleRuleUpdate);
   registerHandler('DELETE', '/api/rules/:id', handleRuleDelete);
-
-  registerHandler('POST', '/api/transfer-rules', handleTransferRuleCreate);
-  registerHandler('PUT', '/api/transfer-rules/:id', handleTransferRuleUpdate);
-  registerHandler('PATCH', '/api/transfer-rules/:id', handleTransferRuleUpdate);
-  registerHandler('DELETE', '/api/transfer-rules/:id', handleTransferRuleDelete);
 }

@@ -85,9 +85,7 @@
       "fileImports_one": "{{count}} import",
       "fileImports_other": "{{count}} imports",
       "checkpoints_one": "{{count}} checkpoint",
-      "checkpoints_other": "{{count}} checkpoints",
-      "transferRules_one": "{{count}} legacy transfer rule",
-      "transferRules_other": "{{count}} legacy transfer rules"
+      "checkpoints_other": "{{count}} checkpoints"
     },
     "confirmDialog": {
       "title": "Import this backup?",

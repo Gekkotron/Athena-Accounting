@@ -58,7 +58,7 @@ describe('BackupPanel', () => {
     apiMock.mockResolvedValue({
       imported: {
         accounts: 1, categories: 2, accountFilenamePatterns: 0,
-        rules: 0, transferRules: 0, transactions: 3,
+        rules: 0, transactions: 3,
       },
     });
     const user = userEvent.setup();
@@ -113,7 +113,7 @@ describe('BackupPanel', () => {
     apiMock.mockResolvedValue({
       imported: {
         accounts: 1, categories: 0, accountFilenamePatterns: 0,
-        rules: 0, transferRules: 0, transactions: 0,
+        rules: 0, transactions: 0,
       },
     });
     const user = userEvent.setup();

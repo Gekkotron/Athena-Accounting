@@ -9,9 +9,9 @@ Athena categorizes transactions two ways: **rules** that run on every
 import, and **manual assignment** via the Sort tab. Every
 transaction carries a **source** tag — `auto`, `default`, or `manual` —
 that decides who owns its category the next time rules are re-applied.
-This page walks through both paths, how transfer rules keep internal
-moves out of your income and expense totals, and what "regenerate
-categories" actually does.
+This page walks through both paths, how the internal-transfer
+category flag keeps internal moves out of your income and expense
+totals, and what "regenerate categories" actually does.
 
 ## The rule engine
 
@@ -80,21 +80,19 @@ source `auto` (previously matched a rule) or `default` (fell into
 category. The result banner shows four counters: total scanned,
 recategorised, still-unknown, and preserved manual.
 
-## Internal transfer rules
+## Internal transfers
 
 When you move money between two of your own accounts, both legs land
-in your imports as ordinary expense and income lines. Athena's
-transfer detector pairs them via a shared `transfer_group_id` and
-excludes them from income/expense aggregates so they don't inflate
-your totals.
+in your imports as ordinary expense and income lines. The clean way
+to keep those from inflating your totals is to route them through a
+category flagged as an **internal transfer** (in **Rules →
+Categories**, tick "Internal transfer" on categories like "Épargne"
+or "Virement interne"). Transactions carrying such a category are
+excluded from monthly averages and donut aggregates.
 
-Transfer rules live at `/api/transfer-rules` and pair a **keyword**
-(e.g. `virement compte joint`) with a **direction** (`outgoing` or
-`incoming`) and, optionally, a specific counterpart account. Once a
-rule matches an incoming leg, Athena looks for the mirror leg in the
-counterpart account within ±7 days and links the two. The UI for
-these is currently minimal — most users configure them via the API or
-by importing a backup that already contains them.
+Older data may carry a `transfer_group_id` from the previous
+rule-driven detector — that column is kept so historical groups
+still filter out correctly, but no new groups are created on import.
 
 ## How sources interact
 

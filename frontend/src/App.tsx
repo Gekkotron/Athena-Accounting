@@ -19,7 +19,6 @@ import { Categories } from './pages/Rules/Categories';
 import { Plafonds } from './pages/Budgets/Plafonds';
 import { Enveloppes } from './pages/Budgets/Enveloppes/Enveloppes';
 import { Rules } from './pages/Rules';
-import { Transfers } from './pages/Rules/Transfers';
 import { DetectedTab } from './pages/Recurrent/DetectedTab';
 import { UpcomingTab } from './pages/Recurrent/UpcomingTab';
 import { ForecastTab } from './pages/Recurrent/ForecastTab';
@@ -46,7 +45,6 @@ export default function App() {
     { to: '/rules/sort', label: t('nav.children.rules.sort') },
     { to: '/rules/list', label: t('nav.children.rules.list') },
     { to: '/rules/categories', label: t('nav.children.rules.categories') },
-    { to: '/rules/transfers', label: t('nav.children.rules.transfers') },
   ];
 
   const RECURRENT_TABS: HubTab[] = [
@@ -132,7 +130,6 @@ export default function App() {
               <Route path="sort" element={<Tri />} />
               <Route path="list" element={<Rules />} />
               <Route path="categories" element={<Categories />} />
-              <Route path="transfers" element={<Transfers />} />
             </Route>
 
             {/* Récurrent hub */}

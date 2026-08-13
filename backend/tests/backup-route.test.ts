@@ -30,12 +30,6 @@ async function seedSomeData() {
   });
 
   await app.inject({
-    method: 'POST', url: '/api/transfer-rules',
-    headers: { cookie },
-    payload: { keyword: 'VIR BACKUP', direction: 'outgoing' },
-  });
-
-  await app.inject({
     method: 'POST', url: '/api/account-filename-patterns',
     headers: { cookie },
     payload: { pattern: 'backup_*.ofx', accountId, priority: 10 },
@@ -51,7 +45,7 @@ async function seedSomeData() {
 async function wipeUserData() {
   const { db } = await import('../src/db/client.js');
   const {
-    accounts, categories, rules, transferRules, accountFilenamePatterns,
+    accounts, categories, rules, accountFilenamePatterns,
     balanceCheckpoints, transactions, fileImports,
   } = await import('../src/db/schema.js');
   const { and, eq } = await import('drizzle-orm');
@@ -59,7 +53,6 @@ async function wipeUserData() {
   await db.delete(fileImports);
   await db.delete(accountFilenamePatterns);
   await db.delete(rules);
-  await db.delete(transferRules);
   await db.delete(balanceCheckpoints);
   await db.delete(categories).where(and(eq(categories.isDefault, false)));
   await db.delete(accounts);
@@ -121,10 +114,6 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(dump.counts.accounts).toBeGreaterThanOrEqual(1);
       expect(dump.counts.categories).toBeGreaterThanOrEqual(1);
       expect(dump.counts.rules).toBe(1);
-      // Transfer rules are no longer emitted (see backup/export.ts). The
-      // count key is absent entirely; the transferRules payload field too.
-      expect(dump.counts.transferRules).toBeUndefined();
-      expect(dump.transferRules).toBeUndefined();
       // Per-account balance checkpoints are part of the export shape now.
       expect(dump.counts.balanceCheckpoints).toBeGreaterThanOrEqual(0);
       expect(Array.isArray(dump.balanceCheckpoints)).toBe(true);
@@ -169,7 +158,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       const res = await app.inject({
         method: 'POST', url: '/api/backup/import',
         headers: { cookie },
-        payload: { version: 999, accounts: [], categories: [], accountFilenamePatterns: [], rules: [], transferRules: [], transactions: [] },
+        payload: { version: 999, accounts: [], categories: [], accountFilenamePatterns: [], rules: [], transactions: [] },
       });
       expect(res.statusCode).toBe(400);
       expect(res.json().error).toMatch(/backup format/i);
@@ -385,7 +374,6 @@ describe.skipIf(!RUN)('/api/backup', () => {
         ],
         accountFilenamePatterns: [],
         rules: [],
-        transferRules: [],
         transactions: [],
       };
       const res = await app.inject({

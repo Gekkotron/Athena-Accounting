@@ -15,7 +15,6 @@ import type {
   RecurringSeries,
   Rule,
   Transaction,
-  TransferRule,
 } from '../types';
 import type { DemoState } from './store';
 import { DEMO_SCHEMA_VERSION } from './store';
@@ -72,8 +71,6 @@ const rules: Rule[] = [
   { id: 8, categoryId: CAT.Abonnements, keyword: 'netflix',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
   { id: 9, categoryId: CAT.Abonnements, keyword: 'spotify',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
 ];
-
-const transferRules: TransferRule[] = [];
 
 const budgets: Budget[] = [
   { id: 1, categoryId: CAT.Courses,     monthlyLimit: '400.00', currency: 'EUR', period: 'monthly', accountId: null },
@@ -347,7 +344,6 @@ export function buildSeedState(): DemoState {
     accounts: clone(accounts),
     categories: clone(categories),
     rules: clone(rules),
-    transferRules: clone(transferRules),
     budgets: clone(budgets),
     transactions,
     balanceCheckpoints,

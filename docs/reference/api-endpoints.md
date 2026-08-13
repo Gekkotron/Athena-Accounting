@@ -153,17 +153,6 @@ Rule engine that assigns categories at import time and on demand.
 | `DELETE` | `/api/rules/:id`    | Remove. |
 | `POST`   | `/api/recategorize` | Re-run the engine over all non-transfer history. Body: `{ preserveManual?: boolean }` (default `true` — user choices are safe). Returns update counts. |
 
-### Transfer rules
-
-Auto-detect internal transfers by keyword + direction.
-
-| Method   | Path                      | Purpose |
-| -------- | ------------------------- | ------- |
-| `GET`    | `/api/transfer-rules`     | List. |
-| `POST`   | `/api/transfer-rules`     | Body: `{ keyword, direction: 'outgoing'\|'incoming', counterpartAccountId?, enabled? }`. |
-| `PUT`    | `/api/transfer-rules/:id` | Partial update. |
-| `DELETE` | `/api/transfer-rules/:id` | Remove. |
-
 ### Sort (categorize queue)
 
 Bulk-categorize the long tail of un-categorized transactions.
@@ -246,7 +235,7 @@ Portable JSON dump / restore.
 
 | Method | Path                 | Purpose |
 | ------ | -------------------- | ------- |
-| `GET`  | `/api/backup/export` | Emits a JSON dump keyed by natural names (account / category names, no numeric ids). Multi-user safe — only the calling user's data is included. Transfer rules are intentionally omitted (superseded by category `is_internal_transfer`); older dumps still round-trip since the schema keeps the optional field. |
+| `GET`  | `/api/backup/export` | Emits a JSON dump keyed by natural names (account / category names, no numeric ids). Multi-user safe — only the calling user's data is included. Legacy `transferRules` payloads on older dumps are silently stripped on restore. |
 | `POST` | `/api/backup/import` | REPLACE semantics, scoped to the caller. Wipes only this user's rows (in reverse dependency order) and reinserts every row from the dump under the caller's `user_id`. Body limit 50 MB. |
 | `GET`  | `/api/backup/destination` | Remote-backup destination status: kind (`webdav`/`folder`/`ftp`), non-secret config, schedule hour, last/next run, last error. Secrets (WebDAV password, backup passphrase) are never echoed. |
 | `PUT`  | `/api/backup/destination` | Configures the destination. Validates with a real probe write + delete against the target before persisting; 502 with a readable `detail` on failure. Secrets are encrypted at rest. |

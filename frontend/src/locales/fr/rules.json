@@ -172,33 +172,5 @@
       "category": "Catégorie"
     },
     "emptyState": "Toutes les transactions sont catégorisées."
-  },
-  "transfers": {
-    "title": "Règles de virement",
-    "subtitle": "À l'import, une transaction dont le libellé contient un de ces mots-clés est rapprochée de sa jambe miroir (montant opposé, ±7 jours) ; les deux jambes sont alors liées et exclues des totaux de revenus/dépenses.",
-    "listErrorTitle": "Impossible de charger les règles de virement",
-    "emptyTitle": "Aucune règle de virement",
-    "emptyDescription": "Ajoutez un mot-clé (ex. « VIREMENT INTERNE ») pour que l'import détecte automatiquement les virements entre vos comptes.",
-    "form": {
-      "keywordLabel": "Mot-clé",
-      "keywordPlaceholder": "virement interne",
-      "keywordHelp": "Comparaison insensible aux accents et à la casse, sur le libellé brut.",
-      "counterpartLabel": "Compte de contrepartie",
-      "anyAccount": "N'importe quel autre compte",
-      "submit": "Ajouter",
-      "submitPending": "Ajout…"
-    },
-    "row": {
-      "counterpart": "contrepartie : {{account}}",
-      "anyAccount": "contrepartie : n'importe quel autre compte",
-      "enable": "Activer",
-      "disable": "Désactiver",
-      "delete": "Supprimer"
-    },
-    "deleteDialog": {
-      "title": "Supprimer la règle « {{keyword}} » ?",
-      "description": "Les virements déjà liés restent liés ; seuls les prochains imports sont concernés.",
-      "confirmLabel": "Supprimer"
-    }
   }
 }

@@ -45,11 +45,6 @@ export const categorySourceEnum = pgEnum('category_source', [
   'llm',
 ]);
 
-export const transferDirectionEnum = pgEnum('transfer_direction', [
-  'outgoing',
-  'incoming',
-]);
-
 export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf', 'bank-sync']);
 
 export const recurringStatusEnum = pgEnum('recurring_status', [
@@ -289,21 +284,6 @@ export const rules = pgTable(
     idxPriority: index('rules_priority_idx').on(t.priority),
   }),
 );
-
-// Separate from `rules`: a transfer rule does not assign a category — it
-// annotates a transaction as one leg of an internal transfer and links it to
-// its mirror leg in the counterpart account via `transfer_group_id`.
-export const transferRules = pgTable('transfer_rules', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
-  keyword: text('keyword').notNull(),
-  direction: transferDirectionEnum('direction').notNull(),
-  counterpartAccountId: integer('counterpart_account_id').references(
-    () => accounts.id,
-    { onDelete: 'set null' },
-  ),
-  enabled: boolean('enabled').notNull().default(true),
-});
 
 // ---------------------------------------------------------------------------
 // file_imports  —  audit row per uploaded file. Lets the UI explain "this

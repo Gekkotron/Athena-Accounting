@@ -1,4 +1,4 @@
-import type { Budget, Category, Rule, TransferRule } from '../../../types';
+import type { Budget, Category, Rule } from '../../../types';
 import { DEFAULTS } from '../../../../lib/settings';
 import { getState } from '../../store';
 import { registerHandler } from '../../index';
@@ -13,7 +13,6 @@ export function registerSimpleHandlers(): void {
   registerHandler('GET', '/health', () => ({ ok: true, mode: 'demo' as const }));
   registerHandler('GET', '/api/categories', () => ({ categories: getState().categories as Category[] }));
   registerHandler('GET', '/api/rules', () => ({ rules: getState().rules as Rule[] }));
-  registerHandler('GET', '/api/transfer-rules', () => ({ transferRules: getState().transferRules as TransferRule[] }));
   registerHandler('GET', '/api/budgets', () => ({ budgets: getState().budgets as Budget[] }));
   // Mirrors the backend settings route: stored values over defaults, so a
   // partial demo seed never leaves consumers with undefined standard keys
