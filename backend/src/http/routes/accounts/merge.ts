@@ -205,6 +205,27 @@ export function registerMerge(app: FastifyInstance): void {
       `);
       const draftsMoved = draftsRes.rows.length;
 
+      // Step E-bis — savings_goals: unique (user_id, account_id, name).
+      // Resolve name collisions on the target account by appending
+      // ` (from <source name>)` — matches how the codebase handles
+      // non-destructive merges elsewhere. Events cascade via their goal_id,
+      // no per-event repoint needed.
+      await tx.execute(sql`
+        UPDATE savings_goals
+           SET name = name || ${' (from ' + source.name + ')'}
+         WHERE account_id = ${sourceId}
+           AND name IN (
+             SELECT name FROM savings_goals WHERE account_id = ${targetId}
+           )
+      `);
+      const goalsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE savings_goals
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const goalsMoved = goalsRes.rows.length;
+
       // Step F — bump target's opening_balance by source's.
       const openingBalanceAdded = source.openingBalance;
       await tx.execute(sql`
@@ -226,6 +247,7 @@ export function registerMerge(app: FastifyInstance): void {
         importsMoved,
         templatesMoved,
         draftsMoved,
+        goalsMoved,
         openingBalanceAdded,
       };
     });

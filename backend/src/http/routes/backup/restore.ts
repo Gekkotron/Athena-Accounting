@@ -9,6 +9,8 @@ import {
   categoryBudgets,
   fileImports,
   rules,
+  savingsGoalEvents,
+  savingsGoals,
   transactions,
   transactionSplits,
 } from '../../../db/schema.js';
@@ -297,6 +299,46 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         }
       }
 
+      // Savings goals: natural key is (accountName, goalName). Events link
+      // back to their goal by the same pair. Goals whose account did not
+      // resolve are silently skipped; events whose goal did not resolve are
+      // skipped and counted (matches the rules/budgets convention).
+      const goalIdByKey = new Map<string, number>();
+      let goalsInserted = 0;
+      let goalsSkipped = 0;
+      for (const g of dump.savingsGoals ?? []) {
+        const accId = resolveNameToId(g.account, accountIdByName);
+        if (accId === null) { goalsSkipped++; continue; }
+        const [inserted] = await tx.insert(savingsGoals).values({
+          userId: uid,
+          accountId: accId,
+          name: g.name,
+          targetAmount: g.targetAmount,
+          targetDate: g.targetDate ?? null,
+          color: g.color ?? null,
+          closedAt: g.closedAt ? new Date(g.closedAt) : null,
+        }).returning({ id: savingsGoals.id });
+        if (inserted) {
+          goalIdByKey.set(`${g.account}::${g.name}`, inserted.id);
+          goalsInserted++;
+        }
+      }
+
+      let goalEventsInserted = 0;
+      let goalEventsSkipped = 0;
+      for (const e of dump.savingsGoalEvents ?? []) {
+        const goalId = goalIdByKey.get(`${e.account}::${e.goal}`);
+        if (goalId === undefined) { goalEventsSkipped++; continue; }
+        await tx.insert(savingsGoalEvents).values({
+          userId: uid,
+          goalId,
+          amount: e.amount,
+          eventDate: e.eventDate,
+          note: e.note ?? null,
+        });
+        goalEventsInserted++;
+      }
+
       return {
         imported: {
           accounts: accountIdByName.size,
@@ -307,6 +349,12 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           budgets: budgetsInserted,
           transactions: txCount,
           fileImports: fileImportsInserted,
+          savingsGoals: goalsInserted,
+          savingsGoalEvents: goalEventsInserted,
+        },
+        skipped: {
+          savingsGoals: goalsSkipped,
+          savingsGoalEvents: goalEventsSkipped,
         },
       };
     });

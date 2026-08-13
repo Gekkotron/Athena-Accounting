@@ -672,6 +672,57 @@ export const bankConnectionAccounts = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// savings_goals + savings_goal_events — per-account named targets ("piggy
+// banks", migration 0037). A goal is a layer of intent: progress is the sum
+// of explicit contribution/withdrawal events, not a fraction of the account
+// balance, so many goals can share one account without arbitrary splitting.
+// closed_at is the whole state machine (NULL = active, non-NULL = archived).
+// See docs/superpowers/specs/2026-08-13-savings-goals-design.md.
+// ---------------------------------------------------------------------------
+
+export const savingsGoals = pgTable(
+  'savings_goals',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    accountId: integer('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    targetAmount: numeric('target_amount', { precision: 14, scale: 2 }).notNull(),
+    targetDate: date('target_date'),
+    color: varchar('color', { length: 9 }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqUserAccountName: uniqueIndex('savings_goals_user_account_name_uq').on(
+      t.userId,
+      t.accountId,
+      t.name,
+    ),
+    idxUser: index('savings_goals_user_idx').on(t.userId),
+    idxAccount: index('savings_goals_account_idx').on(t.accountId),
+  }),
+);
+
+export const savingsGoalEvents = pgTable(
+  'savings_goal_events',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    goalId: integer('goal_id').notNull().references(() => savingsGoals.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+    eventDate: date('event_date').notNull(),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    idxGoalDate: index('savings_goal_events_goal_date_idx').on(t.goalId, t.eventDate),
+    idxUser: index('savings_goal_events_user_idx').on(t.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // backup_destinations — per-user remote backup destination (migration 0031).
 // One row per user: WebDAV or folder target for scheduled encrypted backups.
 // secret_encrypted (WebDAV password) and passphrase_encrypted (enc1 backup

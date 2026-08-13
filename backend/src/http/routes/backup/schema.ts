@@ -131,7 +131,10 @@ export const BackupBody = z.object({
     z.object({
       account: z.string(),
       filename: z.string(),
-      format: z.enum(['ofx', 'csv', 'pdf']),
+      // Mirrors the import_format DB enum. 'bank-sync' arrived in migration
+      // 0030, 'camt' in 0037 — both must be accepted here or a restore of a
+      // dump containing those audit rows would fail zod validation.
+      format: z.enum(['ofx', 'csv', 'pdf', 'bank-sync', 'camt']),
       importedAt: z.string(),
       totalLines: z.number().int(),
       insertedCount: z.number().int(),
@@ -154,6 +157,28 @@ export const BackupBody = z.object({
       currency: z.string(),
       period: z.enum(['monthly', 'yearly']).optional().default('monthly'),
       account: z.string().nullable().optional(), // account name; null = global
+    }),
+  ).optional(),
+  // Savings goals (migration 0037). Optional so pre-0037 backups still
+  // validate. Natural key on restore is (accountName, goalName); events
+  // reference their goal by that same pair.
+  savingsGoals: z.array(
+    z.object({
+      account: z.string(),
+      name: z.string(),
+      targetAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+      targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+      color: z.string().nullable().optional(),
+      closedAt: z.string().nullable().optional(),
+    }),
+  ).optional(),
+  savingsGoalEvents: z.array(
+    z.object({
+      account: z.string(),
+      goal: z.string(),
+      amount: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+      eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      note: z.string().nullable().optional(),
     }),
   ).optional(),
 });

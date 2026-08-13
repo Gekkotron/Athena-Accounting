@@ -8,6 +8,8 @@ import {
   categoryBudgets,
   fileImports,
   rules,
+  savingsGoalEvents,
+  savingsGoals,
   transactions,
   transactionSplits,
 } from '../../db/schema.js';
@@ -23,7 +25,10 @@ import { VERSION, fileImportKey } from '../../http/routes/backup/schema.js';
 // backups keep round-tripping cleanly.
 export async function buildDump(uid: number) {
   {
-    const [accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets] = await Promise.all([
+    const [
+      accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets,
+      goals, goalEvents,
+    ] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
       db.select().from(accountFilenamePatterns).where(eq(accountFilenamePatterns.userId, uid)),
@@ -38,6 +43,8 @@ export async function buildDump(uid: number) {
         .where(eq(transactions.userId, uid))
         .then((rows) => rows.map((r) => r.transaction_splits)),
       db.select().from(categoryBudgets).where(eq(categoryBudgets.userId, uid)),
+      db.select().from(savingsGoals).where(eq(savingsGoals.userId, uid)),
+      db.select().from(savingsGoalEvents).where(eq(savingsGoalEvents.userId, uid)),
     ]);
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
@@ -157,6 +164,27 @@ export async function buildDump(uid: number) {
         period: b.period,
         account: b.accountId != null ? (accountById.get(b.accountId)?.name ?? null) : null,
       })),
+      savingsGoals: goals.map((g) => ({
+        account: accountById.get(g.accountId)?.name ?? '',
+        name: g.name,
+        targetAmount: g.targetAmount,
+        targetDate: g.targetDate,
+        color: g.color,
+        closedAt: g.closedAt ? g.closedAt.toISOString() : null,
+      })),
+      savingsGoalEvents: (() => {
+        const goalById = new Map(goals.map((g) => [g.id, g]));
+        return goalEvents.map((e) => {
+          const g = goalById.get(e.goalId);
+          return {
+            account: g ? (accountById.get(g.accountId)?.name ?? '') : '',
+            goal: g?.name ?? '',
+            amount: e.amount,
+            eventDate: e.eventDate,
+            note: e.note,
+          };
+        });
+      })(),
     };
 
     return dump;

@@ -593,4 +593,88 @@ describe.skipIf(!RUN)('/api/backup', () => {
       expect(short.statusCode).toBe(400);
     });
   });
+
+  describe('savings goals round-trip', () => {
+    it('exports and restores goals + events by natural key (account, goal)', async () => {
+      const acc = await app.inject({
+        method: 'POST', url: '/api/accounts', headers: { cookie },
+        payload: { name: 'GoalsAcct', type: 'savings', currency: 'EUR', openingBalance: '0', openingDate: '2025-01-01' },
+      });
+      const goalsAcctId = acc.json().account.id;
+
+      const g1 = await app.inject({
+        method: 'POST', url: '/api/goals', headers: { cookie },
+        payload: { accountId: goalsAcctId, name: 'Vacances', targetAmount: '2000.00', targetDate: '2027-06-01' },
+      });
+      const g1Id = g1.json().goal.id;
+      await app.inject({
+        method: 'POST', url: `/api/goals/${g1Id}/events`, headers: { cookie },
+        payload: { amount: '500.00', eventDate: '2026-06-15', note: 'juin' },
+      });
+      await app.inject({
+        method: 'POST', url: `/api/goals/${g1Id}/events`, headers: { cookie },
+        payload: { amount: '-100.00', eventDate: '2026-07-01' },
+      });
+      const g2 = await app.inject({
+        method: 'POST', url: '/api/goals', headers: { cookie },
+        payload: { accountId: goalsAcctId, name: 'Fond', targetAmount: '5000.00' },
+      });
+      const g2Id = g2.json().goal.id;
+      await app.inject({ method: 'POST', url: `/api/goals/${g2Id}/close`, headers: { cookie } });
+
+      const dump = await exportDump();
+      expect(dump.savingsGoals).toHaveLength(2);
+      expect(dump.savingsGoalEvents).toHaveLength(2);
+      const vac = dump.savingsGoals.find((g: { name: string }) => g.name === 'Vacances');
+      expect(vac).toMatchObject({ account: 'GoalsAcct', targetAmount: '2000.00', targetDate: '2027-06-01', closedAt: null });
+      const closed = dump.savingsGoals.find((g: { name: string }) => g.name === 'Fond');
+      expect(closed.closedAt).toEqual(expect.any(String));
+
+      const imp = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: dump,
+      });
+      expect(imp.statusCode).toBe(200);
+      expect(imp.json().imported.savingsGoals).toBe(2);
+      expect(imp.json().imported.savingsGoalEvents).toBe(2);
+
+      const listAll = await app.inject({
+        method: 'GET', url: '/api/goals?includeClosed=1', headers: { cookie },
+      });
+      const goals = listAll.json().goals;
+      expect(goals).toHaveLength(2);
+      const restoredVac = goals.find((g: { name: string }) => g.name === 'Vacances');
+      // 500 - 100 = 400
+      expect(restoredVac.savedAmount).toBe('400.00');
+      expect(restoredVac.eventCount).toBe(2);
+      const restoredFond = goals.find((g: { name: string }) => g.name === 'Fond');
+      expect(restoredFond.closedAt).not.toBeNull();
+    });
+
+    it('skips goals whose account did not resolve, and reports the count', async () => {
+      const dump = {
+        version: 4,
+        accounts: [{ name: 'A', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2026-01-01' }],
+        categories: [],
+        accountFilenamePatterns: [],
+        rules: [],
+        transactions: [],
+        savingsGoals: [
+          { account: 'A', name: 'Present', targetAmount: '100.00' },
+          { account: 'DoesNotExist', name: 'Orphan', targetAmount: '100.00' },
+        ],
+        savingsGoalEvents: [
+          { account: 'A', goal: 'Present', amount: '20.00', eventDate: '2026-06-15' },
+          { account: 'A', goal: 'Missing', amount: '10.00', eventDate: '2026-06-15' },
+        ],
+      };
+      const imp = await app.inject({
+        method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: dump,
+      });
+      expect(imp.statusCode).toBe(200);
+      expect(imp.json().imported.savingsGoals).toBe(1);
+      expect(imp.json().skipped.savingsGoals).toBe(1);
+      expect(imp.json().imported.savingsGoalEvents).toBe(1);
+      expect(imp.json().skipped.savingsGoalEvents).toBe(1);
+    });
+  });
 });

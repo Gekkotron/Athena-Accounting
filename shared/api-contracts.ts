@@ -98,3 +98,33 @@ export interface BalanceCheckpoint {
   note: string | null;
   createdAt: string;
 }
+
+// Savings goals (migration 0037). A goal is a "layer of intent" over an
+// account's real balance — its progress is the sum of explicit contribution
+// and withdrawal events, not a fraction of the account balance. Amounts stay
+// fixed-point strings per the project's numeric-precision convention.
+export interface SavingsGoal {
+  id: number;
+  accountId: number;
+  name: string;
+  targetAmount: string;
+  targetDate: string | null;      // YYYY-MM-DD
+  color: string | null;
+  closedAt: string | null;        // ISO string; non-null = archived
+  currency: string;               // inherited from the account
+  savedAmount: string;            // SUM(events.amount)
+  eventCount: number;
+  rawPct: number;                 // real ratio (unclamped)
+  progressPct: number;            // clamped to [0, 100] for the bar
+  perMonthNeeded: string | null;  // null when no deadline / already met
+  overdueDays: number | null;     // null unless past deadline AND under target
+}
+
+export interface SavingsGoalEvent {
+  id: number;
+  goalId: number;
+  amount: string;    // signed: positive = contribution, negative = withdrawal
+  eventDate: string; // YYYY-MM-DD
+  note: string | null;
+  createdAt: string;
+}

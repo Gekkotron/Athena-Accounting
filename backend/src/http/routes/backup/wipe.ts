@@ -8,6 +8,8 @@ import {
   categoryBudgets,
   fileImports,
   rules,
+  savingsGoalEvents,
+  savingsGoals,
   transactionAttachments,
   transactions,
   transactionSplits,
@@ -32,6 +34,7 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   const [userCount] = await tx.select({ n: sql<number>`count(*)::int` }).from(users);
   if ((userCount?.n ?? 0) === 1) {
     await tx.execute(sql`TRUNCATE
+      savings_goal_events, savings_goals,
       transaction_splits, transaction_attachments,
       recurring_series_transactions, recurring_series,
       envelope_assignments, envelope_category_settings,
@@ -48,6 +51,10 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   // attachment files on disk (DATA_DIR/attachments/<user_id>/…) are NOT
   // cleaned up here — the on-disk sweep is out of scope for the wipe path;
   // see backup/schema.ts for the deferred-attachments rationale.
+  // Savings goals: events cascade via goal_id, but delete explicitly to keep
+  // ordering readable and to match the transaction_attachments precedent.
+  await tx.delete(savingsGoalEvents).where(eq(savingsGoalEvents.userId, uid));
+  await tx.delete(savingsGoals).where(eq(savingsGoals.userId, uid));
   await tx.delete(transactionAttachments).where(eq(transactionAttachments.userId, uid));
   await tx.delete(transactionSplits)
     .where(sql`transaction_id IN (SELECT id FROM transactions WHERE user_id = ${uid})`);
