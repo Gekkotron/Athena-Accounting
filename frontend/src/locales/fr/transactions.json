@@ -68,7 +68,25 @@
     "manualTag": "manuel",
     "checkpointAriaLabel": "Valider le solde du {{date}} comme point de contrôle",
     "checkpointTitle": "Valider ce solde comme point de contrôle",
-    "checkpointDrift": "Point de contrôle divergent — attendu {{expected}}, recalculé {{actual}} (Δ {{delta}})"
+    "checkpointDrift": "Point de contrôle divergent — attendu {{expected}}, recalculé {{actual}} (Δ {{delta}})",
+    "attachmentIndicatorAriaLabel_one": "{{count}} pièce jointe",
+    "attachmentIndicatorAriaLabel_other": "{{count}} pièces jointes",
+    "attachmentIndicatorTitle_one": "{{count}} pièce jointe",
+    "attachmentIndicatorTitle_other": "{{count}} pièces jointes"
+  },
+  "attachments": {
+    "sectionTitle": "Pièces jointes",
+    "addButton": "Ajouter…",
+    "uploading": "Envoi…",
+    "download": "Télécharger",
+    "delete": "Supprimer",
+    "empty": "Aucune pièce jointe pour l'instant.",
+    "loading": "Chargement…",
+    "tooLarge": "Fichier trop volumineux (10 Mo maximum).",
+    "uploadFailed": "Envoi impossible.",
+    "saveFirstHint": "Enregistrez d'abord la transaction pour lui attacher un fichier.",
+    "confirmDeleteTitle": "Supprimer la pièce jointe",
+    "confirmDeleteDescription": "Supprimer définitivement « {{name}} » ? Le fichier sera retiré du disque."
   },
   "filters": {
     "labels": {

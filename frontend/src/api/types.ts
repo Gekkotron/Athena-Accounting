@@ -7,6 +7,7 @@
 import type { CategoryKind } from '../../../shared/api-contracts';
 export type {
   Account,
+  Attachment,
   BalanceCheckpoint,
   Category,
   CategoryKind,

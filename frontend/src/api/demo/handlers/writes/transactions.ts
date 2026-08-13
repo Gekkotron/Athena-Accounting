@@ -63,6 +63,7 @@ function handleTxCreate(req: DemoRequest) {
     importedAt: now,
     lockYears: body.lockYears ?? null,
     splits: [],
+    attachmentCount: 0,
   };
   setState((s) => { (s.transactions as Transaction[]).push(tx); });
   return { transaction: tx };

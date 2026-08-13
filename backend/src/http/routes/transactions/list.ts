@@ -4,7 +4,7 @@ import { db } from '../../../db/client.js';
 import { transactions, accounts } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { ListQuery } from './schemas.js';
-import { hydrateSplits, parseId } from './helpers.js';
+import { hydrateAttachmentCounts, hydrateSplits, parseId } from './helpers.js';
 import { buildListWhere } from './filters.js';
 import { computeRunningBalances } from './running-balance.js';
 
@@ -70,8 +70,9 @@ export function registerList(app: FastifyInstance): void {
       : rows;
 
     const hydrated = await hydrateSplits(withBalance);
+    const withCounts = await hydrateAttachmentCounts(hydrated);
     return {
-      transactions: hydrated,
+      transactions: withCounts,
       pagination: { total, limit: q.limit, offset: q.offset },
     };
   });
@@ -86,6 +87,7 @@ export function registerList(app: FastifyInstance): void {
       .where(and(eq(transactions.id, id), eq(transactions.userId, uid)));
     if (!row) return reply.code(404).send({ error: 'not found' });
     const [hydrated] = await hydrateSplits([row]);
-    return { transaction: hydrated };
+    const [withCount] = await hydrateAttachmentCounts([hydrated!]);
+    return { transaction: withCount };
   });
 }

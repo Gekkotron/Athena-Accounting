@@ -181,6 +181,7 @@ function buildTransactions(): Transaction[] {
       importedAt: date + 'T10:00:00.000Z',
       lockYears: null,
       splits: [],
+      attachmentCount: 0,
     });
   };
 
@@ -223,6 +224,7 @@ function buildTransactions(): Transaction[] {
     importedAt: '2026-06-22T10:00:00.000Z',
     lockYears: null,
     splits: [],
+    attachmentCount: 0,
   });
 
   return list;

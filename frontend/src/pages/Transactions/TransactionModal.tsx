@@ -6,6 +6,7 @@ import type { Account, Category, Transaction } from '../../api/types';
 import { formatDate, parseDecimal, parseUserDate } from '../../lib/format';
 import { SplitEditor, type DraftSplit, parseMagnitudeCents, fromInitial } from './SplitEditor';
 import { TransactionModalFields } from './TransactionModalFields';
+import { TransactionAttachments } from './TransactionAttachments';
 import {
   buildPatchDiff,
   draftMatchesInitial,
@@ -315,6 +316,8 @@ export function TransactionModal({
           categories={categories}
           onChange={setSplitsDraft}
         />
+
+        <TransactionAttachments transactionId={transaction?.id ?? null} />
 
         {(error || createdTxIdOnFailure != null) && (
           <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200 mt-4">

@@ -91,8 +91,30 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
         <td className="px-4 py-2.5 text-ink-300 whitespace-nowrap font-mono text-xs">{formatDate(tx.date)}</td>
         <td className="px-4 py-2.5 text-ink-400 whitespace-nowrap hidden sm:table-cell">{account?.name ?? '?'}</td>
         <td className="px-4 py-2.5 text-ink-100">
-          <div className="truncate max-w-[18rem] md:max-w-md" title={tx.rawLabel}>
-            {tx.rawLabel}
+          <div className="truncate max-w-[18rem] md:max-w-md flex items-center gap-1.5" title={tx.rawLabel}>
+            <span className="truncate">{tx.rawLabel}</span>
+            {(tx.attachmentCount ?? 0) > 0 && (
+              <span
+                aria-label={t('row.attachmentIndicatorAriaLabel', { count: tx.attachmentCount })}
+                title={t('row.attachmentIndicatorTitle', { count: tx.attachmentCount })}
+                className="text-ink-400 shrink-0 inline-flex items-center gap-0.5 text-[10px]"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M10.2 3.3 4.6 8.9a1.9 1.9 0 0 0 2.7 2.7l6.1-6.1a3.2 3.2 0 0 0-4.5-4.5L2.8 7.1a4.5 4.5 0 0 0 6.4 6.4l5.4-5.4" />
+                </svg>
+                {(tx.attachmentCount ?? 0) > 1 && <span>{tx.attachmentCount}</span>}
+              </span>
+            )}
           </div>
           {tx.transferGroupId && (
             <div className="text-[11px] text-amber-300/80 mt-0.5 flex items-center gap-1">

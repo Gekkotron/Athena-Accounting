@@ -58,6 +58,20 @@ export interface Transaction {
   lockYears?: number | null;
   runningBalance?: string;
   splits: TransactionSplit[];
+  // Count of transaction_attachments rows on this transaction; hydrated by
+  // the list/get handlers. Optional so pre-attachments-feature payloads and
+  // test fixtures still validate — a missing value reads as "0 attachments",
+  // matching the paperclip-indicator hide behaviour on the row.
+  attachmentCount?: number;
+}
+
+export interface Attachment {
+  id: number;
+  transactionId: number;
+  filename: string;
+  mime: string;
+  sizeBytes: number;
+  createdAt: string;
 }
 
 export interface Account {

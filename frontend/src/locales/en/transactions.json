@@ -68,7 +68,25 @@
     "manualTag": "manual",
     "checkpointAriaLabel": "Validate the {{date}} balance as a checkpoint",
     "checkpointTitle": "Validate this balance as a checkpoint",
-    "checkpointDrift": "Checkpoint diverged — expected {{expected}}, recalculated {{actual}} (Δ {{delta}})"
+    "checkpointDrift": "Checkpoint diverged — expected {{expected}}, recalculated {{actual}} (Δ {{delta}})",
+    "attachmentIndicatorAriaLabel_one": "{{count}} attachment",
+    "attachmentIndicatorAriaLabel_other": "{{count}} attachments",
+    "attachmentIndicatorTitle_one": "{{count}} attachment",
+    "attachmentIndicatorTitle_other": "{{count}} attachments"
+  },
+  "attachments": {
+    "sectionTitle": "Attachments",
+    "addButton": "Add…",
+    "uploading": "Uploading…",
+    "download": "Download",
+    "delete": "Delete",
+    "empty": "No attachments yet.",
+    "loading": "Loading…",
+    "tooLarge": "File too large (10 MB maximum).",
+    "uploadFailed": "Upload failed.",
+    "saveFirstHint": "Save the transaction first to attach a file.",
+    "confirmDeleteTitle": "Delete attachment",
+    "confirmDeleteDescription": "Permanently delete “{{name}}”? The file will be removed from disk."
   },
   "filters": {
     "labels": {

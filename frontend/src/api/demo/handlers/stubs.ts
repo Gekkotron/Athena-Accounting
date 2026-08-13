@@ -82,6 +82,15 @@ export function registerStubHandlers(): void {
   registerHandler('POST',   '/api/bank-sync/sessions', stub);
   registerHandler('POST',   '/api/bank-sync/sync', stub);
 
+  // Transaction attachments — receipt storage needs a real backend disk.
+  // Reads return an empty list so the modal renders the "no attachments yet"
+  // state harmlessly; every mutation is a proper demoStub 501, matching the
+  // bank-sync precedent.
+  registerHandler('GET',    '/api/transactions/:id/attachments', () => ({ attachments: [] }));
+  registerHandler('POST',   '/api/transactions/:id/attachments', stub);
+  registerHandler('GET',    '/api/attachments/:id/download', stub);
+  registerHandler('DELETE', '/api/attachments/:id', stub);
+
   // Tips (per-page guided tours) — TipsContext posts to these on every
   // dismissal and rolls back optimistically on failure, so a plain 501
   // would keep the tour's popover stuck open. Storing dismissals

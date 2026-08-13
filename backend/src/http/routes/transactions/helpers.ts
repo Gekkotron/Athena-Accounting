@@ -1,6 +1,6 @@
-import { inArray } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
-import { transactionSplits } from '../../../db/schema.js';
+import { transactionAttachments, transactionSplits } from '../../../db/schema.js';
 
 export { isPgError, parseId } from '../../../lib/http.js';
 
@@ -51,4 +51,32 @@ export async function hydrateSplits<T extends { id: number }>(rows: T[]): Promis
       memo: s.memo,
     })),
   }));
+}
+
+/**
+ * Attach `attachmentCount: number` to each row via one batched aggregate
+ * query on `transaction_attachments.transaction_id IN (...)`. Zero-cost for
+ * rows with no attachments — they get `0` explicitly rather than `undefined`
+ * so the frontend can rely on a numeric field.
+ *
+ * INVARIANT (same as hydrateSplits): callers MUST scope `rows` to the
+ * caller's userId first. Attachments carry their own user_id but this
+ * helper trusts the incoming ids are already ownership-checked.
+ */
+export async function hydrateAttachmentCounts<T extends { id: number }>(
+  rows: T[],
+): Promise<Array<T & { attachmentCount: number }>> {
+  if (rows.length === 0) return rows.map((r) => ({ ...r, attachmentCount: 0 }));
+  const ids = rows.map((r) => r.id);
+  const counts = await db
+    .select({
+      transactionId: transactionAttachments.transactionId,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(transactionAttachments)
+    .where(inArray(transactionAttachments.transactionId, ids))
+    .groupBy(transactionAttachments.transactionId);
+  const byTx = new Map<number, number>();
+  for (const c of counts) byTx.set(Number(c.transactionId), Number(c.count));
+  return rows.map((r) => ({ ...r, attachmentCount: byTx.get(r.id) ?? 0 }));
 }
