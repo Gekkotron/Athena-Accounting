@@ -57,6 +57,8 @@ toutes ses relations en clés naturelles (noms de comptes, noms de
 catégories) puis scelle le résultat. L'ancien `GET /api/backup/export`
 en clair renvoie désormais `410 Gone`.
 
+**Les pièces jointes des transactions sont sauvegardées séparément** via leur propre canal d'archive chiffré — voir [Pièces jointes](./attachments.md). Le dump JSON ci-dessus reste léger (structure et métadonnées uniquement) pour qu'une lourde bibliothèque de reçus ne gonfle jamais chaque sauvegarde ; les runs planifiés ne re-téléversent l'archive des pièces jointes que si elle a effectivement changé.
+
 ## Sauvegardes distantes (planifiées)
 
 Athena peut pousser une sauvegarde chiffrée vers une destination distante **automatiquement, une fois par nuit**, depuis **Réglages → Données → Sauvegarde**, carte *Sauvegarde distante*. Chaque fichier poussé est la même enveloppe `.enc.json` toujours chiffrée qu'un export manuel — la phrase secrète configurée sur la carte scelle chaque dump, et il n'existe **aucune récupération** en cas de perte.
@@ -201,5 +203,6 @@ vit dans [`docs/dev/backup-drill-report.md`](https://github.com/Gekkotron/Athena
 ## Voir aussi
 
 - [Getting started](./getting-started)
+- [Pièces jointes](./attachments) — le canal d'archive dédié aux reçus et factures, et comment le runner planifié ne les re-téléverse que si elles ont changé.
 - [Security and privacy](./security-and-privacy)
 - [Chiffrement au repos](./encryption-at-rest)

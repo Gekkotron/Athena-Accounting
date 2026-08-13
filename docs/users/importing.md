@@ -172,6 +172,8 @@ was already in the database.
 
 - **[Categorization](categorization.md)** — once transactions are in,
   categorize them.
+- **[Attachments](attachments.md)** — attach the source receipt or PDF
+  to any transaction so its paper trail stays with the row.
 - **[Accounts & data](accounts-and-data.md)** — balance checkpoints
   cross-check your imports against your bank statements.
 - **[Troubleshooting](troubleshooting.md)** — more failure modes.

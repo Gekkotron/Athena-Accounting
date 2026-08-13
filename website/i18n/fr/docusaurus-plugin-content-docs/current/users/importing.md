@@ -96,6 +96,7 @@ Non. C'est la dédup qui fait son job. Comparez le compteur « lus » au compteu
 ## Où aller ensuite
 
 - **[Catégorisation](categorization.md)** — une fois les transactions en base, catégorisez-les.
+- **[Pièces jointes](attachments.md)** — attachez le reçu ou le PDF d'origine à n'importe quelle transaction pour que la trace papier vive avec la ligne.
 - **[Comptes et données](accounts-and-data.md)** — les points de contrôle du solde recoupent vos imports avec vos relevés bancaires.
 - **[Dépannage](troubleshooting.md)** — d'autres modes de défaillance.
 

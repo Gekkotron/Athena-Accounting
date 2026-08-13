@@ -28,6 +28,8 @@ Export files contain the full set of your accounts, transactions, rules and budg
 
 Under the hood: export is a `POST /api/backup/export` with the passphrase in the request body (never a query string, so it never lands in access logs or browser history), which serialises your user with every relation using natural keys (account names, category names) and then seals the result. The plain `GET /api/backup/export` this used to be now returns `410 Gone`.
 
+**Transaction attachments are backed up separately** through their own encrypted archive channel — see [Attachments](./attachments.md). The JSON dump above stays lean (structure + metadata only) so a heavy receipt library never inflates every backup; scheduled runs re-upload the attachment archive only when it actually changed.
+
 ## Remote backups (scheduled)
 
 Athena can push an encrypted backup to a remote destination **automatically, once a night**, from **Settings → Data → Backup**, *Remote backup* card. Every pushed file is the same always-encrypted `.enc.json` envelope as a manual export — the passphrase you configure on the card seals each dump, and there is **no recovery** if you lose it.
@@ -141,5 +143,6 @@ The script `backend/scripts/backup-drill.ts` runs a round-trip on a temporary PG
 ## See also
 
 - [Getting started](./getting-started)
+- [Attachments](./attachments) — the separate archive channel for receipts and invoices, and how the scheduled runner picks them up only on change.
 - [Security and privacy](./security-and-privacy)
 - [Encryption at rest](./encryption-at-rest)
