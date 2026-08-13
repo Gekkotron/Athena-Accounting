@@ -89,3 +89,42 @@ export function isEncryptedEnvelope(x: unknown): x is EncryptedEnvelope {
     typeof o.ciphertext === 'string'
   );
 }
+
+// Binary-friendly variant for large blobs (attachment archives). Same
+// primitive (AES-256-GCM, scrypt-derived key, N/r/p from above) but no
+// JSON envelope and no base64 hops — the ciphertext travels as raw bytes
+// in a fixed-layout header + payload so a 100 MB archive doesn't get
+// re-encoded to a 133 MB string. Layout, in order:
+//   [ SALT_BYTES ][ IV_BYTES ][ 16-byte GCM tag ][ ciphertext ]
+// No version byte — this is the only binary format we emit today; a future
+// change would rename the file extension rather than push the layout.
+const GCM_TAG_BYTES = 16;
+
+export function encryptBytes(plaintext: Buffer, passphrase: string): Buffer {
+  const salt = randomBytes(SALT_BYTES);
+  const iv = randomBytes(IV_BYTES);
+  const cipher = createCipheriv('aes-256-gcm', deriveKey(passphrase, salt), iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return Buffer.concat([salt, iv, authTag, ciphertext]);
+}
+
+export function decryptBytes(envelope: Buffer, passphrase: string): Buffer {
+  if (envelope.length < SALT_BYTES + IV_BYTES + GCM_TAG_BYTES) {
+    throw new BackupDecryptError();
+  }
+  const salt = envelope.subarray(0, SALT_BYTES);
+  const iv = envelope.subarray(SALT_BYTES, SALT_BYTES + IV_BYTES);
+  const authTag = envelope.subarray(
+    SALT_BYTES + IV_BYTES,
+    SALT_BYTES + IV_BYTES + GCM_TAG_BYTES,
+  );
+  const ciphertext = envelope.subarray(SALT_BYTES + IV_BYTES + GCM_TAG_BYTES);
+  try {
+    const decipher = createDecipheriv('aes-256-gcm', deriveKey(passphrase, salt), iv);
+    decipher.setAuthTag(authTag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  } catch {
+    throw new BackupDecryptError();
+  }
+}

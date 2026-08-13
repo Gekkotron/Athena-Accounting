@@ -3,17 +3,18 @@ import { z } from 'zod';
 // Versioned envelope. Bump `version` when the shape changes in a non-additive
 // way — the importer refuses unknown versions outright.
 //
-// Transaction attachments (migration 0034) are DELIBERATELY NOT included in
-// the backup dump. Each attachment can be up to 10 MB and files accumulate
-// with normal use; inlining them as base64 would inflate the JSON envelope
-// by orders of magnitude (and by the encryption cost multiplier under the
-// passphrase-encrypted export flow). The intended workflow is: back up
-// DATA_DIR/attachments/ alongside the JSON dump using the user's own
-// filesystem tooling. The dump file is small and text-diffable; the on-disk
-// attachments directory is a self-contained blob store. On restore the
-// attachment rows cascade-delete with their parent transactions and the
-// user's DATA_DIR/attachments/ files become orphans until the user replaces
-// them from their filesystem-level backup (documented in Task 3).
+// Transaction attachments (migration 0034) travel via a SEPARATE archive
+// channel — see backup/attachments-archive.ts and
+// domain/backup/attachments-archive.ts. They are NOT inlined in this JSON
+// dump because each attachment can be up to 10 MB and would inflate the
+// envelope (and multiply the passphrase-encrypt cost) by orders of magnitude.
+// The archive is encrypted the same way (AES-256-GCM under a scrypt-derived
+// key) but ships as raw binary (gzip'd JSON, not JSON-inside-JSON) so a heavy
+// receipt library stays cheap to move. On restore, the two channels operate
+// independently: restoring the JSON dump alone wipes attachment rows via
+// CASCADE and leaves files orphaned on disk; restoring the attachments
+// archive rebuilds both DB + disk from its own payload. Users are expected
+// to grab both files for a full snapshot.
 export const VERSION = 4;
 
 const categoryKind = z.enum(['expense', 'income', 'transfer', 'neutral']);
