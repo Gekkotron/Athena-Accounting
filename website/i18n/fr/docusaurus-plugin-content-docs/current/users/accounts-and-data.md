@@ -145,6 +145,8 @@ chose d'externe, il se trouve sur l'un de ces quatre écrans.
   modèles, les points de contrôle en détail.
 - **[Catégorisation](categorization.md)** — une fois les
   transactions dans les comptes, rangez-les par catégorie.
+- **[Objectifs d'épargne](goals.md)** — empilez des « tirelires » nommées
+  sur n'importe quel compte, sans découper le compte lui-même.
 - **[Sauvegarde et restauration](backup-recovery.md)** — le contrat
   d'export/import complet, et les emplacements du dossier de
   données par système d'exploitation.

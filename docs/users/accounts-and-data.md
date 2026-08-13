@@ -134,6 +134,8 @@ it's on one of these four screens.
   checkpoints in depth.
 - **[Categorization](categorization.md)** — once accounts hold
   transactions, sort them into categories.
+- **[Savings goals](goals.md)** — stack named "piggy banks" on any
+  account without splitting the account itself.
 - **[Backup and recovery](backup-recovery.md)** — the export/import
   contract in full, plus per-OS data-directory locations.
 
