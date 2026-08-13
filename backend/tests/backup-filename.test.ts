@@ -2,9 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { backupFilename, isBackupFilename } from '../src/domain/backup/dump.js';
 
 describe('backup filenames', () => {
-  it('stamps local time as athena-backup-YYYY-MM-DD-HHMMSS.enc.json', () => {
-    const name = backupFilename(new Date(2026, 7, 5, 3, 7, 9)); // 2026-08-05 03:07:09 local
-    expect(name).toBe('athena-backup-2026-08-05-030709.enc.json');
+  it('stamps local time as athena-backup-YYYY-MM-DD-HHMMSSmmm.enc.json', () => {
+    // 2026-08-05 03:07:09.042 local — milliseconds carry so rapid-fire runs
+    // never share a filename (see dump.ts for the precision rationale).
+    const name = backupFilename(new Date(2026, 7, 5, 3, 7, 9, 42));
+    expect(name).toBe('athena-backup-2026-08-05-030709042.enc.json');
+  });
+  it('accepts the legacy 6-digit (seconds-only) filename so older backups still list', () => {
+    expect(isBackupFilename('athena-backup-2026-08-05-030709.enc.json')).toBe(true);
   });
   it('its own output round-trips the filter', () => {
     expect(isBackupFilename(backupFilename(new Date()))).toBe(true);

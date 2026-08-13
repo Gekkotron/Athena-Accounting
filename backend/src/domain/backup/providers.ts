@@ -8,9 +8,15 @@ import { isBackupFilename } from './dump.js';
 // list() pre-filters to backup-named files so retention pruning can NEVER
 // delete a foreign file living in the same directory.
 
+// The filter parameter lets callers pick which family of names the provider
+// returns — the JSON dump (`isBackupFilename` from dump.ts) or the
+// attachment archive (`isAttachmentArchiveFilename` from the archive route).
+// Default keeps the historical behaviour of returning only JSON dumps.
+export type BackupNameFilter = (name: string) => boolean;
+
 export interface BackupProvider {
   upload(name: string, bytes: Buffer): Promise<void>;
-  list(): Promise<string[]>;
+  list(filter?: BackupNameFilter): Promise<string[]>;
   remove(name: string): Promise<void>;
 }
 
@@ -53,9 +59,9 @@ export function createFolderProvider(dirPath: string): BackupProvider {
         throw new BackupProviderError(`folder write failed: ${errMsg(err)}`);
       }
     },
-    async list() {
+    async list(filter = isBackupFilename) {
       try {
-        return (await readdir(dirPath)).filter(isBackupFilename).sort();
+        return (await readdir(dirPath)).filter(filter).sort();
       } catch (err) {
         throw new BackupProviderError(`folder list failed: ${errMsg(err)}`);
       }
@@ -132,7 +138,7 @@ export function createWebdavProvider(
       }
       if (!res.ok) throw httpError('upload', res.status);
     },
-    async list() {
+    async list(filter = isBackupFilename) {
       const res = await request('PROPFIND', dirUrl, { headers: { depth: '1' } });
       if (res.status === 404) return []; // nothing pushed yet
       if (!res.ok && res.status !== 207) throw httpError('list', res.status);
@@ -143,7 +149,7 @@ export function createWebdavProvider(
       for (const m of xml.matchAll(/<[^<>]*href[^<>]*>([^<]+)<\/[^<>]*href[^<>]*>/gi)) {
         const decoded = decodeURIComponent((m[1] ?? '').trim());
         const basename = decoded.split('/').filter(Boolean).pop() ?? '';
-        if (isBackupFilename(basename)) names.push(basename);
+        if (filter(basename)) names.push(basename);
       }
       return names.sort();
     },

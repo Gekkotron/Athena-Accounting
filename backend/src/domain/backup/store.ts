@@ -19,6 +19,10 @@ export type BackupDestinationRecord = {
   enabled: boolean;
   lastRunAt: Date | null;
   lastError: string | null;
+  // Fingerprint (SHA-256 hex) of the user's attachments as of the last
+  // successful scheduled upload of an attachment archive. NULL when no
+  // archive has ever been uploaded — the next tick always uploads.
+  lastAttachmentFingerprint: string | null;
 };
 
 export async function getDestination(userId: number): Promise<BackupDestinationRecord | null> {
@@ -36,7 +40,22 @@ export async function getDestination(userId: number): Promise<BackupDestinationR
     enabled: row.enabled,
     lastRunAt: row.lastRunAt,
     lastError: row.lastError,
+    lastAttachmentFingerprint: row.lastAttachmentFingerprint,
   };
+}
+
+// Update-only helper used by the scheduled runner after a successful
+// attachment archive upload — kept out of recordRun so the standard
+// success/failure path doesn't touch this column when the archive was
+// skipped (fingerprint unchanged).
+export async function setAttachmentFingerprint(
+  userId: number,
+  fingerprint: string,
+): Promise<void> {
+  await db
+    .update(backupDestinations)
+    .set({ lastAttachmentFingerprint: fingerprint, updatedAt: new Date() })
+    .where(eq(backupDestinations.userId, userId));
 }
 
 export async function setDestination(

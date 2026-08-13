@@ -690,6 +690,10 @@ export const backupDestinations = pgTable('backup_destinations', {
   enabled: boolean('enabled').notNull().default(true),
   lastRunAt: timestamp('last_run_at', { withTimezone: true }),
   lastError: text('last_error'),
+  // Fingerprint of the user's attachment library at the last successful
+  // scheduled upload of an attachment archive. NULL means "never uploaded" —
+  // the first run always uploads. See domain/backup/attachments-fingerprint.
+  lastAttachmentFingerprint: text('last_attachment_fingerprint'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

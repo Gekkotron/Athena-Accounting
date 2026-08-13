@@ -160,6 +160,7 @@ export function registerDestinationRoutes(app: FastifyInstance): void {
       enabled: body.enabled,
       lastRunAt: null,
       lastError: null,
+      lastAttachmentFingerprint: null,
     };
     try {
       await probe(providerFor(candidate));

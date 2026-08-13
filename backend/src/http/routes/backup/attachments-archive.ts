@@ -15,19 +15,24 @@ const ARCHIVE_MAX_BYTES = 500 * 1024 * 1024;
 // separate archive channel exists to handle. If we ever want a lower cap
 // per deployment, wire it through env.
 
-function archiveFilename(now: Date): string {
+// Local-time stamp with milliseconds so rapid-fire runs (close-spaced
+// schedule ticks, tests, manual retries) never collide on the same
+// filename. Shape: athena-attachments-YYYY-MM-DD-HHMMSSmmm.bin. Both this
+// and the JSON dump's backupFilename share the mm-precision convention.
+export function attachmentArchiveFilename(now: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
+  const pad3 = (n: number) => String(n).padStart(3, '0');
   const stamp =
     `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${pad3(now.getMilliseconds())}`;
   return `athena-attachments-${stamp}.bin`;
 }
 
-// Whitelist of characters the retention pruner can trust. Same shape as the
-// JSON dump's isBackupFilename (dump.ts) so a foreign file dropped into the
-// destination can never match.
+// Whitelist of characters the retention pruner can trust. Accepts both the
+// legacy 6-digit (seconds-only) stamp and the 9-digit (seconds+milliseconds)
+// stamp so an upgrade doesn't strand older files outside the pruner's view.
 export function isAttachmentArchiveFilename(name: string): boolean {
-  return /^athena-attachments-\d{4}-\d{2}-\d{2}-\d{6}\.bin$/.test(name);
+  return /^athena-attachments-\d{4}-\d{2}-\d{2}-\d{6,9}\.bin$/.test(name);
 }
 
 const ExportBody = z.object({ passphrase: z.string().min(8).max(1024) });
@@ -46,7 +51,7 @@ export function registerAttachmentsArchiveRoutes(app: FastifyInstance): void {
 
     reply
       .header('Content-Type', 'application/octet-stream')
-      .header('Content-Disposition', `attachment; filename="${archiveFilename(new Date())}"`)
+      .header('Content-Disposition', `attachment; filename="${attachmentArchiveFilename(new Date())}"`)
       .header('Content-Length', String(envelope.length));
     return reply.send(envelope);
   });

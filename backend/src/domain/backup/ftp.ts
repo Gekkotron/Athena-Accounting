@@ -210,7 +210,7 @@ export function createFtpProvider(cfg: FtpDialConfig, password: string): BackupP
         await conn.cmdExpect(`RNTO ${name}`, [250], 'rename');
       });
     },
-    async list() {
+    async list(filter = isBackupFilename) {
       return withFtp(cfg, password, async (conn) => {
         const data = await pasv(conn, cfg.host);
         const r = await conn.cmd('NLST');
@@ -234,7 +234,7 @@ export function createFtpProvider(cfg: FtpDialConfig, password: string): BackupP
           .split(/\r?\n/)
           .map((l) => l.trim())
           .map((l) => l.split('/').filter(Boolean).pop() ?? '')
-          .filter(isBackupFilename)
+          .filter(filter)
           .sort();
       });
     },

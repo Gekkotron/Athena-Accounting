@@ -156,7 +156,7 @@ describe.skipIf(!RUN)('/api/backup/destination', () => {
     });
     expect(res.statusCode).toBe(200);
     const { filename } = res.json();
-    expect(filename).toMatch(/^athena-backup-\d{4}-\d{2}-\d{2}-\d{6}\.enc\.json$/);
+    expect(filename).toMatch(/^athena-backup-\d{4}-\d{2}-\d{2}-\d{6,9}\.enc\.json$/);
     const envelope = JSON.parse((await readFile(join(dir, filename))).toString()) as EncryptedEnvelope;
     const dump = JSON.parse(decryptEnvelope(envelope, PASSPHRASE));
     expect(dump.instance).toBe('athena-accounting');

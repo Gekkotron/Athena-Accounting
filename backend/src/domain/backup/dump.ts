@@ -163,18 +163,25 @@ export async function buildDump(uid: number) {
   }
 }
 
-// Local-time stamp so multiple backups on the same day stay distinct.
-// Shape: athena-backup-YYYY-MM-DD-HHMMSS.enc.json
+// Local-time stamp so multiple backups on the same second still stay distinct
+// (rapid manual triggers, close-spaced schedules, tests). Shape:
+//   athena-backup-YYYY-MM-DD-HHMMSSmmm.enc.json
+// where mmm is milliseconds. isBackupFilename below accepts both this newer
+// 9-digit form and the historical 6-digit (seconds-only) form so pre-upgrade
+// backups already sitting in destination folders keep listing correctly.
 export function backupFilename(now: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
+  const pad3 = (n: number) => String(n).padStart(3, '0');
   const stamp =
     `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${pad3(now.getMilliseconds())}`;
   return `athena-backup-${stamp}.enc.json`;
 }
 
 // Retention pruning filters on this before deleting ANYTHING — a foreign
-// file sitting in the destination directory must never match.
+// file sitting in the destination directory must never match. Accepts the
+// 6-digit legacy stamp AND the 9-digit stamp so an upgrade doesn't strand
+// older files outside the pruner's view.
 export function isBackupFilename(name: string): boolean {
-  return /^athena-backup-\d{4}-\d{2}-\d{2}-\d{6}\.enc\.json$/.test(name);
+  return /^athena-backup-\d{4}-\d{2}-\d{2}-\d{6,9}\.enc\.json$/.test(name);
 }
