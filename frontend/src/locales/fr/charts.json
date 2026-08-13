@@ -29,7 +29,8 @@
   "categoryBreakdown": {
     "modeExpense": "Dépenses",
     "modeIncome": "Revenus",
-    "noCategory": "Sans catégorie"
+    "noCategory": "Sans catégorie",
+    "loadError": "Erreur de chargement des postes."
   },
   "categoryDonut": {
     "empty": "Pas encore de données à représenter ici.",

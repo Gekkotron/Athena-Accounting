@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import type { Category, CategoryReportRow } from '../api/types';
 import { CategoryDonut, type CategorySegment } from './CategoryDonut';
 import { RangePicker, fromDateFor, toDateFor, type RangeKey } from './RangePicker';
+import { ErrorState } from './StateBlocks';
 
 export type { RangeKey } from './RangePicker';
 export type DonutMode = 'expense' | 'income';
@@ -101,6 +102,7 @@ export function CategoryBreakdown({
   }, [reportQ.data, categoriesQ.data, mode, t]);
 
   const isLoading = reportQ.isLoading || categoriesQ.isLoading;
+  const isError = reportQ.isError || categoriesQ.isError;
 
   return (
     <div>
@@ -131,6 +133,16 @@ export function CategoryBreakdown({
 
       {isLoading ? (
         <div className="h-60 animate-pulse rounded-lg bg-ink-900" />
+      ) : isError ? (
+        <ErrorState
+          variant="inline"
+          title={t('categoryBreakdown.loadError')}
+          error={reportQ.error ?? categoriesQ.error}
+          onRetry={() => {
+            void reportQ.refetch();
+            void categoriesQ.refetch();
+          }}
+        />
       ) : (
         <CategoryDonut
           data={donutData}

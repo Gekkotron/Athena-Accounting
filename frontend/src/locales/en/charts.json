@@ -29,7 +29,8 @@
   "categoryBreakdown": {
     "modeExpense": "Expenses",
     "modeIncome": "Income",
-    "noCategory": "No category"
+    "noCategory": "No category",
+    "loadError": "Error loading categories."
   },
   "categoryDonut": {
     "empty": "No data to display yet.",

@@ -151,7 +151,7 @@ export function Sankey({ model }: { model: SankeyModel }): JSX.Element {
         aria-label={ariaLabel}
         viewBox={`0 0 ${VIEW_W} ${layout.height}`}
         preserveAspectRatio="xMidYMid meet"
-        className="w-full min-w-[520px]"
+        className="w-full"
       >
         {/* Central spine — thin ink bar spanning only the flow's y-range, so
             it reads as a junction rather than a full-height wall. */}

@@ -79,3 +79,19 @@ it('sends no toDate for the trailing 30-day range', async () => {
     expect(call![1]?.query).not.toHaveProperty('toDate');
   });
 });
+
+it('shows an ErrorState with retry when the report query fails', async () => {
+  apiMock.mockImplementation(async (path: string) => {
+    if (path === '/api/categories') return { categories: [] } as any;
+    throw new Error('boom');
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { findByRole } = render(
+    <QueryClientProvider client={client}>
+      <CategoryBreakdown range="6m" onRangeChange={() => {}} />
+    </QueryClientProvider>,
+  );
+  const alert = await findByRole('alert');
+  expect(alert).toHaveTextContent(/Erreur de chargement des postes/);
+  expect(alert).toHaveTextContent(/boom/);
+});
