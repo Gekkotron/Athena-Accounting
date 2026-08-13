@@ -3,8 +3,11 @@ import { db } from '../../db/client.js';
 import { transactions } from '../../db/schema.js';
 import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
+import { parseCamt } from './camt-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
+
+export type PreviewFormat = 'ofx' | 'csv' | 'camt';
 
 export interface PreviewRow {
   date: string;
@@ -15,22 +18,24 @@ export interface PreviewRow {
 
 export interface PreviewResult {
   filename: string;
-  format: 'ofx' | 'csv';
+  format: PreviewFormat;
   accountId: number;
   totalRows: number;
   newRows: PreviewRow[];
   duplicateRows: PreviewRow[];
 }
 
-function parse(buf: Buffer, format: 'ofx' | 'csv'): ParsedTransaction[] {
-  return format === 'ofx' ? parseOfx(buf) : parseFrenchCsv(buf);
+function parse(buf: Buffer, format: PreviewFormat): ParsedTransaction[] {
+  if (format === 'ofx') return parseOfx(buf);
+  if (format === 'csv') return parseFrenchCsv(buf);
+  return parseCamt(buf);
 }
 
 export async function previewImport(opts: {
   filename: string;
   accountId: number;
   userId: number;
-  format: 'ofx' | 'csv';
+  format: PreviewFormat;
   buffer: Buffer;
 }): Promise<PreviewResult> {
   const parsed = parse(opts.buffer, opts.format);

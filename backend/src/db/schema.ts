@@ -45,7 +45,7 @@ export const categorySourceEnum = pgEnum('category_source', [
   'llm',
 ]);
 
-export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf', 'bank-sync']);
+export const importFormatEnum = pgEnum('import_format', ['ofx', 'csv', 'pdf', 'bank-sync', 'camt']);
 
 export const recurringStatusEnum = pgEnum('recurring_status', [
   'detected',

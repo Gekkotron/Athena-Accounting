@@ -8,13 +8,14 @@ import {
 } from '../../db/schema.js';
 import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
+import { parseCamt } from './camt-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
 import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 
-export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync';
+export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync' | 'camt';
 
 export interface ImportResult {
   fileImportId: number;
@@ -52,12 +53,14 @@ export function inferFormat(filename: string): Exclude<ImportFormat, 'bank-sync'
   if (ext === 'ofx' || ext === 'qfx') return 'ofx';
   if (ext === 'csv') return 'csv';
   if (ext === 'pdf') return 'pdf';
+  if (ext === 'xml') return 'camt';
   return null;
 }
 
 function parseFile(buf: Buffer, format: ImportFormat): ParsedTransaction[] {
   if (format === 'ofx') return parseOfx(buf);
   if (format === 'csv') return parseFrenchCsv(buf);
+  if (format === 'camt') return parseCamt(buf);
   throw new Error(`parseFile: format ${format} not handled here`);
 }
 

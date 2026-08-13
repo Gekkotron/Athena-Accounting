@@ -534,6 +534,125 @@ describe.skipIf(!RUN)('/api/imports', () => {
       expect(body.skippedRows.length).toBeGreaterThan(0);
     });
   });
+
+  describe('POST /api/imports (CAMT.053/052 XML)', () => {
+    const CAMT053 = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>msg-1</MsgId><CreDtTm>2026-06-15T00:00:00</CreDtTm></GrpHdr>
+    <Stmt>
+      <Id>stmt-1</Id>
+      <Ntry>
+        <Amt Ccy="EUR">25.30</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-06-15</Dt></BookgDt>
+        <AcctSvcrRef>REF-A</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <RmtInf><Ustrd>CARREFOUR MULHOUSE</Ustrd></RmtInf>
+          <RltdPties><Cdtr><Nm>CARREFOUR</Nm></Cdtr></RltdPties>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">1200.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-06-14</Dt></BookgDt>
+        <AcctSvcrRef>REF-B</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <RmtInf><Ustrd>SALAIRE MAI</Ustrd></RmtInf>
+          <RltdPties><Dbtr><Nm>ACME SARL</Nm></Dbtr></RltdPties>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>`;
+
+    it('imports a CAMT.053 statement end-to-end with correct signs, dates, labels', async () => {
+      const { headers, payload } = await buildForm('statement.xml', CAMT053, 'application/xml');
+      const res = await app.inject({
+        method: 'POST', url: `/api/imports?accountId=${accountId}`,
+        headers: { cookie, ...headers },
+        payload,
+      });
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body).toMatchObject({
+        format: 'camt',
+        accountId,
+        totalLines: 2,
+        insertedCount: 2,
+        dedupSkipped: 0,
+      });
+
+      const { db } = await import('../src/db/client.js');
+      const { transactions, fileImports } = await import('../src/db/schema.js');
+      const { asc, eq } = await import('drizzle-orm');
+      const rows = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.accountId, accountId))
+        .orderBy(asc(transactions.date));
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({
+        date: '2026-06-14',
+        amount: '1200.00',
+        rawLabel: 'SALAIRE MAI',
+        fitid: 'REF-B',
+      });
+      expect(rows[1]).toMatchObject({
+        date: '2026-06-15',
+        amount: '-25.30',
+        rawLabel: 'CARREFOUR MULHOUSE',
+        fitid: 'REF-A',
+      });
+
+      const [fi] = await db.select().from(fileImports).where(eq(fileImports.id, body.fileImportId));
+      expect(fi?.format).toBe('camt');
+    });
+
+    it('imports a CAMT.052 intraday report through the same route', async () => {
+      const CAMT052 = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.02">
+  <BkToCstmrAcctRpt>
+    <GrpHdr><MsgId>m</MsgId><CreDtTm>2026-06-15T12:00:00</CreDtTm></GrpHdr>
+    <Rpt>
+      <Id>rpt-1</Id>
+      <Ntry>
+        <Amt Ccy="EUR">42.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-06-15</Dt></BookgDt>
+        <AcctSvcrRef>INTRA-1</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <RmtInf><Ustrd>AMAZON EU</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Rpt>
+  </BkToCstmrAcctRpt>
+</Document>`;
+      const { headers, payload } = await buildForm('intraday.xml', CAMT052, 'application/xml');
+      const res = await app.inject({
+        method: 'POST', url: `/api/imports?accountId=${accountId}`,
+        headers: { cookie, ...headers },
+        payload,
+      });
+      expect(res.statusCode).toBe(201);
+      expect(res.json()).toMatchObject({ format: 'camt', insertedCount: 1 });
+    });
+
+    it('rejects non-CAMT XML with 400', async () => {
+      const notCamt = '<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03"/>';
+      const { headers, payload } = await buildForm('payment-init.xml', notCamt, 'application/xml');
+      const res = await app.inject({
+        method: 'POST', url: `/api/imports?accountId=${accountId}`,
+        headers: { cookie, ...headers },
+        payload,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().message).toMatch(/CAMT\.053|CAMT\.052/i);
+    });
+  });
 });
 
 async function getUid(): Promise<number> {
