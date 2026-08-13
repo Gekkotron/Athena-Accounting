@@ -8,6 +8,7 @@ import {
   categoryBudgets,
   fileImports,
   rules,
+  transactionAttachments,
   transactions,
   transactionSplits,
   users,
@@ -31,7 +32,8 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   const [userCount] = await tx.select({ n: sql<number>`count(*)::int` }).from(users);
   if ((userCount?.n ?? 0) === 1) {
     await tx.execute(sql`TRUNCATE
-      transaction_splits, recurring_series_transactions, recurring_series,
+      transaction_splits, transaction_attachments,
+      recurring_series_transactions, recurring_series,
       envelope_assignments, envelope_category_settings,
       pdf_import_drafts, pdf_statement_templates,
       transactions, file_imports, rules,
@@ -41,8 +43,12 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   }
 
   // Wipe only THIS user's rows, in reverse dependency order.
-  // Splits die via CASCADE when their parent transactions get wiped below,
-  // but we drop them explicitly to keep the ordering readable.
+  // Splits and attachments both cascade-delete when the parent transactions
+  // go, but we drop them explicitly to keep the ordering readable. Orphan
+  // attachment files on disk (DATA_DIR/attachments/<user_id>/…) are NOT
+  // cleaned up here — the on-disk sweep is out of scope for the wipe path;
+  // see backup/schema.ts for the deferred-attachments rationale.
+  await tx.delete(transactionAttachments).where(eq(transactionAttachments.userId, uid));
   await tx.delete(transactionSplits)
     .where(sql`transaction_id IN (SELECT id FROM transactions WHERE user_id = ${uid})`);
   await tx.delete(transactions).where(eq(transactions.userId, uid));

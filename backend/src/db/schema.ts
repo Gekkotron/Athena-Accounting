@@ -566,6 +566,36 @@ export const transactionSplits = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// transaction_attachments — persistent files (receipts, invoices) tied to a
+// transaction (migration 0034). Bytes live on disk under
+// DATA_DIR/attachments/<user_id>/<attachment_id>.bin; only the metadata +
+// relative path sit in Postgres so pg_dump / PGlite bundles stay light. See
+// backend/src/domain/attachments/storage.ts for the disk contract.
+// ---------------------------------------------------------------------------
+
+export const transactionAttachments = pgTable(
+  'transaction_attachments',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    transactionId: bigint('transaction_id', { mode: 'number' })
+      .notNull()
+      .references(() => transactions.id, { onDelete: 'cascade' }),
+    filename: text('filename').notNull(),
+    mime: text('mime').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    storedPath: text('stored_path').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    idxTx: index('transaction_attachments_transaction_idx').on(t.transactionId),
+    idxUser: index('transaction_attachments_user_idx').on(t.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // bank_sync_credentials — per-user Enable Banking application credentials
 // (migration 0028). One row per user: the application ID plus the RS256
 // private key, AES-256-GCM-encrypted under a SESSION_SECRET-derived key

@@ -40,6 +40,7 @@ import { reconcileRoutes } from './http/routes/reconcile.js';
 import { recurringRoutes } from './http/routes/recurring.js';
 import { securityRoutes } from './http/routes/security.js';
 import { bankSyncRoutes } from './http/routes/bank-sync/index.js';
+import { attachmentsRoutes } from './http/routes/attachments.js';
 import { metricsPlugin } from './http/plugins/metrics.js';
 
 export async function build(opts?: { logger?: boolean }): Promise<FastifyInstance> {
@@ -155,6 +156,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(recurringRoutes);
   await app.register(securityRoutes);
   await app.register(bankSyncRoutes);
+  await app.register(attachmentsRoutes);
 
   const serveStatic = env.SERVE_STATIC ?? env.NODE_ENV === 'production';
   if (serveStatic) {
