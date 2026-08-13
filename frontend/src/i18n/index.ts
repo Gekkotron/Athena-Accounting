@@ -11,6 +11,7 @@ const NAMESPACES = [
   'rules',
   'accounts',
   'budgets',
+  'goals',
   'settings',
   'pdf-template',
   'charts',

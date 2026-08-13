@@ -19,6 +19,7 @@ import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
 import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
+import { SavingsGoalsSection } from './SavingsGoalsSection';
 import { AccountSelect } from './AccountSelect';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
@@ -198,6 +199,7 @@ export function Dashboard(): JSX.Element {
         </div>
       )}
       {!rootErr && !rootEmpty && <BudgetEnvelopeSection />}
+      {!rootErr && !rootEmpty && <SavingsGoalsSection />}
 
       {/* Time series — the account scope and period picker sit in the card
           header (right-aligned). Both drive the donut and the Sankey below

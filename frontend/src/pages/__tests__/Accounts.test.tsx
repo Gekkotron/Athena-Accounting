@@ -13,7 +13,7 @@ import { pinLocale } from '../../test/i18n';
 // (Save/Cancel/Edit/Delete). Preload both for both locales, pinned to
 // French, so `useTranslation` never suspends mid-render and the existing
 // French-literal assertions below keep matching real rendered text.
-pinLocale('accounts', 'tips');
+pinLocale('accounts', 'tips', 'goals');
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');

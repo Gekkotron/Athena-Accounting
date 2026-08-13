@@ -25,6 +25,7 @@ export const nav: NavSection[] = [
           { to: '/budgets/envelopes', labelKey: 'nav.children.budgets.enveloppes' },
         ],
       },
+      { to: '/goals', labelKey: 'nav.items.goals', icon: 'goals' },
     ],
   },
   {

@@ -9,7 +9,10 @@
 // so bulk mutations don't storm the disk. Subscribers are notified on
 // every setState, unbatched.
 
-import type { Account, Budget, Category, RecurringSeries, Rule } from '../types';
+import type {
+  Account, Budget, Category, RecurringSeries, Rule,
+  SavingsGoal, SavingsGoalEvent,
+} from '../types';
 
 // Bumped whenever the seed shape changes in a way that must reach every
 // visitor on their next tab open. Mismatch triggers a silent reseed.
@@ -17,7 +20,8 @@ import type { Account, Budget, Category, RecurringSeries, Rule } from '../types'
 //   v=2 → v=3  removed the "Virement Épargne" recurring (a transfer,
 //              not a real outflow — it made the forecast eat income)
 //   v=3 → v=4  transferRules feature removed; key dropped from state
-export const DEMO_SCHEMA_VERSION = 4;
+//   v=4 → v=5  savingsGoals + savingsGoalEvents seeded (migration 0037)
+export const DEMO_SCHEMA_VERSION = 5;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -35,6 +39,10 @@ export interface DemoState {
   // localStorage snapshots written before this key existed still hydrate;
   // handlers default missing/undefined to [].
   recurring?: RecurringSeries[];
+  // Savings goals + events (v5). Optional so pre-v5 snapshots that survive
+  // (e.g. in-flight tests) still hydrate; handlers default undefined to [].
+  savingsGoals?: SavingsGoal[];
+  savingsGoalEvents?: SavingsGoalEvent[];
   settings: Record<string, unknown>;
   // Remote-backup destination (Sauvegarde distante card). Non-secret parts
   // only — the demo never stores passwords or passphrases. Optional so
@@ -70,6 +78,8 @@ function emptyState(): DemoState {
     transactions: [],
     balanceCheckpoints: [],
     recurring: [],
+    savingsGoals: [],
+    savingsGoalEvents: [],
     settings: {},
   };
 }

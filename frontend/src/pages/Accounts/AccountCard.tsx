@@ -5,6 +5,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
+import { AccountCardGoals } from './AccountCardGoals';
 
 export function AccountCard({
   account: a,
@@ -139,6 +140,7 @@ export function AccountCard({
           {t('card.transactionsLink')}
         </Link>
       </div>
+      <AccountCardGoals accountId={a.id} currency={a.currency} />
       {expanded && (
         <div className="mt-3">
           <BalanceCheckpointsDrawer accountId={a.id} currency={a.currency} />

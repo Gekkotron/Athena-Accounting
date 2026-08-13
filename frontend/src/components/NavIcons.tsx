@@ -87,6 +87,20 @@ export function IconRecurrent({ className, size = 16 }: IconProps) {
   );
 }
 
+export function IconGoals({ className, size = 16 }: IconProps) {
+  // Piggy-bank line art — a single body (ellipse) with an ear, a snout dot,
+  // a coin slot on top, and two stubby legs. Same stroke weight as the rest
+  // of the set so it doesn't stand out visually.
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M2.5 8.5c0-2 2-3.5 5-3.5 3 0 5 1.5 5 3.5 0 1.5-1 2.7-2.5 3.2V13h-1.2v-1.2h-2.6V13H5V11.7C3.5 11.2 2.5 10 2.5 8.5Z" />
+      <path d="M12 6.5c.8-.3 1.6-.3 2 0-.2.4-.5.7-.8.9" />
+      <circle cx="9.5" cy="8" r="0.35" fill="currentColor" stroke="none" />
+      <path d="M6 6.5L7.8 6" />
+    </svg>
+  );
+}
+
 export const navIcons = {
   dashboard: IconDashboard,
   transactions: IconTransactions,
@@ -95,5 +109,6 @@ export const navIcons = {
   accounts: IconAccounts,
   imports: IconImports,
   recurrent: IconRecurrent,
+  goals: IconGoals,
 } as const;
 export type NavIconName = keyof typeof navIcons;

@@ -10,6 +10,7 @@ import { registerBudgetsWriteHandlers } from './budgets';
 import { registerTriWriteHandlers } from './tri';
 import { registerSettingsWriteHandlers } from './settings';
 import { registerRecurringWriteHandlers } from './recurring';
+import { registerGoalsHandlers } from '../goals';
 
 export function registerWriteHandlers(): void {
   registerAccountsWriteHandlers();
@@ -20,4 +21,7 @@ export function registerWriteHandlers(): void {
   registerTriWriteHandlers();
   registerSettingsWriteHandlers();
   registerRecurringWriteHandlers();
+  // Goals live as their own module (mixed read + write; not a stub) but
+  // register from here since the composer already runs after seed setup.
+  registerGoalsHandlers();
 }

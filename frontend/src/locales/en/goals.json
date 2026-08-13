@@ -1,0 +1,71 @@
+{
+  "title": "Goals",
+  "subtitle": "Savings intents attached to an account, independent of the real balance.",
+  "addButton": "New goal",
+  "empty": {
+    "title": "No goals yet",
+    "hint": "A goal is an intent to save: name it, set a target, optionally a date. It doesn't change your balance — record contributions separately."
+  },
+  "filters": {
+    "showClosed": "Show closed goals"
+  },
+  "sectionsHeader": {
+    "reservedOf": "reserved {{saved}} / {{balance}}",
+    "overReservedWarning": "You have reserved more than this account's available balance."
+  },
+  "form": {
+    "createTitle": "Create a goal",
+    "editTitle": "Edit goal",
+    "accountLabel": "Account",
+    "nameLabel": "Name",
+    "namePlaceholder": "2027 holiday",
+    "targetLabel": "Target amount",
+    "targetDateLabel": "Target date (optional)",
+    "colorLabel": "Color (optional)",
+    "colorNone": "None",
+    "submitCreate": "Create",
+    "submitUpdate": "Save",
+    "cancel": "Cancel",
+    "errorNamePositiveTarget": "Target amount must be strictly positive.",
+    "errorDuplicate": "A goal with this name already exists on this account."
+  },
+  "card": {
+    "savedOfTarget": "{{saved}} of {{target}}",
+    "overshoot": "{{pct}}% done",
+    "perMonthNeeded": "↣ {{amount}}/month to hit the date",
+    "overdueDays_one": "{{count}} day overdue",
+    "overdueDays_other": "{{count}} days overdue",
+    "noDeadline": "No deadline"
+  },
+  "drawer": {
+    "closeButton": "Close goal",
+    "reopenButton": "Reopen",
+    "deleteButton": "Delete goal",
+    "deleteConfirmTitle": "Delete this goal?",
+    "deleteConfirmDescription": "This removes the goal and all its event history. Cannot be undone.",
+    "recentActivity": "Recent activity",
+    "loadMore": "Load more",
+    "noEvents": "No movements yet."
+  },
+  "events": {
+    "addTitle": "Record a contribution",
+    "amountLabel": "Amount (negative for a withdrawal)",
+    "amountPlaceholder": "50.00",
+    "dateLabel": "Date",
+    "noteLabel": "Note (optional)",
+    "submit": "Save",
+    "toastReached": "Goal reached!",
+    "deleteAria": "Delete this movement",
+    "confirmDeleteTitle": "Delete this movement?",
+    "confirmDeleteDescription": "This movement will be removed from the goal. Cannot be undone."
+  },
+  "dashboard": {
+    "sectionTitle": "Upcoming goals",
+    "viewAll_one": "See the goal",
+    "viewAll_other": "See all goals ({{count}})"
+  },
+  "accountCard": {
+    "sectionTitle": "Goals",
+    "addChip": "+ New goal"
+  }
+}

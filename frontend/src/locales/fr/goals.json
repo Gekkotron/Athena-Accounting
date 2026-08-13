@@ -1,0 +1,71 @@
+{
+  "title": "Objectifs",
+  "subtitle": "Vos objectifs d'épargne, attachés à un compte, indépendants du solde réel.",
+  "addButton": "Nouvel objectif",
+  "empty": {
+    "title": "Aucun objectif pour l'instant",
+    "hint": "Un objectif est une intention d'épargne : nommez-le, fixez un montant, éventuellement une date. Il ne modifie pas votre solde — vous enregistrez vos versements séparément."
+  },
+  "filters": {
+    "showClosed": "Afficher les objectifs clos"
+  },
+  "sectionsHeader": {
+    "reservedOf": "réservé {{saved}} / {{balance}}",
+    "overReservedWarning": "Vous avez réservé plus que votre solde disponible sur ce compte."
+  },
+  "form": {
+    "createTitle": "Créer un objectif",
+    "editTitle": "Modifier l'objectif",
+    "accountLabel": "Compte",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Vacances 2027",
+    "targetLabel": "Montant cible",
+    "targetDateLabel": "Date cible (optionnelle)",
+    "colorLabel": "Couleur (optionnelle)",
+    "colorNone": "Aucune",
+    "submitCreate": "Créer",
+    "submitUpdate": "Enregistrer",
+    "cancel": "Annuler",
+    "errorNamePositiveTarget": "Le montant cible doit être strictement positif.",
+    "errorDuplicate": "Un objectif de ce nom existe déjà sur ce compte."
+  },
+  "card": {
+    "savedOfTarget": "{{saved}} sur {{target}}",
+    "overshoot": "{{pct}} % réalisé",
+    "perMonthNeeded": "↣ {{amount}} / mois pour tenir la date",
+    "overdueDays_one": "en retard de {{count}} jour",
+    "overdueDays_other": "en retard de {{count}} jours",
+    "noDeadline": "Sans échéance"
+  },
+  "drawer": {
+    "closeButton": "Clore l'objectif",
+    "reopenButton": "Réouvrir",
+    "deleteButton": "Supprimer l'objectif",
+    "deleteConfirmTitle": "Supprimer cet objectif ?",
+    "deleteConfirmDescription": "Ceci supprimera l'objectif et l'ensemble de son historique d'événements. L'action est irréversible.",
+    "recentActivity": "Activité récente",
+    "loadMore": "Voir plus",
+    "noEvents": "Aucun mouvement pour l'instant."
+  },
+  "events": {
+    "addTitle": "Enregistrer un versement",
+    "amountLabel": "Montant (négatif pour un retrait)",
+    "amountPlaceholder": "50,00",
+    "dateLabel": "Date",
+    "noteLabel": "Note (optionnelle)",
+    "submit": "Enregistrer",
+    "toastReached": "Objectif atteint !",
+    "deleteAria": "Supprimer ce mouvement",
+    "confirmDeleteTitle": "Supprimer ce mouvement ?",
+    "confirmDeleteDescription": "Ce mouvement sera retiré de l'objectif. L'action est irréversible."
+  },
+  "dashboard": {
+    "sectionTitle": "Objectifs à venir",
+    "viewAll_one": "Voir l'objectif",
+    "viewAll_other": "Voir tous les objectifs ({{count}})"
+  },
+  "accountCard": {
+    "sectionTitle": "Objectifs",
+    "addChip": "+ Nouvel objectif"
+  }
+}

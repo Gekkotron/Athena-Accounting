@@ -23,6 +23,7 @@ import { DetectedTab } from './pages/Recurrent/DetectedTab';
 import { UpcomingTab } from './pages/Recurrent/UpcomingTab';
 import { ForecastTab } from './pages/Recurrent/ForecastTab';
 import { Accounts } from './pages/Accounts';
+import { Goals } from './pages/Goals';
 import { Imports } from './pages/Data/Imports';
 import { BankSync } from './pages/Data/BankSync';
 import { Duplicates } from './pages/Data/Duplicates';
@@ -141,6 +142,7 @@ export default function App() {
             </Route>
 
             <Route path="/accounts" element={<Accounts />} />
+            <Route path="/goals" element={<Goals />} />
 
             {/* Données hub */}
             <Route path="/data" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>

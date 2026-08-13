@@ -12,6 +12,8 @@ export type {
   Category,
   CategoryKind,
   CategorySource,
+  SavingsGoal,
+  SavingsGoalEvent,
   Transaction,
   TransactionSplit,
 } from '../../../shared/api-contracts';

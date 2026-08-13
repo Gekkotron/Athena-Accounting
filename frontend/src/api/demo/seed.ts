@@ -14,6 +14,8 @@ import type {
   Category,
   RecurringSeries,
   Rule,
+  SavingsGoal,
+  SavingsGoalEvent,
   Transaction,
 } from '../types';
 import type { DemoState } from './store';
@@ -341,6 +343,7 @@ export function buildSeedState(): DemoState {
   const transactions = buildTransactions();
   const balanceCheckpoints = buildCheckpoints(transactions);
   const recurring = buildRecurringSeries(transactions);
+  const { savingsGoals, savingsGoalEvents } = buildSavingsGoals();
   return {
     v: DEMO_SCHEMA_VERSION,
     accounts: clone(accounts),
@@ -350,12 +353,61 @@ export function buildSeedState(): DemoState {
     transactions,
     balanceCheckpoints,
     recurring,
+    savingsGoals,
+    savingsGoalEvents,
     settings: {
       locale: 'fr',
       currency: 'EUR',
       seedTodayForDemo: SEED_TODAY,
     },
   };
+}
+
+// Three savings goals from the spec's demo section:
+//  1. Livret A / Vacances 2027 — ~40 % filled via monthly events
+//  2. Livret A / Fond d'urgence — ~50 % filled, no deadline
+//  3. Compte courant / Prochain iPhone — deadline in the past, only 300 € saved
+function buildSavingsGoals(): { savingsGoals: SavingsGoal[]; savingsGoalEvents: SavingsGoalEvent[] } {
+  const goals: SavingsGoal[] = [
+    {
+      id: 1, accountId: ACC.Livret, name: 'Vacances 2027',
+      targetAmount: '2000.00', targetDate: '2027-07-15',
+      color: '#f472b6', closedAt: null, currency: 'EUR',
+      savedAmount: '780.00', eventCount: 6,
+      rawPct: 39, progressPct: 39, perMonthNeeded: null, overdueDays: null,
+    },
+    {
+      id: 2, accountId: ACC.Livret, name: "Fond d'urgence",
+      targetAmount: '5000.00', targetDate: null,
+      color: '#22d3ee', closedAt: null, currency: 'EUR',
+      savedAmount: '2500.00', eventCount: 3,
+      rawPct: 50, progressPct: 50, perMonthNeeded: null, overdueDays: null,
+    },
+    {
+      id: 3, accountId: ACC.Courant, name: 'Prochain iPhone',
+      targetAmount: '1200.00', targetDate: '2026-06-08',
+      color: '#facc15', closedAt: null, currency: 'EUR',
+      savedAmount: '300.00', eventCount: 2,
+      rawPct: 25, progressPct: 25, perMonthNeeded: null, overdueDays: 40,
+    },
+  ];
+  const events: SavingsGoalEvent[] = [
+    // Goal 1 — six monthly contributions of 130 €
+    { id: 1, goalId: 1, amount: '130.00', eventDate: '2026-02-01', note: null, createdAt: '2026-02-01T09:00:00.000Z' },
+    { id: 2, goalId: 1, amount: '130.00', eventDate: '2026-03-01', note: null, createdAt: '2026-03-01T09:00:00.000Z' },
+    { id: 3, goalId: 1, amount: '130.00', eventDate: '2026-04-01', note: null, createdAt: '2026-04-01T09:00:00.000Z' },
+    { id: 4, goalId: 1, amount: '130.00', eventDate: '2026-05-01', note: null, createdAt: '2026-05-01T09:00:00.000Z' },
+    { id: 5, goalId: 1, amount: '130.00', eventDate: '2026-06-01', note: null, createdAt: '2026-06-01T09:00:00.000Z' },
+    { id: 6, goalId: 1, amount: '130.00', eventDate: '2026-07-01', note: null, createdAt: '2026-07-01T09:00:00.000Z' },
+    // Goal 2 — three larger contributions
+    { id: 7, goalId: 2, amount: '1000.00', eventDate: '2026-03-15', note: 'Bonus', createdAt: '2026-03-15T09:00:00.000Z' },
+    { id: 8, goalId: 2, amount: '800.00',  eventDate: '2026-05-05', note: null, createdAt: '2026-05-05T09:00:00.000Z' },
+    { id: 9, goalId: 2, amount: '700.00',  eventDate: '2026-07-01', note: null, createdAt: '2026-07-01T09:00:00.000Z' },
+    // Goal 3 — two small ones, late and short of target
+    { id: 10, goalId: 3, amount: '150.00', eventDate: '2026-03-10', note: null, createdAt: '2026-03-10T09:00:00.000Z' },
+    { id: 11, goalId: 3, amount: '150.00', eventDate: '2026-05-20', note: null, createdAt: '2026-05-20T09:00:00.000Z' },
+  ];
+  return { savingsGoals: goals, savingsGoalEvents: events };
 }
 
 export const SEED_META = {

@@ -4,15 +4,15 @@ import userEvent from '@testing-library/user-event';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AccountCard } from '../AccountCard';
 import type { Account } from '../../../api/types';
 import { pinLocale } from '../../../test/i18n';
 
-// AccountCard uses both the 'accounts' namespace (card copy) and 'common'
-// (Edit tooltip). Preload both for both locales, pinned to French, so
-// `useTranslation` never suspends and the existing French-literal
-// assertions below keep matching real rendered text.
-pinLocale('accounts');
+// AccountCard uses 'accounts' (card copy), 'common' (Edit tooltip), and —
+// since the goals strip was added — 'goals' (empty-state label). Preload
+// all three so `useTranslation` never suspends the first render.
+pinLocale('accounts', 'goals');
 
 const acc: Account = {
   id: 1, name: 'Test', type: 'checking', currency: 'EUR',
@@ -28,14 +28,20 @@ const defaultProps = {
 };
 
 function renderCard(props: Partial<typeof defaultProps> = {}) {
+  // AccountCard hydrates AccountCardGoals via useQuery — wrap in a fresh
+  // QueryClient per test so hooks inside the card have their required
+  // provider, and results don't leak across tests.
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <DndContext>
-        <SortableContext items={[acc.id]} strategy={rectSortingStrategy}>
-          <AccountCard {...defaultProps} {...props} />
-        </SortableContext>
-      </DndContext>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <DndContext>
+          <SortableContext items={[acc.id]} strategy={rectSortingStrategy}>
+            <AccountCard {...defaultProps} {...props} />
+          </SortableContext>
+        </DndContext>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
