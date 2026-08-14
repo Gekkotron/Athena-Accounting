@@ -13,7 +13,7 @@ export function consolidate<K extends string>(
   at: string,
   keys: readonly K[],
 ): ConsolidatedTotals<K> {
-  const running: Record<string, number> = Object.fromEntries(keys.map((k) => [k, 0]));
+  const running = Object.fromEntries(keys.map((k) => [k, 0])) as Record<K, number>;
   const unmapped: Array<{ currency: string } & Record<K, string>> = [];
 
   for (const row of rows) {
