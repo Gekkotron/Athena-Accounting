@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildBudgetConsolidatedBlock } from '../budget.js';
+import { resolveDisplayCurrency } from '../balance.js';
 
 // Exercises the budget route's FX-consolidation glue directly rather than
 // through app.inject() — see balance.test.ts for why: full-app mocking of
@@ -84,5 +85,27 @@ describe('buildBudgetConsolidatedBlock', () => {
       projected: '0.00',
     });
     expect(out.unmapped).toEqual([]);
+  });
+});
+
+describe('resolveDisplayCurrency wiring for budget route', () => {
+  it('returns null (per-currency mode) when no query param and no setting', () => {
+    expect(resolveDisplayCurrency(undefined, null)).toBeNull();
+  });
+
+  it('falls back to the settings value when no query param is given', () => {
+    expect(resolveDisplayCurrency(undefined, 'EUR')).toBe('EUR');
+  });
+
+  it('returns null (per-currency mode) for an explicit ?display=none override', () => {
+    expect(resolveDisplayCurrency('none', 'EUR')).toBeNull();
+  });
+
+  it('lets an explicit query param win over the settings value', () => {
+    expect(resolveDisplayCurrency('EUR', null)).toBe('EUR');
+  });
+
+  it('rejects a lowercase display param as invalid', () => {
+    expect(resolveDisplayCurrency('eur', null)).toBe('invalid');
   });
 });
