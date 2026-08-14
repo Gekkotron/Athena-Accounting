@@ -8,40 +8,24 @@
 // strings with two decimals to match the app's storage convention.
 
 import type {
-  Account,
-  BalanceCheckpoint,
   Budget,
   Category,
-  RecurringSeries,
   Rule,
   SavingsGoal,
   SavingsGoalEvent,
-  Transaction,
 } from '../types';
 import type { DemoState } from './store';
 import { DEMO_SCHEMA_VERSION } from './store';
-import { MONTH_DAYS, ymd, fmt, normalize, clone } from './seed-utils';
-
-const SEED_TODAY = '2026-07-18';
-
-const CAT = {
-  Courses: 1,
-  Restaurant: 2,
-  Transport: 3,
-  Logement: 4,
-  Energie: 5,
-  Loisirs: 6,
-  Sante: 7,
-  Salaire: 8,
-  Impots: 9,
-  Assurance: 10,
-  Abonnements: 11,
-} as const;
-
-const ACC = {
-  Courant: 1,
-  Livret: 2,
-} as const;
+import { clone } from './seed-utils';
+import {
+  CAT,
+  ACC,
+  SEED_TODAY,
+  accounts,
+  buildTransactions,
+  buildCheckpoints,
+  buildRecurringSeries,
+} from './seed-transactions';
 
 const categories: Category[] = [
   { id: CAT.Courses,     name: 'Courses',     kind: 'expense', color: '#c084fc', parentId: null, isDefault: true, isInternalTransfer: false },
@@ -55,11 +39,6 @@ const categories: Category[] = [
   { id: CAT.Impots,      name: 'Impôts',      kind: 'expense', color: '#94a3b8', parentId: null, isDefault: true, isInternalTransfer: false },
   { id: CAT.Assurance,   name: 'Assurance',   kind: 'expense', color: '#60a5fa', parentId: null, isDefault: true, isInternalTransfer: false },
   { id: CAT.Abonnements, name: 'Abonnements', kind: 'expense', color: '#f87171', parentId: null, isDefault: true, isInternalTransfer: false },
-];
-
-const accounts: Account[] = [
-  { id: ACC.Courant, name: 'Compte courant', type: 'checking', currency: 'EUR', openingBalance: '2500.00', openingDate: '2026-01-15', displayOrder: 0, createdAt: '2026-01-15T09:00:00.000Z', lockYears: null },
-  { id: ACC.Livret,  name: 'Livret A',       type: 'savings',  currency: 'EUR', openingBalance: '8000.00', openingDate: '2026-01-15', displayOrder: 1, createdAt: '2026-01-15T09:00:00.000Z', lockYears: null },
 ];
 
 const rules: Rule[] = [
@@ -80,263 +59,6 @@ const budgets: Budget[] = [
   { id: 3, categoryId: CAT.Loisirs,     monthlyLimit: '100.00', currency: 'EUR', period: 'monthly', accountId: null },
   { id: 4, categoryId: CAT.Abonnements, monthlyLimit:  '60.00', currency: 'EUR', period: 'monthly', accountId: null },
 ];
-
-interface TxSpec {
-  day: number;          // day of month
-  label: string;
-  amount: number;       // signed
-  categoryId: number | null;
-  categorySource: 'manual' | 'auto' | 'default';
-  accountId?: number;   // default: Courant
-}
-
-// Monthly recurring pattern. Applied to each of the six seed months
-// (Feb–Jul 2026). Eleven series that spread across every week of the
-// month so the Récurrent → À venir tab shows a full timeline. Some are
-// auto-categorised via rules, some are manual, two (FreeBox, Bouygues)
-// stay uncategorised on purpose so the Tri queue keeps real content.
-//
-// Confirmed vs detected is set in buildRecurringSeries below:
-// - Confirmed + essential: Salaire, Loyer, Impôts, EDF, Mutuelle, MAIF
-//   — these feed the six-month forecast on the Prévision tab.
-// - Detected (awaiting confirmation): FreeBox, Bouygues, Netflix,
-//   Spotify, Basic-Fit — these show the "Confirmer" button in action.
-//
-// No savings transfer here on purpose. A "virement épargne" is a
-// transfer to another of your own accounts, not a recurring outflow —
-// counting it as an essential expense makes the Prévision curve look
-// like it's eating income when the money is really just being moved.
-const RECURRING: TxSpec[] = [
-  { day: 1,  label: 'Virement Salaire',           amount:  2500.00, categoryId: CAT.Salaire,     categorySource: 'manual' },
-  { day: 5,  label: 'Prélèvement Loyer',          amount:  -850.00, categoryId: CAT.Logement,    categorySource: 'auto' },
-  { day: 8,  label: 'Impots SPFI Prelevement',    amount:  -320.00, categoryId: CAT.Impots,      categorySource: 'auto' },
-  { day: 10, label: 'EDF Facture Électricité',    amount:   -78.40, categoryId: CAT.Energie,     categorySource: 'auto' },
-  { day: 12, label: 'Mutuelle Alan',              amount:   -42.00, categoryId: CAT.Sante,       categorySource: 'manual' },
-  { day: 13, label: 'MAIF Assurance Habitation',  amount:   -18.50, categoryId: CAT.Assurance,   categorySource: 'auto' },
-  { day: 15, label: 'FreeBox Internet',           amount:   -29.99, categoryId: null,            categorySource: 'default' },
-  { day: 20, label: 'Bouygues Mobile',            amount:   -19.99, categoryId: null,            categorySource: 'default' },
-  { day: 22, label: 'Netflix Abonnement',         amount:   -13.49, categoryId: CAT.Abonnements, categorySource: 'auto' },
-  { day: 24, label: 'Spotify Premium',            amount:    -9.99, categoryId: CAT.Abonnements, categorySource: 'auto' },
-  { day: 27, label: 'Basic-Fit Abonnement',       amount:   -24.99, categoryId: CAT.Loisirs,     categorySource: 'manual' },
-];
-
-// Weekly-ish discretionary spend. day-of-month per week 1..4 (day 3 =
-// early, day 12 = mid, day 19 = late, day 26 = end). Enough coverage to
-// hit ~25 discretionary tx / month → ~150 over six months, on top of 30
-// recurring = ~180 total per the plan.
-const DISCRETIONARY_TEMPLATE: Array<Omit<TxSpec, 'day'>> = [
-  { label: 'Carrefour Market',       amount:  -52.30, categoryId: CAT.Courses,    categorySource: 'auto' },
-  { label: 'Monoprix',               amount:  -38.75, categoryId: CAT.Courses,    categorySource: 'auto' },
-  { label: 'Boulangerie Martin',     amount:  -12.40, categoryId: CAT.Courses,    categorySource: 'manual' },
-  { label: 'Café du Coin',           amount:  -14.80, categoryId: CAT.Restaurant, categorySource: 'manual' },
-  { label: 'Restaurant Chez Marie',  amount:  -42.60, categoryId: CAT.Restaurant, categorySource: 'manual' },
-  { label: 'SNCF Voyages',           amount:  -68.00, categoryId: CAT.Transport,  categorySource: 'auto' },
-  { label: 'RATP Navigo',            amount:  -75.20, categoryId: CAT.Transport,  categorySource: 'manual' },
-  { label: 'Cinéma Le Grand Rex',    amount:  -22.00, categoryId: CAT.Loisirs,    categorySource: 'manual' },
-  { label: 'FNAC Livre',             amount:  -19.90, categoryId: CAT.Loisirs,    categorySource: 'manual' },
-  { label: 'Pharmacie Centrale',     amount:  -18.50, categoryId: CAT.Sante,      categorySource: 'manual' },
-  { label: 'Carrefour City',         amount:  -27.10, categoryId: CAT.Courses,    categorySource: 'auto' },
-  { label: 'Boulangerie Martin',     amount:   -8.90, categoryId: CAT.Courses,    categorySource: 'manual' },
-];
-
-function buildTransactions(): Transaction[] {
-  const list: Transaction[] = [];
-  let id = 1;
-  const SEED_MONTHS: Array<{ year: number; month: number }> = [
-    { year: 2026, month: 2 },
-    { year: 2026, month: 3 },
-    { year: 2026, month: 4 },
-    { year: 2026, month: 5 },
-    { year: 2026, month: 6 },
-    { year: 2026, month: 7 },
-  ];
-
-  // Cap every generated transaction to SEED_TODAY. Without this the ledger
-  // contained future-dated July occurrences (Bouygues day 20, Netflix day
-  // 22, Épargne day 28, plus discretionary items in weeks 3–4) that made
-  // the balance and forecast disagree: startBalance already summed them
-  // in, but the historical chart line kept drawing past "today", and
-  // firstOccurrenceOnOrAfter treated them as "already seen" so the
-  // projection missed the next real occurrence in July.
-  const push = (spec: TxSpec, year: number, month: number, weekBias: number) => {
-    const day = Math.min(spec.day, MONTH_DAYS[month - 1]);
-    const date = ymd(year, month, day);
-    if (date > SEED_TODAY) return;
-    const acc = spec.accountId ?? ACC.Courant;
-    const amt = fmt(spec.amount);
-    const norm = normalize(spec.label);
-    list.push({
-      id: id++,
-      accountId: acc,
-      date,
-      amount: amt,
-      rawLabel: spec.label,
-      normalizedLabel: norm,
-      memo: null,
-      notes: null,
-      fitid: null,
-      dedupKey: `${acc}_${date}_${amt}_${norm}_${weekBias}`,
-      categoryId: spec.categoryId,
-      categorySource: spec.categorySource,
-      transferGroupId: null,
-      sourceFileId: null,
-      importedAt: date + 'T10:00:00.000Z',
-      lockYears: null,
-      splits: [],
-      attachmentCount: 0,
-    });
-  };
-
-  for (const { year, month } of SEED_MONTHS) {
-    // Recurring
-    for (const spec of RECURRING) push(spec, year, month, 0);
-
-    // Discretionary — 3 items per week × 4 weeks = 12 tx/month. Plus a
-    // per-month "Boulangerie" doubled and an extra Carrefour, bumping
-    // to ~25/month with variety.
-    const WEEK_DAYS = [4, 11, 18, 25];
-    for (let w = 0; w < WEEK_DAYS.length; w++) {
-      // Rotate which items fire each week for realistic variation.
-      const startIdx = (month + w) % DISCRETIONARY_TEMPLATE.length;
-      for (let k = 0; k < 6; k++) {
-        const tpl = DISCRETIONARY_TEMPLATE[(startIdx + k) % DISCRETIONARY_TEMPLATE.length];
-        const dayOffset = (k % 3);
-        const day = Math.min(WEEK_DAYS[w] + dayOffset, MONTH_DAYS[month - 1]);
-        push({ ...tpl, day }, year, month, w * 10 + k);
-      }
-    }
-  }
-
-  // The one large blip — June 2026 vacation.
-  list.push({
-    id: id++,
-    accountId: ACC.Courant,
-    date: '2026-06-22',
-    amount: '-2800.00',
-    rawLabel: 'Vacances été 2026 — location',
-    normalizedLabel: 'vacances ete 2026 location',
-    memo: null,
-    notes: 'Location maison, deux semaines.',
-    fitid: null,
-    dedupKey: `${ACC.Courant}_2026-06-22_-2800.00_vacances`,
-    categoryId: CAT.Loisirs,
-    categorySource: 'manual',
-    transferGroupId: null,
-    sourceFileId: null,
-    importedAt: '2026-06-22T10:00:00.000Z',
-    lockYears: null,
-    splits: [],
-    attachmentCount: 0,
-  });
-
-  return list;
-}
-
-function balanceAt(txs: Transaction[], accountId: number, opening: string, cutoff: string): string {
-  let sum = Number(opening);
-  for (const t of txs) {
-    if (t.accountId !== accountId) continue;
-    if (t.date > cutoff) continue;
-    sum += Number(t.amount);
-  }
-  return sum.toFixed(2);
-}
-
-function buildCheckpoints(txs: Transaction[]): BalanceCheckpoint[] {
-  // ~3 months ago from SEED_TODAY = 2026-04-18. Matches computed balance
-  // exactly so the app renders a green diamond on the dashboard.
-  const date = '2026-04-18';
-  const expected = balanceAt(txs, ACC.Courant, accounts[0].openingBalance, date);
-  return [
-    {
-      id: 1,
-      accountId: ACC.Courant,
-      checkpointDate: date,
-      expectedAmount: expected,
-      note: 'Vérifié depuis le relevé papier.',
-      createdAt: date + 'T18:00:00.000Z',
-    },
-  ];
-}
-
-// Pre-computed recurring series matching the seed's RECURRING template.
-// Real detection would find these too; hard-coding lets the demo render a
-// populated Récurrent page on first visit without waiting for a
-// regenerate call. Member IDs are omitted (memberCount only) because the
-// pure-frontend demo doesn't need the join graph.
-function buildRecurringSeries(transactions: Transaction[]): RecurringSeries[] {
-  const now = SEED_TODAY;
-  const specs: Array<{
-    id: number;
-    label: string;
-    amount: number;
-    day: number;
-    categoryId: number | null;
-    essentialness: 'essential' | 'discretionary' | null;
-  }> = [
-    // Essentials — confirmed, feed the Prévision forecast.
-    { id: 1,  label: 'Virement Salaire',           amount:  2500.00, day: 1,  categoryId: CAT.Salaire,     essentialness: 'essential' },
-    { id: 2,  label: 'Prélèvement Loyer',          amount:  -850.00, day: 5,  categoryId: CAT.Logement,    essentialness: 'essential' },
-    { id: 3,  label: 'Impots SPFI Prelevement',    amount:  -320.00, day: 8,  categoryId: CAT.Impots,      essentialness: 'essential' },
-    { id: 4,  label: 'EDF Facture Électricité',    amount:   -78.40, day: 10, categoryId: CAT.Energie,     essentialness: 'essential' },
-    { id: 5,  label: 'Mutuelle Alan',              amount:   -42.00, day: 12, categoryId: CAT.Sante,       essentialness: 'essential' },
-    { id: 6,  label: 'MAIF Assurance Habitation',  amount:   -18.50, day: 13, categoryId: CAT.Assurance,   essentialness: 'essential' },
-
-    // Detected — pending confirmation, show the "Confirmer" affordance.
-    { id: 7,  label: 'FreeBox Internet',           amount:   -29.99, day: 15, categoryId: null,            essentialness: null },
-    { id: 8,  label: 'Bouygues Mobile',            amount:   -19.99, day: 20, categoryId: null,            essentialness: null },
-    { id: 9,  label: 'Netflix Abonnement',         amount:   -13.49, day: 22, categoryId: CAT.Abonnements, essentialness: null },
-    { id: 10, label: 'Spotify Premium',            amount:    -9.99, day: 24, categoryId: CAT.Abonnements, essentialness: null },
-    { id: 11, label: 'Basic-Fit Abonnement',       amount:   -24.99, day: 27, categoryId: CAT.Loisirs,     essentialness: null },
-  ];
-
-  // lastSeenAt anchors the "last real occurrence in the ledger" — must
-  // NOT be in the future relative to SEED_TODAY, otherwise the forecast
-  // treats a not-yet-happened occurrence as already-seen and skips it.
-  // Day already passed this month → July's date; day still upcoming
-  // this month → June's date. nextDueAt is +30d from lastSeenAt.
-  const seedTodayDay = Number(SEED_TODAY.slice(-2));
-  const list: RecurringSeries[] = [];
-  for (const s of specs) {
-    const lastSeenAt = s.day <= seedTodayDay ? ymd(2026, 7, s.day) : ymd(2026, 6, s.day);
-    const nextDueAt = s.day <= seedTodayDay ? ymd(2026, 8, s.day) : ymd(2026, 7, s.day);
-    const firstSeenAt = ymd(2026, 2, s.day);
-    const members = transactions.filter(
-      (t) => t.rawLabel === s.label,
-    );
-    // Majority-vote account, matching the backend's subquery shape.
-    // Every demo series today lands on Courant; keep the vote logic
-    // real so future seed changes don't silently pin everything to id=1.
-    const accountCounts = new Map<number, number>();
-    for (const m of members) accountCounts.set(m.accountId, (accountCounts.get(m.accountId) ?? 0) + 1);
-    let primaryAccountId: number | null = null;
-    let bestCount = 0;
-    for (const [id, cnt] of accountCounts) {
-      if (cnt > bestCount) {
-        bestCount = cnt;
-        primaryAccountId = id;
-      }
-    }
-    list.push({
-      id: s.id,
-      label: s.label,
-      cadenceDays: 30,
-      avgAmount: (s.amount < 0 ? '-' : '') + Math.abs(s.amount).toFixed(2),
-      amountStddev: '0.00',
-      categoryId: s.categoryId,
-      firstSeenAt,
-      lastSeenAt,
-      nextDueAt,
-      status: s.essentialness === 'essential' ? 'confirmed' : 'detected',
-      essentialness: s.essentialness,
-      createdAt: firstSeenAt + 'T09:00:00.000Z',
-      updatedAt: now + 'T09:00:00.000Z',
-      memberCount: members.length,
-      primaryAccountId,
-    });
-  }
-  return list;
-}
 
 // buildSeedState() must return a fresh object graph on every call.
 export function buildSeedState(): DemoState {
