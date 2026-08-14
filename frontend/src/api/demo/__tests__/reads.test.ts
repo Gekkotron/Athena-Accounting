@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { api, registerSeedProvider } from '../index';
 import { __resetForTest } from '../store';
 import { buildSeedState, SEED_META } from '../seed';
+import { ApiError } from '../../apiError';
 
 // Match the runtime shapes the frontend expects. Anything asserted here
 // is a contract the demo adapter must never silently break.
@@ -204,5 +205,87 @@ describe('demo read handlers', () => {
     // Newest first with runningBalance on it. Its runningBalance is the
     // cumulative sum at that date — must match the checkpoint.
     expect(Number(last.runningBalance!)).toBeCloseTo(Number(cp.expectedAmount), 2);
+  });
+});
+
+describe('demo reports — consolidated block (manual FX table)', () => {
+  it('GET /api/reports/balance: consolidated is null when displayCurrency is unset', async () => {
+    const r = await api<BalanceResp & { consolidated: unknown }>('/api/reports/balance');
+    expect(r.consolidated).toBeNull();
+  });
+
+  it('GET /api/reports/balance: consolidated totals EUR-only accounts when displayCurrency = EUR', async () => {
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+    const r = await api<BalanceResp & { consolidated: { display: string; total: string; unmapped: unknown[] } }>(
+      '/api/reports/balance',
+    );
+    expect(r.consolidated).not.toBeNull();
+    expect(r.consolidated!.display).toBe('EUR');
+    expect(r.consolidated!.total).toBe(r.perCurrency[0].total);
+    expect(r.consolidated!.unmapped).toEqual([]);
+  });
+
+  it('GET /api/reports/balance: consolidated.unmapped lists uncovered currencies', async () => {
+    await api('/api/accounts', {
+      method: 'POST',
+      json: { name: 'US Checking', type: 'checking', currency: 'USD', openingBalance: '100.00', openingDate: '2026-01-01' },
+    });
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+    const r = await api<{ consolidated: { unmapped: Array<{ currency: string }> } }>('/api/reports/balance');
+    expect(r.consolidated!.unmapped.map((u) => u.currency)).toContain('USD');
+  });
+
+  it('GET /api/reports/balance: consolidated.total converts once a matching rate exists', async () => {
+    await api('/api/accounts', {
+      method: 'POST',
+      json: { name: 'US Checking', type: 'checking', currency: 'USD', openingBalance: '100.00', openingDate: '2020-01-01' },
+    });
+    await api('/api/fx-rates', { method: 'POST', json: { from: 'USD', to: 'EUR', effectiveFrom: '2020-01-01', rate: '0.9' } });
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+    const r = await api<BalanceResp & { consolidated: { total: string; unmapped: unknown[] } }>('/api/reports/balance');
+    expect(r.consolidated!.unmapped).toEqual([]);
+    const eurTotal = Number(r.perCurrency.find((p) => p.currency === 'EUR')!.total);
+    expect(Number(r.consolidated!.total)).toBeCloseTo(eurTotal + 100 * 0.9, 2);
+  });
+
+  it('GET /api/reports/timeseries: consolidated is null by default, present once displayCurrency is set', async () => {
+    const before = await api<TimeseriesResp & { consolidated: unknown }>('/api/reports/timeseries');
+    expect(before.consolidated).toBeNull();
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+    const after = await api<TimeseriesResp & { consolidated: { display: string; points: unknown[] } }>(
+      '/api/reports/timeseries',
+    );
+    expect(after.consolidated).not.toBeNull();
+    expect(after.consolidated!.display).toBe('EUR');
+    expect(after.consolidated!.points.length).toBeGreaterThan(0);
+  });
+
+  it('GET /api/reports/budget: consolidated is null by default, present once displayCurrency is set', async () => {
+    const before = await api<BudgetReportResp & { consolidated: unknown }>('/api/reports/budget', {
+      query: { month: '2026-07' },
+    });
+    expect(before.consolidated).toBeNull();
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+    const after = await api<BudgetReportResp & { consolidated: { display: string; totals: { limit: string } } }>(
+      '/api/reports/budget', { query: { month: '2026-07' } },
+    );
+    expect(after.consolidated).not.toBeNull();
+    expect(after.consolidated!.display).toBe('EUR');
+    expect(after.consolidated!.totals.limit).toBe(before.totals.limit);
+  });
+
+  it('GET /api/reports/balance: ?display=none overrides settings to per-currency mode', async () => {
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+    const r = await api<{ consolidated: unknown }>('/api/reports/balance', { query: { display: 'none' } });
+    expect(r.consolidated).toBeNull();
+  });
+
+  it('GET /api/reports/balance: ?display=<invalid> rejects with 400', async () => {
+    let caught: unknown = null;
+    try {
+      await api('/api/reports/balance', { query: { display: 'xx' } });
+    } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(ApiError);
+    expect((caught as ApiError).status).toBe(400);
   });
 });

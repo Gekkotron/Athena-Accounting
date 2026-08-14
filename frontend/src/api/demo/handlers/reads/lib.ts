@@ -31,6 +31,27 @@ export function monthOf(date: string): string {
   return date.slice(0, 7);
 }
 
+// Resolves the effective display currency the same way the backend's
+// /api/reports/* routes do (backend/src/http/routes/reports/balance.ts): an
+// explicit `?display=` query param wins ('none' → no conversion, a 3-letter
+// code → that currency), falling back to the settings value when the param
+// is absent. Returns 'invalid' for anything else, so the caller can 400.
+export function resolveDisplayCurrency(
+  displayParam: string | undefined,
+  settingsDisplay: string | null,
+): string | null | 'invalid' {
+  if (displayParam === undefined) return settingsDisplay;
+  if (displayParam === 'none') return null;
+  if (/^[A-Z]{3}$/.test(displayParam)) return displayParam;
+  return 'invalid';
+}
+
+// Reads settings.displayCurrency off demo state, defaulting missing/undefined
+// to null (per-currency mode) — mirrors the backend's loadUserDisplayCurrency.
+export function settingsDisplayCurrency(state: DemoState): string | null {
+  return (state.settings as { displayCurrency?: string | null }).displayCurrency ?? null;
+}
+
 // Add `daysCount` days to an ISO YYYY-MM-DD, UTC-safe.
 export function addDaysIso(iso: string, daysCount: number): string {
   const [y, m, d] = iso.split('-').map(Number) as [number, number, number];

@@ -355,10 +355,13 @@ export function buildSeedState(): DemoState {
     recurring,
     savingsGoals,
     savingsGoalEvents,
+    fxRates: [],
     settings: {
       locale: 'fr',
       currency: 'EUR',
       seedTodayForDemo: SEED_TODAY,
+      // Manual FX table (Task 7): null = per-currency mode, no conversion.
+      displayCurrency: null,
     },
   };
 }

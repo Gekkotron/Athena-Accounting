@@ -13,6 +13,7 @@ import type {
   Account, Budget, Category, RecurringSeries, Rule,
   SavingsGoal, SavingsGoalEvent,
 } from '../types';
+import type { FxRate } from '../../lib/fx';
 
 // Bumped whenever the seed shape changes in a way that must reach every
 // visitor on their next tab open. Mismatch triggers a silent reseed.
@@ -21,7 +22,9 @@ import type {
 //              not a real outflow — it made the forecast eat income)
 //   v=3 → v=4  transferRules feature removed; key dropped from state
 //   v=4 → v=5  savingsGoals + savingsGoalEvents seeded (migration 0037)
-export const DEMO_SCHEMA_VERSION = 5;
+//   v=5 → v=6  fxRates seeded (empty) + settings.displayCurrency (manual
+//              FX table, Task 7)
+export const DEMO_SCHEMA_VERSION = 6;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -43,6 +46,9 @@ export interface DemoState {
   // (e.g. in-flight tests) still hydrate; handlers default undefined to [].
   savingsGoals?: SavingsGoal[];
   savingsGoalEvents?: SavingsGoalEvent[];
+  // Manual FX table rows (v6). Optional so pre-v6 snapshots that survive
+  // still hydrate; handlers default missing/undefined to [].
+  fxRates?: DemoFxRate[];
   settings: Record<string, unknown>;
   // Remote-backup destination (Sauvegarde distante card). Non-secret parts
   // only — the demo never stores passwords or passphrases. Optional so
@@ -54,6 +60,19 @@ export interface DemoState {
     lastRunAt: string | null;
     lastError: string | null;
   };
+}
+
+// A stored FX rate row: the domain shape (fromCcy/toCcy) plus an
+// auto-increment id so writes/fx-rates.ts can address a row for PATCH/DELETE
+// — mirrors the backend's fx_rates table row (userId omitted; demo is
+// single-user).
+export type DemoFxRate = FxRate & { id: number };
+
+// Wire shape for GET/POST/PATCH /api/fx-rates responses: `from`/`to` instead
+// of the domain's `fromCcy`/`toCcy`. Mirrors backend/src/http/routes/
+// fx-rates.ts's shape().
+export function fxRateToWire(row: DemoFxRate): { id: number; from: string; to: string; effectiveFrom: string; rate: string } {
+  return { id: row.id, from: row.fromCcy, to: row.toCcy, effectiveFrom: row.effectiveFrom, rate: row.rate };
 }
 
 type Mutator = (draft: DemoState) => void;
@@ -80,6 +99,7 @@ function emptyState(): DemoState {
     recurring: [],
     savingsGoals: [],
     savingsGoalEvents: [],
+    fxRates: [],
     settings: {},
   };
 }

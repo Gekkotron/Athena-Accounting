@@ -10,7 +10,7 @@ describe('demo store + seed', () => {
 
   it('hydrates from the seed on first getState', () => {
     const state = getState();
-    expect(state.v).toBe(5);
+    expect(state.v).toBe(6);
     expect(state.accounts).toHaveLength(2);
     expect(state.categories).toHaveLength(11);
     expect(state.rules).toHaveLength(9);

@@ -1,6 +1,25 @@
 import { getState } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
-import { enrichAccount, money, txs } from './lib';
+import { ApiError } from '../../../apiError';
+import { consolidate } from '../../../../lib/fx';
+import type { DemoFxRate } from '../../store';
+import { enrichAccount, money, resolveDisplayCurrency, settingsDisplayCurrency, todayIso, txs } from './lib';
+
+type PerCurrencyRow = { currency: string; total: string; available: string; invested: string; account_count: number };
+
+const CONSOLIDATE_KEYS = ['total', 'available', 'invested'] as const;
+
+// Mirrors backend/src/http/routes/reports/balance.ts's buildConsolidatedBlock.
+function buildBalanceConsolidated(rows: PerCurrencyRow[], display: string, rates: DemoFxRate[], at: string) {
+  const out = consolidate(rows, display, rates, at, CONSOLIDATE_KEYS);
+  return {
+    display: out.display,
+    total: out.totals.total,
+    available: out.totals.available,
+    invested: out.totals.invested,
+    unmapped: out.unmapped as PerCurrencyRow[],
+  };
+}
 
 function handleAccounts() {
   const state = getState();
@@ -17,7 +36,7 @@ function handleAccountCheckpoints(req: DemoRequest) {
   return { checkpoints };
 }
 
-function handleReportsBalance() {
+function handleReportsBalance(req: DemoRequest) {
   const state = getState();
   const allTx = txs();
   const enriched = state.accounts.map((a) => enrichAccount(a, allTx));
@@ -35,15 +54,27 @@ function handleReportsBalance() {
     bucket.account_count += 1;
     byCurrency.set(cur, bucket);
   }
-  return {
-    perCurrency: Array.from(byCurrency.values()).map((b) => ({
-      currency: b.currency,
-      total: money(b.total),
-      available: money(b.available),
-      invested: money(b.invested),
-      account_count: b.account_count,
-    })),
-  };
+  const perCurrency: PerCurrencyRow[] = Array.from(byCurrency.values()).map((b) => ({
+    currency: b.currency,
+    total: money(b.total),
+    available: money(b.available),
+    invested: money(b.invested),
+    account_count: b.account_count,
+  }));
+
+  const displayParam = req.query.display;
+  const settingsDisplay = displayParam === undefined ? settingsDisplayCurrency(state) : null;
+  const resolved = resolveDisplayCurrency(displayParam, settingsDisplay);
+  if (resolved === 'invalid') {
+    throw new ApiError('invalid display currency', 400, { error: 'invalid display currency' });
+  }
+
+  let consolidated: ReturnType<typeof buildBalanceConsolidated> | null = null;
+  if (resolved !== null) {
+    consolidated = buildBalanceConsolidated(perCurrency, resolved, state.fxRates ?? [], todayIso());
+  }
+
+  return { perCurrency, consolidated };
 }
 
 export function registerAccountsHandlers(): void {

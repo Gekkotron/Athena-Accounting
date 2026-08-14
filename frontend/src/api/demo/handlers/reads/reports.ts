@@ -1,7 +1,9 @@
 import type { BalancePoint, BudgetPeriod, BudgetReport, BudgetReportRow, CategoryReportRow } from '../../../types';
-import { getState } from '../../store';
+import { getState, type DemoFxRate } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
-import { bucketFor, categoryById, money, monthOf, txs } from './lib';
+import { ApiError } from '../../../apiError';
+import { aggregateTimeseriesByBucket, consolidate, resolveRate } from '../../../../lib/fx';
+import { bucketFor, categoryById, money, monthOf, resolveDisplayCurrency, settingsDisplayCurrency, todayIso, txs } from './lib';
 
 function handleReportsTimeseries(req: DemoRequest) {
   const state = getState();
@@ -30,7 +32,20 @@ function handleReportsTimeseries(req: DemoRequest) {
       });
     }
   }
-  return { points };
+
+  const displayParam = req.query.display;
+  const settingsDisplay = displayParam === undefined ? settingsDisplayCurrency(state) : null;
+  const resolved = resolveDisplayCurrency(displayParam, settingsDisplay);
+  if (resolved === 'invalid') {
+    throw new ApiError('invalid display currency', 400, { error: 'invalid display currency' });
+  }
+
+  let consolidated: { display: string; points: ReturnType<typeof aggregateTimeseriesByBucket> } | null = null;
+  if (resolved !== null) {
+    consolidated = { display: resolved, points: aggregateTimeseriesByBucket(points, resolved, state.fxRates ?? []) };
+  }
+
+  return { points, consolidated };
 }
 
 function handleReportsCategories(req: DemoRequest) {
@@ -68,13 +83,87 @@ function handleReportsCategories(req: DemoRequest) {
   return { rows: Array.from(perKey.values()).map((v) => v.row) };
 }
 
-function handleReportsBudget(req: DemoRequest): BudgetReport {
+const BUDGET_CONSOLIDATE_KEYS = ['limit', 'spent', 'remaining'] as const;
+
+// Half-up rounding to 2 decimals, matching frontend/src/lib/fx.ts's own copy.
+function quantize2(n: number): string {
+  return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+}
+
+type BudgetConsolidateRow = { currency: string; limit: string; spent: string; remaining: string; projected: string | null };
+
+// Mirrors backend/src/http/routes/reports/budget.ts's buildBudgetConsolidatedBlock.
+// Demo budget rows never carry a `projected` value (see handleReportsBudget
+// below), so `projected` here always resolves to null — the formula is kept
+// intact anyway so a future demo forecast doesn't silently diverge from the
+// backend's math.
+function buildBudgetConsolidated(rows: BudgetConsolidateRow[], display: string, rates: DemoFxRate[], at: string) {
+  type PerCurrencyAgg = { currency: string; limit: string; spent: string; remaining: string; projected: number | null };
+
+  const byCurrency = new Map<string, { limit: number; spent: number; remaining: number; projected: number | null }>();
+  for (const r of rows) {
+    let g = byCurrency.get(r.currency);
+    if (!g) {
+      g = { limit: 0, spent: 0, remaining: 0, projected: 0 };
+      byCurrency.set(r.currency, g);
+    }
+    g.limit += Number(r.limit);
+    g.spent += Number(r.spent);
+    g.remaining += Number(r.remaining);
+    if (g.projected !== null) {
+      if (r.projected == null) g.projected = null;
+      else g.projected += Number(r.projected);
+    }
+  }
+
+  const perCurrency: PerCurrencyAgg[] = Array.from(byCurrency.entries()).map(([currency, g]) => ({
+    currency,
+    limit: g.limit.toFixed(2),
+    spent: g.spent.toFixed(2),
+    remaining: g.remaining.toFixed(2),
+    projected: g.projected,
+  }));
+
+  const out = consolidate(perCurrency, display, rates, at, BUDGET_CONSOLIDATE_KEYS);
+  const unmappedRows = out.unmapped as PerCurrencyAgg[];
+
+  const anyNullProjected = perCurrency.some((p) => p.projected == null);
+  let projectedTotal: string | null = null;
+  if (unmappedRows.length === 0 && !anyNullProjected) {
+    let sum = 0;
+    for (const p of perCurrency) {
+      const rate = resolveRate(rates, p.currency, display, at);
+      sum += (p.projected as number) * (rate as number);
+    }
+    projectedTotal = quantize2(sum);
+  }
+
+  return {
+    display: out.display,
+    totals: {
+      limit: out.totals.limit,
+      spent: out.totals.spent,
+      remaining: out.totals.remaining,
+      projected: projectedTotal,
+    },
+    unmapped: unmappedRows.map((u) => ({
+      currency: u.currency,
+      limit: u.limit,
+      spent: u.spent,
+      remaining: u.remaining,
+      projected: u.projected == null ? null : u.projected.toFixed(2),
+    })),
+  };
+}
+
+function handleReportsBudget(req: DemoRequest): BudgetReport & { consolidated: ReturnType<typeof buildBudgetConsolidated> | null } {
   const state = getState();
   const period = (req.query.period as BudgetPeriod | undefined) ?? 'monthly';
   const monthArg = req.query.month;
   const now = new Date();
   const currentMonth = monthArg ?? `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
   const rows: BudgetReportRow[] = [];
+  const consolidationRows: BudgetConsolidateRow[] = [];
   let totalLimit = 0;
   let totalSpent = 0;
   for (const b of state.budgets) {
@@ -106,7 +195,27 @@ function handleReportsBudget(req: DemoRequest): BudgetReport {
       anomaly: false,
       suggestedLimit: null,
     });
+    consolidationRows.push({
+      currency: b.currency,
+      limit: money(limit),
+      spent: money(spent),
+      remaining: money(remaining),
+      projected: null,
+    });
   }
+
+  const displayParam = req.query.display;
+  const settingsDisplay = displayParam === undefined ? settingsDisplayCurrency(state) : null;
+  const resolved = resolveDisplayCurrency(displayParam, settingsDisplay);
+  if (resolved === 'invalid') {
+    throw new ApiError('invalid display currency', 400, { error: 'invalid display currency' });
+  }
+
+  let consolidated: ReturnType<typeof buildBudgetConsolidated> | null = null;
+  if (resolved !== null) {
+    consolidated = buildBudgetConsolidated(consolidationRows, resolved, state.fxRates ?? [], todayIso());
+  }
+
   return {
     period,
     month: currentMonth,
@@ -119,6 +228,7 @@ function handleReportsBudget(req: DemoRequest): BudgetReport {
       remaining: money(totalLimit - totalSpent),
       projected: null,
     },
+    consolidated,
     unbudgetedCandidates: [],
   };
 }
