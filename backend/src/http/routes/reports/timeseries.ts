@@ -3,6 +3,10 @@ import { sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { userId } from '../../plugins/auth.js';
 import { RangeQuery } from './schemas.js';
+import { loadUserRates } from '../../../domain/fx/rates-repo.js';
+import { aggregateTimeseriesByBucket } from '../../../domain/fx/aggregate-timeseries.js';
+import { loadUserDisplayCurrency } from '../../../domain/settings/loader.js';
+import { resolveDisplayCurrency } from './balance.js';
 
 export function registerTimeseriesRoute(app: FastifyInstance): void {
   // Running balance per account over time. Returns one row per (account, date)
@@ -83,6 +87,20 @@ export function registerTimeseriesRoute(app: FastifyInstance): void {
       ORDER BY account_id, bucket
     `);
 
-    return { points: rows.rows };
+    const q = req.query as { display?: string } | undefined;
+    const displayParam = q?.display;
+    const settingsDisplay = displayParam === undefined ? await loadUserDisplayCurrency(uid) : null;
+    const resolved = resolveDisplayCurrency(displayParam, settingsDisplay);
+    if (resolved === 'invalid') {
+      return reply.code(400).send({ error: 'invalid display currency' });
+    }
+
+    let consolidated: { display: string; points: Array<{ bucket: string; total: string; unmapped: string[] }> } | null = null;
+    if (resolved !== null) {
+      const rates = await loadUserRates(uid);
+      consolidated = { display: resolved, points: aggregateTimeseriesByBucket(rows.rows, resolved, rates) };
+    }
+
+    return { points: rows.rows, consolidated };
   });
 }
