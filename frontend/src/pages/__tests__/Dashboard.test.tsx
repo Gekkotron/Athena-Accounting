@@ -175,4 +175,62 @@ describe('Dashboard', () => {
     expect(patchCalls).toHaveLength(0);
   });
 
+  it('collapses the per-currency card list into one consolidated total when a display currency is set', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte'), acc(2, 'USD', { currency: 'USD' })] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [
+          { currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 },
+          { currency: 'USD', total: '90.00', available: '90.00', invested: '0.00', account_count: 1 },
+        ],
+        consolidated: {
+          display: 'EUR', total: '190.00', available: '190.00', invested: '0.00', unmapped: [],
+        },
+      };
+      if (path === '/api/reports/timeseries') return { points: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    expect(await screen.findByText(/190,00/)).toBeInTheDocument();
+    // Only the consolidated card renders — the secondary per-currency card
+    // for USD is collapsed away, not shown separately (no unmapped rows).
+    expect(screen.queryByText('USD')).not.toBeInTheDocument();
+  });
+
+  it('renders a warning strip with a small fallback card for unmapped currencies', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte'), acc(2, 'GBP', { currency: 'GBP' })] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [
+          { currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 },
+          { currency: 'GBP', total: '50.00', available: '50.00', invested: '0.00', account_count: 1 },
+        ],
+        consolidated: {
+          display: 'EUR', total: '100.00', available: '100.00', invested: '0.00',
+          unmapped: [{ currency: 'GBP', total: '50.00', available: '50.00', invested: '0.00', account_count: 1 }],
+        },
+      };
+      if (path === '/api/reports/timeseries') return { points: [] };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    expect(await screen.findByText('Devises non converties — ajoutez un taux pour les inclure dans le total :')).toBeInTheDocument();
+    // The raw GBP amount still surfaces — once in the consolidated card's
+    // warning-strip label, once in the small fallback card below it.
+    expect(screen.getAllByText('GBP').length).toBeGreaterThan(0);
+    expect(screen.getByText(/50,00/)).toBeInTheDocument();
+  });
+
 });

@@ -18,5 +18,11 @@
   },
   "errors": {
     "demoUnavailable": "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser."
+  },
+  "fx": {
+    "convertedFrom_one": "Convertie depuis {{count}} devise · Ajuster",
+    "convertedFrom_other": "Convertie depuis {{count}} devises · Ajuster",
+    "unmappedWarning": "Devises non converties — ajoutez un taux pour les inclure dans le total :",
+    "addRate": "Ajouter un taux"
   }
 }

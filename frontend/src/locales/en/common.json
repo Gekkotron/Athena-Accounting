@@ -18,5 +18,11 @@
   },
   "errors": {
     "demoUnavailable": "This feature is not available in the demo. Install Athena to use it."
+  },
+  "fx": {
+    "convertedFrom_one": "Converted from {{count}} currency · Adjust",
+    "convertedFrom_other": "Converted from {{count}} currencies · Adjust",
+    "unmappedWarning": "Currencies not converted — add a rate to include them in the total:",
+    "addRate": "Add rate"
   }
 }

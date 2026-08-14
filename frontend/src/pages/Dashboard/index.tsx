@@ -7,7 +7,6 @@ import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
 import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
-import { formatAmount, amountSignClass } from '../../lib/format';
 import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
 import { withCarriedBaselines } from '../../components/BalanceChart/series';
@@ -15,6 +14,7 @@ import { useForecastProjection } from './useForecastProjection';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
+import { BalanceCardBlock, type ConsolidatedBlock, type PerCurrencyRow } from './BalanceCardBlock';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
 import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
@@ -32,9 +32,7 @@ export function Dashboard(): JSX.Element {
   });
   const balanceQ = useQuery({
     queryKey: ['reports', 'balance'],
-    queryFn: () => api<{ perCurrency: { currency: string; total: string; available: string; invested: string; account_count: number }[] }>(
-      '/api/reports/balance',
-    ),
+    queryFn: () => api<{ perCurrency: PerCurrencyRow[]; consolidated: ConsolidatedBlock | null }>('/api/reports/balance'),
   });
   const seriesQ = useQuery({
     queryKey: ['reports', 'timeseries'],
@@ -174,17 +172,8 @@ export function Dashboard(): JSX.Element {
 
       {/* Sections below are hidden while the root queries are erroring or empty
           — no point showing a wall of skeletons behind a top-level error. */}
-      {!rootErr && !rootEmpty && currencies.length > 1 && (
-        <section className="flex flex-wrap gap-3">
-          {currencies.slice(1).map((c) => (
-            <div key={c.currency} className="surface-soft px-4 py-3">
-              <div className="label">{c.currency}</div>
-              <div className={`display text-xl mt-0.5 tabular-nums ${amountSignClass(c.total)}`}>
-                {formatAmount(c.total, c.currency)}
-              </div>
-            </div>
-          ))}
-        </section>
+      {!rootErr && !rootEmpty && (
+        <BalanceCardBlock currencies={currencies} consolidated={balanceQ.data?.consolidated ?? null} />
       )}
 
       {!rootErr && !rootEmpty && primary && <MoyennesMensuellesSection currency={primary.currency} />}
