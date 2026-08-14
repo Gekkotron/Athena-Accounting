@@ -25,8 +25,8 @@ Locked during brainstorming, listed here so downstream planning can reference th
 | # | Decision |
 |---|---|
 | D1 | Time-varying rates: `(from, to, effective_from, rate)` — one row per pair per effective date. Historical charts stay stable when rates are edited later. |
-| D2 | Global `users.display_currency` preference (nullable) + a "show per-currency" toggle in the UI. Not per-view. |
-| D3 | Full first-pass scope: balance, timeseries, budgets, insights, sankey, category donut, stats. |
+| D2 | Global `displayCurrency` preference in `user_settings.settings` (nullable) + a "show per-currency" toggle in the UI. Not per-view. |
+| D3 | First-pass scope covers the endpoints that already emit `perCurrency`: **balance, timeseries, budget report**. Frontend-only aggregations (sankey, donut, stats, insights) get a separate follow-up spec — see "Deferred to follow-up" below. |
 | D4 | Missing rate → consolidate what we can + inline warning strip listing unmapped currencies; the unmapped balances stay visible as fallback cards. Never silently treat missing as 1:1. |
 | D5 | Settings UX: a table with add / edit / delete rows; smart suggestions from accounts in use. |
 | D6 | Storage shape: direct pairs `(from, to)` — never normalized to a base currency. Reverse pairs are not auto-derived. |
@@ -50,12 +50,11 @@ fx_rates
   CHECK  (from_ccy <> to_ccy)
   CHECK  (rate > 0)
   INDEX  (user_id, from_ccy, to_ccy, effective_from DESC)
-
-users
-  + display_currency  varchar(3) NULL   -- NULL = per-currency mode (current behavior)
 ```
 
-Drizzle types in `backend/src/db/schema.ts` grow the matching `fxRates` table and add the `displayCurrency` column to `users`.
+Drizzle types in `backend/src/db/schema.ts` grow the matching `fxRates` table.
+
+**Display-currency preference.** User settings live in the existing `user_settings.settings` JSONB, not a column on `users`. Add a new `displayCurrency` field to the Zod schema in `backend/src/domain/settings/schema.ts` (nullable ISO code, default `null` = per-currency mode) and to `backend/src/domain/settings/defaults.ts`. The existing `PATCH /api/settings` endpoint handles the write; no new route.
 
 ### Lookup rule
 
@@ -63,7 +62,7 @@ At date `T`, the effective rate for `(from, to)` is the row with the **largest `
 
 ### Backfill
 
-None. The table starts empty; behavior with no rates + `display_currency = NULL` is identical to today, so this is a purely additive change.
+None. The table starts empty; behavior with no rates + `displayCurrency = null` is identical to today, so this is a purely additive change.
 
 ## Shared FX helper
 
@@ -127,16 +126,11 @@ Route lives under `backend/src/http/routes/fx-rates.ts`; registered in `buildSer
 
 ### Preference: display currency
 
-```
-PUT /api/settings/display-currency  body { currency: string | null }
-GET /api/settings                    ← grows the `displayCurrency` field
-```
-
-Setting `currency: null` reverts to per-currency mode.
+No new endpoint. `PATCH /api/settings` already accepts a partial patch merged into `user_settings.settings`. Setting `displayCurrency: null` reverts to per-currency mode.
 
 ### Existing reports — response evolution
 
-Every aggregate route grows an optional `?display=<ccy>` query param (defaults to `users.display_currency`).
+The three routes that already emit `perCurrency` — `/api/reports/balance`, `/api/reports/timeseries`, `/api/reports/budget` — each grow an optional `?display=<ccy>` query param (defaults to the `displayCurrency` field of the user's settings).
 
 Response shape adds a `consolidated` block **alongside** the existing `perCurrency` — never in place of it:
 
@@ -154,7 +148,7 @@ GET /api/reports/balance?display=EUR →
 }
 ```
 
-The same envelope shape is added to `/api/reports/timeseries`, `/api/reports/budget`, and the insights / sankey / category / stats routes. Each aggregate implements the block via `consolidate()` — except timeseries, which does the JOIN in SQL.
+The same envelope shape is added to `/api/reports/timeseries` and `/api/reports/budget`. `balance` and `budget` implement the block via `consolidate()`; `timeseries` does the JOIN in SQL (next section) because each bucket needs its own historical rate.
 
 ### Timeseries — in-SQL conversion
 
@@ -212,8 +206,12 @@ Response wrapper for timeseries:
 |---|---|---|
 | `reports/balance` | `SELECT ... GROUP BY currency` | after fetch, `consolidate(rows, display, rates, today, ["total", "available", "invested"])` |
 | `reports/budget` | `GROUP BY b.id, ..., b.currency` | same, `at = end of budget period` |
-| `insights` | per-currency accumulator in TS | fold via `consolidate(...)` |
-| `sankey`, `category-donut`, `stats` | walk transactions, bucket by category | resolve rate per transaction using `resolveRate(rates, tx.currency, display, tx.date)` before summing into category buckets — the historical rate at `tx.date` keeps category history stable |
+
+### Deferred to follow-up
+
+The Dashboard's **sankey, category donut, category breakdown, and stat widgets** are pure frontend components: they aggregate raw transactions in `useMemo`, not from a dedicated per-currency backend endpoint. Making them FX-aware requires either (a) a new backend endpoint that emits per-transaction converted amounts, or (b) shipping the rate table to the frontend and doing the FX math in TS.
+
+Neither option fits cleanly on top of the current architecture, and locking on one shape here risks doing the wrong thing. **Out of scope for this spec** — file a follow-up once the balance/timeseries/budget rollout is real and the right pattern is obvious. Until then, those components stay in the account's own currency (unchanged behavior); the Dashboard header consolidated card is what "goes multi-currency" in v1.
 
 ### Demo mode
 
@@ -247,9 +245,11 @@ Each existing row has edit-in-place + delete buttons. A server 409 duplicate err
 
 When `consolidated` is present, the chart draws a single line in the display currency using `consolidated.points`. The legend gains a "Show raw per-currency" toggle that swaps back to the current multi-line view. Buckets whose `unmapped` list is non-empty render a dashed segment + a tooltip note.
 
-### Budget / insights / sankey / stats
+### Budget report
 
-Each component reads `consolidated` when present and falls back to `perCurrency` otherwise. The switch is one prop on the existing components; no visual redesign.
+The existing budget report reads `consolidated` when present and falls back to `perCurrency` otherwise. One prop on the existing component; no visual redesign.
+
+Frontend sankey / donut / stats / breakdown components stay unchanged in v1 (see "Deferred to follow-up" in the backend section).
 
 ### i18n
 
@@ -278,11 +278,13 @@ New:
 - `frontend/src/pages/Settings/FxSection/` (new folder for the section + its subcomponents)
 
 Modified:
-- `backend/src/db/schema.ts` — `fxRates` table, `users.displayCurrency` column, update the comment on `accounts` (line 77) to reference this table.
+- `backend/src/db/schema.ts` — `fxRates` table; update the comment on `accounts` (line 77) to reference this table.
+- `backend/src/domain/settings/schema.ts` + `defaults.ts` — grow `displayCurrency` (nullable ISO code, default null).
 - `backend/src/buildServer.ts` — register `fx-rates` route.
-- `backend/src/http/routes/settings.ts` (or whichever file owns `GET/PUT /api/settings`) — grow `displayCurrency`.
-- `backend/src/http/routes/reports/{balance,timeseries,budget,...}.ts` — response envelope with the `consolidated` block; TS-side wiring for all except timeseries; SQL join for timeseries.
-- Frontend consumers of `perCurrency`: `pages/Dashboard/index.tsx`, `pages/Dashboard/useForecastProjection.ts`, `pages/Recurrent/ForecastTab.tsx`, `components/BalanceChart/`, `components/Sankey.tsx`, `components/CategoryBreakdown.tsx`, `components/CategoryDonut.tsx`, `components/StatWidget.tsx` — read `consolidated` when present, fall back to `perCurrency` otherwise.
+- `backend/src/http/routes/reports/balance.ts` — add `consolidated` block via `consolidate()`.
+- `backend/src/http/routes/reports/timeseries.ts` — add `consolidated` block via CTE JOIN.
+- `backend/src/http/routes/reports/budget.ts` — add `consolidated` block via `consolidate()`.
+- Frontend consumers of `perCurrency` (v1 scope): `pages/Dashboard/index.tsx`, `pages/Dashboard/useForecastProjection.ts`, `pages/Recurrent/ForecastTab.tsx`, `components/BalanceChart/` — read `consolidated` when present, fall back to `perCurrency` otherwise.
 - `frontend/src/pages/Settings.tsx` — mount the new `FxSection`.
 - `frontend/src/locales/{fr,en}.json` — new `settings.fx` and `common.fx` namespaces.
 
