@@ -5,7 +5,7 @@ import { api } from '../../api/client';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
-import type { Account, BalancePoint, BalanceCheckpoint } from '../../api/types';
+import type { Account, BalancePoint, BalanceCheckpoint, TimeseriesConsolidatedBlock } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
@@ -26,6 +26,9 @@ import { Link } from 'react-router-dom';
 
 export function Dashboard(): JSX.Element {
   const { t } = useTranslation('dashboard');
+  // Hoisted above the queries below so the timeseries query can key on and
+  // send the user's display currency (Settings → Multi-devises).
+  const { settings, isReady, patch: patchSettings } = useSettings();
   const accountsQ = useQuery({
     queryKey: ['accounts'],
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
@@ -35,8 +38,10 @@ export function Dashboard(): JSX.Element {
     queryFn: () => api<{ perCurrency: PerCurrencyRow[]; consolidated: ConsolidatedBlock | null }>('/api/reports/balance'),
   });
   const seriesQ = useQuery({
-    queryKey: ['reports', 'timeseries'],
-    queryFn: () => api<{ points: BalancePoint[] }>('/api/reports/timeseries', { query: { granularity: 'day' } }),
+    queryKey: ['reports', 'timeseries', settings.displayCurrency],
+    queryFn: () => api<{ points: BalancePoint[]; consolidated: TimeseriesConsolidatedBlock | null }>('/api/reports/timeseries', {
+      query: { granularity: 'day', ...(settings.displayCurrency ? { display: settings.displayCurrency } : {}) },
+    }),
   });
 
   const currencies = balanceQ.data?.perCurrency ?? [];
@@ -62,7 +67,6 @@ export function Dashboard(): JSX.Element {
   // Page-wide period and chart scope. Both seeded from user settings on
   // mount; in-session changes are ephemeral (no writeback). To make a
   // change stick, edit Réglages.
-  const { settings, isReady, patch: patchSettings } = useSettings();
   const [range, setRange] = useState<RangeKey>(settings.dashboardRange);
   const [chartScope, setChartScope] = useState<'all' | number>(settings.dashboardChartScope);
   // If settings arrive after the initial render (first paint used DEFAULTS),
@@ -233,6 +237,10 @@ export function Dashboard(): JSX.Element {
             <BalanceChart
               points={chartPoints}
               currency={chartCurrency}
+              // The consolidated block aggregates ALL accounts server-side —
+              // only valid when the chart itself is scoped to 'all'. A
+              // single-account scope keeps the raw per-currency curve.
+              consolidated={chartScope === 'all' ? seriesQ.data?.consolidated ?? null : null}
               checkpoints={chartCheckpoints}
               gapThresholdDays={settings.chartGapThresholdDays}
               projection={forecastProjection?.points}

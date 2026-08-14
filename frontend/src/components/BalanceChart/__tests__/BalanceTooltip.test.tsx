@@ -83,3 +83,27 @@ describe('BalanceTooltip privacy mode', () => {
     expect(privates.some((t) => /100/.test(t ?? ''))).toBe(true);     // écart
   });
 });
+
+describe('BalanceTooltip unmapped-currency note', () => {
+  it('renders a note when the hovered bucket has unmapped currencies', () => {
+    render(
+      <BalanceTooltip hovered={hovered} hoveredCheckpoint={null} currency="EUR"
+        x={100} y={50} containerWidth={1000} previousValue={null}
+        unmappedCurrencies={['USD', 'GBP']} />,
+    );
+    expect(screen.getByText(/USD, GBP/)).toBeInTheDocument();
+  });
+
+  it('renders no note when unmappedCurrencies is empty or absent', () => {
+    const { rerender } = render(
+      <BalanceTooltip hovered={hovered} hoveredCheckpoint={null} currency="EUR"
+        x={100} y={50} containerWidth={1000} previousValue={null} />,
+    );
+    expect(screen.queryByText(/USD/)).not.toBeInTheDocument();
+    rerender(
+      <BalanceTooltip hovered={hovered} hoveredCheckpoint={null} currency="EUR"
+        x={100} y={50} containerWidth={1000} previousValue={null} unmappedCurrencies={[]} />,
+    );
+    expect(screen.queryByText(/USD/)).not.toBeInTheDocument();
+  });
+});

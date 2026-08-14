@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BalanceChart } from '../index';
 import { pinLocale } from '../../../test/i18n';
 
@@ -32,5 +33,64 @@ describe('BalanceChart gapThresholdDays', () => {
     const { container } = render(<BalanceChart points={points} currency="EUR" />);
     expect(container.querySelectorAll('path[stroke-dasharray="4 5"]').length).toBeGreaterThan(0);
     expect(container.querySelectorAll('path[filter="url(#glow)"]').length).toBeGreaterThan(0);
+  });
+});
+
+describe('BalanceChart consolidated series', () => {
+  const points = [
+    { account_id: 1, currency: 'EUR', bucket: '2026-01-01', cumulative: '100.00' },
+    { account_id: 1, currency: 'EUR', bucket: '2026-01-05', cumulative: '110.00' },
+    { account_id: 1, currency: 'EUR', bucket: '2026-01-15', cumulative: '120.00' },
+  ] as any;
+
+  const consolidated = {
+    display: 'USD',
+    points: [
+      { bucket: '2026-01-01', total: '500.00', unmapped: [] },
+      { bucket: '2026-01-05', total: '510.00', unmapped: [] },
+      { bucket: '2026-01-15', total: '520.00', unmapped: [] },
+    ],
+  };
+
+  it('plots the consolidated series (display currency, converted totals) when present', () => {
+    const { container } = render(
+      <BalanceChart points={points} currency="EUR" consolidated={consolidated} />,
+    );
+    const svg = container.querySelector('svg');
+    // aria-label embeds the formatted current/min/max values — consolidated's
+    // last total (520) in its display currency (USD), not the raw EUR value (120).
+    expect(svg?.getAttribute('aria-label')).toMatch(/520/);
+    expect(svg?.getAttribute('aria-label')).not.toMatch(/120/);
+  });
+
+  it('falls back to the raw per-account/per-currency series when consolidated is null', () => {
+    const { container } = render(
+      <BalanceChart points={points} currency="EUR" consolidated={null} />,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('aria-label')).toMatch(/120/);
+    expect(svg?.getAttribute('aria-label')).not.toMatch(/520/);
+  });
+
+  it('shows no toggle button when consolidated is absent', () => {
+    render(<BalanceChart points={points} currency="EUR" />);
+    expect(screen.queryByText(/Afficher/)).not.toBeInTheDocument();
+  });
+
+  it('toggling "Show raw per-currency" switches the plotted series back to raw values', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <BalanceChart points={points} currency="EUR" consolidated={consolidated} />,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('aria-label')).toMatch(/520/);
+
+    await user.click(screen.getByRole('button', { name: /Afficher par devise/ }));
+    expect(svg?.getAttribute('aria-label')).toMatch(/120/);
+    expect(svg?.getAttribute('aria-label')).not.toMatch(/520/);
+
+    // Toggling back restores the consolidated series.
+    await user.click(screen.getByRole('button', { name: /Afficher consolidé/ }));
+    expect(svg?.getAttribute('aria-label')).toMatch(/520/);
   });
 });

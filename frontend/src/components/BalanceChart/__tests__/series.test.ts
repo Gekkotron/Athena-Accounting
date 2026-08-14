@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildAggregatedSeries, withCarriedBaselines } from '../series';
-import type { BalancePoint } from '../../../api/types';
+import { buildAggregatedSeries, buildConsolidatedSeries, withCarriedBaselines } from '../series';
+import type { BalancePoint, TimeseriesConsolidatedPoint } from '../../../api/types';
 
 function p(bucket: string, cumulative: string, account_id = 1, currency = 'EUR'): BalancePoint {
   return { account_id, currency, bucket, delta: '0', cumulative };
@@ -123,5 +123,22 @@ describe('withCarriedBaselines', () => {
   it('leaves accounts with no pre-window history untouched', () => {
     const points = [p('2024-06-10', '150')];
     expect(withCarriedBaselines(points, '2024-06-01')).toEqual(points);
+  });
+});
+
+describe('buildConsolidatedSeries', () => {
+  it('reshapes consolidated points into {date, value}, parsing the total string', () => {
+    const points: TimeseriesConsolidatedPoint[] = [
+      { bucket: '2026-01-01', total: '500.00', unmapped: [] },
+      { bucket: '2026-01-05', total: '510.50', unmapped: ['USD'] },
+    ];
+    expect(buildConsolidatedSeries(points)).toEqual([
+      { date: '2026-01-01', value: 500 },
+      { date: '2026-01-05', value: 510.5 },
+    ]);
+  });
+
+  it('returns [] for an empty points array', () => {
+    expect(buildConsolidatedSeries([])).toEqual([]);
   });
 });

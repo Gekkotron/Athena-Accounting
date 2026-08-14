@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BalancePoint } from '../../api/types';
+import type { BalancePoint, TimeseriesConsolidatedBlock } from '../../api/types';
 import { formatAmountCompact, formatDateShort } from '../../lib/format';
-import { buildAggregatedSeries } from './series';
+import { buildAggregatedSeries, buildConsolidatedSeries } from './series';
 import { buildCheckpointMarks, type Checkpoint } from './checkpoints';
 import { BalanceTooltip } from './BalanceTooltip';
 import {
@@ -39,20 +39,41 @@ interface Props {
   // carried into the sum). The projection is anchored to the same value,
   // so with this set the historical/projection join is always continuous.
   alignEndTo?: number;
+  // Optional consolidated (multi-currency, FX-converted) series from the
+  // timeseries report. When present, the chart defaults to plotting this
+  // single line instead of the raw per-account/per-currency one — a small
+  // toggle lets the user flip back. Absent or null falls back unchanged.
+  consolidated?: TimeseriesConsolidatedBlock | null;
 }
 
-export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection, alignEndTo }: Props): JSX.Element {
+export function BalanceChart({ points, currency, height = 240, checkpoints, gapThresholdDays = 6, projection, alignEndTo, consolidated }: Props): JSX.Element {
   const { t } = useTranslation('charts');
   const [zoom, setZoom] = useState<ZoomState | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
+
+  const hasConsolidated = !!consolidated && consolidated.points.length > 0;
+  const useConsolidated = hasConsolidated && !showRaw;
+  const effectiveCurrency = useConsolidated ? consolidated!.display : currency;
+
+  // Buckets whose consolidated total couldn't fully convert every currency
+  // (missing rate) — keyed by bucket date so the tooltip can flag them
+  // without dashing the line itself (simplest first pass, per the plan).
+  const unmappedByBucket = useMemo(() => {
+    const m = new Map<string, string[]>();
+    if (consolidated) {
+      for (const p of consolidated.points) if (p.unmapped.length > 0) m.set(p.bucket, p.unmapped);
+    }
+    return m;
+  }, [consolidated]);
 
   const { data, projectionStartIdx } = useMemo(
     () =>
       mergeHistoricalAndProjection({
-        raw: buildAggregatedSeries(points, currency),
+        raw: useConsolidated ? buildConsolidatedSeries(consolidated!.points) : buildAggregatedSeries(points, currency),
         alignEndTo,
         projection,
       }),
-    [points, currency, projection, alignEndTo],
+    [points, currency, consolidated, useConsolidated, projection, alignEndTo],
   );
 
   const w = 1000;
@@ -143,9 +164,9 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           count: data.length,
           from: formatDateShort(data[0]!.date),
           to: formatDateShort(data[data.length - 1]!.date),
-          current: formatAmountCompact(data[data.length - 1]!.value, currency),
-          min: formatAmountCompact(minY, currency),
-          max: formatAmountCompact(maxY, currency),
+          current: formatAmountCompact(data[data.length - 1]!.value, effectiveCurrency),
+          min: formatAmountCompact(minY, effectiveCurrency),
+          max: formatAmountCompact(maxY, effectiveCurrency),
         })}
         viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="xMidYMid meet"
@@ -181,7 +202,7 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
           <g key={i}>
             <line x1={pad.left} y1={yScale(t)} x2={w - pad.right} y2={yScale(t)} stroke={t === 0 ? '#3a4252' : '#1d2230'} strokeDasharray={t === 0 ? undefined : '2 6'} />
             <text x={pad.left - 10} y={yScale(t) + 4} fill="#5b6478" fontSize="11" textAnchor="end" fontFamily="JetBrains Mono Variable, monospace" className="private">
-              {formatAmountCompact(t, currency)}
+              {formatAmountCompact(t, effectiveCurrency)}
             </text>
           </g>
         ))}
@@ -260,8 +281,23 @@ export function BalanceChart({ points, currency, height = 240, checkpoints, gapT
         </button>
       )}
 
+      {hasConsolidated && (
+        <button type="button" onClick={() => setShowRaw((v) => !v)} className="absolute top-2 left-2 text-[11px] text-ink-300 hover:text-ink-50 bg-ink-900/85 border border-ink-800 hover:border-ink-700 rounded-md px-2 py-1 transition">
+          {showRaw ? t('balanceChart.toggleConsolidated') : t('balanceChart.toggleRaw')}
+        </button>
+      )}
+
       {hover !== null && drag === null && hovered && (
-        <BalanceTooltip hovered={hovered} hoveredCheckpoint={hoveredCheckpoint} currency={currency} x={hover.x} y={hover.y} containerWidth={containerRef.current?.clientWidth ?? 1000} previousValue={hover.idx > 0 ? data[hover.idx - 1]!.value : null} />
+        <BalanceTooltip
+          hovered={hovered}
+          hoveredCheckpoint={hoveredCheckpoint}
+          currency={effectiveCurrency}
+          x={hover.x}
+          y={hover.y}
+          containerWidth={containerRef.current?.clientWidth ?? 1000}
+          previousValue={hover.idx > 0 ? data[hover.idx - 1]!.value : null}
+          unmappedCurrencies={useConsolidated ? unmappedByBucket.get(hovered.date) : undefined}
+        />
       )}
     </div>
   );

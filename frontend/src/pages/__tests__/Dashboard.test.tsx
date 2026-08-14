@@ -17,7 +17,9 @@ vi.mock('../../api/checkpoints', () => ({
 // The chart uses SVG size heuristics that don't render in jsdom; stub it out
 // to a plain <div> to keep the test focused on the surrounding orchestration.
 vi.mock('../../components/BalanceChart', () => ({
-  BalanceChart: ({ currency }: { currency: string }) => <div data-testid="chart">chart:{currency}</div>,
+  BalanceChart: ({ currency, consolidated }: { currency: string; consolidated?: { display: string } | null }) => (
+    <div data-testid="chart">chart:{currency}{consolidated ? `:consolidated:${consolidated.display}` : ''}</div>
+  ),
 }));
 vi.mock('../../components/CategoryBreakdown', () => ({
   CategoryBreakdown: () => <div data-testid="breakdown">breakdown</div>,
@@ -233,4 +235,52 @@ describe('Dashboard', () => {
     expect(screen.getByText(/50,00/)).toBeInTheDocument();
   });
 
+  it('passes the timeseries consolidated block through to BalanceChart when scoped to all accounts', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: 'EUR',
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 }],
+      };
+      if (path === '/api/reports/timeseries') return {
+        points: [],
+        consolidated: { display: 'EUR', points: [] },
+      };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    expect(await screen.findByText(/consolidated:EUR/)).toBeInTheDocument();
+  });
+
+  it('does not pass consolidated to BalanceChart when scoped to a single account', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 1,
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: 'EUR',
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [{ currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 }],
+      };
+      if (path === '/api/reports/timeseries') return {
+        points: [],
+        consolidated: { display: 'EUR', points: [] },
+      };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    // Wait for the settings-seeded scope (1) to hydrate before asserting —
+    // the first render still holds the DEFAULTS scope ('all') while
+    // /api/settings is in flight.
+    const selects = await screen.findAllByLabelText(/compte affiché/i);
+    await waitFor(() => expect((selects[0] as HTMLSelectElement).value).toBe('1'));
+    expect(screen.queryByText(/consolidated:/)).not.toBeInTheDocument();
+  });
 });

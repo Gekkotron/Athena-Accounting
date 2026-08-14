@@ -1,8 +1,15 @@
-import type { BalancePoint } from '../../api/types';
+import type { BalancePoint, TimeseriesConsolidatedPoint } from '../../api/types';
 
 export interface SeriesPoint {
   date: string;
   value: number;
+}
+
+// The timeseries report's `consolidated.points` are already one-per-bucket
+// and FX-converted server-side — nothing to forward-fill or filter, just
+// reshape into the chart's plain {date, value} series.
+export function buildConsolidatedSeries(points: TimeseriesConsolidatedPoint[]): SeriesPoint[] {
+  return points.map((p) => ({ date: p.bucket, value: Number(p.total) }));
 }
 
 // Clip a full-history point set to a display window WITHOUT losing quiet

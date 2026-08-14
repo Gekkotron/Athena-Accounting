@@ -81,6 +81,17 @@ export interface BalancePoint {
   cumulative: string;
 }
 
+export interface TimeseriesConsolidatedPoint {
+  bucket: string;
+  total: string;
+  unmapped: string[];
+}
+
+export interface TimeseriesConsolidatedBlock {
+  display: string;
+  points: TimeseriesConsolidatedPoint[];
+}
+
 export interface CategoryReportRow {
   category_id: number | null;
   category_name: string | null;
@@ -122,6 +133,20 @@ export type BudgetReportRow = {
   suggestedLimit: string | null;
 };
 
+export type BudgetConsolidatedRow = {
+  currency: string;
+  limit: string;
+  spent: string;
+  remaining: string;
+  projected: string | null;
+};
+
+export type BudgetConsolidatedBlock = {
+  display: string;
+  totals: { limit: string; spent: string; remaining: string; projected: string | null };
+  unmapped: BudgetConsolidatedRow[];
+};
+
 export type BudgetReport = {
   period: BudgetPeriod;
   month?: string;
@@ -130,6 +155,7 @@ export type BudgetReport = {
   elapsedDays: number;
   rows: BudgetReportRow[];
   totals: { limit: string; spent: string; remaining: string; projected: string | null };
+  consolidated?: BudgetConsolidatedBlock | null;
   unbudgetedCandidates: {
     categoryId: number; name: string; color: string | null;
     parentId: number | null; average: string;

@@ -5,14 +5,17 @@
     "zoomReset": {
       "button": "Réinitialiser le zoom",
       "title": "Double-cliquez sur le graphique pour la même action"
-    }
+    },
+    "toggleRaw": "Afficher par devise",
+    "toggleConsolidated": "Afficher consolidé"
   },
   "balanceTooltip": {
     "checkpoint": "point de contrôle",
     "expected": "attendu",
     "actual": "réel",
     "delta": "écart",
-    "expectedConfirmed": "attendu ✓"
+    "expectedConfirmed": "attendu ✓",
+    "unmappedNote": "Non converties : {{currencies}}"
   },
   "sankey": {
     "sourcesLabel": "Sources",

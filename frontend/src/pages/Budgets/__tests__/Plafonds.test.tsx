@@ -40,6 +40,9 @@ vi.mock('../../../api/client', () => ({
     if (url === '/api/accounts') {
       return { accounts: [{ id: 1, name: 'Compte principal', type: 'checking', currency: 'EUR' }] };
     }
+    if (url === '/api/settings') {
+      return { settings: { dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: null } };
+    }
     if (url.startsWith('/api/reports/budget')) {
       return {
         period: 'monthly',
@@ -102,6 +105,9 @@ describe('Budgets page — totals correction (no double-count)', () => {
       }
       if (url === '/api/accounts') {
         return { accounts: [{ id: 1, name: 'Compte principal', type: 'checking', currency: 'EUR' }] };
+      }
+      if (url === '/api/settings') {
+        return { settings: { dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: null } };
       }
       if (url.startsWith('/api/reports/budget')) {
         return {
@@ -179,6 +185,9 @@ describe('Budgets page — end-to-end URL + summary', () => {
       if (url === '/api/accounts') {
         return { accounts: [{ id: 10, name: 'Compte A', type: 'checking', currency: 'EUR', openingBalance: '0', openingDate: '2026-01-01' }] };
       }
+      if (url === '/api/settings') {
+        return { settings: { dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: null } };
+      }
       if (url.startsWith('/api/reports/budget')) {
         return {
           period: 'yearly',
@@ -228,5 +237,73 @@ describe('Budgets page — end-to-end URL + summary', () => {
 
     // Add form present.
     expect(screen.getByText(/Ajouter un budget/)).toBeInTheDocument();
+  });
+});
+
+describe('Budgets page — consolidated (FX) totals', () => {
+  function mockReport(consolidated: unknown) {
+    vi.mocked(api).mockImplementation(async (url: string) => {
+      if (url === '/api/categories') {
+        return { categories: [
+          { id: 1, name: 'Courses', kind: 'expense', color: null, parentId: null, isDefault: false, isInternalTransfer: false },
+        ] };
+      }
+      if (url === '/api/accounts') {
+        return { accounts: [{ id: 1, name: 'Compte principal', type: 'checking', currency: 'EUR' }] };
+      }
+      if (url === '/api/settings') {
+        return { settings: { dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: 'EUR' } };
+      }
+      if (url.startsWith('/api/reports/budget')) {
+        return {
+          period: 'monthly',
+          month: '2026-06',
+          windowDays: 30,
+          elapsedDays: 15,
+          rows: [{
+            id: 201, categoryId: 1, name: 'Courses', color: null, parentId: null, accountId: null, period: 'monthly',
+            limit: '50.00', currency: 'EUR', spent: '20.00', remaining: '30.00', pct: 40, over: false,
+            projected: null, history: null, anomaly: false, suggestedLimit: null,
+          }],
+          totals: { limit: '50.00', spent: '20.00', remaining: '30.00', projected: null },
+          consolidated,
+          unbudgetedCandidates: [],
+        };
+      }
+      if (url === '/api/budgets') {
+        return { budgets: [{ id: 1, categoryId: 1, monthlyLimit: '50.00', currency: 'EUR', period: 'monthly', accountId: null }] };
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+  }
+
+  it('shows the consolidated totals in the display currency when unmapped is empty', async () => {
+    mockReport({
+      display: 'EUR',
+      totals: { limit: '250.00', spent: '180.00', remaining: '70.00', projected: null },
+      unmapped: [],
+    });
+    render(withProviders(<Plafonds />));
+    expect(await screen.findByText(/Totaux convertis en EUR/)).toBeInTheDocument();
+    expect(screen.getByText(/180,00 € sur 250,00 € dépensés · reste 70,00 €/)).toBeInTheDocument();
+    expect(screen.queryByText('Devises non converties — ajoutez un taux pour les inclure dans le total :')).not.toBeInTheDocument();
+  });
+
+  it('renders a warning strip listing unmapped currencies', async () => {
+    mockReport({
+      display: 'EUR',
+      totals: { limit: '250.00', spent: '180.00', remaining: '70.00', projected: null },
+      unmapped: [{ currency: 'USD', limit: '0.00', spent: '50.00', remaining: '-50.00', projected: null }],
+    });
+    render(withProviders(<Plafonds />));
+    expect(await screen.findByText('Devises non converties — ajoutez un taux pour les inclure dans le total :')).toBeInTheDocument();
+    expect(screen.getAllByText('USD').length).toBeGreaterThan(0);
+  });
+
+  it('does not render the consolidated block when consolidated is null', async () => {
+    mockReport(null);
+    render(withProviders(<Plafonds />));
+    expect((await screen.findAllByText('Courses')).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Totaux convertis en/)).not.toBeInTheDocument();
   });
 });

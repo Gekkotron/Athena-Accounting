@@ -73,6 +73,10 @@
     "count": "Catégories sans budget ({{count}})",
     "defineButton": "Définir un plafond"
   },
+  "consolidated": {
+    "note": "Totaux convertis en {{currency}}",
+    "summary": "{{spent}} sur {{limit}} dépensés · reste {{remaining}}"
+  },
   "envelopes": {
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",

@@ -13,6 +13,9 @@ interface Props {
   // Value of the point immediately before the hovered one, or null at the
   // very first point. Drives the "diff from the last point" chip.
   previousValue: number | null;
+  // Currencies the consolidated total couldn't convert for this bucket
+  // (missing FX rate). Undefined/empty renders nothing.
+  unmappedCurrencies?: string[];
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -23,7 +26,7 @@ function clamp(v: number, min: number, max: number): number {
 // the data point. -translate-x-1/2 + -translate-y-full + -mt-3 puts it just
 // above the dot, centered horizontally. The container also clamps the X so
 // the tooltip never overflows on the sides.
-export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, containerWidth, previousValue }: Props): JSX.Element {
+export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, containerWidth, previousValue, unmappedCurrencies }: Props): JSX.Element {
   const { t } = useTranslation('charts');
   // Diff from the previous data point, e.g. "2 300 € (−100 €)". Intl renders
   // the minus for negatives; we prepend an explicit "+" for gains so the
@@ -70,6 +73,11 @@ export function BalanceTooltip({ hovered, hoveredCheckpoint, currency, x, y, con
           ) : (
             <div className="text-sage-300">{t('balanceTooltip.expectedConfirmed')} <span className="private">{formatAmount(hoveredCheckpoint.expectedAmount, currency)}</span></div>
           )}
+        </div>
+      )}
+      {unmappedCurrencies && unmappedCurrencies.length > 0 && (
+        <div className="mt-1 pt-1 border-t border-ink-800/60 text-[10px] text-amber-300/90">
+          {t('balanceTooltip.unmappedNote', { currencies: unmappedCurrencies.join(', ') })}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Budget, BudgetReport, BudgetPeriod } from '../api/types';
+import { useSettings } from './useSettings';
 
 export function useBudgets() {
   const qc = useQueryClient();
@@ -52,13 +53,17 @@ export function useBudgetReport(args: {
   year?: string;
   accountId?: number | null;
 }) {
+  const { settings } = useSettings();
+  const display = settings.displayCurrency;
+
   const query: Record<string, string | number> = { period: args.period };
   if (args.period === 'monthly' && args.month) query.month = args.month;
   if (args.period === 'yearly' && args.year) query.year = args.year;
   if (args.accountId != null) query.accountId = args.accountId;
+  if (display) query.display = display;
 
   return useQuery({
-    queryKey: ['budget-report', args.period, args.month, args.year, args.accountId ?? null],
+    queryKey: ['budget-report', args.period, args.month, args.year, args.accountId ?? null, display],
     queryFn: () => api<BudgetReport>('/api/reports/budget', { query }),
   });
 }

@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import { api, ApiError } from '../../api/client';
 import type { Account, BudgetPeriod, Category } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
+import { ConsolidatedSummary } from './ConsolidatedSummary';
 import { groupCategories } from '../../lib/categories';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
@@ -182,6 +183,10 @@ export function Plafonds(): JSX.Element {
           period={report.data.period}
           monthOrYear={monthOrYear}
         />
+      )}
+
+      {report.data?.consolidated && (
+        <ConsolidatedSummary consolidated={report.data.consolidated} />
       )}
 
       {/* Row list + Suggestions + Unbudgeted + Add form — placeholders for

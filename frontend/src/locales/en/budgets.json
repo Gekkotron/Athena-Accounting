@@ -73,6 +73,10 @@
     "count": "Categories without a budget ({{count}})",
     "defineButton": "Set a budget"
   },
+  "consolidated": {
+    "note": "Totals converted to {{currency}}",
+    "summary": "{{spent}} of {{limit}} spent · {{remaining}} left"
+  },
   "envelopes": {
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
