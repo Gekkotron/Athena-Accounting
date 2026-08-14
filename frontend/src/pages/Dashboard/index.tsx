@@ -34,8 +34,10 @@ export function Dashboard(): JSX.Element {
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
   });
   const balanceQ = useQuery({
-    queryKey: ['reports', 'balance'],
-    queryFn: () => api<{ perCurrency: PerCurrencyRow[]; consolidated: ConsolidatedBlock | null }>('/api/reports/balance'),
+    queryKey: ['reports', 'balance', settings.displayCurrency],
+    queryFn: () => api<{ perCurrency: PerCurrencyRow[]; consolidated: ConsolidatedBlock | null }>('/api/reports/balance', {
+      query: { ...(settings.displayCurrency ? { display: settings.displayCurrency } : {}) },
+    }),
   });
   const seriesQ = useQuery({
     queryKey: ['reports', 'timeseries', settings.displayCurrency],

@@ -3,7 +3,7 @@ import { getState, type DemoFxRate } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
 import { ApiError } from '../../../apiError';
 import { aggregateTimeseriesByBucket, consolidate, resolveRate } from '../../../../lib/fx';
-import { bucketFor, categoryById, money, monthOf, resolveDisplayCurrency, settingsDisplayCurrency, todayIso, txs } from './lib';
+import { bucketFor, categoryById, money, monthOf, resolveDisplayCurrency, settingsDisplayCurrency, txs } from './lib';
 
 function handleReportsTimeseries(req: DemoRequest) {
   const state = getState();
@@ -213,7 +213,9 @@ function handleReportsBudget(req: DemoRequest): BudgetReport & { consolidated: R
 
   let consolidated: ReturnType<typeof buildBudgetConsolidated> | null = null;
   if (resolved !== null) {
-    consolidated = buildBudgetConsolidated(consolidationRows, resolved, state.fxRates ?? [], todayIso());
+    // Mirrors backend/src/http/routes/reports/budget.ts's use of startIso.
+    const startIso = `${currentMonth}-01`;
+    consolidated = buildBudgetConsolidated(consolidationRows, resolved, state.fxRates ?? [], startIso);
   }
 
   return {

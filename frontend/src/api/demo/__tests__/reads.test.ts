@@ -288,4 +288,33 @@ describe('demo reports — consolidated block (manual FX table)', () => {
     expect(caught).toBeInstanceOf(ApiError);
     expect((caught as ApiError).status).toBe(400);
   });
+
+  it('GET /api/reports/budget: consolidated spent converts at the rate effective at the report period start', async () => {
+    await api('/api/fx-rates', { method: 'POST', json: { from: 'USD', to: 'EUR', effectiveFrom: '2025-06-01', rate: '0.8' } });
+    await api('/api/fx-rates', { method: 'POST', json: { from: 'USD', to: 'EUR', effectiveFrom: '2026-01-01', rate: '0.9' } });
+    await api('/api/settings', { method: 'PATCH', json: { displayCurrency: 'EUR' } });
+
+    const before = await api<{ consolidated: { totals: { spent: string } } }>(
+      '/api/reports/budget', { query: { month: '2026-01' } },
+    );
+
+    const cat = await api<{ category: { id: number } }>('/api/categories', {
+      method: 'POST', json: { name: 'USD Test', kind: 'expense' },
+    });
+    await api('/api/budgets', {
+      method: 'POST',
+      json: { categoryId: cat.category.id, monthlyLimit: '500.00', currency: 'USD', period: 'monthly' },
+    });
+    await api('/api/transactions', {
+      method: 'POST',
+      json: { categoryId: cat.category.id, date: '2026-01-15', amount: '-100.00' },
+    });
+
+    const after = await api<{ consolidated: { totals: { spent: string } } }>(
+      '/api/reports/budget', { query: { month: '2026-01' } },
+    );
+
+    const delta = Number(after.consolidated!.totals.spent) - Number(before.consolidated!.totals.spent);
+    expect(delta).toBeCloseTo(100 * 0.9, 2);
+  });
 });
