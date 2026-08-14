@@ -24,6 +24,9 @@ export const SettingsSchema = z
       .optional(),
     bankSyncHour: z.number().int().min(0).max(23).optional(),
     backupHour: z.number().int().min(0).max(23).optional(),
+    displayCurrency: z
+      .union([z.string().regex(/^[A-Z]{3}$/), z.null()])
+      .optional(),
   })
   .strict();
 
@@ -38,6 +41,7 @@ export type FullSettings = {
   transactionsDefaultAccount: TransactionsDefaultAccount;
   bankSyncHour: number;
   backupHour: number;
+  displayCurrency: string | null;
 };
 
 // Merges DEFAULTS <- stored (unvalidated JSONB) <- patch. `stored` is

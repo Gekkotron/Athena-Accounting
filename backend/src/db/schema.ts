@@ -74,8 +74,9 @@ export const users = pgTable('users', {
 //
 // opening_balance + opening_date are mandatory: every reported balance is
 // computed as opening_balance + SUM(amount WHERE date >= opening_date).
-// Multi-currency: each account has its own `currency`; aggregates are reported
-// per currency until an explicit FX-rate table is introduced.
+// Multi-currency: each account has its own `currency`; per-currency aggregates
+// are complemented by a `consolidated` block driven by the fx_rates table
+// (see backend/src/domain/fx/).
 // ---------------------------------------------------------------------------
 
 export const accounts = pgTable(
@@ -668,6 +669,42 @@ export const bankConnectionAccounts = pgTable(
       t.bankAccountUid,
     ),
     idxConnection: index('bank_connection_accounts_connection_idx').on(t.connectionId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// fx_rates — user-entered manual FX rates (migration 0038). One row per
+// (user, from_ccy, to_ccy, effective_from): the rate to convert 1 unit of
+// from_ccy into to_ccy, effective from that date onward until superseded by
+// a later effective_from row for the same pair.
+// ---------------------------------------------------------------------------
+
+export const fxRates = pgTable(
+  'fx_rates',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    fromCcy: varchar('from_ccy', { length: 3 }).notNull(),
+    toCcy: varchar('to_ccy', { length: 3 }).notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    rate: numeric('rate', { precision: 20, scale: 10 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqPairEffective: uniqueIndex('fx_rates_user_pair_effective_uq').on(
+      t.userId,
+      t.fromCcy,
+      t.toCcy,
+      t.effectiveFrom,
+    ),
+    idxLookup: index('fx_rates_user_pair_effective_idx').on(
+      t.userId,
+      t.fromCcy,
+      t.toCcy,
+      t.effectiveFrom,
+    ),
   }),
 );
 
