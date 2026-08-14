@@ -117,6 +117,32 @@
       },
       "expiryBanner": "Le consentement {{name}} expire le {{date}} — reconnectez la banque pour éviter une interruption de la synchronisation."
     },
+    "fx": {
+      "title": "Multi-devises",
+      "description": "Consolidez plusieurs devises dans une devise d'affichage unique. Les taux sont saisis manuellement.",
+      "displayCurrency": {
+        "label": "Devise d'affichage",
+        "none": "Aucune (par devise)"
+      },
+      "rates": {
+        "title": "Taux de change",
+        "columns": {
+          "from": "De",
+          "to": "Vers",
+          "effectiveFrom": "Effectif à partir du",
+          "rate": "Taux"
+        },
+        "add": "Ajouter",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "duplicate": "Un taux existe déjà pour cette paire à cette date.",
+        "invalidRate": "Taux invalide.",
+        "sameCurrency": "La devise source et cible doivent être différentes."
+      },
+      "suggest": {
+        "missingPair": "{{from}} détecté sur un compte — aucun taux vers {{to}}."
+      }
+    },
     "reset": {
       "button": "Réinitialiser aux valeurs par défaut",
       "dialogTitle": "Réinitialiser les réglages ?",

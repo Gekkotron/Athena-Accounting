@@ -23,6 +23,9 @@ export interface Settings {
   bankSyncHour: number;
   // Local hour (0-23, server clock) of the unattended remote backup.
   backupHour: number;
+  // 3-letter uppercase ISO currency code multi-currency totals are
+  // consolidated into, or null to keep reports split per-currency.
+  displayCurrency: string | null;
 }
 
 export const DEFAULTS: Settings = {
@@ -34,4 +37,5 @@ export const DEFAULTS: Settings = {
   transactionsDefaultAccount: 'first-checking',
   bankSyncHour: 2,
   backupHour: 3,
+  displayCurrency: null,
 };

@@ -117,6 +117,32 @@
       },
       "expiryBanner": "The {{name}} consent expires on {{date}} — reconnect the bank to avoid a sync interruption."
     },
+    "fx": {
+      "title": "Multi-currency",
+      "description": "Consolidate multiple currencies into a single display currency. Rates are entered manually.",
+      "displayCurrency": {
+        "label": "Display currency",
+        "none": "None (per-currency)"
+      },
+      "rates": {
+        "title": "Exchange rates",
+        "columns": {
+          "from": "From",
+          "to": "To",
+          "effectiveFrom": "Effective from",
+          "rate": "Rate"
+        },
+        "add": "Add",
+        "edit": "Edit",
+        "delete": "Delete",
+        "duplicate": "A rate already exists for this pair on this date.",
+        "invalidRate": "Invalid rate.",
+        "sameCurrency": "The source and target currency must be different."
+      },
+      "suggest": {
+        "missingPair": "{{from}} detected on an account — no rate to {{to}} yet."
+      }
+    },
     "reset": {
       "button": "Reset to defaults",
       "dialogTitle": "Reset settings?",
