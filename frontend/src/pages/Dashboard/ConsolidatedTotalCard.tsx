@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { formatAmount, amountSignClass } from '../../lib/format';
+import { FxUnmappedWarning } from '../../components/FxUnmappedWarning';
 
 export interface PerCurrencyRow {
   currency: string;
@@ -43,21 +44,7 @@ export function ConsolidatedTotalCard({ consolidated, currencyCount }: Props): J
       >
         {t('fx.convertedFrom', { count: mappedCount })}
       </Link>
-      {consolidated.unmapped.length > 0 && (
-        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-          <div className="text-xs text-amber-300/90">{t('fx.unmappedWarning')}</div>
-          <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-            {consolidated.unmapped.map((c) => (
-              <li key={c.currency} className="flex items-center gap-1.5 text-sm">
-                <span className="font-mono">{c.currency}</span>
-                <Link to="/settings#fx" className="text-sky-300 hover:text-sky-200 underline underline-offset-2">
-                  {t('fx.addRate')}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <FxUnmappedWarning unmapped={consolidated.unmapped} className="mt-3" />
     </div>
   );
 }

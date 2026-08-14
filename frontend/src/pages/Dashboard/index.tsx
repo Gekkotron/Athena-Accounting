@@ -128,6 +128,19 @@ export function Dashboard(): JSX.Element {
     points: seriesQ.data?.points,
   });
 
+  // The consolidated block aggregates ALL accounts server-side — only valid
+  // when the chart itself is scoped to 'all'. A single-account scope keeps
+  // the raw per-currency curve.
+  const chartConsolidated = chartScope === 'all' ? seriesQ.data?.consolidated ?? null : null;
+  // The forecast overlay's anchor/points are computed from raw single-currency
+  // balances (see useForecastProjection), while the consolidated series is
+  // FX-converted into `chartConsolidated.display`. Mixing the two would shift
+  // the historical curve by a bogus amount (mergeHistoricalAndProjection's
+  // `alignEndTo` assumes both magnitudes share a currency) — so the forecast
+  // overlay is suppressed whenever the chart is showing the consolidated
+  // series. Cross-currency forecast support is out of scope for now.
+  const chartUsesConsolidated = chartConsolidated !== null;
+
   return (
     <div className="flex flex-col gap-10">
       <div className="page-header">
@@ -237,14 +250,11 @@ export function Dashboard(): JSX.Element {
             <BalanceChart
               points={chartPoints}
               currency={chartCurrency}
-              // The consolidated block aggregates ALL accounts server-side —
-              // only valid when the chart itself is scoped to 'all'. A
-              // single-account scope keeps the raw per-currency curve.
-              consolidated={chartScope === 'all' ? seriesQ.data?.consolidated ?? null : null}
+              consolidated={chartConsolidated}
               checkpoints={chartCheckpoints}
               gapThresholdDays={settings.chartGapThresholdDays}
-              projection={forecastProjection?.points}
-              alignEndTo={forecastProjection?.anchor}
+              projection={chartUsesConsolidated ? undefined : forecastProjection?.points}
+              alignEndTo={chartUsesConsolidated ? undefined : forecastProjection?.anchor}
             />
           ) : (
             <LoadingBlock variant="inline" height="min-h-40" />

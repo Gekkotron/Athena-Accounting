@@ -17,8 +17,17 @@ vi.mock('../../api/checkpoints', () => ({
 // The chart uses SVG size heuristics that don't render in jsdom; stub it out
 // to a plain <div> to keep the test focused on the surrounding orchestration.
 vi.mock('../../components/BalanceChart', () => ({
-  BalanceChart: ({ currency, consolidated }: { currency: string; consolidated?: { display: string } | null }) => (
-    <div data-testid="chart">chart:{currency}{consolidated ? `:consolidated:${consolidated.display}` : ''}</div>
+  BalanceChart: ({ currency, consolidated, projection, alignEndTo }: {
+    currency: string;
+    consolidated?: { display: string } | null;
+    projection?: unknown[];
+    alignEndTo?: number;
+  }) => (
+    <div data-testid="chart">
+      chart:{currency}
+      {consolidated ? `:consolidated:${consolidated.display}` : ''}
+      {projection !== undefined || alignEndTo !== undefined ? ':hasProjection' : ''}
+    </div>
   ),
 }));
 vi.mock('../../components/CategoryBreakdown', () => ({
@@ -282,5 +291,46 @@ describe('Dashboard', () => {
     const selects = await screen.findAllByLabelText(/compte affiché/i);
     await waitFor(() => expect((selects[0] as HTMLSelectElement).value).toBe('1'));
     expect(screen.queryByText(/consolidated:/)).not.toBeInTheDocument();
+  });
+
+  it('suppresses the forecast overlay when the chart is showing the consolidated series', async () => {
+    // Regression test (review round 1, Finding 1): the forecast overlay's
+    // anchor/points are raw single-currency numbers (useForecastProjection),
+    // while the consolidated series is FX-converted — mixing the two via
+    // BalanceChart's alignEndTo silently shifted the whole historical curve.
+    // With showForecast on AND a real month of category history (so the
+    // overlay would otherwise be defined), the chart must still receive no
+    // projection/alignEndTo while consolidated is active.
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+          displayCurrency: 'EUR', showForecast: true,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte')] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [
+          { currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 },
+          { currency: 'USD', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 },
+        ],
+      };
+      if (path === '/api/reports/timeseries') return {
+        points: [],
+        consolidated: { display: 'EUR', points: [{ bucket: '2026-01-01', total: '190.00', unmapped: [] }] },
+      };
+      if (path === '/api/reports/categories') return {
+        rows: [
+          { category_id: 1, category_name: 'Salaire', category_kind: 'income', category_is_internal_transfer: false, month: '2026-05', total: '2000.00', transaction_count: 1 },
+          { category_id: 2, category_name: 'Courses', category_kind: 'expense', category_is_internal_transfer: false, month: '2026-05', total: '-500.00', transaction_count: 3 },
+        ],
+      };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    const chart = await screen.findByTestId('chart');
+    expect(chart.textContent).toContain('consolidated:EUR');
+    expect(chart.textContent).not.toContain('hasProjection');
   });
 });
