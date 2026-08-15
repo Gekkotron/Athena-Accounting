@@ -46,6 +46,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       transactionsDefaultAccount: 'first-checking',
       bankSyncHour: 2,
       backupHour: 3,
+      displayCurrency: null,
     });
   });
 
@@ -64,6 +65,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       transactionsDefaultAccount: 'first-checking',
       bankSyncHour: 2,
       backupHour: 3,
+      displayCurrency: null,
     });
   });
 
