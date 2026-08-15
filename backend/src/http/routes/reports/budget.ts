@@ -1,119 +1,23 @@
 import type { FastifyInstance } from 'fastify';
-import { sql } from 'drizzle-orm';
-import { db } from '../../../db/client.js';
 import { userId } from '../../plugins/auth.js';
 import { BudgetQuery } from './schemas.js';
-import { TX_EFFECTIVE_CTE } from './sql-fragments.js';
 import { annotateBudgetRow, elapsedIn, priorPeriodKeys } from './period-math.js';
 import { loadUserRates } from '../../../domain/fx/rates-repo.js';
-import { consolidate } from '../../../domain/fx/consolidate.js';
-import { resolveRate } from '../../../domain/fx/resolve-rate.js';
 import { loadUserDisplayCurrency } from '../../../domain/settings/loader.js';
 import { resolveDisplayCurrency } from './balance.js';
-import type { FxRate } from '../../../domain/fx/types.js';
+import {
+  buildBudgetConsolidatedBlock,
+  type BudgetConsolidatedBlock,
+} from './budget-consolidate.js';
+import {
+  fetchBudgetHistory,
+  fetchBudgetRows,
+  fetchUnbudgetedCandidates,
+} from './budget-queries.js';
 
-type BudgetConsolidateRow = {
-  currency: string;
-  limit: string;
-  spent: string;
-  remaining: string;
-  projected: string | null;
-};
-
-type BudgetConsolidatedBlock = {
-  display: string;
-  totals: {
-    limit: string;
-    spent: string;
-    remaining: string;
-    projected: string | null;
-  };
-  unmapped: BudgetConsolidateRow[];
-};
-
-const BUDGET_CONSOLIDATE_KEYS = ['limit', 'spent', 'remaining'] as const;
-
-// Half-up rounding to 2 decimals, matching the formula used across the FX
-// consolidation code (domain/fx/consolidate.ts keeps its own copy too — it's
-// small enough that duplicating beats exporting a "private" helper).
-function quantize2(n: number): string {
-  return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
-}
-
-// Groups the budget response's rows by currency, sums their numeric fields,
-// then converts the per-currency sums into `display` via the manual FX
-// table. `projected` is handled outside consolidate(): a null projected on
-// any row in a currency (too early in the period to extrapolate) poisons
-// that currency's projected sum, and any currency with a null or unmapped
-// (no applicable rate) projected sum poisons the consolidated total too.
-export function buildBudgetConsolidatedBlock(
-  rows: Array<{ currency: string; limit: string; spent: string; remaining: string; projected: string | null }>,
-  display: string,
-  rates: FxRate[],
-  at: string,
-): BudgetConsolidatedBlock {
-  type PerCurrencyAgg = { currency: string; limit: string; spent: string; remaining: string; projected: number | null };
-
-  const byCurrency = new Map<string, { limit: number; spent: number; remaining: number; projected: number | null }>();
-  for (const r of rows) {
-    let g = byCurrency.get(r.currency);
-    if (!g) {
-      g = { limit: 0, spent: 0, remaining: 0, projected: 0 };
-      byCurrency.set(r.currency, g);
-    }
-    g.limit += Number(r.limit);
-    g.spent += Number(r.spent);
-    g.remaining += Number(r.remaining);
-    if (g.projected !== null) {
-      if (r.projected == null) g.projected = null;
-      else g.projected += Number(r.projected);
-    }
-  }
-
-  const perCurrency: PerCurrencyAgg[] = Array.from(byCurrency.entries()).map(([currency, g]) => ({
-    currency,
-    limit: g.limit.toFixed(2),
-    spent: g.spent.toFixed(2),
-    remaining: g.remaining.toFixed(2),
-    projected: g.projected,
-  }));
-
-  const out = consolidate(perCurrency, display, rates, at, BUDGET_CONSOLIDATE_KEYS);
-  // consolidate() pushes back the exact row objects it received for any
-  // currency it couldn't map — its generic signature only names the
-  // `{ currency } & Record<K, string>` fields it operates on, but each
-  // element is still the original PerCurrencyAgg (projected included).
-  const unmappedRows = out.unmapped as PerCurrencyAgg[];
-
-  const anyNullProjected = perCurrency.some((p) => p.projected == null);
-  let projectedTotal: string | null = null;
-  if (unmappedRows.length === 0 && !anyNullProjected) {
-    let sum = 0;
-    for (const p of perCurrency) {
-      const rate = resolveRate(rates, p.currency, display, at);
-      // Guaranteed non-null: this currency wasn't pushed into `unmapped`.
-      sum += (p.projected as number) * (rate as number);
-    }
-    projectedTotal = quantize2(sum);
-  }
-
-  return {
-    display: out.display,
-    totals: {
-      limit: out.totals.limit,
-      spent: out.totals.spent,
-      remaining: out.totals.remaining,
-      projected: projectedTotal,
-    },
-    unmapped: unmappedRows.map((u) => ({
-      currency: u.currency,
-      limit: u.limit,
-      spent: u.spent,
-      remaining: u.remaining,
-      projected: u.projected == null ? null : u.projected.toFixed(2),
-    })),
-  };
-}
+// Re-exported so external importers (tests, downstream routes) that used to
+// pull the helper from './budget.js' don't have to know it moved.
+export { buildBudgetConsolidatedBlock } from './budget-consolidate.js';
 
 export function registerBudgetRoute(app: FastifyInstance): void {
   // Planned-vs-actual per budgeted expense category for one period (a
@@ -166,117 +70,32 @@ export function registerBudgetRoute(app: FastifyInstance): void {
 
     const startIso = periodStart.toISOString().slice(0, 10); // YYYY-MM-DD
     const endIso = periodEndExclusive.toISOString().slice(0, 10);
-
-    // Rows: for each budget matching the period + account scope, its rolled-up
-    // spend inside the period. Global budgets (account_id IS NULL) always count;
-    // scoped budgets require accountId param equality (or no filter).
-    const result = await db.execute<{
-      id: number;
-      category_id: number;
-      name: string;
-      color: string | null;
-      parent_id: number | null;
-      limit: string;
-      currency: string;
-      period: string;
-      account_id: number | null;
-      spent: string;
-    }>(sql`
-      WITH ${TX_EFFECTIVE_CTE}
-      SELECT
-        b.id                                        AS id,
-        b.category_id                               AS category_id,
-        c.name                                      AS name,
-        c.color                                     AS color,
-        c.parent_id                                 AS parent_id,
-        b.monthly_limit::text                       AS limit,
-        b.currency                                  AS currency,
-        b.period                                    AS period,
-        b.account_id                                AS account_id,
-        COALESCE(-SUM(e.amount), 0)::text           AS spent
-      FROM category_budgets b
-      JOIN categories c ON c.id = b.category_id AND c.user_id = ${uid}
-      LEFT JOIN tx_effective e
-        ON (
-          e.category_id = b.category_id
-          OR e.category_id IN (
-            SELECT cc.id FROM categories cc
-            WHERE cc.parent_id = b.category_id AND cc.user_id = ${uid}
-          )
-        )
-       AND e.user_id = ${uid}
-       AND e.transfer_group_id IS NULL
-       AND e.date >= ${startIso}::date
-       AND e.date <  ${endIso}::date
-       AND (b.account_id IS NULL OR e.account_id = b.account_id)
-       AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
-      WHERE b.user_id = ${uid}
-        AND b.period = ${period}
-        AND (
-          b.account_id IS NULL
-          OR (${accountId ?? null}::int IS NULL AND b.account_id IS NOT NULL)
-          OR b.account_id = ${accountId ?? null}::int
-        )
-      GROUP BY b.id, b.category_id, c.name, c.color, c.parent_id, b.monthly_limit, b.currency, b.period, b.account_id
-      ORDER BY c.name ASC
-    `);
-
-    // When accountId IS provided, hide budgets scoped to OTHER accounts (SQL
-    // above lets global rows and rows scoped to this account through; this
-    // pass makes that intent explicit and defensive).
-    const rowsFiltered = result.rows.filter((r) =>
-      accountId == null ? true : r.account_id == null || r.account_id === accountId
-    );
-
-    // Fetch 6 completed periods of history in one query, grouped by budget row.
-    // For monthly: 6 calendar months before periodStart. For yearly: 6 calendar
-    // years before periodStart. Missing (userId, categoryId, periodKey) tuples
-    // stay zero.
     const historyStart = period === 'monthly'
       ? new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() - 6, 1))
       : new Date(Date.UTC(periodStart.getUTCFullYear() - 6, 0, 1));
 
-    const historyRes = await db.execute<{
-      budget_id: number;
-      category_id: number;
-      period_key: string;      // 'YYYY-MM' or 'YYYY'
-      spent: string;
-    }>(sql`
-      WITH ${TX_EFFECTIVE_CTE}
-      SELECT
-        b.id                                          AS budget_id,
-        b.category_id,
-        ${period === 'monthly'
-          ? sql`to_char(e.date, 'YYYY-MM')`
-          : sql`to_char(e.date, 'YYYY')`
-        } AS period_key,
-        COALESCE(-SUM(e.amount), 0)::text AS spent
-      FROM category_budgets b
-      JOIN tx_effective e
-        ON (
-          e.category_id = b.category_id
-          OR e.category_id IN (
-            SELECT cc.id FROM categories cc
-            WHERE cc.parent_id = b.category_id AND cc.user_id = ${uid}
-          )
-        )
-       AND e.user_id = ${uid}
-       AND e.transfer_group_id IS NULL
-       AND e.date >= ${historyStart.toISOString().slice(0, 10)}::date
-       AND e.date <  ${startIso}::date
-       AND (b.account_id IS NULL OR e.account_id = b.account_id)
-       AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
-      WHERE b.user_id = ${uid}
-        AND b.period = ${period}
-      GROUP BY b.id, b.category_id, period_key
-    `);
+    const budgetRows = await fetchBudgetRows(uid, period, startIso, endIso, accountId ?? null);
+    // When accountId IS provided, hide budgets scoped to OTHER accounts (SQL
+    // already lets global rows and rows scoped to this account through; this
+    // pass makes that intent explicit and defensive).
+    const rowsFiltered = budgetRows.filter((r) =>
+      accountId == null ? true : r.account_id == null || r.account_id === accountId
+    );
+
+    const historyRows = await fetchBudgetHistory(
+      uid,
+      period,
+      historyStart.toISOString().slice(0, 10),
+      startIso,
+      accountId ?? null,
+    );
 
     // Group history rows by budget-row id (not category_id) then by period_key.
     // A category can have both a GLOBAL and an ACCOUNT-SCOPED budget (Task 2),
     // so keying by category_id here would double-count: the outer /result
     // query already groups by b.id per row, so history must match that grain.
     const historyByBudget = new Map<number, Map<string, string>>();
-    for (const r of historyRes.rows) {
+    for (const r of historyRows) {
       let inner = historyByBudget.get(r.budget_id);
       if (!inner) { inner = new Map(); historyByBudget.set(r.budget_id, inner); }
       inner.set(r.period_key, r.spent);
@@ -284,22 +103,18 @@ export function registerBudgetRoute(app: FastifyInstance): void {
 
     // Rows whose parent category is ALSO budgeted must be excluded from the
     // totals: the parent's rolled-up spend/limit already includes this row's,
-    // so summing both double-counts it. This is the backend counterpart of
-    // the frontend's client-side `topLevelRows` filter — both are kept
-    // (defense-in-depth) so a future change to either side can't silently
-    // reintroduce the double-count.
+    // so summing both double-counts it. Mirrors the frontend's `topLevelRows`
+    // filter — both are kept (defense-in-depth) so a future change to either
+    // side can't silently reintroduce the double-count.
     const budgetedCategoryIds = new Set(rowsFiltered.map((r) => r.category_id));
 
     let totalLimit = 0;
     let totalSpent = 0;
     let totalProjected: number | null = 0;
-    // Same rows the flat `totals` sum (see includeInTotals below), grouped by
-    // currency downstream to build the `consolidated` block.
     const consolidationRows: Array<{ currency: string; limit: string; spent: string; remaining: string; projected: string | null }> = [];
     const rows = rowsFiltered.map((r) => {
       const limit = Number(r.limit);
       const spent = Number(r.spent);
-
       const priorKeys = priorPeriodKeys(period, periodStart);
       const catHist = historyByBudget.get(r.id) ?? new Map<string, string>();
       const historyValuesNum = priorKeys.map((k) => Number(catHist.get(k) ?? '0'));
@@ -397,45 +212,14 @@ export function registerBudgetRoute(app: FastifyInstance): void {
     const candidateHistoryStart = period === 'monthly'
       ? new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() - 3, 1))
       : new Date(Date.UTC(periodStart.getUTCFullYear() - 3, 0, 1));
-
-    const candidateRes = await db.execute<{
-      category_id: number;
-      name: string;
-      color: string | null;
-      parent_id: number | null;
-      average: string;
-    }>(sql`
-      WITH ${TX_EFFECTIVE_CTE},
-      spend AS (
-        SELECT
-          e.category_id,
-          ${period === 'monthly' ? sql`to_char(e.date, 'YYYY-MM')` : sql`to_char(e.date, 'YYYY')`} AS period_key,
-          COALESCE(-SUM(e.amount), 0)::numeric AS spent
-        FROM tx_effective e
-        WHERE e.user_id = ${uid}
-          AND e.transfer_group_id IS NULL
-          AND e.date >= ${candidateHistoryStart.toISOString().slice(0, 10)}::date
-          AND e.date <  ${startIso}::date
-          AND (${accountId ?? null}::int IS NULL OR e.account_id = ${accountId ?? null}::int)
-        GROUP BY e.category_id, period_key
-      )
-      SELECT
-        c.id                                       AS category_id,
-        c.name                                     AS name,
-        c.color                                    AS color,
-        c.parent_id                                AS parent_id,
-        ROUND(AVG(s.spent)::numeric, 2)::text       AS average
-      FROM categories c
-      LEFT JOIN spend s ON s.category_id = c.id
-      WHERE c.user_id = ${uid}
-        AND c.kind = 'expense'
-      GROUP BY c.id, c.name, c.color, c.parent_id
-      HAVING COALESCE(AVG(s.spent), 0) > 0
-      ORDER BY AVG(s.spent) DESC
-      LIMIT 20
-    `);
-
-    response.unbudgetedCandidates = candidateRes.rows
+    const candidateRows = await fetchUnbudgetedCandidates(
+      uid,
+      period,
+      candidateHistoryStart.toISOString().slice(0, 10),
+      startIso,
+      accountId ?? null,
+    );
+    response.unbudgetedCandidates = candidateRows
       .filter((c) => !budgetedCategoryIds.has(c.category_id))
       .map((c) => ({
         categoryId: c.category_id,
