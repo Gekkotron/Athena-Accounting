@@ -18,7 +18,7 @@ Go to *Accounts → New account*. Every account needs five things:
 |-------|---------------|
 | **Name** | Free text — shown on cards, in transaction lists, and in the account picker. |
 | **Type** | `checking`, `savings`, `investment`, `credit`, or `other`. The type influences styling and a couple of aggregates, not the balance math. |
-| **Currency** | ISO 4217 code (EUR, USD, GBP…). Displayed as a badge on every card. |
+| **Currency** | Picked from a dropdown listing every ISO 4217 code the browser knows (~170 entries), labelled with the currency name (`EUR — Euro`, `USD — US Dollar`, …). Displayed as a badge on every card. Defaults to `EUR`. |
 | **Opening balance** | The balance on the opening date. Every reported balance is `opening_balance + SUM(amount WHERE date >= opening_date)`, so this number is load-bearing — get it right on day one. |
 | **Opening date** | The date the opening balance is taken as of. Usually the day before the earliest transaction you plan to import. |
 
@@ -39,11 +39,31 @@ delete those first, or use the merge flow below.
 
 ## Currency
 
-Each account is single-currency. Athena does not do FX conversion —
-cards, charts, and totals display in the account's own currency, and
-the Dashboard groups totals per currency when accounts span more than
-one. If you hold the same physical account in two currencies, model
-it as two Athena accounts.
+Each account is single-currency by design — the running-balance math
+in `opening_balance + SUM(amount)` only holds when every row is
+denominated the same way. If you hold the same physical account in
+two currencies, model it as two Athena accounts.
+
+Per-account surfaces (cards, the balance chart, individual balances)
+always display in the account's own currency. If your accounts span
+more than one currency and you want a single consolidated total
+across all of them, switch on the **Multi-currency** section at the
+bottom of *Settings*:
+
+1. **Display currency** — pick the currency you want the Dashboard
+   total in. Leaving it as *"None (per-currency)"* keeps the pre-FX
+   behaviour: totals stay grouped per currency.
+2. **Exchange rates** — the table below the picker holds every
+   rate you've entered. Add a row per `(from, to, effective from)`
+   triplet; the Dashboard uses the most recent effective-from rate on
+   or before each transaction's date. Rates are entered manually
+   (Athena does not fetch live rates).
+
+Missing pairs surface as a hint below the picker (*"EUR detected on
+an account — no rate to USD yet"*) so you know which rate to add
+next. If the display currency is set and a required pair is still
+missing, the Dashboard shows the offending accounts in an *"FX
+unmapped"* warning rather than lying about a total.
 
 ## Marking an account as invested
 

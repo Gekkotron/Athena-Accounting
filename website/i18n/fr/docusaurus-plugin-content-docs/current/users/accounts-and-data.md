@@ -18,7 +18,7 @@ doublons, les modèles PDF et les sauvegardes.
 |-------|------|
 | **Nom** | Texte libre — affiché sur les cartes, dans les listes de transactions et dans le sélecteur de compte. |
 | **Type** | `checking`, `savings`, `investment`, `credit` ou `other`. Le type influe sur l'affichage et sur quelques agrégats, mais pas sur le calcul du solde. |
-| **Devise** | Code ISO 4217 (EUR, USD, GBP…). Affiché en badge sur chaque carte. |
+| **Devise** | Choisie dans un menu déroulant listant tous les codes ISO 4217 connus du navigateur (~170 entrées), avec leur libellé (`EUR — euro`, `USD — dollar des États-Unis`…). Affichée en badge sur chaque carte. `EUR` par défaut. |
 | **Solde d'ouverture** | Solde à la date d'ouverture. Chaque solde reporté est calculé comme `solde_ouverture + SOMME(montant WHERE date >= date_ouverture)` — ce chiffre est structurel, à saisir avec soin dès le premier jour. |
 | **Date d'ouverture** | Date à laquelle le solde d'ouverture est mesuré. Généralement la veille de la première transaction que vous prévoyez d'importer. |
 
@@ -42,11 +42,34 @@ ci-dessous.
 
 ## Devise
 
-Chaque compte est mono-devise. Athena ne convertit pas les devises —
-les cartes, graphiques et totaux s'affichent dans la devise propre
-au compte, et le tableau de bord regroupe les totaux par devise
-lorsque plusieurs sont présentes. Si vous détenez le même compte
+Chaque compte est mono-devise par construction — le calcul du solde
+courant `solde_ouverture + SOMME(montant)` ne tient que si toutes les
+lignes sont dans la même unité. Si vous détenez le même compte
 physique en deux devises, modélisez-le comme deux comptes Athena.
+
+Les surfaces par compte (cartes, courbe du solde, soldes
+individuels) restent toujours dans la devise propre au compte. Si
+vos comptes couvrent plusieurs devises et que vous voulez un total
+consolidé unique, activez la section **Multi-devises** au bas des
+*Réglages* :
+
+1. **Devise d'affichage** — choisissez la devise dans laquelle vous
+   voulez lire le total du tableau de bord. Laissée sur *« Aucune
+   (par devise) »*, on garde le comportement pré-FX : les totaux
+   restent regroupés par devise.
+2. **Taux de change** — le tableau juste en dessous du sélecteur
+   contient tous les taux que vous avez saisis. Ajoutez une ligne
+   par triplet `(De, Vers, Effectif à partir du)` ; le tableau de
+   bord applique à chaque transaction le taux le plus récent
+   effectif à sa date. Les taux sont saisis manuellement (Athena ne
+   récupère pas de cotations en direct).
+
+Les paires manquantes sont signalées sous le sélecteur (*« EUR
+détecté sur un compte — aucun taux vers USD »*) pour indiquer
+laquelle ajouter. Si la devise d'affichage est renseignée mais qu'un
+taux requis manque, le tableau de bord affiche un avertissement
+*« FX non mappé »* sur les comptes concernés plutôt que d'inventer
+un total.
 
 ## Marquer un compte comme investi
 
