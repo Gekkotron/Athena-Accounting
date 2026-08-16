@@ -1,10 +1,20 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseDecimal } from '../../lib/format';
 import { todayLocalIso } from '../../lib/dates';
 import { InfoTip } from '../../components/InfoTip';
 
 const ACCOUNT_TYPES = ['checking', 'savings', 'investment', 'credit', 'other'] as const;
+
+// Full ISO 4217 list from the JS engine (~170 codes). Fallback to the common
+// set if the runtime pre-dates Intl.supportedValuesOf.
+const ISO_CURRENCY_CODES: string[] = (() => {
+  try {
+    return Intl.supportedValuesOf('currency');
+  } catch {
+    return ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY'];
+  }
+})();
 
 export interface AccountFormValues {
   name: string;
@@ -46,7 +56,22 @@ function FormFields({
   setLockYearsInput: (v: string) => void;
   mode: 'create' | 'edit';
 }) {
-  const { t } = useTranslation('accounts');
+  const { t, i18n } = useTranslation('accounts');
+  const currencyOptions = useMemo(() => {
+    const locale = i18n.language?.startsWith('en') ? 'en' : 'fr';
+    let names: Intl.DisplayNames | null = null;
+    try {
+      names = new Intl.DisplayNames([locale], { type: 'currency' });
+    } catch {
+      names = null;
+    }
+    return ISO_CURRENCY_CODES
+      .map((code) => {
+        const name = names?.of(code);
+        return { code, label: name && name !== code ? `${code} — ${name}` : code };
+      })
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [i18n.language]);
   return (
     <>
       <div className={mode === 'create' ? 'lg:col-span-2' : ''}>
@@ -81,13 +106,16 @@ function FormFields({
       </div>
       <div>
         <label className="label mb-1.5 block">{t('form.labels.currency')}</label>
-        <input
+        <select
           className="input"
           value={currency}
-          onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-          maxLength={3}
+          onChange={(e) => setCurrency(e.target.value)}
           required={mode === 'create'}
-        />
+        >
+          {currencyOptions.map((c) => (
+            <option key={c.code} value={c.code}>{c.label}</option>
+          ))}
+        </select>
       </div>
       <div>
         <label className="label mb-1.5 block">{t('form.labels.openingBalance')}</label>
