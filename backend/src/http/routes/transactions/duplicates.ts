@@ -3,13 +3,127 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { transactions } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
+import {
+  MAX_DAY_DELTA,
+  MAX_AMOUNT_DELTA,
+  LABEL_JACCARD_THRESHOLD,
+} from '../../../domain/dedup/fuzzy-match.js';
+import { groupMinPairwiseSimilarity } from '../../../lib/label-similarity.js';
+
+type Row = Record<string, unknown> & {
+  id: number;
+  account_id: number;
+  date: string;
+  amount: string;
+  raw_label: string;
+  not_duplicate: boolean;
+};
+
+export interface DuplicatesResponse {
+  groups: Array<{
+    accountId: number;
+    date: string;
+    amount: string;
+    transactions: Row[];
+  }>;
+}
+
+// Soft-dedup detection: find transactions that share (account, ±date-window,
+// ±amount-window, same sign) but have a different dedup_key — labels that
+// differ enough to evade the strict UNIQUE constraint but match enough on
+// identity to be plausible duplicates worth a human glance. Widened from the
+// exact-tuple match so bank re-posts and rounding drift surface too; groups
+// are then filtered by max-pairwise Jaccard so a coincidental (date, amount)
+// collision with disjoint labels drops out.
+export async function getDuplicates(opts: {
+  userId: number;
+  accountIdFilter?: number | null;
+}): Promise<DuplicatesResponse> {
+  const accountIdFilter = opts.accountIdFilter ?? null;
+  const rows = await db.execute<Row>(sql`
+    SELECT t.*
+    FROM transactions t
+    WHERE t.user_id = ${opts.userId}
+      AND t.transfer_group_id IS NULL
+      ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
+      AND EXISTS (
+        SELECT 1 FROM transactions t2
+        WHERE t2.user_id = t.user_id
+          AND t2.account_id = t.account_id
+          AND t2.id <> t.id
+          AND t2.transfer_group_id IS NULL
+          AND ABS(t2.date - t.date) <= ${MAX_DAY_DELTA}
+          AND ABS(t2.amount::numeric - t.amount::numeric) <= ${MAX_AMOUNT_DELTA}
+          AND SIGN(t2.amount::numeric) = SIGN(t.amount::numeric)
+      )
+    ORDER BY t.account_id, t.date DESC, t.amount, t.id
+  `);
+
+  const byAccount = new Map<number, Row[]>();
+  for (const r of rows.rows) {
+    const arr = byAccount.get(r.account_id) ?? [];
+    arr.push(r);
+    byAccount.set(r.account_id, arr);
+  }
+
+  const groups: DuplicatesResponse['groups'] = [];
+  for (const [accountId, accountRows] of byAccount) {
+    // Connected-components clustering via Union-Find over the fuzzy-adjacency
+    // graph. A chain a↔b↔c can group without a↔c matching directly.
+    const parent = new Map<number, number>();
+    const find = (x: number): number => {
+      let cur = x;
+      while (parent.get(cur) !== cur) {
+        const p = parent.get(cur)!;
+        parent.set(cur, parent.get(p)!);
+        cur = parent.get(cur)!;
+      }
+      return cur;
+    };
+    for (const r of accountRows) parent.set(r.id, r.id);
+    for (let i = 0; i < accountRows.length; i++) {
+      for (let j = i + 1; j < accountRows.length; j++) {
+        const a = accountRows[i]!;
+        const b = accountRows[j]!;
+        const dateDiff = Math.abs(dateToUtc(a.date) - dateToUtc(b.date)) / 86_400_000;
+        if (dateDiff > MAX_DAY_DELTA) continue;
+        if (Math.abs(Number(a.amount) - Number(b.amount)) > MAX_AMOUNT_DELTA + 1e-9) continue;
+        if (Math.sign(Number(a.amount)) !== Math.sign(Number(b.amount))) continue;
+        const ra = find(a.id);
+        const rb = find(b.id);
+        if (ra !== rb) parent.set(ra, rb);
+      }
+    }
+    const byRoot = new Map<number, Row[]>();
+    for (const r of accountRows) {
+      const root = find(r.id);
+      const arr = byRoot.get(root) ?? [];
+      arr.push(r);
+      byRoot.set(root, arr);
+    }
+    for (const [, members] of byRoot) {
+      if (members.length < 2) continue;
+      const labels = members.map((m) => m.raw_label);
+      if (groupMinPairwiseSimilarity(labels) < LABEL_JACCARD_THRESHOLD) continue;
+      if (members.every((m) => m.not_duplicate)) continue;
+      members.sort((a, b) => (a.date === b.date ? a.id - b.id : a.date.localeCompare(b.date)));
+      groups.push({
+        accountId,
+        date: members[0]!.date,
+        amount: members[0]!.amount,
+        transactions: members,
+      });
+    }
+  }
+  return { groups };
+}
+
+function dateToUtc(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  return Date.UTC(y, m - 1, d);
+}
 
 export function registerDuplicateRoutes(app: FastifyInstance): void {
-  // Soft-dedup detection: find transactions that share (account, date, amount)
-  // but have a different dedup_key — i.e. labels that differ enough to evade
-  // the strict UNIQUE constraint but match enough on identity to be plausible
-  // duplicates worth a human glance. Used by the Imports page to surface these
-  // after every import.
   app.get('/api/transactions/duplicates', async (req, reply) => {
     const uid = userId(req);
     const q = req.query as { accountId?: string };
@@ -21,43 +135,7 @@ export function registerDuplicateRoutes(app: FastifyInstance): void {
       }
       accountIdFilter = n;
     }
-    // Surface a group only when at least one of its rows is still unmarked.
-    // Once the user clicks "Ce n'est pas un doublon" on every row in the
-    // group, BOOL_OR(NOT not_duplicate) flips to false and the group is hidden.
-    const rows = await db.execute(sql`
-      SELECT t.*
-      FROM transactions t
-      WHERE t.user_id = ${uid}
-        AND (t.account_id, t.date, t.amount) IN (
-          SELECT account_id, date, amount
-          FROM transactions
-          WHERE user_id = ${uid}
-          ${accountIdFilter !== null ? sql`AND account_id = ${accountIdFilter}` : sql``}
-          GROUP BY account_id, date, amount
-          HAVING count(*) >= 2
-             AND count(distinct dedup_key) >= 2
-             AND BOOL_OR(NOT not_duplicate)
-        )
-      ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
-      ORDER BY t.account_id, t.date DESC, t.amount, t.id
-    `);
-    const groupsMap = new Map<string, Array<Record<string, unknown>>>();
-    for (const r of rows.rows as Array<Record<string, unknown>>) {
-      const key = `${r.account_id}|${r.date}|${r.amount}`;
-      const arr = groupsMap.get(key) ?? [];
-      arr.push(r);
-      groupsMap.set(key, arr);
-    }
-    const groups = Array.from(groupsMap.entries()).map(([k, txns]) => {
-      const [accId, date, amount] = k.split('|');
-      return {
-        accountId: Number(accId),
-        date,
-        amount,
-        transactions: txns,
-      };
-    });
-    return { groups };
+    return getDuplicates({ userId: uid, accountIdFilter });
   });
 
   // Batch-mark a set of transaction ids as "not a duplicate". Used by the
