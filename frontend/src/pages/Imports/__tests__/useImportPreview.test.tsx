@@ -29,6 +29,7 @@ describe('useImportPreview', () => {
       filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 1,
       newRows: [{ date: '2026-06-15', amount: '-1.00', rawLabel: 'X', memo: null }],
       duplicateRows: [],
+      fuzzyDuplicateRows: [],
     });
     const c = cbs();
     const { result } = renderHook(() => useImportPreview(c));
@@ -39,7 +40,7 @@ describe('useImportPreview', () => {
 
   it('confirm() calls apiUpload with the retained file and invokes onImported', async () => {
     previewMock.mockResolvedValue({
-      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 1, newRows: [], duplicateRows: [],
+      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 1, newRows: [], duplicateRows: [], fuzzyDuplicateRows: [],
     });
     uploadMock.mockResolvedValue({ filename: 'x.csv', insertedCount: 1, dedupSkipped: 0, totalLines: 1 });
     const c = cbs();
@@ -56,7 +57,7 @@ describe('useImportPreview', () => {
 
   it('cancel() clears preview state without calling apiUpload', async () => {
     previewMock.mockResolvedValue({
-      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 0, newRows: [], duplicateRows: [],
+      filename: 'x.csv', format: 'csv', accountId: 3, totalRows: 0, newRows: [], duplicateRows: [], fuzzyDuplicateRows: [],
     });
     const c = cbs();
     const { result } = renderHook(() => useImportPreview(c));

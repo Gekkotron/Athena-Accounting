@@ -115,6 +115,16 @@ describe('apiUpload()', () => {
       message: 'account not found',
     });
   });
+
+  it('appends extra form fields when `fields` is provided', async () => {
+    const fetchMock = mockFetch(() => jsonRes({ ok: true }));
+    await apiUpload('/api/imports', new File(['x'], 'x.csv'), {
+      fields: { skipParsedIndices: '[0,2,5]' },
+    });
+    const [, init] = fetchMock.mock.calls[0]!;
+    const form = (init as RequestInit).body as FormData;
+    expect(form.get('skipParsedIndices')).toBe('[0,2,5]');
+  });
 });
 
 describe('401 unauthorized handler', () => {

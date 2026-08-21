@@ -87,6 +87,7 @@ describe('UploadForm', () => {
       filename: 'new.csv', format: 'csv', accountId: 1, totalRows: 1,
       newRows: [{ date: '2026-06-15', amount: '-10.00', rawLabel: 'A', memo: null }],
       duplicateRows: [],
+      fuzzyDuplicateRows: [],
     });
     uploadMock.mockResolvedValue({ filename: 'new.csv', insertedCount: 5, dedupSkipped: 1, totalLines: 6 });
     const user = userEvent.setup();
@@ -121,6 +122,7 @@ describe('UploadForm', () => {
       filename: 'p.csv', format: 'csv', accountId: 1, totalRows: 1,
       newRows: [{ date: '2026-06-15', amount: '-1.00', rawLabel: 'X', memo: null }],
       duplicateRows: [],
+      fuzzyDuplicateRows: [],
     });
     const user = userEvent.setup();
     renderForm();

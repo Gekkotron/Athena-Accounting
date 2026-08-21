@@ -86,7 +86,7 @@ async function readAndValidateResponse(res: Response, path: string): Promise<{ t
 export async function apiUpload<T>(
   path: string,
   file: File,
-  opts?: { query?: Record<string, unknown> },
+  opts?: { query?: Record<string, unknown>; fields?: Record<string, string> },
 ): Promise<T> {
   if (IS_DEMO) return demo.apiUpload<T>(path, file, opts);
   const url = new URL(path, window.location.origin);
@@ -98,6 +98,9 @@ export async function apiUpload<T>(
   }
   const form = new FormData();
   form.append('file', file, file.name);
+  if (opts?.fields) {
+    for (const [k, v] of Object.entries(opts.fields)) form.append(k, v);
+  }
   const res = await fetch(url.pathname + url.search, {
     method: 'POST',
     credentials: 'include',

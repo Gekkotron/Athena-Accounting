@@ -101,7 +101,7 @@ export async function api<T>(
 export async function apiUpload<T>(
   path: string,
   _file: File,
-  _opts?: { query?: Record<string, unknown> },
+  _opts?: { query?: Record<string, unknown>; fields?: Record<string, string> },
 ): Promise<T> {
   throw new ApiError(
     "Cette fonctionnalité n'est pas disponible dans la démo.",

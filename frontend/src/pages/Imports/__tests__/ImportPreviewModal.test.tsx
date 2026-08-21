@@ -24,6 +24,7 @@ const preview: ImportPreview = {
   duplicateRows: [
     { date: '2026-06-14', amount: '-10.00', rawLabel: 'Doublon', memo: null },
   ],
+  fuzzyDuplicateRows: [],
 };
 
 describe('ImportPreviewModal', () => {
@@ -89,6 +90,7 @@ describe('ImportPreviewModal', () => {
         date: '2026-06-15', amount: '-1.00', rawLabel: `Row-${i}`, memo: null,
       })),
       duplicateRows: [],
+      fuzzyDuplicateRows: [],
     };
     const user = userEvent.setup();
     render(<ImportPreviewModal preview={many} onConfirm={() => {}} onCancel={() => {}} />);

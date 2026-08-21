@@ -19,6 +19,7 @@ describe('previewImport', () => {
       totalRows: 1,
       newRows: [{ date: '2026-06-15', amount: '-3.50', rawLabel: 'X', memo: null }],
       duplicateRows: [],
+      fuzzyDuplicateRows: [],
     };
     uploadMock.mockResolvedValue(payload);
     const file = new File(['x'], 'x.csv', { type: 'text/csv' });
@@ -30,7 +31,7 @@ describe('previewImport', () => {
   it('omits the accountId query when accountId is undefined', async () => {
     uploadMock.mockResolvedValue({
       filename: 'y.csv', format: 'csv', accountId: 3, totalRows: 0,
-      newRows: [], duplicateRows: [],
+      newRows: [], duplicateRows: [], fuzzyDuplicateRows: [],
     });
     const file = new File(['x'], 'y.csv', { type: 'text/csv' });
     await previewImport(file);
