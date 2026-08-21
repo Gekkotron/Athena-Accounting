@@ -77,6 +77,21 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
 
     const uid = userId(req);
 
+    let skipParsedIndices: number[] | undefined;
+    const rawSkip = (data.fields as Record<string, { value?: unknown } | undefined>).skipParsedIndices?.value;
+    if (typeof rawSkip === 'string' && rawSkip.trim()) {
+      try {
+        const parsedSkip = JSON.parse(rawSkip);
+        if (Array.isArray(parsedSkip)) {
+          skipParsedIndices = parsedSkip
+            .map((v) => Number(v))
+            .filter((n) => Number.isInteger(n) && n >= 0);
+        }
+      } catch {
+        return reply.code(400).send({ error: 'skipParsedIndices must be a JSON array of integers' });
+      }
+    }
+
     if (format === 'pdf') {
       if (buffer.byteLength > PDF_MAX_BYTES) {
         return reply.code(413).send({ code: 'pdf_too_large', error: 'PDF exceeds 10MB limit' });
@@ -100,7 +115,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     try {
-      const result = await runImport({ filename, accountId, userId: uid, format, buffer });
+      const result = await runImport({ filename, accountId, userId: uid, format, buffer, skipParsedIndices });
       app.metrics.importsTotal.inc({ kind: format, outcome: 'success' }); void flushSnapshots();
       return reply.code(201).send(result);
     } catch (err) {

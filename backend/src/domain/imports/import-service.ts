@@ -24,6 +24,7 @@ export interface ImportResult {
   totalLines: number;
   insertedCount: number;
   dedupSkipped: number;
+  userSkipped: number;
   insertedIds: number[];
   // Rows the parser produced but the DB dedup-skipped (a matching
   // (account_id, dedup_key) already existed). Surfaced in the import
@@ -90,11 +91,20 @@ export async function runImport(opts: {
   format: ImportFormat;
   buffer?: Buffer;
   prepared?: ParsedTransaction[];
+  skipParsedIndices?: number[];
 }): Promise<ImportResult> {
   const tStart = Date.now();
   const parsed = opts.prepared ?? parseFile(opts.buffer!, opts.format);
   const tParsed = Date.now();
   trace(`start file=${opts.filename} parsed=${parsed.length} parse=${tParsed - tStart}ms`);
+
+  const skipSet = new Set<number>();
+  if (opts.skipParsedIndices) {
+    for (const n of opts.skipParsedIndices) {
+      if (Number.isInteger(n) && n >= 0 && n < parsed.length) skipSet.add(n);
+    }
+  }
+  const userSkipped = skipSet.size;
 
   const result = await db.transaction(async (tx) => {
     trace('tx: begin');
@@ -169,8 +179,23 @@ export async function runImport(opts: {
     // 100 rows each, each with its own trace line so a stuck chunk is
     // pinpointed by the last visible log.
     if (parsed.length > 0) {
-      trace(`prep: normalizing + computing dedup keys for ${parsed.length} rows`);
-      const rowValues = parsed.map((p) => {
+      trace(`prep: normalizing + computing dedup keys for ${parsed.length} rows (skipping ${userSkipped})`);
+      const rowValues: Array<{
+        userId: number;
+        accountId: number;
+        date: string;
+        amount: string;
+        rawLabel: string;
+        normalizedLabel: string;
+        memo: string | null;
+        fitid: string | null;
+        dedupKey: string;
+        sourceFileId: number;
+      }> = [];
+      const parsedIndexForRowValue: number[] = [];
+      for (let i = 0; i < parsed.length; i++) {
+        if (skipSet.has(i)) continue;
+        const p = parsed[i]!;
         const normalizedLabel = normalizeLabel(p.rawLabel);
         const dedupKey = computeDedupKey({
           accountId: opts.accountId,
@@ -179,7 +204,7 @@ export async function runImport(opts: {
           normalizedLabel,
           fitid: p.fitid,
         });
-        return {
+        rowValues.push({
           userId: opts.userId,
           accountId: opts.accountId,
           date: p.date,
@@ -190,8 +215,9 @@ export async function runImport(opts: {
           fitid: p.fitid,
           dedupKey,
           sourceFileId: fileImport.id,
-        };
-      });
+        });
+        parsedIndexForRowValue.push(i);
+      }
       trace('prep: done');
 
       const insertedByKey = new Map<string, number>();
@@ -215,9 +241,10 @@ export async function runImport(opts: {
       }
 
       trace('match: reconciling inserted vs skipped');
-      for (let i = 0; i < parsed.length; i++) {
+      for (let j = 0; j < rowValues.length; j++) {
+        const i = parsedIndexForRowValue[j]!;
         const p = parsed[i]!;
-        const key = rowValues[i]!.dedupKey;
+        const key = rowValues[j]!.dedupKey;
         const id = insertedByKey.get(key);
         if (id !== undefined) {
           inserted++;
@@ -234,7 +261,7 @@ export async function runImport(opts: {
     trace('tx: updating file_imports counts');
     await tx
       .update(fileImports)
-      .set({ insertedCount: inserted, dedupSkipped: skipped })
+      .set({ insertedCount: inserted, dedupSkipped: skipped, userSkipped })
       .where(eq(fileImports.id, fileImport.id));
 
     // Apply the rule engine to freshly inserted rows. We do this *inside* the
@@ -297,6 +324,7 @@ export async function runImport(opts: {
       totalLines: parsed.length,
       insertedCount: inserted,
       dedupSkipped: skipped,
+      userSkipped,
       insertedIds,
       dedupSkippedRows,
     };
@@ -306,8 +334,8 @@ export async function runImport(opts: {
   const tCommitted = Date.now();
   trace(
     `done file=${opts.filename} inserted=${result.insertedCount} ` +
-    `skipped=${result.dedupSkipped} parse=${tParsed - tStart}ms ` +
-    `tx=${tCommitted - tParsed}ms total=${tCommitted - tStart}ms`,
+    `deduped=${result.dedupSkipped} user-skipped=${result.userSkipped} ` +
+    `parse=${tParsed - tStart}ms tx=${tCommitted - tParsed}ms total=${tCommitted - tStart}ms`,
   );
 
   // Recurring-series detection was previously awaited inside the import
