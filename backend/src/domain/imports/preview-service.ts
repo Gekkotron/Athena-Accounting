@@ -6,6 +6,7 @@ import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
+import { findFuzzyMatches, type FuzzyCandidate } from '../dedup/fuzzy-match.js';
 
 export type PreviewFormat = 'ofx' | 'csv' | 'camt';
 
@@ -16,6 +17,17 @@ export interface PreviewRow {
   memo: string | null;
 }
 
+export interface FuzzyDuplicatePreviewRow {
+  row: PreviewRow;
+  parsedIndex: number;
+  matches: Array<{
+    txId: number;
+    date: string;
+    amount: string;
+    rawLabel: string;
+  }>;
+}
+
 export interface PreviewResult {
   filename: string;
   format: PreviewFormat;
@@ -23,6 +35,7 @@ export interface PreviewResult {
   totalRows: number;
   newRows: PreviewRow[];
   duplicateRows: PreviewRow[];
+  fuzzyDuplicateRows: FuzzyDuplicatePreviewRow[];
 }
 
 function parse(buf: Buffer, format: PreviewFormat): ParsedTransaction[] {
@@ -47,6 +60,7 @@ export async function previewImport(opts: {
       totalRows: 0,
       newRows: [],
       duplicateRows: [],
+      fuzzyDuplicateRows: [],
     };
   }
 
@@ -75,11 +89,51 @@ export async function previewImport(opts: {
     ));
   const seen = new Set(existing.map((r) => r.dedupKey));
 
-  const newRows: PreviewRow[] = [];
+  // Partition parsed rows against the hard dedup key first.
   const duplicateRows: PreviewRow[] = [];
-  for (const w of withKeys) {
-    if (seen.has(w.dedupKey)) duplicateRows.push(w.row);
-    else newRows.push(w.row);
+  const newParsedIndices: number[] = [];
+  const newFuzzyInput: FuzzyCandidate[] = [];
+  for (let i = 0; i < withKeys.length; i++) {
+    const w = withKeys[i]!;
+    if (seen.has(w.dedupKey)) {
+      duplicateRows.push(w.row);
+      continue;
+    }
+    newParsedIndices.push(i);
+    newFuzzyInput.push({
+      date: w.row.date,
+      amount: w.row.amount,
+      rawLabel: w.row.rawLabel,
+      normalizedLabel: normalizeLabel(w.row.rawLabel),
+    });
+  }
+
+  const fuzzyMap = await findFuzzyMatches({
+    accountId: opts.accountId,
+    userId: opts.userId,
+    incoming: newFuzzyInput,
+  });
+
+  const newRows: PreviewRow[] = [];
+  const fuzzyDuplicateRows: FuzzyDuplicatePreviewRow[] = [];
+  for (let idx = 0; idx < newFuzzyInput.length; idx++) {
+    const parsedIndex = newParsedIndices[idx]!;
+    const row = withKeys[parsedIndex]!.row;
+    const matches = fuzzyMap.get(idx);
+    if (!matches || matches.length === 0) {
+      newRows.push(row);
+      continue;
+    }
+    fuzzyDuplicateRows.push({
+      row,
+      parsedIndex,
+      matches: matches.slice(0, 3).map((m) => ({
+        txId: m.candidate.txId!,
+        date: m.candidate.date,
+        amount: m.candidate.amount,
+        rawLabel: m.candidate.rawLabel,
+      })),
+    });
   }
 
   return {
@@ -89,5 +143,6 @@ export async function previewImport(opts: {
     totalRows: parsed.length,
     newRows,
     duplicateRows,
+    fuzzyDuplicateRows,
   };
 }

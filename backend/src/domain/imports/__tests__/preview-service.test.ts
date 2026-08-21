@@ -83,4 +83,81 @@ describe.skipIf(!RUN)('previewImport', () => {
     expect(fi).toHaveLength(0);
     expect(tx).toHaveLength(0);
   });
+
+  it('flags a near-duplicate (Δdate=1, Δamount=0.01) as fuzzy, not new', async () => {
+    const { runImport } = await import('../import-service.js');
+    const { previewImport } = await import('../preview-service.js');
+
+    const seed = 'Date;Libellé;Montant\n15/06/2026;CB CARREFOUR MARKET;-25,30\n';
+    await runImport({
+      filename: 'seed.csv', accountId, userId, format: 'csv',
+      buffer: Buffer.from(seed, 'utf-8'),
+    });
+
+    const preview =
+      'Date;Libellé;Montant\n16/06/2026;PAIEMENT CARREFOUR MARKET REF98;-25,31\n';
+    const result = await previewImport({
+      filename: 'again.csv', accountId, userId, format: 'csv',
+      buffer: Buffer.from(preview, 'utf-8'),
+    });
+
+    expect(result.newRows).toHaveLength(0);
+    expect(result.duplicateRows).toHaveLength(0);
+    expect(result.fuzzyDuplicateRows).toHaveLength(1);
+    expect(result.fuzzyDuplicateRows[0]!.parsedIndex).toBe(0);
+    expect(result.fuzzyDuplicateRows[0]!.matches).toHaveLength(1);
+    expect(result.fuzzyDuplicateRows[0]!.matches[0]!.txId).toBeTruthy();
+  });
+
+  it('keeps a token-disjoint row as new even when date+amount align', async () => {
+    const { runImport } = await import('../import-service.js');
+    const { previewImport } = await import('../preview-service.js');
+    const seed = 'Date;Libellé;Montant\n15/06/2026;CB CARREFOUR MARKET;-25,30\n';
+    await runImport({
+      filename: 'seed.csv', accountId, userId, format: 'csv',
+      buffer: Buffer.from(seed, 'utf-8'),
+    });
+    const preview = 'Date;Libellé;Montant\n15/06/2026;SNCF PARIS LYON;-25,30\n';
+    const result = await previewImport({
+      filename: 'again.csv', accountId, userId, format: 'csv',
+      buffer: Buffer.from(preview, 'utf-8'),
+    });
+    expect(result.newRows).toHaveLength(1);
+    expect(result.fuzzyDuplicateRows).toHaveLength(0);
+  });
+
+  it('caps matches per fuzzy row at 3 by Jaccard descending', async () => {
+    const { db } = await import('../../../db/client.js');
+    const { transactions, fileImports } = await import('../../../db/schema.js');
+    const { previewImport } = await import('../preview-service.js');
+    const [fi] = await db.insert(fileImports).values({
+      userId, filename: 'multi.csv', accountId, format: 'csv',
+      totalLines: 4, insertedCount: 4, dedupSkipped: 0, userSkipped: 0,
+    }).returning();
+    const seedRaw = [
+      'CARREFOUR MARKET PARIS RIVOLI',
+      'CARREFOUR MARKET PARIS BASTILLE',
+      'CARREFOUR PARIS OPERA',
+      'CARREFOUR MARKET NICE PROMENADE',
+    ];
+    for (let i = 0; i < seedRaw.length; i++) {
+      await db.insert(transactions).values({
+        userId, accountId,
+        date: `2026-06-${13 + i}`,
+        amount: '-25.30',
+        rawLabel: seedRaw[i]!,
+        normalizedLabel: seedRaw[i]!.toLowerCase(),
+        dedupKey: `hash:multi-${i}`, memo: null, fitid: null,
+        sourceFileId: fi!.id,
+      });
+    }
+    const preview =
+      'Date;Libellé;Montant\n15/06/2026;CARREFOUR MARKET PARIS RIVOLI;-25,30\n';
+    const result = await previewImport({
+      filename: 'again.csv', accountId, userId, format: 'csv',
+      buffer: Buffer.from(preview, 'utf-8'),
+    });
+    expect(result.fuzzyDuplicateRows).toHaveLength(1);
+    expect(result.fuzzyDuplicateRows[0]!.matches.length).toBeLessThanOrEqual(3);
+  });
 });
