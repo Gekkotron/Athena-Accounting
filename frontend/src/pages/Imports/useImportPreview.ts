@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { previewImport, type ImportPreview } from '../../api/imports';
-import { apiUpload, ApiError } from '../../api/client';
+import { previewImport, commitImport, type ImportPreview } from '../../api/imports';
+import { ApiError } from '../../api/client';
 
 interface OfxCsvSuccess {
   filename: string;
   inserted: number;
   skipped: number;
+  userSkipped: number;
   total: number;
 }
 
@@ -32,19 +33,19 @@ export function useImportPreview(opts: {
     }
   };
 
-  const confirm = async () => {
+  const confirm = async (skipParsedIndices: number[]) => {
     if (!state) return;
     setState({ ...state, confirming: true });
     try {
-      const data = await apiUpload<{
-        filename: string; insertedCount: number; dedupSkipped: number; totalLines: number;
-      }>('/api/imports', state.file, {
-        query: state.data.accountId ? { accountId: state.data.accountId } : undefined,
+      const data = await commitImport(state.file, {
+        accountId: state.data.accountId,
+        skipParsedIndices,
       });
       opts.onImported({
         filename: state.file.name,
         inserted: data.insertedCount,
         skipped: data.dedupSkipped,
+        userSkipped: data.userSkipped,
         total: data.totalLines,
       });
       opts.invalidate();

@@ -28,9 +28,10 @@ import { submitPdf, submitPhoto } from '../../../api/pdf-templates';
 const submitPdfMock = vi.mocked(submitPdf);
 const submitPhotoMock = vi.mocked(submitPhoto);
 
-vi.mock('../../../api/imports', () => ({ previewImport: vi.fn() }));
-import { previewImport } from '../../../api/imports';
+vi.mock('../../../api/imports', () => ({ previewImport: vi.fn(), commitImport: vi.fn() }));
+import { previewImport, commitImport } from '../../../api/imports';
 const previewMock = vi.mocked(previewImport);
+const commitMock = vi.mocked(commitImport);
 
 const accs: Account[] = [
   { id: 1, name: 'Compte', type: 'checking', currency: 'EUR',
@@ -72,6 +73,7 @@ beforeEach(() => {
   submitPdfMock.mockReset();
   submitPhotoMock.mockReset();
   previewMock.mockReset();
+  commitMock.mockReset();
 });
 
 describe('UploadForm', () => {
@@ -82,14 +84,16 @@ describe('UploadForm', () => {
     expect(screen.getByRole('button', { name: 'Importer' })).toBeInTheDocument();
   });
 
-  it('CSV single-file submit opens the preview modal, then Importer inside the modal fires apiUpload', async () => {
+  it('CSV single-file submit opens the preview modal, then Importer inside the modal fires commitImport', async () => {
     previewMock.mockResolvedValue({
       filename: 'new.csv', format: 'csv', accountId: 1, totalRows: 1,
       newRows: [{ date: '2026-06-15', amount: '-10.00', rawLabel: 'A', memo: null }],
       duplicateRows: [],
       fuzzyDuplicateRows: [],
     });
-    uploadMock.mockResolvedValue({ filename: 'new.csv', insertedCount: 5, dedupSkipped: 1, totalLines: 6 });
+    commitMock.mockResolvedValue({
+      filename: 'new.csv', insertedCount: 5, dedupSkipped: 1, userSkipped: 0, totalLines: 6,
+    });
     const user = userEvent.setup();
     const { props } = renderForm();
 
@@ -99,20 +103,21 @@ describe('UploadForm', () => {
     await user.selectOptions(fieldFor(/^Compte$/), '1');
     await user.click(screen.getByRole('button', { name: 'Importer' }));
 
-    // Preview endpoint fires first; real upload has NOT happened yet.
+    // Preview endpoint fires first; commit has NOT happened yet.
     await waitFor(() => expect(previewMock).toHaveBeenCalledTimes(1));
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(commitMock).not.toHaveBeenCalled();
 
     // Click the modal's Importer (second one on screen).
     const modalImporter = screen.getAllByRole('button', { name: /^(Importer|Import…)$/ })
       .find((b) => b.closest('[role="dialog"]'));
     await user.click(modalImporter!);
 
-    await waitFor(() => expect(uploadMock).toHaveBeenCalledWith('/api/imports', file, { query: { accountId: 1 } }));
+    await waitFor(() => expect(commitMock).toHaveBeenCalledWith(file, { accountId: 1, skipParsedIndices: [] }));
     expect(props.onOfxCsvSuccess).toHaveBeenCalledWith({
       filename: 'new.csv',
       inserted: 5,
       skipped: 1,
+      userSkipped: 0,
       total: 6,
     });
   });
@@ -135,6 +140,7 @@ describe('UploadForm', () => {
       .find((b) => b.closest('[role="dialog"]'));
     await user.click(modalCancel!);
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /Prévisualiser/ })).not.toBeInTheDocument());
+    expect(commitMock).not.toHaveBeenCalled();
     expect(uploadMock).not.toHaveBeenCalled();
   });
 
