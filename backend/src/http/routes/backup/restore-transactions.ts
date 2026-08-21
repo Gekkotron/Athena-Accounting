@@ -36,6 +36,7 @@ export async function restoreFileImports(
         totalLines: f.totalLines,
         insertedCount: f.insertedCount,
         dedupSkipped: f.dedupSkipped,
+        userSkipped: f.userSkipped,
         statedBalance: f.statedBalance ?? null,
         statedBalanceDate: f.statedBalanceDate ?? null,
       })

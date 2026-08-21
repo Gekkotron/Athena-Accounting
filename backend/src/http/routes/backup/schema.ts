@@ -139,6 +139,7 @@ export const BackupBody = z.object({
       totalLines: z.number().int(),
       insertedCount: z.number().int(),
       dedupSkipped: z.number().int(),
+      userSkipped: z.number().int().default(0),
       statedBalance: z.string().nullable().optional(),
       statedBalanceDate: z.string().nullable().optional(),
     }),

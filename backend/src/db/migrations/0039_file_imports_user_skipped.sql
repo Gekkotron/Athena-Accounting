@@ -1,0 +1,2 @@
+ALTER TABLE file_imports
+  ADD COLUMN user_skipped INTEGER NOT NULL DEFAULT 0;
