@@ -97,6 +97,7 @@ describe('Imports page (characterization)', () => {
           filename: 'new.csv', format: 'csv', accountId: 1, totalRows: 1,
           newRows: [{ date: '2026-06-15', amount: '-10.00', rawLabel: 'A', memo: null }],
           duplicateRows: [],
+          fuzzyDuplicateRows: [],
         };
       }
       uploaded = true;

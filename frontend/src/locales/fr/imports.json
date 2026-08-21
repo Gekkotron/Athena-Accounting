@@ -205,12 +205,15 @@
     "ariaLabel": "Prévisualiser l'import",
     "status": {
       "new": "Nouveau",
-      "duplicate": "Doublon"
+      "duplicate": "Doublon",
+      "fuzzyDuplicate": "Probable"
     },
     "newCount_one": "{{count}} nouvelle",
     "newCount_other": "{{count}} nouvelles",
     "duplicateCount_one": "{{count}} dédupliquée",
     "duplicateCount_other": "{{count}} dédupliquées",
+    "fuzzyCount_one": "{{count}} doublon probable",
+    "fuzzyCount_other": "{{count}} doublons probables",
     "ofTotal": "sur {{count}}",
     "table": {
       "date": "Date",
@@ -218,6 +221,8 @@
       "amount": "Montant",
       "status": "État"
     },
+    "fuzzyMatchLabel": "correspond à",
+    "fuzzySkipHeader": "Ignorer",
     "showAll": "voir tout ({{count}} de plus)",
     "confirm": "Importer",
     "confirming": "Import…"

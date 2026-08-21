@@ -205,12 +205,15 @@
     "ariaLabel": "Preview the import",
     "status": {
       "new": "New",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "fuzzyDuplicate": "Probable"
     },
     "newCount_one": "{{count}} new",
     "newCount_other": "{{count}} new",
     "duplicateCount_one": "{{count}} duplicate",
     "duplicateCount_other": "{{count}} duplicates",
+    "fuzzyCount_one": "{{count}} probable duplicate",
+    "fuzzyCount_other": "{{count}} probable duplicates",
     "ofTotal": "of {{count}}",
     "table": {
       "date": "Date",
@@ -218,6 +221,8 @@
       "amount": "Amount",
       "status": "Status"
     },
+    "fuzzyMatchLabel": "matches",
+    "fuzzySkipHeader": "Skip",
     "showAll": "see all ({{count}} more)",
     "confirm": "Import",
     "confirming": "Import…"
