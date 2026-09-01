@@ -36,6 +36,7 @@ import { PdfTemplates } from './pages/Data/PdfTemplates';
 import { Backup } from './pages/Data/Backup';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
+import { Notifications } from './pages/Notifications';
 import { BankSyncCallback } from './pages/BankSyncCallback';
 
 // TODO(Task 15): replace with useNotificationPrefs()
@@ -192,6 +193,7 @@ export default function App() {
 
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="/bank-sync/callback" element={<BankSyncCallback />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

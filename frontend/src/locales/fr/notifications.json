@@ -1,0 +1,20 @@
+{
+  "title": "Notifications",
+  "mark_all_read": "Tout marquer comme lu",
+  "filter": {
+    "all": "Toutes",
+    "unread": "Non lues",
+    "big_transaction": "Grosse transaction",
+    "account_low": "Compte bas",
+    "envelope_exceeded": "Enveloppe",
+    "bank_sync_failed": "Sync bancaire"
+  },
+  "empty": {
+    "title": "Aucune notification",
+    "body": "Tout est à jour. Gérez vos alertes dans les <1>Paramètres</1>."
+  },
+  "today": "Aujourd'hui",
+  "yesterday": "Hier",
+  "mark_read": "Marquer comme lu",
+  "delete": "Supprimer"
+}

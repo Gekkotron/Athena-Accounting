@@ -16,6 +16,7 @@ const NAMESPACES = [
   'pdf-template',
   'charts',
   'tips',
+  'notifications',
 ] as const;
 
 type Ns = (typeof NAMESPACES)[number];

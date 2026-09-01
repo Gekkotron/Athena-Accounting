@@ -1,0 +1,20 @@
+{
+  "title": "Notifications",
+  "mark_all_read": "Mark all as read",
+  "filter": {
+    "all": "All",
+    "unread": "Unread",
+    "big_transaction": "Big tx",
+    "account_low": "Account low",
+    "envelope_exceeded": "Envelope",
+    "bank_sync_failed": "Bank sync"
+  },
+  "empty": {
+    "title": "No notifications yet",
+    "body": "You're all caught up. Manage which alerts you get in <1>Settings</1>."
+  },
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "mark_read": "Mark read",
+  "delete": "Delete"
+}
