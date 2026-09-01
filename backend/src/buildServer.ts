@@ -31,6 +31,8 @@ import { backupRoutes } from './http/routes/backup/index.js';
 import { pdfTemplatesRoutes } from './http/routes/pdf-templates.js';
 import { balanceCheckpointsRoutes } from './http/routes/balance-checkpoints.js';
 import { settingsRoutes } from './http/routes/settings.js';
+import { notificationsRoutes } from './http/routes/notifications/index.js';
+import { notificationsStreamRoutes } from './http/routes/notifications/stream.js';
 import { tipsRoutes } from './http/routes/tips/index.js';
 import { runOrphanCleanup } from './http/routes/tips/cleanup.js';
 import { mcpSettingsRoutes } from './http/routes/mcp-settings.js';
@@ -150,6 +152,8 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   await app.register(pdfTemplatesRoutes);
   await app.register(balanceCheckpointsRoutes);
   await app.register(settingsRoutes);
+  await app.register(notificationsRoutes);
+  await app.register(notificationsStreamRoutes);
   await app.register(tipsRoutes);
   await app.register(mcpSettingsRoutes);
   await app.register(budgetsRoutes);
