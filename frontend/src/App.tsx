@@ -43,7 +43,6 @@ import { SettingsTransactions } from './pages/Settings/SettingsTransactions';
 import { SettingsImport } from './pages/Settings/SettingsImport';
 import { SettingsFx } from './pages/Settings/SettingsFx';
 import { SettingsSecurityPage } from './pages/Settings/SettingsSecurityPage';
-import { SettingsIntegrations } from './pages/Settings/SettingsIntegrations';
 import { SettingsNotifications } from './pages/Settings/SettingsNotifications';
 import { Notifications } from './pages/Notifications';
 import { BankSyncCallback } from './pages/BankSyncCallback';
@@ -125,7 +124,6 @@ export default function App() {
     { to: '/settings/import', label: t('nav.children.settings.import') },
     { to: '/settings/fx', label: t('nav.children.settings.fx') },
     { to: '/settings/security', label: t('nav.children.settings.security') },
-    { to: '/settings/integrations', label: t('nav.children.settings.integrations') },
     { to: '/settings/notifications', label: t('nav.children.settings.notifications') },
   ];
 
@@ -234,7 +232,7 @@ export default function App() {
               <Route path="import" element={<SettingsImport />} />
               <Route path="fx" element={<SettingsFx />} />
               <Route path="security" element={<SettingsSecurityPage />} />
-              <Route path="integrations" element={<SettingsIntegrations />} />
+              <Route path="integrations" element={<Navigate to="/settings/security" replace />} />
               <Route path="notifications" element={<SettingsNotifications />} />
             </Route>
 

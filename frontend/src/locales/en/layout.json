@@ -44,7 +44,6 @@
     "import": "Import",
     "fx": "Currencies",
     "security": "Security",
-    "integrations": "Integrations",
     "notifications": "Notifications"
    }
   },

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { SettingsIntegrations } from '../Settings/SettingsIntegrations';
+import { SettingsSecurityPage } from '../Settings/SettingsSecurityPage';
 import { pinLocale } from '../../test/i18n';
 
 // Preload 'settings'/'common' for both locales and pin French so
@@ -17,16 +17,25 @@ vi.mock('../../api/mcp', () => ({
   revokeMcpToken: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
+// SettingsSecurityPage also mounts SettingsSecurity + SettingsLock, which
+// hit /api/security and /api/auth/lock-status. Both components early-return
+// null when their status query has no data, so returning empty objects
+// keeps the DOM focused on the MCP section this suite exercises.
+vi.mock('../../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
+  return { ...actual, api: vi.fn().mockResolvedValue({}) };
+});
+
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter><SettingsIntegrations /></MemoryRouter>
+      <MemoryRouter><SettingsSecurityPage /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('SettingsIntegrations — Accès MCP', () => {
+describe('SettingsSecurityPage — Accès MCP', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders the MCP section', async () => {
