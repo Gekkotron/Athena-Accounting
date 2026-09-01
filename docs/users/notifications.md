@@ -12,18 +12,26 @@ locally and delivered over the same connection your browser already has
 open, with no cloud service involved.
 
 Configure alerts in *Paramètres → Notifications*. A master toggle turns the
-whole feature on or off; each trigger below has its own toggle underneath
-it, so you can enable only the ones you care about. New alerts show up as a
-badge on the bell icon in the header and in the inbox at */notifications*.
+whole feature on or off; the settings underneath are split across three
+tabs so each concern stays out of the others' way:
+
+- **Canaux** — where alerts appear (in-app toast, browser notification).
+- **Confidentialité** — what a notification is allowed to show on your
+  screen.
+- **Alertes** — which triggers are on and what their thresholds are.
+
+Each trigger has its own toggle in the *Alertes* tab, so you can enable
+only the ones you care about. New alerts show up as a badge on the bell
+icon in the header and in the inbox at */notifications*.
 
 ## Big transaction
 
 Fires when a single transaction on an account exceeds an amount you set for
 that account. Set the threshold per account in the "Grosse transaction"
-card — leave an account blank to never alert on it. If several qualifying
-transactions land close together (an import, a bank sync), Athena waits a
-couple of seconds and sends one summary notification instead of one per
-row.
+card of the *Alertes* tab — leave an account blank to never alert on it.
+If several qualifying transactions land close together (an import, a bank
+sync), Athena waits a couple of seconds and sends one summary notification
+instead of one per row.
 
 ## Low balance
 
@@ -58,7 +66,8 @@ glances at your screen or a lock-screen preview:
   description of the trigger instead of the transaction text.
 
 Both are on by default and can be turned off independently in the
-Notifications settings if you'd rather see the real numbers. The inbox at
+*Confidentialité* tab of the Notifications settings if you'd rather see
+the real numbers. The inbox at
 */notifications* always shows the full transaction detail — the privacy
 toggles apply only to toast pop-ups and browser notifications, which appear
 in more visible contexts (a shoulder-surfer at your screen).

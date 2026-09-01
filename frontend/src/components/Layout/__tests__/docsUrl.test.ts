@@ -21,6 +21,8 @@ describe('docsSlugFor', () => {
     ['/data/imports', 'importing'],
     ['/data/duplicates', 'importing'],
     ['/data/pdf-templates', 'importing'],
+    ['/notifications', 'notifications'],
+    ['/notifications/17', 'notifications'],
     ['/some/unknown/route', 'getting-started'],
   ])('%s → %s', (pathname, slug) => {
     expect(docsSlugFor(pathname)).toBe(slug);

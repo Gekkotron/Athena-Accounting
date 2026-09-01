@@ -65,12 +65,28 @@ function mount(initial: Settings = DEFAULTS) {
 beforeEach(() => { mockedApi.mockReset(); mockedRequestPermission.mockClear(); });
 
 describe('SettingsNotifications', () => {
+  it('renders three tabs and switches panels on click', async () => {
+    const u = userEvent.setup();
+    mount();
+    const channelsTab = await screen.findByRole('tab', { name: /canaux/i });
+    expect(channelsTab).toHaveAttribute('aria-selected', 'true');
+    // Privacy toggle only exists in the Confidentialité tab's panel.
+    expect(screen.queryByLabelText(/masquer le montant/i)).toBeNull();
+    await u.click(screen.getByRole('tab', { name: /confidentialité/i }));
+    expect(screen.getByLabelText(/masquer le montant/i)).toBeInTheDocument();
+    await u.click(screen.getByRole('tab', { name: /alertes/i }));
+    expect(screen.getByLabelText(/grosse transaction/i)).toBeInTheDocument();
+  });
+
   it('disables channel/privacy/trigger toggles when the master toggle is off', async () => {
+    const u = userEvent.setup();
     mount({ ...DEFAULTS, notifications: { ...DEFAULTS.notifications, enabled: false } });
     // The hook paints DEFAULTS (enabled: true) before the settings query
     // resolves, so wait for the real (disabled) settings to land.
     await waitFor(() => expect(screen.getByLabelText(/notification dans l'application/i)).toBeDisabled());
+    await u.click(screen.getByRole('tab', { name: /confidentialité/i }));
     expect(screen.getByLabelText(/masquer le montant/i)).toBeDisabled();
+    await u.click(screen.getByRole('tab', { name: /alertes/i }));
     expect(screen.getByLabelText(/grosse transaction/i)).toBeDisabled();
   });
 
@@ -83,7 +99,9 @@ describe('SettingsNotifications', () => {
   });
 
   it('renders the per-account threshold input as a text field with inputMode="decimal"', async () => {
+    const u = userEvent.setup();
     mount();
+    await u.click(await screen.findByRole('tab', { name: /alertes/i }));
     // Both the bigTransaction and accountLow cards render one per-account
     // amount row for "Courant" — the first is the bigTransaction threshold.
     const [input] = await screen.findAllByRole('textbox', { name: ACCOUNT.name });
@@ -94,6 +112,7 @@ describe('SettingsNotifications', () => {
   it('committing a threshold amount sends a PATCH keyed by account id', async () => {
     const u = userEvent.setup();
     mount();
+    await u.click(await screen.findByRole('tab', { name: /alertes/i }));
     const [input] = await screen.findAllByRole('textbox', { name: ACCOUNT.name });
     await u.type(input, '150,50');
     await u.tab();

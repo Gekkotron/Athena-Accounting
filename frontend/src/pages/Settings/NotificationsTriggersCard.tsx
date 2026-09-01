@@ -72,8 +72,6 @@ export function NotificationsTriggersCard({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="label">{t('settings.notifications.triggers.sectionLabel')}</div>
-
       <div className="rounded-lg border border-ink-800 p-3 flex flex-col gap-2">
         <label className="flex items-center gap-2 text-sm text-ink-200">
           <input

@@ -23,11 +23,12 @@ test('big-transaction threshold triggers the bell badge and an inbox row', async
   await login(page);
   await createAccount(page, ACCOUNT_NAME);
 
-  // Settings → Notifications → "Grosse transaction" card renders one
-  // per-account threshold input per trigger; the bigTransaction card's
-  // row is the first match for this account name (accountLow's card
+  // Settings → Notifications → "Alertes" tab → "Grosse transaction" card
+  // renders one per-account threshold input per trigger; the bigTransaction
+  // card's row is the first match for this account name (accountLow's card
   // renders a second one further down).
   await page.goto('/settings');
+  await page.getByRole('tab', { name: 'Alertes' }).click();
   const thresholdInput = page.getByRole('textbox', { name: ACCOUNT_NAME }).first();
   await thresholdInput.fill('500');
   await thresholdInput.press('Tab'); // blur-commits the PATCH, no explicit save button

@@ -12,8 +12,6 @@ export function NotificationsPrivacyCard({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="label">{t('settings.notifications.privacy.sectionLabel')}</div>
-
       <label className="flex items-center gap-2 text-sm text-ink-200">
         <input
           type="checkbox"
