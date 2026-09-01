@@ -5,7 +5,7 @@ import { buildApp } from './helpers/build-app.js';
 import { seedUserAndCookie, seedAccount } from './helpers/seedUserAndCookie.js';
 import { seedUser } from './helpers/seedUser.js';
 import { db } from '../src/db/client.js';
-import { notifications, bankConnections, bankConnectionAccounts } from '../src/db/schema.js';
+import { notifications, bankConnections, bankConnectionAccounts, transactions } from '../src/db/schema.js';
 import { syncUserConnections } from '../src/domain/imports/bank-sync.js';
 import { computeCurrentBalance } from '../src/domain/notifications/hooks.js';
 import type { EnableBankingClient } from '../src/services/enable-banking/client.js';
@@ -156,6 +156,27 @@ d('notification triggers', () => {
     // userA has no relationship to accountB — must not see userB's balance.
     const balance = await computeCurrentBalance(userA, accountB);
     expect(balance).toBe(0);
+  });
+
+  it('rejects a transaction posted against another user\'s account (IDOR)', async () => {
+    const app = await buildApp();
+    const { cookie: cookieA } = await seedUserAndCookie(app);
+    const userB = await seedUser();
+    const accountB = await seedAccount(userB);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/transactions',
+      headers: { cookie: cookieA },
+      payload: { accountId: accountB, amount: '-10.00', date: '2026-09-01', rawLabel: 'Cross-tenant attempt' },
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.statusCode).toBeLessThan(500);
+
+    const rows = await db.select().from(transactions).where(eq(transactions.accountId, accountB));
+    expect(rows).toHaveLength(0);
+
+    await app.close();
   });
 
   it('a failed bank sync emits bank_sync_failed', async () => {

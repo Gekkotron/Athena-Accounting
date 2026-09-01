@@ -117,13 +117,14 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       expect(b.json().error).toMatch(/identique/i);
     });
 
-    it('rejects an unknown accountId with 400', async () => {
+    it('rejects an unknown accountId with 404', async () => {
       const res = await app.inject({
         method: 'POST', url: '/api/transactions',
         headers: { cookie },
         payload: { accountId: 999999, date: '2026-06-15', amount: '1.00', rawLabel: 'x' },
       });
-      expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(404);
+      expect(res.json().error).toBe('account_not_found');
     });
 
     it('rejects invalid input with 400', async () => {

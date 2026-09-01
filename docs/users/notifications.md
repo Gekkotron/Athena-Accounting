@@ -59,8 +59,9 @@ glances at your screen or a lock-screen preview:
 
 Both are on by default and can be turned off independently in the
 Notifications settings if you'd rather see the real numbers. The inbox at
-*/notifications* always respects the same privacy settings as the toast and
-browser notifications.
+*/notifications* always shows the full transaction detail — the privacy
+toggles apply only to toast pop-ups and browser notifications, which appear
+in more visible contexts (a shoulder-surfer at your screen).
 
 ## See also
 

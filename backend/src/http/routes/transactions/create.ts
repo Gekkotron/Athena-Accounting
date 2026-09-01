@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
-import { transactions } from '../../../db/schema.js';
+import { accounts, transactions } from '../../../db/schema.js';
 import { normalizeLabel } from '../../../domain/imports/normalize.js';
 import { computeDedupKey } from '../../../domain/imports/dedup.js';
 import { categorizeOne, loadRuleEngine } from '../../../domain/rules/recategorize.js';
@@ -21,6 +21,13 @@ export function registerCreate(app: FastifyInstance): void {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     const v = parsed.data;
+
+    const [acc] = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.id, v.accountId), eq(accounts.userId, uid)));
+    if (!acc) return reply.code(404).send({ error: 'account_not_found' });
+
     const amount = Number(v.amount).toFixed(2);
     const normalized = normalizeLabel(v.rawLabel);
     const dedupKey = computeDedupKey({

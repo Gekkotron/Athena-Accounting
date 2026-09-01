@@ -49,7 +49,7 @@ function fanoutToChannels(
   push: (t: { title: string; body: string }) => void,
   prefs: NotificationPrefs,
 ): void {
-  if (prefs.channels.toast)   showToast(push, n);
+  if (prefs.channels.toast)   showToast(push, n, prefs.privacy);
   if (prefs.channels.webPush) sendWebPush(n, prefs.privacy);
 }
 
