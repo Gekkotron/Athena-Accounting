@@ -104,7 +104,7 @@ export type FullSettings = {
 // Every container in the returned value is freshly constructed (never
 // `base` or one of its nested objects/maps returned by reference) so a
 // caller mutating the result can never reach back into `DEFAULTS`.
-function mergeNotifications(
+export function mergeNotifications(
   base: FullSettings['notifications'],
   patch: NotificationsPatch | undefined,
 ): FullSettings['notifications'] {

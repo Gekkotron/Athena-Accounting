@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accounts, userSettings } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
-import { SettingsSchema, mergeSettings, type FullSettings } from '../../domain/settings/schema.js';
+import { SettingsSchema, mergeSettings, mergeNotifications, type FullSettings } from '../../domain/settings/schema.js';
 
 // Load the stored JSONB for `uid`, coerce to a full settings object with
 // defaults filled in, and sanitise any account-id-shaped fields so a
@@ -47,15 +47,34 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: 'invalid input', issues: parsed.error.issues });
     }
     const patch = parsed.data;
+    // JSONB `||` is a shallow merge at the top level — for the nested
+    // `notifications` key that means a partial patch (e.g. one privacy
+    // checkbox) would replace the whole notifications subtree in storage,
+    // wiping every sibling. On the next GET, mergeSettings would refill the
+    // missing fields from DEFAULTS, silently flipping any user-set field
+    // back to its default. Deep-merge notifications against the stored tree
+    // first so what lands in the JSONB is a complete subtree.
+    let storagePatch: typeof patch = patch;
+    if (patch.notifications) {
+      const [row] = await db
+        .select({ settings: userSettings.settings })
+        .from(userSettings)
+        .where(eq(userSettings.userId, uid));
+      const currentNotifications = mergeSettings(row?.settings ?? {}, {}).notifications;
+      storagePatch = {
+        ...patch,
+        notifications: mergeNotifications(currentNotifications, patch.notifications),
+      };
+    }
     // Upsert: create the row if missing, otherwise shallow-merge the JSONB
     // (`settings || excluded.settings` — the right-hand side wins per key).
     await db
       .insert(userSettings)
-      .values({ userId: uid, settings: patch })
+      .values({ userId: uid, settings: storagePatch })
       .onConflictDoUpdate({
         target: userSettings.userId,
         set: {
-          settings: sql`${userSettings.settings} || ${JSON.stringify(patch)}::jsonb`,
+          settings: sql`${userSettings.settings} || ${JSON.stringify(storagePatch)}::jsonb`,
           updatedAt: new Date(),
         },
       });

@@ -83,6 +83,45 @@ describe.skipIf(!RUN)('/api/settings', () => {
     expect(get.json().settings.duplicateSimilarityThreshold).toBe(42);
   });
 
+  it('two disjoint notification PATCHes both survive (deep-merge, not JSONB shallow ||)', async () => {
+    // Reproduces the Privacy tab bug: PATCH one privacy checkbox off,
+    // then the other, and both should stick. Without the notifications
+    // deep-merge, JSONB `||` at the top level wipes the whole
+    // notifications subtree each time, so mergeSettings' fill-from-DEFAULTS
+    // on GET silently flips the first one back to true.
+    await app.inject({
+      method: 'PATCH', url: '/api/settings', headers: { cookie },
+      payload: { notifications: { privacy: { hideAmount: false } } },
+    });
+    await app.inject({
+      method: 'PATCH', url: '/api/settings', headers: { cookie },
+      payload: { notifications: { privacy: { hideMerchant: false } } },
+    });
+    const get = await app.inject({ method: 'GET', url: '/api/settings', headers: { cookie } });
+    expect(get.json().settings.notifications.privacy).toEqual({
+      hideAmount: false,
+      hideMerchant: false,
+    });
+  });
+
+  it('toggling a trigger enabled flag preserves the account-id thresholds map', async () => {
+    // Same shallow-|| trap for per-account thresholds: patching just
+    // `bigTransaction.enabled` must not wipe `bigTransaction.thresholds`.
+    await app.inject({
+      method: 'PATCH', url: '/api/settings', headers: { cookie },
+      payload: { notifications: { triggers: { bigTransaction: { thresholds: { '7': 500 } } } } },
+    });
+    await app.inject({
+      method: 'PATCH', url: '/api/settings', headers: { cookie },
+      payload: { notifications: { triggers: { bigTransaction: { enabled: false } } } },
+    });
+    const get = await app.inject({ method: 'GET', url: '/api/settings', headers: { cookie } });
+    expect(get.json().settings.notifications.triggers.bigTransaction).toEqual({
+      enabled: false,
+      thresholds: { '7': 500 },
+    });
+  });
+
   it('PATCH with an out-of-range value returns 400', async () => {
     const res = await app.inject({
       method: 'PATCH', url: '/api/settings', headers: { cookie },
