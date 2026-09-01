@@ -16,6 +16,8 @@ You installed Athena or plan to. Start here.
 - **[Categorization](categorization.md)** — rules, Sort tab, internal
   transfer detection.
 - **[Dashboard](dashboard.md)** — charts, insights, Sankey, budgets.
+- **[Notifications](notifications.md)** — alerts for big transactions, low
+  balances, envelope overspend, and bank-sync failures.
 - **[Accounts & data](accounts-and-data.md)** — accounts, checkpoints,
   locked money, backups.
 - **[Security & privacy](security-and-privacy.md)** — auth, sessions,

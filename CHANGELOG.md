@@ -12,6 +12,11 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+- **Notifications**: alerts for big transactions, low balances, envelope
+  overspend, and bank-sync failures. Configurable per account with a
+  privacy toggle. See [docs/users/notifications.md](docs/users/notifications.md).
+
 ### Fixed
 - **Sankey**: the breakdown tooltip now flips above the pointer when the
   hovered node sits near the bottom of the chart, so it can no longer be
