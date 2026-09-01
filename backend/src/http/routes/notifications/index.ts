@@ -79,6 +79,7 @@ export async function notificationsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/notifications/test', async (req, reply) => {
     const row = await emitNotification(userId(req), 'test', { kind: 'test' },
       { idempotency: `test:${Date.now()}` });
+    if (row === null) return reply.code(422).send({ error: 'notifications_disabled' });
     return reply.code(201).send(row);
   });
 }

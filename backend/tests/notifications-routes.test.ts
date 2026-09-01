@@ -78,4 +78,33 @@ describe.skipIf(!RUN)('notifications routes', () => {
     expect(r.statusCode).toBe(201);
     expect(r.json().kind).toBe('test');
   });
+
+  it('POST /test returns 422 and fires nothing when notifications are disabled', async () => {
+    const { db } = await import('../src/db/client.js');
+    const { userSettings, notifications } = await import('../src/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    await db
+      .insert(userSettings)
+      .values({ userId: uid, settings: { notifications: { enabled: false } } })
+      .onConflictDoUpdate({
+        target: userSettings.userId,
+        set: { settings: { notifications: { enabled: false } } },
+      });
+
+    const before = await db.select().from(notifications).where(eq(notifications.userId, uid));
+    const r = await app.inject({ method: 'POST', url: '/api/notifications/test', headers: { cookie } });
+    expect(r.statusCode).toBe(422);
+    expect(r.json()).toEqual({ error: 'notifications_disabled' });
+    const after = await db.select().from(notifications).where(eq(notifications.userId, uid));
+    expect(after.length).toBe(before.length);
+
+    // Restore for any tests that might run after this one in the file.
+    await db
+      .insert(userSettings)
+      .values({ userId: uid, settings: { notifications: { enabled: true } } })
+      .onConflictDoUpdate({
+        target: userSettings.userId,
+        set: { settings: { notifications: { enabled: true } } },
+      });
+  });
 });
