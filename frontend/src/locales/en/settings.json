@@ -182,6 +182,45 @@
         "submit": "Disable encryption",
         "note": "Disabling only takes effect the next time the application starts."
       }
+    },
+    "notifications": {
+      "sectionLabel": "Notifications",
+      "description": "Choose how and for which events you get alerted.",
+      "masterToggle": "Enable notifications",
+      "channels": {
+        "sectionLabel": "Channels",
+        "toast": "In-app notification",
+        "webPush": "Browser notification",
+        "webPushBlocked": "Blocked by the browser — allow it in your browser settings."
+      },
+      "privacy": {
+        "sectionLabel": "Privacy",
+        "hideAmount": "Hide amount",
+        "hideMerchant": "Hide merchant"
+      },
+      "triggers": {
+        "sectionLabel": "Alerts",
+        "bigTransaction": {
+          "label": "Big transaction",
+          "help": "Alerts when a transaction exceeds the threshold set for an account."
+        },
+        "accountLow": {
+          "label": "Low balance",
+          "help": "Alerts when an account's balance drops below the floor set for it."
+        },
+        "envelopeExceeded": {
+          "label": "Envelope exceeded"
+        },
+        "bankSyncFailed": {
+          "label": "Bank sync failed"
+        }
+      },
+      "test": {
+        "button": "Send a test",
+        "success": "Test notification sent.",
+        "disabledError": "Enable notifications before sending a test.",
+        "genericError": "Something went wrong. Please try again."
+      }
     }
   },
   "lock": {

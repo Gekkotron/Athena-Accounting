@@ -14,6 +14,7 @@ import { NumberField, SavedChip } from './Settings-fields';
 import { SettingsSecurity } from './SettingsSecurity';
 import { SettingsLock } from './SettingsLock';
 import { FxSection } from './Settings/FxSection';
+import { SettingsNotifications } from './Settings/SettingsNotifications';
 
 export function Settings(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -239,6 +240,8 @@ export function Settings(): JSX.Element {
         <SettingsLock />
 
         <FxSection />
+
+        <SettingsNotifications />
 
         <section className="pt-4 border-t border-ink-800/60">
           <button className="btn-ghost" onClick={() => setConfirmReset(true)}>

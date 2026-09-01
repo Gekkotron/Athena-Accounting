@@ -8,6 +8,8 @@ import type { Notification } from '../../shared/api-contracts.js';
 import { startNotificationsStream } from './lib/notifications/stream.js';
 import { showToast } from './lib/notifications/channels/toast.js';
 import { sendWebPush } from './lib/notifications/channels/webPush.js';
+import { useNotificationPrefs } from './lib/notifications/hooks.js';
+import type { NotificationPrefs } from './lib/settings';
 import { ToastProvider, useToast } from './components/Toast';
 import { LockProvider } from './contexts/LockContext';
 import { TipsProvider } from './contexts/TipsContext';
@@ -39,17 +41,16 @@ import { Settings } from './pages/Settings';
 import { Notifications } from './pages/Notifications';
 import { BankSyncCallback } from './pages/BankSyncCallback';
 
-// TODO(Task 15): replace with useNotificationPrefs()
-const notificationPrefs = {
-  channels: { toast: true, osNative: false, webPush: false },
-  privacy: { hideAmount: true, hideMerchant: true },
-};
-
 // Single fan-out point for live notification channels. Toast lands in Task
-// 10; Task 12 adds the webPush channel alongside it here.
-function fanoutToChannels(n: Notification, push: (t: { title: string; body: string }) => void): void {
-  if (notificationPrefs.channels.toast)   showToast(push, n);
-  if (notificationPrefs.channels.webPush) sendWebPush(n, notificationPrefs.privacy);
+// 10; Task 12 adds the webPush channel alongside it here. Channel/privacy
+// prefs come from useNotificationPrefs() (Task 15), fed in by NotificationsBridge.
+function fanoutToChannels(
+  n: Notification,
+  push: (t: { title: string; body: string }) => void,
+  prefs: NotificationPrefs,
+): void {
+  if (prefs.channels.toast)   showToast(push, n);
+  if (prefs.channels.webPush) sendWebPush(n, prefs.privacy);
 }
 
 // Lives inside <ToastProvider> so it can obtain `push` via useToast(); the
@@ -58,13 +59,14 @@ function fanoutToChannels(n: Notification, push: (t: { title: string; body: stri
 // login and its cleanup (es.close()) runs on logout/unmount.
 function NotificationsBridge({ qc }: { qc: QueryClient }): null {
   const { push } = useToast();
+  const { prefs } = useNotificationPrefs();
   useEffect(() => {
     const stop = startNotificationsStream((n) => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
-      fanoutToChannels(n, push);
+      fanoutToChannels(n, push, prefs);
     });
     return stop;
-  }, [qc, push]);
+  }, [qc, push, prefs]);
   return null;
 }
 

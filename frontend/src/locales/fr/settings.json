@@ -182,6 +182,45 @@
         "submit": "Désactiver le chiffrement",
         "note": "La désactivation ne prend effet qu'au prochain démarrage de l'application."
       }
+    },
+    "notifications": {
+      "sectionLabel": "Notifications",
+      "description": "Choisissez comment et pour quels événements être alerté.",
+      "masterToggle": "Activer les notifications",
+      "channels": {
+        "sectionLabel": "Canaux",
+        "toast": "Notification dans l'application",
+        "webPush": "Notification du navigateur",
+        "webPushBlocked": "Bloquée par le navigateur — autorisez-la dans les paramètres du navigateur."
+      },
+      "privacy": {
+        "sectionLabel": "Confidentialité",
+        "hideAmount": "Masquer le montant",
+        "hideMerchant": "Masquer le marchand"
+      },
+      "triggers": {
+        "sectionLabel": "Alertes",
+        "bigTransaction": {
+          "label": "Grosse transaction",
+          "help": "Alerte quand une transaction dépasse le seuil défini pour un compte."
+        },
+        "accountLow": {
+          "label": "Solde bas",
+          "help": "Alerte quand le solde d'un compte passe sous le plancher défini."
+        },
+        "envelopeExceeded": {
+          "label": "Enveloppe dépassée"
+        },
+        "bankSyncFailed": {
+          "label": "Échec de synchronisation bancaire"
+        }
+      },
+      "test": {
+        "button": "Envoyer un test",
+        "success": "Notification de test envoyée.",
+        "disabledError": "Activez les notifications avant d'envoyer un test.",
+        "genericError": "Une erreur est survenue. Réessayez."
+      }
     }
   },
   "lock": {

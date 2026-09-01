@@ -18,13 +18,20 @@ vi.mock('../../api/mcp', () => ({
   revokeMcpToken: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
-// Minimal stubs so the rest of the Settings page renders.
-vi.mock('../../lib/useSettings', () => ({
-  useSettings: () => ({
-    settings: { dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0 },
-    isReady: true, patch: vi.fn(), mutation: { isSuccess: false, isError: false, data: undefined },
-  }),
-}));
+// Minimal stubs so the rest of the Settings page renders. `notifications`
+// must be the full shape (used unconditionally by SettingsNotifications).
+vi.mock('../../lib/useSettings', async () => {
+  const { DEFAULTS } = await import('../../lib/settings');
+  return {
+    useSettings: () => ({
+      settings: {
+        dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        notifications: DEFAULTS.notifications,
+      },
+      isReady: true, patch: vi.fn(), mutation: { isSuccess: false, isError: false, data: undefined },
+    }),
+  };
+});
 vi.mock('../../api/client', () => ({ api: vi.fn().mockResolvedValue({ accounts: [] }) }));
 
 function renderPage() {

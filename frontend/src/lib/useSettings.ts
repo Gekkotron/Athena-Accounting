@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { getSettings, patchSettings } from '../api/settings';
-import { DEFAULTS, type Settings } from './settings';
+import { DEFAULTS, type Settings, type SettingsPatch } from './settings';
 
 export function useSettings(): {
   settings: Settings;
   isReady: boolean;
-  patch: (p: Partial<Settings>) => void;
-  mutation: UseMutationResult<{ settings: Settings }, Error, Partial<Settings>>;
+  patch: (p: SettingsPatch) => void;
+  mutation: UseMutationResult<{ settings: Settings }, Error, SettingsPatch>;
 } {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['settings'], queryFn: getSettings });

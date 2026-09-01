@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Notification } from '../../../../shared/api-contracts.js';
+import { useSettings } from '../useSettings';
+import type { NotificationPrefs, NotificationPrefsPatch } from '../settings';
 
 function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['notifications'] });
@@ -56,4 +58,22 @@ export function useTestNotification() {
       // notifications — surfaced as a toast in Task 10.
     },
   });
+}
+
+// Reads/patches settings.notifications on top of useSettings() so the
+// Settings → Notifications page and App.tsx's fan-out share the same
+// ['settings'] cache instead of issuing a second GET.
+export function useNotificationPrefs(): {
+  prefs: NotificationPrefs;
+  isReady: boolean;
+  patch: (p: NotificationPrefsPatch) => void;
+  mutation: ReturnType<typeof useSettings>['mutation'];
+} {
+  const { settings, isReady, patch, mutation } = useSettings();
+  return {
+    prefs: settings.notifications,
+    isReady,
+    patch: (p) => patch({ notifications: p }),
+    mutation,
+  };
 }
