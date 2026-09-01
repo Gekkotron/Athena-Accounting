@@ -11,12 +11,17 @@ export type NotificationKind =
   | 'bank_sync_failed'
   | 'test';
 
+// `accountName` / `categoryName` are set by the emitter (see
+// emit.ts:enrichPayload) so the renderer can print the account or
+// category as the user knows it instead of `account #12`. Optional so a
+// legacy row stored before enrichment existed still renders (the
+// renderer falls back to the id).
 export type NotificationPayload =
-  | { kind: 'big_transaction'; single: { txId: number; accountId: number; amount: number; merchant: string | null } }
-  | { kind: 'big_transaction'; summary: { accountId: number; count: number; total: number } }
-  | { kind: 'account_low'; accountId: number; balance: number; floor: number }
-  | { kind: 'envelope_exceeded'; categoryId: number; envelope: number; spent: number; month: string }
-  | { kind: 'bank_sync_failed'; accountId: number; reason: string }
+  | { kind: 'big_transaction'; single: { txId: number; accountId: number; accountName?: string; amount: number; merchant: string | null } }
+  | { kind: 'big_transaction'; summary: { accountId: number; accountName?: string; count: number; total: number } }
+  | { kind: 'account_low'; accountId: number; accountName?: string; balance: number; floor: number }
+  | { kind: 'envelope_exceeded'; categoryId: number; categoryName?: string; envelope: number; spent: number; month: string }
+  | { kind: 'bank_sync_failed'; accountId: number; accountName?: string; reason: string }
   | { kind: 'test' };
 
 export interface Notification {

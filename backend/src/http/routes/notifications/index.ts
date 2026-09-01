@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../../db/client.js';
-import { notifications } from '../../../db/schema.js';
+import { accounts, categories, notifications } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { emitNotification } from '../../../domain/notifications/emit.js';
 import { renderFullDetail } from '../../../domain/notifications/render.js';
@@ -23,19 +23,41 @@ const testBody = z.object({
 // user can see what each trigger looks like without waiting for a real event.
 // A test bypasses the per-trigger gate: seeing a preview shouldn't require
 // enabling the trigger first — the master toggle still gates.
-function sampleTestPayload(kind: NonNullable<z.infer<typeof testBody>['kind']>): NotificationPayload {
+//
+// Resolves the user's first real account and category so the preview reads
+// "on Compte Courant at Amazon" instead of "on account #0 at Amazon". If
+// the user has no account/category yet (fresh onboarding), fall back to a
+// plausible placeholder name — never leave `#0` in the rendered body.
+async function sampleTestPayload(
+  uid: number,
+  kind: NonNullable<z.infer<typeof testBody>['kind']>,
+): Promise<NotificationPayload> {
+  const [firstAccount] = await db
+    .select({ id: accounts.id, name: accounts.name })
+    .from(accounts)
+    .where(eq(accounts.userId, uid))
+    .orderBy(accounts.displayOrder, accounts.id)
+    .limit(1);
+  const [firstCategory] = await db
+    .select({ id: categories.id, name: categories.name })
+    .from(categories)
+    .where(eq(categories.userId, uid))
+    .orderBy(categories.id)
+    .limit(1);
+  const acct = firstAccount ?? { id: 0, name: 'your account' };
+  const cat  = firstCategory ?? { id: 0, name: 'your category' };
   switch (kind) {
     case 'big_transaction':
-      return { kind, single: { txId: 0, accountId: 0, amount: 249.99, merchant: 'Amazon' } };
+      return { kind, single: { txId: 0, accountId: acct.id, accountName: acct.name, amount: 249.99, merchant: 'Amazon' } };
     case 'account_low':
-      return { kind, accountId: 0, balance: 42.5, floor: 100 };
+      return { kind, accountId: acct.id, accountName: acct.name, balance: 42.5, floor: 100 };
     case 'envelope_exceeded': {
       const now = new Date();
       const month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-      return { kind, categoryId: 0, envelope: 200, spent: 227.3, month };
+      return { kind, categoryId: cat.id, categoryName: cat.name, envelope: 200, spent: 227.3, month };
     }
     case 'bank_sync_failed':
-      return { kind, accountId: 0, reason: 'test_preview' };
+      return { kind, accountId: acct.id, accountName: acct.name, reason: 'test_preview' };
   }
 }
 
@@ -104,10 +126,11 @@ export async function notificationsRoutes(app: FastifyInstance): Promise<void> {
     const parsed = testBody.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: 'bad_body' });
     const { kind } = parsed.data;
+    const uid = userId(req);
     const row = kind
-      ? await emitNotification(userId(req), kind, sampleTestPayload(kind),
+      ? await emitNotification(uid, kind, await sampleTestPayload(uid, kind),
           { idempotency: `test:${kind}:${Date.now()}`, bypassTriggerGate: true })
-      : await emitNotification(userId(req), 'test', { kind: 'test' },
+      : await emitNotification(uid, 'test', { kind: 'test' },
           { idempotency: `test:${Date.now()}` });
     if (row === null) return reply.code(422).send({ error: 'notifications_disabled' });
     return reply.code(201).send(row);

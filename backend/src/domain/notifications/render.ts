@@ -4,6 +4,10 @@ type Privacy = { hideAmount: boolean; hideMerchant: boolean };
 
 const amount = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 
+// Enrichment happens in emit.ts; the fallback keeps legacy rows readable.
+const accountLabel  = (id: number, name?: string) => name ?? `account #${id}`;
+const categoryLabel = (id: number, name?: string) => name ?? `category #${id}`;
+
 export function renderTitle(p: NotificationPayload, _priv: Privacy): string {
   switch (p.kind) {
     case 'big_transaction':      return 'Big transaction';
@@ -19,22 +23,26 @@ export function renderBody(p: NotificationPayload, priv: Privacy): string {
     case 'big_transaction': {
       if ('summary' in p) {
         const total = priv.hideAmount ? '' : ` (${amount(p.summary.total)})`;
-        return `${p.summary.count} big transactions on account #${p.summary.accountId}${total}`;
+        const acct  = accountLabel(p.summary.accountId, p.summary.accountName);
+        return `${p.summary.count} big transactions on ${acct}${total}`;
       }
       const merchant = !priv.hideMerchant && p.single.merchant ? ` at ${p.single.merchant}` : '';
       const money    = priv.hideAmount ? '' : `${amount(p.single.amount)} `;
-      return `${money}on account #${p.single.accountId}${merchant}`.trim() || 'A big transaction was recorded';
+      const acct     = accountLabel(p.single.accountId, p.single.accountName);
+      return `${money}on ${acct}${merchant}`.trim() || 'A big transaction was recorded';
     }
     case 'account_low': {
       const balance = priv.hideAmount ? '' : ` (${amount(p.balance)})`;
-      return `Account #${p.accountId} dipped below its floor${balance}`;
+      const acct    = accountLabel(p.accountId, p.accountName);
+      return `${acct} dipped below its floor${balance}`;
     }
     case 'envelope_exceeded': {
       const money = priv.hideAmount ? '' : ` — ${amount(p.spent)} of ${amount(p.envelope)}`;
-      return `Category #${p.categoryId} over budget for ${p.month}${money}`;
+      const cat   = categoryLabel(p.categoryId, p.categoryName);
+      return `${cat} over budget for ${p.month}${money}`;
     }
     case 'bank_sync_failed':
-      return `Sync failed for account #${p.accountId}: ${p.reason}`;
+      return `Sync failed for ${accountLabel(p.accountId, p.accountName)}: ${p.reason}`;
     case 'test':
       return 'This is a test — if you see it, the pipeline works.';
   }
