@@ -186,6 +186,7 @@
     "notifications": {
       "sectionLabel": "Notifications",
       "description": "Choisissez comment et pour quels événements être alerté.",
+      "patch_error": "Impossible d'enregistrer ce réglage de notification. Réessayez.",
       "masterToggle": "Activer les notifications",
       "channels": {
         "sectionLabel": "Canaux",

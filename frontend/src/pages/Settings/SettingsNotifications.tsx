@@ -10,7 +10,7 @@ import { NotificationsTestButton } from './NotificationsTestButton';
 
 export function SettingsNotifications(): JSX.Element {
   const { t } = useTranslation('settings');
-  const { prefs, patch } = useNotificationPrefs();
+  const { prefs, patch, mutation } = useNotificationPrefs();
 
   const accountsQ = useQuery({
     queryKey: ['accounts'],
@@ -24,6 +24,12 @@ export function SettingsNotifications(): JSX.Element {
         <div className="label">{t('settings.notifications.sectionLabel')}</div>
         <p className="text-sm text-ink-400 mt-1">{t('settings.notifications.description')}</p>
       </div>
+
+      {mutation.isError && (
+        <p role="alert" className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
+          {t('settings.notifications.patch_error')}
+        </p>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-ink-200">
         <input

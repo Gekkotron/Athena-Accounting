@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -57,16 +57,28 @@ function fanoutToChannels(
 // channel adapters themselves stay hook-free (see lib/notifications/channels).
 // Mounted only for the authenticated tree, so the SSE connection opens after
 // login and its cleanup (es.close()) runs on logout/unmount.
+//
+// `prefs` is read through a ref instead of being an effect dependency:
+// `prefs` comes from the shared ['settings'] query, so ANY patchSettings()
+// call anywhere in the app (dashboard range, FX currency, bank-sync hour,
+// ...) invalidates and refetches it, producing a new object reference. If
+// that reference were in the deps array, every unrelated settings save
+// would tear down and reopen the SSE connection — and a plain EventSource
+// with no Last-Event-ID silently drops any notification pushed during that
+// close/reopen gap. The ref keeps the stream open for the component's full
+// lifetime while `onEvent` still always reads the latest prefs.
 function NotificationsBridge({ qc }: { qc: QueryClient }): null {
   const { push } = useToast();
   const { prefs } = useNotificationPrefs();
+  const prefsRef = useRef(prefs);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
   useEffect(() => {
     const stop = startNotificationsStream((n) => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
-      fanoutToChannels(n, push, prefs);
+      fanoutToChannels(n, push, prefsRef.current);
     });
     return stop;
-  }, [qc, push, prefs]);
+  }, [qc, push]);
   return null;
 }
 

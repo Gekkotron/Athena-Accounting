@@ -186,6 +186,7 @@
     "notifications": {
       "sectionLabel": "Notifications",
       "description": "Choose how and for which events you get alerted.",
+      "patch_error": "Couldn't save that notification setting. Please try again.",
       "masterToggle": "Enable notifications",
       "channels": {
         "sectionLabel": "Channels",
