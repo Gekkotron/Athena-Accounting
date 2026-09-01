@@ -25,6 +25,20 @@ export const DEFAULTS = {
   // fx_rates table. null = per-currency mode (no conversion, current
   // behavior).
   displayCurrency: null,
+  // Notification prefs: enabled by default with privacy-safe display
+  // (amount/merchant hidden) and only the in-app toast channel on. OS
+  // native and web push are opt-in since they require extra permissions.
+  notifications: {
+    enabled: true,
+    channels: { toast: true, osNative: false, webPush: false },
+    privacy: { hideAmount: true, hideMerchant: true },
+    triggers: {
+      bigTransaction: { enabled: true, thresholds: {} as Record<string, number> },
+      accountLow: { enabled: true, floors: {} as Record<string, number> },
+      envelopeExceeded: { enabled: true },
+      bankSyncFailed: { enabled: true },
+    },
+  },
 } as const;
 
 export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';
