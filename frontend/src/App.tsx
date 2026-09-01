@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError, setUnauthorizedHandler } from './api/client';
 import type { User } from './api/types';
+import type { Notification } from '../../shared/api-contracts.js';
+import { startNotificationsStream } from './lib/notifications/stream.js';
 import { LockProvider } from './contexts/LockContext';
 import { TipsProvider } from './contexts/TipsContext';
 import { TourProvider } from './contexts/TourContext';
@@ -32,6 +34,13 @@ import { Backup } from './pages/Data/Backup';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { BankSyncCallback } from './pages/BankSyncCallback';
+
+// Channel dispatch is wired in Tasks 10–12 (toast, web push). Task 9 only
+// needs a stable call site so those tasks don't require another App.tsx
+// change.
+function fanoutToChannels(_n: Notification): void {
+  /* TODO(Task 10/12): dispatch to toast + web push channels */
+}
 
 export default function App() {
   const location = useLocation();
@@ -88,6 +97,22 @@ export default function App() {
     },
   });
 
+  const user = me.data?.user ?? null;
+  const isAuthenticated = !!user;
+
+  // One SSE connection for the whole authenticated tree; react-query cache
+  // invalidation lives here so every notifications hook stays in sync
+  // regardless of which page is mounted. Channel dispatch (toast, web push)
+  // is added on top of fanoutToChannels in Tasks 10–12.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const stop = startNotificationsStream((n) => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      fanoutToChannels(n);
+    });
+    return stop;
+  }, [isAuthenticated, qc]);
+
   if (me.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
@@ -95,8 +120,6 @@ export default function App() {
       </div>
     );
   }
-
-  const user = me.data?.user ?? null;
 
   if (!user) {
     if (location.pathname !== '/login') {
