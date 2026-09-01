@@ -7,6 +7,7 @@ import type { User } from './api/types';
 import type { Notification } from '../../shared/api-contracts.js';
 import { startNotificationsStream } from './lib/notifications/stream.js';
 import { showToast } from './lib/notifications/channels/toast.js';
+import { sendWebPush } from './lib/notifications/channels/webPush.js';
 import { ToastProvider, useToast } from './components/Toast';
 import { LockProvider } from './contexts/LockContext';
 import { TipsProvider } from './contexts/TipsContext';
@@ -37,12 +38,17 @@ import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { BankSyncCallback } from './pages/BankSyncCallback';
 
+// TODO(Task 15): replace with useNotificationPrefs()
+const notificationPrefs = {
+  channels: { toast: true, osNative: false, webPush: false },
+  privacy: { hideAmount: true, hideMerchant: true },
+};
+
 // Single fan-out point for live notification channels. Toast lands in Task
-// 10; Task 12 adds a `sendWebPush(n, prefs)` call alongside it here.
+// 10; Task 12 adds the webPush channel alongside it here.
 function fanoutToChannels(n: Notification, push: (t: { title: string; body: string }) => void): void {
-  // TODO(Task 12): gate each channel on prefs.channels.<name> once
-  // useNotificationPrefs() lands.
-  showToast(push, n);
+  if (notificationPrefs.channels.toast)   showToast(push, n);
+  if (notificationPrefs.channels.webPush) sendWebPush(n, notificationPrefs.privacy);
 }
 
 // Lives inside <ToastProvider> so it can obtain `push` via useToast(); the
