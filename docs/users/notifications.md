@@ -49,7 +49,7 @@ one alert is sent per envelope per month.
 
 ## Bank sync failed
 
-Fires when a scheduled or manual [bank sync](./bank-sync.md) fails for a
+Fires when a scheduled or manual [bank sync](./bank-sync) fails for a
 connected account — an expired consent, an Enable Banking outage, or a
 mapping issue. At most one alert is sent per account per day, so a sync
 that keeps failing throughout the day won't flood your inbox; check the
@@ -74,6 +74,6 @@ in more visible contexts (a shoulder-surfer at your screen).
 
 ## See also
 
-- [Bank sync](./bank-sync.md) — connections, consent lifecycle, and sync
+- [Bank sync](./bank-sync) — connections, consent lifecycle, and sync
   troubleshooting.
-- [Dashboard](./dashboard.md) — where budgets and envelopes are set.
+- [Dashboard](./dashboard) — where budgets and envelopes are set.
