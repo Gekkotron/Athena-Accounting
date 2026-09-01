@@ -3,9 +3,11 @@ import { describe, it, expect } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { buildApp } from './helpers/build-app.js';
 import { seedUserAndCookie, seedAccount } from './helpers/seedUserAndCookie.js';
+import { seedUser } from './helpers/seedUser.js';
 import { db } from '../src/db/client.js';
 import { notifications, bankConnections, bankConnectionAccounts } from '../src/db/schema.js';
 import { syncUserConnections } from '../src/domain/imports/bank-sync.js';
+import { computeCurrentBalance } from '../src/domain/notifications/hooks.js';
 import type { EnableBankingClient } from '../src/services/enable-banking/client.js';
 
 const RUN = process.env.RUN_DB_TESTS === '1';
@@ -96,6 +98,64 @@ d('notification triggers', () => {
     expect(rows.some((r) => r.kind === 'envelope_exceeded')).toBe(true);
 
     await app.close();
+  });
+
+  it('prefers the account-scoped budget over a global budget for the same category', async () => {
+    const app = await buildApp();
+    const { cookie, uid } = await seedUserAndCookie(app);
+    const accountId = await seedAccount(uid);
+
+    const catRes = await app.inject({
+      method: 'POST',
+      url: '/api/categories',
+      headers: { cookie },
+      payload: { name: 'Scoped envelope cat', kind: 'expense' },
+    });
+    const categoryId = catRes.json().category.id;
+
+    // Global budget: high limit, would NOT be exceeded by this spend.
+    await app.inject({
+      method: 'POST',
+      url: '/api/budgets',
+      headers: { cookie },
+      payload: { categoryId, monthlyLimit: '1000.00' },
+    });
+    // Account-scoped budget for the same category: low limit, WOULD be exceeded.
+    await app.inject({
+      method: 'POST',
+      url: '/api/budgets',
+      headers: { cookie },
+      payload: { categoryId, monthlyLimit: '100.00', accountId },
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/transactions',
+      headers: { cookie },
+      payload: { accountId, amount: '-150.00', date: today, rawLabel: 'Scoped envelope buster', categoryId },
+    });
+    expect(res.statusCode).toBe(201);
+
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, uid));
+    const envelopeRow = rows.find((r) => r.kind === 'envelope_exceeded');
+    expect(envelopeRow).toBeTruthy();
+    const payload = envelopeRow!.payload as { envelope: number; spent: number };
+    // 100, not 1000 — the account-scoped budget won, not the global one.
+    expect(payload.envelope).toBe(100);
+    expect(payload.spent).toBe(150);
+
+    await app.close();
+  });
+
+  it('computeCurrentBalance is scoped to the owning user (no cross-tenant balance leak)', async () => {
+    const userA = await seedUser();
+    const userB = await seedUser();
+    const accountB = await seedAccount(userB, { openingBalance: '5000.00' });
+
+    // userA has no relationship to accountB — must not see userB's balance.
+    const balance = await computeCurrentBalance(userA, accountB);
+    expect(balance).toBe(0);
   });
 
   it('a failed bank sync emits bank_sync_failed', async () => {

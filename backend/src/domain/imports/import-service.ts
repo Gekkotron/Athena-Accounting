@@ -354,7 +354,7 @@ export async function runImport(opts: {
       })
       .from(transactions)
       .where(inArray(transactions.id, result.insertedIds));
-    const newBalance = await computeCurrentBalance(opts.accountId);
+    const newBalance = await computeCurrentBalance(opts.userId, opts.accountId);
     for (const row of freshRows) {
       await afterTransactionInserted(opts.userId, {
         id: row.id,

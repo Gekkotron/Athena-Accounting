@@ -64,7 +64,7 @@ export function registerCreate(app: FastifyInstance): void {
 
       const [final] = await db.select().from(transactions).where(eq(transactions.id, inserted.id));
       const row = final ?? inserted;
-      const newBalance = await computeCurrentBalance(row.accountId);
+      const newBalance = await computeCurrentBalance(uid, row.accountId);
       await afterTransactionInserted(uid, {
         id: row.id,
         accountId: row.accountId,
