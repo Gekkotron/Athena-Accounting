@@ -1,4 +1,4 @@
-import type { Notification } from '../../../../shared/api-contracts.js';
+import type { Notification } from './types.js';
 
 export type BusEvent = { row: Notification };
 type Sub = (e: BusEvent) => void;

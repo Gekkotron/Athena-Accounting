@@ -4,7 +4,7 @@ import { notifications, userSettings } from '../../db/schema.js';
 import { mergeSettings } from '../settings/schema.js';
 import { renderFullDetail } from './render.js';
 import { broadcast } from './bus.js';
-import type { Notification, NotificationKind, NotificationPayload } from '../../../../shared/api-contracts.js';
+import type { Notification, NotificationKind, NotificationPayload } from './types.js';
 
 function triggerKey(kind: NotificationKind): keyof ReturnType<typeof mergeSettings>['notifications']['triggers'] | null {
   switch (kind) {

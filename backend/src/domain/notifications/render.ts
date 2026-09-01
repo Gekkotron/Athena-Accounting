@@ -1,4 +1,4 @@
-import type { NotificationPayload } from '../../../../shared/api-contracts.js';
+import type { NotificationPayload } from './types.js';
 
 type Privacy = { hideAmount: boolean; hideMerchant: boolean };
 
