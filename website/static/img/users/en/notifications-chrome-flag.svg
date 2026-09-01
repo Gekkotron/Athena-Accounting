@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" role="img" aria-labelledby="title desc" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <title id="title">Chrome flag: Insecure origins treated as secure</title>
+  <desc id="desc">chrome://flags entry showing the flag set to Enabled with a redacted local server address http://<lan-ip>:<port></desc>
+  <rect width="900" height="260" fill="#1f1f1f"/>
+  <circle cx="28" cy="34" r="5" fill="#8ab4f8"/>
+  <rect x="42" y="20" width="330" height="26" rx="3" fill="#fff5b0"/>
+  <text x="50" y="38" font-size="14" font-weight="600" fill="#202124">Insecure origins treated as secure</text>
+  <text x="42" y="70" font-size="12" fill="#bdc1c6">
+    <tspan x="42" dy="0">Treat given (insecure) origins as secure origins. Multiple origins can be supplied as a</tspan>
+    <tspan x="42" dy="16">comma-separated list. Origins must have their protocol specified e.g.</tspan>
+    <tspan x="42" dy="16">&quot;http://example.com&quot;. For the definition of secure contexts, see</tspan>
+    <tspan x="42" dy="16">https://w3c.github.io/webappsec-secure-contexts/ — Mac, Windows, Linux, ChromeOS,</tspan>
+    <tspan x="42" dy="16">Android</tspan>
+  </text>
+  <rect x="700" y="72" width="160" height="34" rx="4" fill="#8ab4f8"/>
+  <text x="732" y="94" font-size="14" fill="#202124">Activé</text>
+  <text x="838" y="94" font-size="12" fill="#202124">▾</text>
+  <rect x="42" y="170" width="600" height="40" rx="4" fill="#2b2b2b" stroke="#5f6368" stroke-width="1"/>
+  <text x="56" y="196" font-size="14" font-family="ui-monospace,'SFMono-Regular',Menlo,monospace" fill="#e8eaed">http://&lt;lan-ip&gt;:&lt;port&gt;</text>
+  <text x="42" y="238" font-size="13" fill="#8ab4f8" text-decoration="underline">#unsafely-treat-insecure-origin-as-secure</text>
+</svg>

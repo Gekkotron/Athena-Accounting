@@ -51,6 +51,31 @@ export function NotificationsChannelsCard({
           </span>
         )}
       </label>
+
+      <details className="mt-1 text-xs text-ink-400">
+        <summary className="cursor-pointer text-ink-300 hover:text-ink-100">
+          {t('settings.notifications.channels.chromeInsecureTip.title')}
+        </summary>
+        <div className="mt-2 flex flex-col gap-2 pl-2">
+          <p>{t('settings.notifications.channels.chromeInsecureTip.intro')}</p>
+          <ol className="list-decimal list-inside flex flex-col gap-1">
+            <li>
+              {t('settings.notifications.channels.chromeInsecureTip.step1_pre')}{' '}
+              <code className="rounded bg-ink-900/50 px-1 py-0.5 text-ink-100">
+                {t('settings.notifications.channels.chromeInsecureTip.step1_url')}
+              </code>
+            </li>
+            <li>{t('settings.notifications.channels.chromeInsecureTip.step2')}</li>
+            <li>
+              {t('settings.notifications.channels.chromeInsecureTip.step3_pre')}{' '}
+              <code className="rounded bg-ink-900/50 px-1 py-0.5 text-ink-100">
+                {t('settings.notifications.channels.chromeInsecureTip.step3_example')}
+              </code>
+              {t('settings.notifications.channels.chromeInsecureTip.step3_post')}
+            </li>
+          </ol>
+        </div>
+      </details>
     </div>
   );
 }

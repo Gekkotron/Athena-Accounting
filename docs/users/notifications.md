@@ -24,6 +24,43 @@ Each trigger has its own toggle in the *Alertes* tab, so you can enable
 only the ones you care about. New alerts show up as a badge on the bell
 icon in the header and in the inbox at */notifications*.
 
+## Browser notifications on a LAN (HTTP)
+
+Athena runs on your own server, and most home setups reach it over plain
+HTTP on a local IP — no HTTPS certificate. Chrome treats such origins as
+**insecure**, and refuses to grant the `Notification` permission from
+them: the *Notification du navigateur* toggle in *Paramètres →
+Notifications → Canaux* will stay off no matter how many times you flip
+it, because the browser silently drops the permission request.
+
+To work around this and force Chrome to treat your LAN address as
+secure:
+
+1. Open Chrome and go to
+   `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
+2. Set **Insecure origins treated as secure** to *Enabled*.
+3. In the text box that appears, enter your Athena server's address —
+   including the scheme and port — for example
+   `http://<lan-ip>:<port>`. Multiple origins can be entered as a
+   comma-separated list.
+4. Relaunch Chrome when it prompts you.
+
+![Chrome flag &laquo;&nbsp;Insecure origins treated as secure&nbsp;&raquo; set to Enabled, with a redacted local address in the origins list](/img/users/en/notifications-chrome-flag.svg)
+
+After the relaunch, load Athena at the same address you whitelisted, go
+back to *Paramètres → Notifications → Canaux*, and toggle *Notification
+du navigateur* on — Chrome will now prompt for permission normally.
+
+:::caution
+
+The flag applies to every tab in that Chrome profile that loads the
+whitelisted origin, so keep the origin list narrow (your Athena server,
+nothing else). Firefox and Safari don't expose an equivalent flag; the
+supported long-term fix on any browser is to put Athena behind HTTPS
+(a local CA, Tailscale, or a reverse proxy with a real certificate).
+
+:::
+
 ## Big transaction
 
 Fires when a single transaction on an account exceeds an amount you set for
