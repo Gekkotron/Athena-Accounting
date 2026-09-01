@@ -43,7 +43,15 @@
  },
  "header": {
   "menu": "Menu",
-  "connectedAs": "Signed in"
+  "connectedAs": "Signed in",
+  "notifications": {
+   "bell": "Notifications",
+   "empty": "No unread notifications",
+   "unread_count_one": "{{count}} unread",
+   "unread_count_other": "{{count}} unread",
+   "see_all": "See all",
+   "mark_as_read": "Mark as read"
+  }
  },
  "footer": {
   "githubLink": "View on GitHub",

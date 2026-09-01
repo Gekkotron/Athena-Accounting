@@ -12,6 +12,7 @@ import { NavTree } from './NavTree';
 import { Brand } from './Brand';
 import { UserCard } from './UserCard';
 import { SiteFooter } from './SiteFooter';
+import { NotificationBell } from '../NotificationBell';
 
 export function Layout({ user }: { user: User }) {
   const { t } = useTranslation(['layout', 'common']);
@@ -35,15 +36,18 @@ export function Layout({ user }: { user: User }) {
         {/* Mobile top bar */}
         <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-ink-800/70 bg-ink-950/85 backdrop-blur">
           <Brand />
-          <button
-            aria-label={t('header.menu', { ns: 'layout' })}
-            onClick={() => setDrawerOpen(true)}
-            className="btn-secondary !min-h-0 !py-1.5 !px-2"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button
+              aria-label={t('header.menu', { ns: 'layout' })}
+              onClick={() => setDrawerOpen(true)}
+              className="btn-secondary !min-h-0 !py-1.5 !px-2"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
         </header>
 
         {/* Mobile drawer overlay */}
@@ -81,8 +85,9 @@ export function Layout({ user }: { user: User }) {
             sidebar doesn't stretch to match the (potentially very tall)
             transactions/reports page height. */}
         <aside className="hidden md:flex w-60 shrink-0 border-r border-ink-800/70 bg-ink-950/60 px-4 py-6 flex-col sticky top-0 self-start h-screen">
-          <div className="mb-10 px-2">
+          <div className="mb-10 px-2 flex items-center justify-between">
             <Brand />
+            <NotificationBell />
           </div>
           <nav className="overflow-y-auto flex-1 min-h-0">
             <NavTree sections={nav} />

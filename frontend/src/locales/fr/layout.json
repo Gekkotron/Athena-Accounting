@@ -43,7 +43,15 @@
  },
  "header": {
   "menu": "Menu",
-  "connectedAs": "Connecté"
+  "connectedAs": "Connecté",
+  "notifications": {
+   "bell": "Notifications",
+   "empty": "Aucune notification non lue",
+   "unread_count_one": "{{count}} non lue",
+   "unread_count_other": "{{count}} non lues",
+   "see_all": "Tout voir",
+   "mark_as_read": "Marquer comme lu"
+  }
  },
  "footer": {
   "githubLink": "Projet sur GitHub",
