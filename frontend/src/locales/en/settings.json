@@ -192,7 +192,17 @@
         "sectionLabel": "Channels",
         "toast": "In-app notification",
         "webPush": "Browser notification",
-        "webPushBlocked": "Blocked by the browser — allow it in your browser settings."
+        "webPushBlocked": "Blocked by the browser — allow it in your browser settings.",
+        "chromeInsecureTip": {
+          "title": "Tip: allow notifications on a local (HTTP) server",
+          "intro": "On a LAN without HTTPS, Chrome refuses notifications. To work around it and force Chrome to treat your IP as secure:",
+          "step1_pre": "Open Chrome and go to the following address:",
+          "step1_url": "chrome://flags/#unsafely-treat-insecure-origin-as-secure",
+          "step2": "Set the flag to Enabled.",
+          "step3_pre": "In the text box, enter your local server's address, for example",
+          "step3_example": "http://<lan-ip>:<port>",
+          "step3_post": ", then relaunch Chrome."
+        }
       },
       "privacy": {
         "sectionLabel": "Privacy",
@@ -220,7 +230,9 @@
         "button": "Send a test",
         "success": "Test notification sent.",
         "disabledError": "Enable notifications before sending a test.",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "hintWebPushOff": "Turn on \"Browser notification\" in Channels to also get a system alert.",
+        "hintWebPushBlocked": "Your browser has blocked notifications — allow them in the browser's site settings."
       }
     }
   },

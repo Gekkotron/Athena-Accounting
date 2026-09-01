@@ -192,7 +192,17 @@
         "sectionLabel": "Canaux",
         "toast": "Notification dans l'application",
         "webPush": "Notification du navigateur",
-        "webPushBlocked": "Bloquée par le navigateur — autorisez-la dans les paramètres du navigateur."
+        "webPushBlocked": "Bloquée par le navigateur — autorisez-la dans les paramètres du navigateur.",
+        "chromeInsecureTip": {
+          "title": "Astuce : autoriser les notifications sur un serveur local (HTTP)",
+          "intro": "Sur un réseau local sans HTTPS, Chrome refuse les notifications. Pour contourner cela et forcer Chrome à traiter votre IP comme sécurisée :",
+          "step1_pre": "Ouvrez Chrome et accédez à l'adresse suivante :",
+          "step1_url": "chrome://flags/#unsafely-treat-insecure-origin-as-secure",
+          "step2": "Activez l'option (Enabled).",
+          "step3_pre": "Dans la zone de texte, saisissez l'adresse de votre serveur local, par exemple",
+          "step3_example": "http://<ip-lan>:<port>",
+          "step3_post": ", puis relancez Chrome."
+        }
       },
       "privacy": {
         "sectionLabel": "Confidentialité",
@@ -220,7 +230,9 @@
         "button": "Envoyer un test",
         "success": "Notification de test envoyée.",
         "disabledError": "Activez les notifications avant d'envoyer un test.",
-        "genericError": "Une erreur est survenue. Réessayez."
+        "genericError": "Une erreur est survenue. Réessayez.",
+        "hintWebPushOff": "Activez « Notification du navigateur » dans Canaux pour recevoir aussi une alerte système.",
+        "hintWebPushBlocked": "Votre navigateur bloque les notifications — autorisez-les dans les paramètres du site."
       }
     }
   },
