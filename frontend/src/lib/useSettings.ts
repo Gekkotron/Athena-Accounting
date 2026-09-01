@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { getSettings, patchSettings } from '../api/settings';
-import { DEFAULTS, type Settings, type SettingsPatch } from './settings';
+import { DEFAULTS, mergeNotifications, type Settings, type SettingsPatch } from './settings';
 
 export function useSettings(): {
   settings: Settings;
@@ -15,8 +15,14 @@ export function useSettings(): {
     onMutate: async (patch) => {
       await qc.cancelQueries({ queryKey: ['settings'] });
       const prev = qc.getQueryData<{ settings: Settings }>(['settings']);
+      const base = prev?.settings ?? DEFAULTS;
+      const { notifications: notifPatch, ...rest } = patch;
       qc.setQueryData(['settings'], {
-        settings: { ...(prev?.settings ?? DEFAULTS), ...patch },
+        settings: {
+          ...base,
+          ...rest,
+          notifications: mergeNotifications(base.notifications, notifPatch),
+        },
       });
       return { prev };
     },

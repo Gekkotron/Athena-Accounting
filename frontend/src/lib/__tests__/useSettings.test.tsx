@@ -60,6 +60,35 @@ describe('useSettings', () => {
     await waitFor(() => expect(result.current.settings.dashboardRange).toBe(DEFAULTS.dashboardRange));
   });
 
+  it('optimistic update deep-merges notifications sub-tree (regression: Alerts tab black screen)', async () => {
+    // Regression for: committing a threshold on the Alerts tab wiped out
+    // sibling notification fields (channels/privacy/other triggers) via a
+    // shallow spread, then NotificationsTriggersCard threw on
+    // `triggers.accountLow.enabled` — no ErrorBoundary → black screen.
+    apiMock.mockImplementation((_path: string, init?: any) => {
+      // Never resolves: we want to observe the optimistic state, not the
+      // eventual refetch's server-merged state.
+      if (init?.method === 'PATCH') return new Promise(() => {});
+      return Promise.resolve({ settings: DEFAULTS });
+    });
+    const { result } = renderHook(() => useSettings(), { wrapper: wrap() });
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    act(() => result.current.patch({
+      notifications: { triggers: { bigTransaction: { thresholds: { '3': 150.5 } } } },
+    }));
+    await waitFor(() => {
+      expect(result.current.settings.notifications.triggers.bigTransaction.thresholds).toEqual({ '3': 150.5 });
+    });
+    const n = result.current.settings.notifications;
+    expect(n.enabled).toBe(DEFAULTS.notifications.enabled);
+    expect(n.channels).toEqual(DEFAULTS.notifications.channels);
+    expect(n.privacy).toEqual(DEFAULTS.notifications.privacy);
+    expect(n.triggers.bigTransaction.enabled).toBe(DEFAULTS.notifications.triggers.bigTransaction.enabled);
+    expect(n.triggers.accountLow).toEqual(DEFAULTS.notifications.triggers.accountLow);
+    expect(n.triggers.envelopeExceeded).toEqual(DEFAULTS.notifications.triggers.envelopeExceeded);
+    expect(n.triggers.bankSyncFailed).toEqual(DEFAULTS.notifications.triggers.bankSyncFailed);
+  });
+
   it('invalidates on settle so a fresh GET is refetched', async () => {
     apiMock.mockImplementation((_path: string, init?: any) => {
       if (init?.method === 'PATCH') return Promise.resolve({ settings: { ...DEFAULTS, dashboardRange: '6m' } });

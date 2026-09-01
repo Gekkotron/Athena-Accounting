@@ -78,6 +78,31 @@ export type SettingsPatch = Partial<Omit<Settings, 'notifications'>> & {
   notifications?: NotificationPrefsPatch;
 };
 
+// Deep-merges a NotificationPrefsPatch on top of an existing NotificationPrefs
+// value. Mirrors backend/src/domain/settings/schema.ts's NotificationsSchema,
+// which merges each field individually rather than replacing whole sub-objects.
+// Used by useSettings' optimistic update so a partial patch (e.g. one account
+// threshold) doesn't wipe out the sibling fields — that would leave the
+// Triggers card reading `.enabled` on undefined and crash the tree.
+export function mergeNotifications(
+  base: NotificationPrefs,
+  patch: NotificationPrefsPatch | undefined,
+): NotificationPrefs {
+  if (!patch) return base;
+  const t = patch.triggers;
+  return {
+    enabled: patch.enabled ?? base.enabled,
+    channels: { ...base.channels, ...patch.channels },
+    privacy: { ...base.privacy, ...patch.privacy },
+    triggers: {
+      bigTransaction: { ...base.triggers.bigTransaction, ...t?.bigTransaction },
+      accountLow: { ...base.triggers.accountLow, ...t?.accountLow },
+      envelopeExceeded: { ...base.triggers.envelopeExceeded, ...t?.envelopeExceeded },
+      bankSyncFailed: { ...base.triggers.bankSyncFailed, ...t?.bankSyncFailed },
+    },
+  };
+}
+
 export const DEFAULTS: Settings = {
   dashboardRange: '3m',
   dashboardChartScope: 'all',
