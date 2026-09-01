@@ -23,6 +23,7 @@ describe('docsSlugFor', () => {
     ['/data/pdf-templates', 'importing'],
     ['/notifications', 'notifications'],
     ['/notifications/17', 'notifications'],
+    ['/settings/notifications', 'notifications'],
     ['/some/unknown/route', 'getting-started'],
   ])('%s → %s', (pathname, slug) => {
     expect(docsSlugFor(pathname)).toBe(slug);

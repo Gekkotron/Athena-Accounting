@@ -1,22 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation, Trans } from 'react-i18next';
-import { api } from '../api/client';
-import type { Account } from '../api/types';
-import { useSettings } from '../lib/useSettings';
-import { DEFAULTS, type Settings as SettingsShape } from '../lib/settings';
-import { RangePicker, type RangeKey } from '../components/RangePicker';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../api/mcp';
-import { useTips } from '../contexts/TipsContext';
-import { LoadingBlock } from '../components/StateBlocks';
-import { NumberField, SavedChip } from './Settings-fields';
-import { SettingsSecurity } from './SettingsSecurity';
-import { SettingsLock } from './SettingsLock';
-import { FxSection } from './Settings/FxSection';
-import { SettingsNotifications } from './Settings/SettingsNotifications';
+import { api } from '../../api/client';
+import type { Account } from '../../api/types';
+import { useSettings } from '../../lib/useSettings';
+import { DEFAULTS, type Settings as SettingsShape } from '../../lib/settings';
+import { RangePicker, type RangeKey } from '../../components/RangePicker';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../../api/mcp';
+import { useTips } from '../../contexts/TipsContext';
+import { LoadingBlock } from '../../components/StateBlocks';
+import { NumberField, SavedChip } from '../Settings-fields';
+import { SettingsSecurity } from '../SettingsSecurity';
+import { SettingsLock } from '../SettingsLock';
+import { FxSection } from './FxSection';
 
-export function Settings(): JSX.Element {
+export function SettingsGeneral(): JSX.Element {
   const { t } = useTranslation('settings');
   const { settings, isReady, patch, mutation } = useSettings();
   const { reset: resetTips } = useTips();
@@ -77,12 +76,9 @@ export function Settings(): JSX.Element {
 
   return (
     <div className="max-w-xl flex flex-col gap-6">
-      <div>
-        <h1 className="display text-2xl text-ink-50">{t('settings.page.title')}</h1>
-        <p className="text-sm text-ink-400 mt-1">
-          {t('settings.page.subtitle')}
-        </p>
-      </div>
+      <p className="text-sm text-ink-400">
+        {t('settings.page.subtitle')}
+      </p>
 
       {mutation.isError && (
         <div className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
@@ -241,8 +237,6 @@ export function Settings(): JSX.Element {
 
         <FxSection />
 
-        <SettingsNotifications />
-
         <section className="pt-4 border-t border-ink-800/60">
           <button className="btn-ghost" onClick={() => setConfirmReset(true)}>
             {t('settings.reset.button')}
@@ -281,4 +275,3 @@ export function Settings(): JSX.Element {
     </div>
   );
 }
-

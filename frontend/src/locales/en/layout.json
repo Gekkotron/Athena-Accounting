@@ -36,6 +36,10 @@
    "budgets": {
     "plafonds": "Caps",
     "enveloppes": "Envelopes"
+   },
+   "settings": {
+    "general": "Settings",
+    "notifications": "Notifications"
    }
   },
   "badge_one": "{{count}} pending",

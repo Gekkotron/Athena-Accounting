@@ -37,7 +37,8 @@ import { Duplicates } from './pages/Data/Duplicates';
 import { PdfTemplates } from './pages/Data/PdfTemplates';
 import { Backup } from './pages/Data/Backup';
 import { Profile } from './pages/Profile';
-import { Settings } from './pages/Settings';
+import { SettingsGeneral } from './pages/Settings/SettingsGeneral';
+import { SettingsNotifications } from './pages/Settings/SettingsNotifications';
 import { Notifications } from './pages/Notifications';
 import { BankSyncCallback } from './pages/BankSyncCallback';
 
@@ -109,6 +110,11 @@ export default function App() {
     { to: '/data/duplicates', label: t('nav.children.data.duplicates') },
     { to: '/data/pdf-templates', label: t('nav.children.data.pdfTemplates') },
     { to: '/data/backup', label: t('nav.children.data.backup') },
+  ];
+
+  const SETTINGS_TABS: HubTab[] = [
+    { to: '/settings/general', label: t('nav.children.settings.general') },
+    { to: '/settings/notifications', label: t('nav.children.settings.notifications') },
   ];
 
   // Global session-expiry redirect: any 401 from a non-auth-me endpoint
@@ -206,7 +212,14 @@ export default function App() {
             </Route>
 
             <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
+
+            {/* Réglages hub */}
+            <Route path="/settings" element={<HubLayout title={t('user.settings')} tabs={SETTINGS_TABS} />}>
+              <Route index element={<Navigate to="general" replace />} />
+              <Route path="general" element={<SettingsGeneral />} />
+              <Route path="notifications" element={<SettingsNotifications />} />
+            </Route>
+
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/bank-sync/callback" element={<BankSyncCallback />} />
 

@@ -12,6 +12,7 @@ const ROUTE_SLUGS: readonly (readonly [string, string])[] = [
   ['/data/pdf-templates', 'importing'],
   ['/data', 'accounts-and-data'],
   ['/notifications', 'notifications'],
+  ['/settings/notifications', 'notifications'],
 ];
 
 export function docsSlugFor(pathname: string): string {

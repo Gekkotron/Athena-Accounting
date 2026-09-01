@@ -74,7 +74,7 @@ export function Notifications(): JSX.Element {
           title={t('empty.title')}
           hint={(
             <Trans i18nKey="notifications:empty.body">
-              You&apos;re all caught up. Manage which alerts you get in <Link to="/settings" className="text-sage-300 hover:text-sage-200">Settings</Link>.
+              You&apos;re all caught up. Manage which alerts you get in <Link to="/settings/notifications" className="text-sage-300 hover:text-sage-200">Settings</Link>.
             </Trans>
           )}
         />

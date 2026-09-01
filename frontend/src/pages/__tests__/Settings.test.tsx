@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { Settings } from '../Settings';
+import { SettingsGeneral } from '../Settings/SettingsGeneral';
 import { DEFAULTS } from '../../lib/settings';
 import { withTips } from '../../test/renderWithProviders';
 import { pinLocale } from '../../test/i18n';
@@ -27,7 +27,7 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        {withTips(<Settings />)}
+        {withTips(<SettingsGeneral />)}
       </MemoryRouter>
     </QueryClientProvider>,
   );

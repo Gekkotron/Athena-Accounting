@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { Settings } from '../Settings';
+import { SettingsGeneral } from '../Settings/SettingsGeneral';
 import { withTips } from '../../test/renderWithProviders';
 import { pinLocale } from '../../test/i18n';
 
@@ -18,32 +18,29 @@ vi.mock('../../api/mcp', () => ({
   revokeMcpToken: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
-// Minimal stubs so the rest of the Settings page renders. `notifications`
-// must be the full shape (used unconditionally by SettingsNotifications).
-vi.mock('../../lib/useSettings', async () => {
-  const { DEFAULTS } = await import('../../lib/settings');
-  return {
-    useSettings: () => ({
-      settings: {
-        dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
-        notifications: DEFAULTS.notifications,
-      },
-      isReady: true, patch: vi.fn(), mutation: { isSuccess: false, isError: false, data: undefined },
-    }),
-  };
-});
+// Minimal stubs so the Settings general page renders. Notifications live
+// under a separate route now, so this test doesn't need the notification
+// prefs shape.
+vi.mock('../../lib/useSettings', () => ({
+  useSettings: () => ({
+    settings: {
+      dashboardRange: '3m', dashboardChartScope: 'all', chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+    },
+    isReady: true, patch: vi.fn(), mutation: { isSuccess: false, isError: false, data: undefined },
+  }),
+}));
 vi.mock('../../api/client', () => ({ api: vi.fn().mockResolvedValue({ accounts: [] }) }));
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{withTips(<Settings />)}</MemoryRouter>
+      <MemoryRouter>{withTips(<SettingsGeneral />)}</MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('Settings — Accès MCP', () => {
+describe('SettingsGeneral — Accès MCP', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders the MCP section', async () => {
