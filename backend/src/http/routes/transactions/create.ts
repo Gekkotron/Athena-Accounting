@@ -5,6 +5,7 @@ import { transactions } from '../../../db/schema.js';
 import { normalizeLabel } from '../../../domain/imports/normalize.js';
 import { computeDedupKey } from '../../../domain/imports/dedup.js';
 import { categorizeOne, loadRuleEngine } from '../../../domain/rules/recategorize.js';
+import { afterTransactionInserted, computeCurrentBalance } from '../../../domain/notifications/hooks.js';
 import { userId } from '../../plugins/auth.js';
 import { CreateBody } from './schemas.js';
 import { isPgError } from './helpers.js';
@@ -62,7 +63,17 @@ export function registerCreate(app: FastifyInstance): void {
       }
 
       const [final] = await db.select().from(transactions).where(eq(transactions.id, inserted.id));
-      return reply.code(201).send({ transaction: final ?? inserted });
+      const row = final ?? inserted;
+      const newBalance = await computeCurrentBalance(row.accountId);
+      await afterTransactionInserted(uid, {
+        id: row.id,
+        accountId: row.accountId,
+        amount: Number(row.amount),
+        merchant: row.rawLabel,
+        categoryId: row.categoryId,
+        newBalance,
+      });
+      return reply.code(201).send({ transaction: row });
     } catch (err) {
       if (isPgError(err) && err.code === '23505') {
         return reply.code(409).send({

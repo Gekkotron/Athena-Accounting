@@ -25,6 +25,7 @@ import {
   syncWindowStart,
 } from './bank-sync-core.js';
 import { mergeSettings } from '../settings/schema.js';
+import { afterBankSyncCompleted } from '../notifications/hooks.js';
 
 // Sync engine: pulls booked transactions for every mapped account of every
 // active connection and feeds them through runImport, so dedup, rule
@@ -213,14 +214,17 @@ export async function syncUserConnections(
           dedupSkippedRows,
           skipped: null,
         });
+        await afterBankSyncCompleted(userId, row.accountId, true);
       } catch (err) {
         if (err instanceof EnableBankingError && RECONNECT_STATUSES.has(err.status)) {
           await markNeedsReconnect(conn.id);
           result.status = 'needs_reconnect';
+          await afterBankSyncCompleted(userId, row.accountId, false, 'needs_reconnect');
           break;
         }
         result.status = 'error';
         result.error = err instanceof Error ? err.message : String(err);
+        await afterBankSyncCompleted(userId, row.accountId, false, result.error);
         break;
       }
     }

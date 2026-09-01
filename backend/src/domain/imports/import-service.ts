@@ -14,6 +14,7 @@ import { computeDedupKey } from './dedup.js';
 import { loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
+import { afterTransactionInserted, computeCurrentBalance } from '../notifications/hooks.js';
 
 export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync' | 'camt';
 
@@ -337,6 +338,34 @@ export async function runImport(opts: {
     `deduped=${result.dedupSkipped} user-skipped=${result.userSkipped} ` +
     `parse=${tParsed - tStart}ms tx=${tCommitted - tParsed}ms total=${tCommitted - tStart}ms`,
   );
+
+  // Notification triggers (big transaction / low balance / envelope
+  // exceeded), one call per freshly inserted row — see hooks.ts. Runs after
+  // commit so it sees each row's final (post-rule-engine) category. Not a
+  // hot path: imports run in batch mode, and the balance aggregate below is
+  // computed once and reused for every row in this import.
+  if (result.insertedIds.length > 0) {
+    const freshRows = await db
+      .select({
+        id: transactions.id,
+        amount: transactions.amount,
+        rawLabel: transactions.rawLabel,
+        categoryId: transactions.categoryId,
+      })
+      .from(transactions)
+      .where(inArray(transactions.id, result.insertedIds));
+    const newBalance = await computeCurrentBalance(opts.accountId);
+    for (const row of freshRows) {
+      await afterTransactionInserted(opts.userId, {
+        id: row.id,
+        accountId: opts.accountId,
+        amount: Number(row.amount),
+        merchant: row.rawLabel,
+        categoryId: row.categoryId,
+        newBalance,
+      });
+    }
+  }
 
   // Recurring-series detection was previously awaited inside the import
   // transaction — clustering the last 12 months of transactions on PGlite

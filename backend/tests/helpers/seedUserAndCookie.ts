@@ -1,4 +1,6 @@
 import type { FastifyInstance } from 'fastify';
+import { db } from '../../src/db/client.js';
+import { accounts } from '../../src/db/schema.js';
 
 // Onboards a fresh user through the real HTTP flow (POST /api/onboarding/create
 // + POST /api/auth/login) and returns a signed session cookie plus the user's
@@ -24,4 +26,26 @@ export async function seedUserAndCookie(
   const cookie = login.cookies[0]!.name + '=' + login.cookies[0]!.value;
   const uid = login.json().user.id as number;
   return { cookie, uid };
+}
+
+// Inserts a minimal `accounts` row directly (no HTTP round-trip) for tests
+// that only need an account id to hang transactions off of. Name is
+// randomized per call so repeated invocations don't collide on the
+// (user_id, name) unique index.
+export async function seedAccount(
+  userId: number,
+  opts: { openingBalance?: string } = {},
+): Promise<number> {
+  const [row] = await db
+    .insert(accounts)
+    .values({
+      userId,
+      name: `notif-acct-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      type: 'checking',
+      currency: 'EUR',
+      openingBalance: opts.openingBalance ?? '0',
+      openingDate: '2025-01-01',
+    })
+    .returning();
+  return row!.id;
 }
