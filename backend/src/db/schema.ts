@@ -479,6 +479,29 @@ export const userSettings = pgTable('user_settings', {
 });
 
 // ---------------------------------------------------------------------------
+// notifications — per-user in-app notifications (big transactions, low
+// balance, exceeded envelopes, failed bank syncs, etc.). idempotency lets
+// emitters upsert-guard against re-firing the same event.
+// ---------------------------------------------------------------------------
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    payload: jsonb('payload').notNull(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    idempotency: text('idempotency').notNull(),
+  },
+  (t) => ({
+    userCreatedIdx: index('notifications_user_created_idx').on(t.userId, t.createdAt.desc()),
+    userIdempotencyUq: uniqueIndex('notifications_user_idempotency_uq').on(t.userId, t.idempotency),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // recurring_series — detected recurring transaction patterns (migration 0027).
 // The detector groups a user's transactions by (fuzzy label similarity,
 // cadence bucket, amount tolerance) and emits one row here per repeating
