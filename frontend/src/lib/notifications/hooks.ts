@@ -48,10 +48,19 @@ export function useDeleteNotification() {
   });
 }
 
+export type TestNotificationKind =
+  | 'big_transaction'
+  | 'account_low'
+  | 'envelope_exceeded'
+  | 'bank_sync_failed';
+
 export function useTestNotification() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api<Notification>('/api/notifications/test', { method: 'POST' }),
+    mutationFn: (kind?: TestNotificationKind) => api<Notification>(
+      '/api/notifications/test',
+      { method: 'POST', json: kind ? { kind } : undefined },
+    ),
     onSuccess: () => invalidateAll(qc),
     onError: () => {
       // 422 { error: 'notifications_disabled' } when the user has disabled

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SettingsNotifications } from '../SettingsNotifications';
-import { DEFAULTS, type Settings, type NotificationPrefsPatch } from '../../../lib/settings';
+import { DEFAULTS, mergeNotifications, type Settings, type NotificationPrefsPatch } from '../../../lib/settings';
 import { pinLocale } from '../../../test/i18n';
 
 pinLocale('settings');
@@ -23,23 +23,6 @@ import { requestWebPushPermission } from '../../../lib/notifications/channels/we
 const mockedRequestPermission = vi.mocked(requestWebPushPermission);
 
 const ACCOUNT = { id: 3, name: 'Courant', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2025-01-01' };
-
-function mergeNotifications(
-  base: Settings['notifications'],
-  patch: NotificationPrefsPatch | undefined,
-): Settings['notifications'] {
-  return {
-    enabled: patch?.enabled ?? base.enabled,
-    channels: { ...base.channels, ...patch?.channels },
-    privacy: { ...base.privacy, ...patch?.privacy },
-    triggers: {
-      bigTransaction: { ...base.triggers.bigTransaction, ...patch?.triggers?.bigTransaction },
-      accountLow: { ...base.triggers.accountLow, ...patch?.triggers?.accountLow },
-      envelopeExceeded: { ...base.triggers.envelopeExceeded, ...patch?.triggers?.envelopeExceeded },
-      bankSyncFailed: { ...base.triggers.bankSyncFailed, ...patch?.triggers?.bankSyncFailed },
-    },
-  };
-}
 
 function mount(initial: Settings = DEFAULTS) {
   let current = initial;
@@ -136,6 +119,35 @@ describe('SettingsNotifications', () => {
     const button = await screen.findByRole('button', { name: /envoyer un test/i });
     await u.click(button);
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('/api/notifications/test', { method: 'POST' }));
+  });
+
+  it('"Envoyer un test" on the Privacy tab previews a big_transaction sample', async () => {
+    const u = userEvent.setup();
+    mount();
+    await u.click(await screen.findByRole('tab', { name: /confidentialité/i }));
+    await u.click(screen.getByRole('button', { name: /envoyer un test/i }));
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('/api/notifications/test', {
+      method: 'POST',
+      json: { kind: 'big_transaction' },
+    }));
+  });
+
+  it('"Envoyer un test" on the Alerts tab previews a random trigger kind', async () => {
+    const u = userEvent.setup();
+    // Force Math.random to the second bucket (index 1 → 'account_low') so the
+    // test asserts a deterministic kind rather than a member-of check.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.3);
+    try {
+      mount();
+      await u.click(await screen.findByRole('tab', { name: /alertes/i }));
+      await u.click(screen.getByRole('button', { name: /envoyer un test/i }));
+      await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('/api/notifications/test', {
+        method: 'POST',
+        json: { kind: 'account_low' },
+      }));
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it('shows an inline hint when the test call 422s because notifications are disabled', async () => {

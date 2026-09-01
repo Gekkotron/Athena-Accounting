@@ -1,6 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
-import { useNotificationPrefs, useTestNotification } from '../../lib/notifications/hooks';
+import {
+  useNotificationPrefs,
+  useTestNotification,
+  type TestNotificationKind,
+} from '../../lib/notifications/hooks';
 import { requestWebPushPermission } from '../../lib/notifications/channels/webPush';
 
 function currentPermission(): NotificationPermission | 'unsupported' {
@@ -8,10 +12,32 @@ function currentPermission(): NotificationPermission | 'unsupported' {
   return Notification.permission;
 }
 
+const ALERT_KINDS: readonly TestNotificationKind[] = [
+  'big_transaction',
+  'account_low',
+  'envelope_exceeded',
+  'bank_sync_failed',
+];
+
+// Picks the sample kind the "Send a test" click should preview, based on which
+// sub-tab the user is looking at. Channels stays generic (the tab is about
+// delivery, not payload); Privacy previews a big_transaction because that's
+// where amount/merchant masking is most visible; Alerts randomizes across the
+// four real triggers so repeated clicks show each variant.
+function pickTestKind(tab: SettingsNotificationsTab): TestNotificationKind | undefined {
+  switch (tab) {
+    case 'channels': return undefined;
+    case 'privacy':  return 'big_transaction';
+    case 'triggers': return ALERT_KINDS[Math.floor(Math.random() * ALERT_KINDS.length)]!;
+  }
+}
+
+export type SettingsNotificationsTab = 'channels' | 'privacy' | 'triggers';
+
 // Deliberately outside the master-toggle fieldset in SettingsNotifications:
 // clicking it while notifications are disabled is how a user reaches the
 // 422 "notifications_disabled" response and its inline hint below.
-export function NotificationsTestButton(): JSX.Element {
+export function NotificationsTestButton({ tab }: { tab: SettingsNotificationsTab }): JSX.Element {
   const { t } = useTranslation('settings');
   const { prefs } = useNotificationPrefs();
   const testMut = useTestNotification();
@@ -36,7 +62,7 @@ export function NotificationsTestButton(): JSX.Element {
     if (webPushOn && permission === 'default') {
       await requestWebPushPermission();
     }
-    testMut.mutate();
+    testMut.mutate(pickTestKind(tab));
   };
 
   return (

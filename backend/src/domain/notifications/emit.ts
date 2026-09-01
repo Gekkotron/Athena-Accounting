@@ -20,14 +20,14 @@ export async function emitNotification(
   userId: number,
   kind: NotificationKind,
   payload: NotificationPayload,
-  opts: { idempotency?: string } = {},
+  opts: { idempotency?: string; bypassTriggerGate?: boolean } = {},
 ): Promise<Notification | null> {
   const [row] = await db.select({ settings: userSettings.settings })
     .from(userSettings).where(eq(userSettings.userId, userId));
   const prefs = mergeSettings(row?.settings ?? {}).notifications;
   if (!prefs.enabled) return null;
   const tk = triggerKey(kind);
-  if (tk && !prefs.triggers[tk].enabled) return null;
+  if (tk && !opts.bypassTriggerGate && !prefs.triggers[tk].enabled) return null;
 
   const idempotency = opts.idempotency ?? `${kind}:${Date.now()}:${Math.random()}`;
   const inserted = await db.insert(notifications)

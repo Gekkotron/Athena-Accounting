@@ -79,6 +79,41 @@ describe.skipIf(!RUN)('notifications routes', () => {
     expect(r.json().kind).toBe('test');
   });
 
+  it('POST /test with a kind bypasses the per-trigger gate and emits a canned payload', async () => {
+    const { db } = await import('../src/db/client.js');
+    const { userSettings } = await import('../src/db/schema.js');
+    // Disable the accountLow trigger explicitly — a real emit would be
+    // silenced; a preview should still fire.
+    await db
+      .insert(userSettings)
+      .values({ userId: uid, settings: { notifications: { enabled: true, triggers: { accountLow: { enabled: false } } } } })
+      .onConflictDoUpdate({
+        target: userSettings.userId,
+        set: { settings: { notifications: { enabled: true, triggers: { accountLow: { enabled: false } } } } },
+      });
+
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/notifications/test',
+      headers: { cookie },
+      payload: { kind: 'account_low' },
+    });
+    expect(r.statusCode).toBe(201);
+    const body = r.json();
+    expect(body.kind).toBe('account_low');
+    expect(body.payload).toMatchObject({ kind: 'account_low', balance: 42.5, floor: 100 });
+  });
+
+  it('POST /test rejects an unknown kind with 400', async () => {
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/notifications/test',
+      headers: { cookie },
+      payload: { kind: 'not_a_kind' },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
   it('POST /test returns 422 and fires nothing when notifications are disabled', async () => {
     const { db } = await import('../src/db/client.js');
     const { userSettings, notifications } = await import('../src/db/schema.js');

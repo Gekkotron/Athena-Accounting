@@ -7,9 +7,9 @@ import { useNotificationPrefs } from '../../lib/notifications/hooks';
 import { NotificationsChannelsCard } from './NotificationsChannelsCard';
 import { NotificationsPrivacyCard } from './NotificationsPrivacyCard';
 import { NotificationsTriggersCard } from './NotificationsTriggersCard';
-import { NotificationsTestButton } from './NotificationsTestButton';
+import { NotificationsTestButton, type SettingsNotificationsTab } from './NotificationsTestButton';
 
-type TabId = 'channels' | 'privacy' | 'triggers';
+type TabId = SettingsNotificationsTab;
 
 export function SettingsNotifications(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -95,7 +95,7 @@ export function SettingsNotifications(): JSX.Element {
           )}
         </fieldset>
 
-        <NotificationsTestButton />
+        <NotificationsTestButton tab={tab} />
       </section>
     </div>
   );
