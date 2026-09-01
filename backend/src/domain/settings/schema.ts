@@ -101,29 +101,31 @@ export type FullSettings = {
 // `enabled`, `privacy`, and `triggers`). `thresholds`/`floors` are
 // account-id-keyed maps — when present in the patch they are used as-is
 // (the base default is always `{}`, so this is still a merge onto it).
+// Every container in the returned value is freshly constructed (never
+// `base` or one of its nested objects/maps returned by reference) so a
+// caller mutating the result can never reach back into `DEFAULTS`.
 function mergeNotifications(
   base: FullSettings['notifications'],
   patch: NotificationsPatch | undefined,
 ): FullSettings['notifications'] {
-  if (!patch) return base;
   return {
-    enabled: patch.enabled ?? base.enabled,
-    channels: { ...base.channels, ...patch.channels },
-    privacy: { ...base.privacy, ...patch.privacy },
+    enabled: patch?.enabled ?? base.enabled,
+    channels: { ...base.channels, ...patch?.channels },
+    privacy: { ...base.privacy, ...patch?.privacy },
     triggers: {
       bigTransaction: {
-        enabled: patch.triggers?.bigTransaction?.enabled ?? base.triggers.bigTransaction.enabled,
-        thresholds: patch.triggers?.bigTransaction?.thresholds ?? base.triggers.bigTransaction.thresholds,
+        enabled: patch?.triggers?.bigTransaction?.enabled ?? base.triggers.bigTransaction.enabled,
+        thresholds: { ...(patch?.triggers?.bigTransaction?.thresholds ?? base.triggers.bigTransaction.thresholds) },
       },
       accountLow: {
-        enabled: patch.triggers?.accountLow?.enabled ?? base.triggers.accountLow.enabled,
-        floors: patch.triggers?.accountLow?.floors ?? base.triggers.accountLow.floors,
+        enabled: patch?.triggers?.accountLow?.enabled ?? base.triggers.accountLow.enabled,
+        floors: { ...(patch?.triggers?.accountLow?.floors ?? base.triggers.accountLow.floors) },
       },
       envelopeExceeded: {
-        enabled: patch.triggers?.envelopeExceeded?.enabled ?? base.triggers.envelopeExceeded.enabled,
+        enabled: patch?.triggers?.envelopeExceeded?.enabled ?? base.triggers.envelopeExceeded.enabled,
       },
       bankSyncFailed: {
-        enabled: patch.triggers?.bankSyncFailed?.enabled ?? base.triggers.bankSyncFailed.enabled,
+        enabled: patch?.triggers?.bankSyncFailed?.enabled ?? base.triggers.bankSyncFailed.enabled,
       },
     },
   };

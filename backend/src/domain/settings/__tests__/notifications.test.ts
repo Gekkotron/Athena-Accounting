@@ -24,4 +24,16 @@ describe('settings.notifications', () => {
     // strict schema drops the unknown branch and returns defaults
     expect(s.notifications.enabled).toBe(true);
   });
+
+  it('never leaks a mutable reference back into DEFAULTS', () => {
+    const first = mergeSettings({});
+    first.notifications.triggers.bigTransaction.thresholds['5'] = 500;
+    first.notifications.channels.toast = false;
+    first.notifications.privacy.hideAmount = false;
+
+    const second = mergeSettings({});
+    expect(second.notifications.triggers.bigTransaction.thresholds).toEqual({});
+    expect(second.notifications.channels.toast).toBe(true);
+    expect(second.notifications.privacy.hideAmount).toBe(true);
+  });
 });
