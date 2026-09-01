@@ -3,7 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import type { ReactElement } from 'react';
 import { SettingsGeneral } from '../Settings/SettingsGeneral';
+import { SettingsDashboard } from '../Settings/SettingsDashboard';
+import { SettingsTransactions } from '../Settings/SettingsTransactions';
 import { DEFAULTS } from '../../lib/settings';
 import { withTips } from '../../test/renderWithProviders';
 import { pinLocale } from '../../test/i18n';
@@ -22,12 +25,12 @@ vi.mock('../../api/client', async () => {
 import { api } from '../../api/client';
 const apiMock = vi.mocked(api);
 
-function renderPage() {
+function renderPage(page: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        {withTips(<SettingsGeneral />)}
+        {withTips(page)}
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -35,10 +38,10 @@ function renderPage() {
 
 beforeEach(() => { apiMock.mockReset(); });
 
-describe('Settings page', () => {
+describe('Settings — Dashboard sub-page', () => {
   it('renders a skeleton while the settings query is pending', async () => {
     apiMock.mockImplementation(() => new Promise(() => {}));
-    renderPage();
+    renderPage(<SettingsDashboard />);
     expect(await screen.findByTestId('settings-skeleton')).toBeInTheDocument();
   });
 
@@ -54,8 +57,7 @@ describe('Settings page', () => {
       throw new Error(`unexpected: ${init?.method ?? 'GET'} ${path}`);
     });
     const u = userEvent.setup();
-    renderPage();
-    // Wait for the skeleton to disappear.
+    renderPage(<SettingsDashboard />);
     await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
     await u.click(screen.getByRole('button', { name: /^6 m$/i }));
     await waitFor(() => {
@@ -77,59 +79,15 @@ describe('Settings page', () => {
       throw new Error(`unexpected: ${path}`);
     });
     const u = userEvent.setup();
-    renderPage();
+    renderPage(<SettingsDashboard />);
     await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
     const gap = screen.getByLabelText(/seuil de ligne pointillée/i);
     await u.clear(gap);
     await u.type(gap, '12');
-    // No PATCH yet — still focused.
     expect(patchCalls).toHaveLength(0);
     await u.tab();
     await waitFor(() => expect(patchCalls).toHaveLength(1));
     expect(patchCalls[0]).toEqual({ chartGapThresholdDays: 12 });
-  });
-
-  it('"Réinitialiser" confirms then sends a PATCH with every default', async () => {
-    const patchCalls: any[] = [];
-    apiMock.mockImplementation(async (path: string, init?: any) => {
-      if (path === '/api/accounts') return { accounts: [] };
-      if (path === '/api/settings' && init?.method === 'PATCH') {
-        patchCalls.push(init.json);
-        return { settings: DEFAULTS };
-      }
-      if (path === '/api/settings') return { settings: { ...DEFAULTS, dashboardRange: '12m' } };
-      throw new Error(`unexpected: ${path}`);
-    });
-    const u = userEvent.setup();
-    renderPage();
-    await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
-    await u.click(screen.getByRole('button', { name: /réinitialiser/i }));
-    // ConfirmDialog opens; click the confirm button (labelled "Confirmer" in
-    // the existing component — adjust if the shared component uses a
-    // different label).
-    await u.click(await screen.findByRole('button', { name: /^confirmer$/i }));
-    await waitFor(() => expect(patchCalls).toHaveLength(1));
-    expect(patchCalls[0]).toEqual(DEFAULTS);
-  });
-
-  it('changing the "Transactions" default account sends a PATCH', async () => {
-    const patchCalls: any[] = [];
-    apiMock.mockImplementation(async (path: string, init?: any) => {
-      if (path === '/api/accounts') return { accounts: [{ id: 3, name: 'Courant', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2025-01-01' }] };
-      if (path === '/api/settings' && init?.method === 'PATCH') {
-        patchCalls.push(init.json);
-        return { settings: { ...DEFAULTS, ...init.json } };
-      }
-      if (path === '/api/settings') return { settings: DEFAULTS };
-      throw new Error(`unexpected: ${path}`);
-    });
-    const u = userEvent.setup();
-    renderPage();
-    await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
-    const select = screen.getByLabelText(/compte affiché par défaut/i) as HTMLSelectElement;
-    await u.selectOptions(select, '3');
-    await waitFor(() => expect(patchCalls).toHaveLength(1));
-    expect(patchCalls[0]).toEqual({ transactionsDefaultAccount: 3 });
   });
 
   it('does not leave the "Enregistré" chip visible when the PATCH fails', async () => {
@@ -142,12 +100,56 @@ describe('Settings page', () => {
       throw new Error(`unexpected: ${path}`);
     });
     const u = userEvent.setup();
-    renderPage();
+    renderPage(<SettingsDashboard />);
     await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
     await u.click(screen.getByRole('button', { name: /^6 m$/i }));
     await waitFor(() =>
       expect(screen.getByText(/impossible d'enregistrer les réglages/i)).toBeInTheDocument(),
     );
     expect(screen.queryByText(/enregistré/i)).toBeNull();
+  });
+});
+
+describe('Settings — Transactions sub-page', () => {
+  it('changing the default account sends a PATCH', async () => {
+    const patchCalls: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [{ id: 3, name: 'Courant', type: 'checking', currency: 'EUR', openingBalance: '0.00', openingDate: '2025-01-01' }] };
+      if (path === '/api/settings' && init?.method === 'PATCH') {
+        patchCalls.push(init.json);
+        return { settings: { ...DEFAULTS, ...init.json } };
+      }
+      if (path === '/api/settings') return { settings: DEFAULTS };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderPage(<SettingsTransactions />);
+    await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
+    const select = screen.getByLabelText(/compte affiché par défaut/i) as HTMLSelectElement;
+    await u.selectOptions(select, '3');
+    await waitFor(() => expect(patchCalls).toHaveLength(1));
+    expect(patchCalls[0]).toEqual({ transactionsDefaultAccount: 3 });
+  });
+});
+
+describe('Settings — General sub-page', () => {
+  it('"Réinitialiser" confirms then sends a PATCH with every default', async () => {
+    const patchCalls: any[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/accounts') return { accounts: [] };
+      if (path === '/api/settings' && init?.method === 'PATCH') {
+        patchCalls.push(init.json);
+        return { settings: DEFAULTS };
+      }
+      if (path === '/api/settings') return { settings: { ...DEFAULTS, dashboardRange: '12m' } };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderPage(<SettingsGeneral />);
+    await waitFor(() => expect(screen.queryByTestId('settings-skeleton')).toBeNull());
+    await u.click(screen.getByRole('button', { name: /réinitialiser/i }));
+    await u.click(await screen.findByRole('button', { name: /^confirmer$/i }));
+    await waitFor(() => expect(patchCalls).toHaveLength(1));
+    expect(patchCalls[0]).toEqual(DEFAULTS);
   });
 });

@@ -38,7 +38,13 @@
     "enveloppes": "Enveloppes"
    },
    "settings": {
-    "general": "Réglages",
+    "general": "Général",
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "import": "Import",
+    "fx": "Devises",
+    "security": "Sécurité",
+    "integrations": "Intégrations",
     "notifications": "Notifications"
    }
   },
