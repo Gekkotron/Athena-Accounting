@@ -1,23 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../api/client';
 import { navIcons } from '../NavIcons';
 import { navLinkClass, type NavSection } from './nav-config';
-
-function useNavBadgeCounts(): Record<string, number> {
-  // Shares the queryKey with DuplicatesPanel so the two views stay in sync
-  // and the badge updates as soon as the user resolves a group.
-  const duplicates = useQuery({
-    queryKey: ['transaction-duplicates'],
-    queryFn: () => api<{ groups: unknown[] }>('/api/transactions/duplicates'),
-    refetchOnWindowFocus: true,
-    staleTime: 30_000,
-  });
-  return {
-    '/data/duplicates': duplicates.data?.groups?.length ?? 0,
-  };
-}
+import { useNavBadgeCounts } from '../../lib/useNavBadgeCounts';
 
 export function NavTree({
   sections,
