@@ -48,4 +48,30 @@ describe('ConsolidatedTotalCard', () => {
     const { container } = renderCard(null, 1);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('hides the "Converted from" chip when only one currency is in the pot', () => {
+    const consolidated: ConsolidatedBlock = {
+      display: 'EUR',
+      total: '190.00',
+      available: '190.00',
+      invested: '0.00',
+      unmapped: [],
+    };
+    renderCard(consolidated, 1);
+    expect(screen.getByText(/190,00/)).toBeInTheDocument();
+    expect(screen.queryByText(/Convertie depuis/)).not.toBeInTheDocument();
+  });
+
+  it('hides the chip when a second currency is unmapped (mapped count drops to 1)', () => {
+    const consolidated: ConsolidatedBlock = {
+      display: 'EUR',
+      total: '140.00',
+      available: '140.00',
+      invested: '0.00',
+      unmapped: [{ currency: 'USD', total: '50.00', available: '50.00', invested: '0.00', account_count: 1 }],
+    };
+    renderCard(consolidated, 2);
+    expect(screen.queryByText(/Convertie depuis/)).not.toBeInTheDocument();
+    expect(screen.getByText('USD')).toBeInTheDocument();
+  });
 });
