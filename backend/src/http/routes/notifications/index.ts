@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../../db/client.js';
 import { accounts, categories, notifications } from '../../../db/schema.js';
@@ -61,12 +61,88 @@ async function sampleTestPayload(
   }
 }
 
-function toWire(row: typeof notifications.$inferSelect): Notification {
-  const { title, body } = renderFullDetail(row.payload as NotificationPayload);
+function accountRef(p: NotificationPayload): { id: number; name?: string } | null {
+  switch (p.kind) {
+    case 'big_transaction': {
+      const r = 'single' in p ? p.single : p.summary;
+      return { id: r.accountId, name: r.accountName };
+    }
+    case 'account_low':       return { id: p.accountId, name: p.accountName };
+    case 'bank_sync_failed':  return { id: p.accountId, name: p.accountName };
+    default:                  return null;
+  }
+}
+function categoryRef(p: NotificationPayload): { id: number; name?: string } | null {
+  return p.kind === 'envelope_exceeded' ? { id: p.categoryId, name: p.categoryName } : null;
+}
+
+// Legacy rows (persisted before the emit-time enrichment landed) have no
+// accountName/categoryName on the payload — the renderer would print
+// `account #12`. Batch-resolve the missing names for the current page in
+// one query per table (scoped to userId), stamp them onto a shallow copy
+// of each payload, and render from that. Rows that already have a name
+// pass through untouched, and a name that no longer resolves (deleted
+// account) still falls back to `#id` in the renderer.
+async function enrichRowsForRender(
+  uid: number,
+  rows: (typeof notifications.$inferSelect)[],
+): Promise<NotificationPayload[]> {
+  const payloads = rows.map((r) => r.payload as NotificationPayload);
+  const missingAccountIds = new Set<number>();
+  const missingCategoryIds = new Set<number>();
+  for (const p of payloads) {
+    const a = accountRef(p);
+    if (a && !a.name) missingAccountIds.add(a.id);
+    const c = categoryRef(p);
+    if (c && !c.name) missingCategoryIds.add(c.id);
+  }
+  const [accountRows, categoryRows] = await Promise.all([
+    missingAccountIds.size === 0 ? Promise.resolve([]) : db
+      .select({ id: accounts.id, name: accounts.name })
+      .from(accounts)
+      .where(and(eq(accounts.userId, uid), inArray(accounts.id, [...missingAccountIds]))),
+    missingCategoryIds.size === 0 ? Promise.resolve([]) : db
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .where(and(eq(categories.userId, uid), inArray(categories.id, [...missingCategoryIds]))),
+  ]);
+  const accountName = new Map(accountRows.map((r) => [r.id, r.name]));
+  const categoryName = new Map(categoryRows.map((r) => [r.id, r.name]));
+  return payloads.map((p) => {
+    switch (p.kind) {
+      case 'big_transaction': {
+        if ('single' in p) {
+          if (p.single.accountName) return p;
+          const name = accountName.get(p.single.accountId);
+          return name ? { ...p, single: { ...p.single, accountName: name } } : p;
+        }
+        if (p.summary.accountName) return p;
+        const name = accountName.get(p.summary.accountId);
+        return name ? { ...p, summary: { ...p.summary, accountName: name } } : p;
+      }
+      case 'account_low':
+      case 'bank_sync_failed': {
+        if (p.accountName) return p;
+        const name = accountName.get(p.accountId);
+        return name ? { ...p, accountName: name } : p;
+      }
+      case 'envelope_exceeded': {
+        if (p.categoryName) return p;
+        const name = categoryName.get(p.categoryId);
+        return name ? { ...p, categoryName: name } : p;
+      }
+      case 'test':
+        return p;
+    }
+  });
+}
+
+function toWireWith(row: typeof notifications.$inferSelect, payload: NotificationPayload): Notification {
+  const { title, body } = renderFullDetail(payload);
   return {
     id: row.id,
     kind: row.kind as Notification['kind'],
-    payload: row.payload as NotificationPayload,
+    payload,
     title, body,
     readAt: row.readAt ? row.readAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
@@ -88,7 +164,9 @@ export async function notificationsRoutes(app: FastifyInstance): Promise<void> {
       ))
       .orderBy(desc(notifications.id))
       .limit(q.limit + 1);
-    const items = rows.slice(0, q.limit).map(toWire);
+    const page = rows.slice(0, q.limit);
+    const payloads = await enrichRowsForRender(uid, page);
+    const items = page.map((r, i) => toWireWith(r, payloads[i]!));
     const nextCursor = rows.length > q.limit ? items[items.length - 1]!.id : null;
     return { items, nextCursor };
   });
