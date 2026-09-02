@@ -82,8 +82,8 @@ it('renders the header suffix based on the range prop', async () => {
     if (path === '/api/categories') return { categories: [] } as any;
     return { rows: [] } as any;
   });
-  renderSection({ range: '30d' });
-  expect(await screen.findByText(/sur 30 jours/i)).toBeInTheDocument();
+  renderSection({ range: '1m' });
+  expect(await screen.findByText(/le mois dernier/i)).toBeInTheDocument();
 });
 
 it('clicking a range button in the header picker calls onRangeChange with that range', async () => {

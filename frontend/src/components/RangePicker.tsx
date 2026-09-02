@@ -1,24 +1,25 @@
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
-export type RangeKey = '30d' | '3m' | '6m' | '12m' | 'all';
+export type RangeKey = '1m' | '3m' | '6m' | '12m' | 'all';
 
-// `days` → trailing window of N days ending today; `months` → the last N
-// COMPLETE calendar months, i.e. [1st of the month N months back, last day
-// of the previous month] — the in-progress month is excluded, matching the
-// Moyennes mensuelles convention so "donut total over N mois" always equals
-// N × the displayed monthly average. Month ranges used to be fixed day
-// counts (180/365), which chopped the start of the oldest month — a salary
-// landing on the 1st silently vanished from the donut/Sankey while the
-// Moyennes tiles still counted it. Neither field → "all time" (no bounds).
-// The display label and "sur X" suffix are translated — see
-// rangeSuffixLabel() below — keyed off `charts.rangePicker` using a
-// translation-key-safe id (RANGES[i].key with the leading digit dropped,
-// e.g. '30d' -> 'd30') since i18next keys can't start with a digit.
+// `months` → the last N COMPLETE calendar months, i.e. [1st of the month N
+// months back, last day of the previous month] — the in-progress month is
+// excluded, matching the Moyennes mensuelles convention so "donut total
+// over N mois" always equals N × the displayed monthly average. This
+// applies to 1m too: on Sep 2 the "1m" range is [Aug 1, Aug 31], not a
+// rolling 30-day window (which mixed in half of the current month and
+// silently shifted the donut/Sankey off the Moyennes total). Neither field
+// set → "all time" (no bounds). The display label and "sur X" suffix are
+// translated — see rangeSuffixLabel() below — keyed off
+// `charts.rangePicker` using a translation-key-safe id (RANGES[i].key with
+// the leading digit dropped, e.g. '1m' -> 'm1') since i18next keys can't
+// start with a digit. Legacy `'30d'` stored settings are coerced to `'1m'`
+// on the backend (see settings/schema.ts).
 interface RangeSpec { key: RangeKey; days?: number; months?: number }
 
 export const RANGES: readonly RangeSpec[] = [
-  { key: '30d', days: 30 },
+  { key: '1m',  months: 1 },
   { key: '3m',  months: 3 },
   { key: '6m',  months: 6 },
   { key: '12m', months: 12 },
@@ -26,7 +27,7 @@ export const RANGES: readonly RangeSpec[] = [
 ] as const;
 
 const LABEL_KEY: Record<RangeKey, string> = {
-  '30d': 'd30',
+  '1m': 'm1',
   '3m': 'm3',
   '6m': 'm6',
   '12m': 'm12',

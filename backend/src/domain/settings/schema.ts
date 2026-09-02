@@ -46,7 +46,15 @@ type NotificationsPatch = z.infer<typeof NotificationsSchema>;
 
 export const SettingsSchema = z
   .object({
-    dashboardRange: z.enum(['30d', '3m', '6m', '12m', 'all']).optional(),
+    // `'30d'` is a legacy value from when the shortest range was a rolling
+    // 30-day window. It is now the previous complete calendar month; the
+    // transform normalizes any stored `'30d'` to `'1m'` so a settings GET
+    // never returns the removed literal (which would trip the frontend
+    // union type).
+    dashboardRange: z
+      .enum(['1m', '3m', '6m', '12m', 'all', '30d'])
+      .transform((v) => (v === '30d' ? ('1m' as const) : v))
+      .optional(),
     dashboardChartScope: z
       .union([z.literal('all'), z.number().int().positive()])
       .optional(),

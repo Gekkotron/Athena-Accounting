@@ -41,7 +41,7 @@ export const DEFAULTS = {
   },
 } as const;
 
-export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';
+export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 export type DisplayCurrency = string | null;

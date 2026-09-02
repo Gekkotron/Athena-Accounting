@@ -2,7 +2,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CategoryBreakdown } from '../CategoryBreakdown';
-import { fromDateFor, toDateFor } from '../RangePicker';
+import { fromDateFor, toDateFor, type RangeKey } from '../RangePicker';
 import { pinLocale } from '../../test/i18n';
 
 vi.mock('../../api/client', async () => {
@@ -22,7 +22,7 @@ beforeEach(() => {
   });
 });
 
-function renderBreakdown(range: '6m' | '30d') {
+function renderBreakdown(range: RangeKey) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -70,12 +70,12 @@ it('excludes internal-transfer categories from both donut modes', async () => {
   expect(queryByText(/Épargne interne/)).not.toBeInTheDocument();
 });
 
-it('sends no toDate for the trailing 30-day range', async () => {
-  renderBreakdown('30d');
+it('sends neither fromDate nor toDate for the "all" range', async () => {
+  renderBreakdown('all');
   await waitFor(() => {
     const call = apiMock.mock.calls.find(([p]) => p === '/api/reports/categories');
     expect(call).toBeDefined();
-    expect(call![1]?.query).toMatchObject({ fromDate: fromDateFor('30d') });
+    expect(call![1]?.query).not.toHaveProperty('fromDate');
     expect(call![1]?.query).not.toHaveProperty('toDate');
   });
 });

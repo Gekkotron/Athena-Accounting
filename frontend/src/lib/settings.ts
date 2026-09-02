@@ -2,7 +2,7 @@
 // backend/src/domain/settings/defaults.ts — if they drift, the backend
 // value wins on the first GET (see design doc).
 
-export type DashboardRange = '30d' | '3m' | '6m' | '12m' | 'all';
+export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 

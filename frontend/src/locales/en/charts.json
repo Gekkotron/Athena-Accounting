@@ -44,14 +44,14 @@
   "rangePicker": {
     "ariaLabel": "Displayed period",
     "labels": {
-      "d30": "30d",
+      "m1": "1mo",
       "m3": "3mo",
       "m6": "6mo",
       "m12": "12mo",
       "all": "All"
     },
     "suffix": {
-      "d30": "over 30 days",
+      "m1": "last month",
       "m3": "over 3 months",
       "m6": "over 6 months",
       "m12": "over 12 months",

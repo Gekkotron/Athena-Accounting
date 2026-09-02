@@ -45,10 +45,13 @@ describe('fromDateFor / toDateFor', () => {
     expect(toDateFor('6m')).toBe('2026-02-28');
   });
 
-  it('30d stays a plain trailing-days window with no upper bound', () => {
-    vi.setSystemTime(new Date(2026, 7, 3));
-    expect(fromDateFor('30d')).toBe('2026-07-04');
-    expect(toDateFor('30d')).toBeUndefined();
+  it('1m spans the single complete month before the current one', () => {
+    vi.setSystemTime(new Date(2026, 8, 2)); // 2026-09-02 local — the case
+    // that motivated replacing the old rolling 30-day window with a
+    // "previous complete month" range so donut/Sankey no longer mix
+    // in half of September.
+    expect(fromDateFor('1m')).toBe('2026-08-01');
+    expect(toDateFor('1m')).toBe('2026-08-31');
   });
 
   it('all has no bounds', () => {
