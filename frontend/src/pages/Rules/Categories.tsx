@@ -193,7 +193,7 @@ export function Categories() {
       >
         <div className="surface overflow-hidden">
           <div className="table-scroll">
-            <table ref={tableRef} className="w-full text-sm">
+            <table ref={tableRef} className="w-full text-sm stack-md">
               <thead className="text-left">
                 <tr className="border-b border-ink-800/70">
                   <th className="px-2 py-3 w-8" aria-hidden />

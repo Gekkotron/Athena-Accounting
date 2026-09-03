@@ -209,7 +209,7 @@ export function Tri() {
 
       <div ref={rulesListAnchor} className="surface overflow-hidden">
         <div className="table-scroll">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm stack-md">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
                 <th className="px-4 py-3 w-8"></th>
@@ -242,7 +242,7 @@ export function Tri() {
                         selectedG ? 'bg-sage-900/15' : 'hover:bg-ink-850/40'
                       }`}
                     >
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5" data-hide-mobile>
                         <input
                           type="checkbox"
                           checked={selectedG}

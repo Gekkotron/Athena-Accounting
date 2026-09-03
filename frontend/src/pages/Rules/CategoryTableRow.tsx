@@ -59,7 +59,7 @@ export function CategoryTableRow(props: {
         (draggable.isDragging ? 'opacity-40' : '')
       }
     >
-      <td className="pl-2 pr-1 py-2.5 w-8">
+      <td className="pl-2 pr-1 py-2.5 w-8" data-hide-mobile>
         <button
           ref={draggable.setActivatorNodeRef}
           type="button"

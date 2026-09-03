@@ -162,6 +162,42 @@ html.privacy-on .private {
     @apply min-w-[640px] w-full;
   }
 
+  /* Mobile table reflow. Add `.stack-md` to a <table> whose cells are
+     self-explanatory when read top-to-bottom (a label input, a value, a
+     select, an action) — below the md breakpoint the row becomes a
+     vertical block, thead vanishes, and any explicit min-widths are lifted
+     so the row fits any viewport. Above md the table stays a table.
+     Cells marked `data-hide-mobile` disappear entirely on mobile — use for
+     redundant meta the mobile card should suppress. */
+  .stack-md {
+    /* Neutralize .table-scroll's min-width for stacked mode. */
+    @apply md:min-w-[640px];
+    min-width: 0;
+  }
+  @media (max-width: 767px) {
+    .stack-md { display: block; }
+    .stack-md thead { display: none; }
+    .stack-md tbody { display: block; }
+    .stack-md tr {
+      display: block;
+      padding: 0.75rem 0.875rem;
+      border-bottom: 1px solid theme('colors.ink.800' / 40%);
+    }
+    .stack-md tr:last-child { border-bottom: 0; }
+    .stack-md td {
+      display: block;
+      padding: 0.25rem 0 !important;
+      text-align: left !important;
+      max-width: none !important;
+    }
+    .stack-md td:empty { display: none; }
+    .stack-md td[data-hide-mobile] { display: none; }
+    /* Full-width form controls in stacked mode so selects/inputs earn the row. */
+    .stack-md td select,
+    .stack-md td input[type="text"],
+    .stack-md td input:not([type]) { width: 100%; }
+  }
+
   /* Page header pattern — used by every top-level page. */
   .page-header {
     @apply flex flex-col gap-1 md:flex-row md:items-end md:justify-between md:gap-6;

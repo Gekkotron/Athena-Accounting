@@ -223,7 +223,7 @@ export function DuplicatesPanel(): JSX.Element {
           </div>
         )}
         <div className="table-scroll">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm stack-md">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
                 <th className="px-4 py-3 label font-normal">{t('duplicates.table.account')}</th>

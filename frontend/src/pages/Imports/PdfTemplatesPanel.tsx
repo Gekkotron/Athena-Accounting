@@ -127,7 +127,7 @@ export function PdfTemplatesPanel(): JSX.Element {
           </div>
         )}
         <div className="table-scroll">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm stack-md">
             <thead className="text-left">
               <tr className="border-b border-ink-800/70">
                 <th className="px-3 py-2 label font-normal">{t('templates.table.label')}</th>
