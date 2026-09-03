@@ -182,3 +182,12 @@ html.privacy-on .private {
     @apply flex-1 h-px bg-ink-800;
   }
 }
+
+/* Bottom-sheet slide-up used by the mobile quick-edit sheet (QuickEditSheet).
+   Kept as a plain @keyframes so it's usable from the arbitrary-value class
+   `animate-[slideup_…]` — Tailwind's animate-* utilities only cover a small
+   built-in set. */
+@keyframes slideup {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}

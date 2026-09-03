@@ -72,7 +72,8 @@
     "attachmentIndicatorAriaLabel_one": "{{count}} pièce jointe",
     "attachmentIndicatorAriaLabel_other": "{{count}} pièces jointes",
     "attachmentIndicatorTitle_one": "{{count}} pièce jointe",
-    "attachmentIndicatorTitle_other": "{{count}} pièces jointes"
+    "attachmentIndicatorTitle_other": "{{count}} pièces jointes",
+    "advancedEditLabel": "Édition avancée"
   },
   "attachments": {
     "sectionTitle": "Pièces jointes",

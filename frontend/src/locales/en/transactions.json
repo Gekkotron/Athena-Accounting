@@ -72,7 +72,8 @@
     "attachmentIndicatorAriaLabel_one": "{{count}} attachment",
     "attachmentIndicatorAriaLabel_other": "{{count}} attachments",
     "attachmentIndicatorTitle_one": "{{count}} attachment",
-    "attachmentIndicatorTitle_other": "{{count}} attachments"
+    "attachmentIndicatorTitle_other": "{{count}} attachments",
+    "advancedEditLabel": "Advanced edit"
   },
   "attachments": {
     "sectionTitle": "Attachments",

@@ -8,7 +8,9 @@ import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TransactionsHeader } from './TransactionsHeader';
 import { TransactionsTable } from './TransactionsTable';
+import { TransactionsMobileView } from './TransactionsMobileView';
 import { FiltersBar } from './FiltersBar';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { TransactionModal } from './TransactionModal';
 import { TransactionsNotices } from './TransactionsNotices';
 import { TransactionsConfirmDialogs } from './TransactionsConfirmDialogs';
@@ -37,12 +39,7 @@ export function Transactions() {
   // links from Dashboard or Imports land on the right pre-filtered view.
   const initialAccountId = readIntParam(searchParams, 'accountId');
   const initialSourceFileId = readIntParam(searchParams, 'sourceFileId');
-  const [filters, setFilters] = useState<Filters>({
-    sort: 'date',
-    order: 'desc',
-    accountId: initialAccountId,
-    sourceFileId: initialSourceFileId,
-  });
+  const [filters, setFilters] = useState<Filters>({ sort: 'date', order: 'desc', accountId: initialAccountId, sourceFileId: initialSourceFileId });
   const { settings, isReady: settingsReady } = useSettings();
   const [searchInput, setSearchInput] = useState('');
   const [offset, setOffset] = useState(0);
@@ -60,6 +57,11 @@ export function Transactions() {
   const [bulkCategorizeError, setBulkCategorizeError] = useState<string | null>(null);
   const [pendingCheckpointDate, setPendingCheckpointDate] = useState<string | null>(null);
   const [checkpointError, setCheckpointError] = useState<string | null>(null);
+  // Mobile swaps the <table> for a card list + bottom sheet. `max-width:
+  // 767px` matches "below Tailwind's md breakpoint" and, importantly, returns
+  // `false` when window.matchMedia is unavailable (jsdom) — so unit tests
+  // and SSR default to the desktop table.
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Reset the selection whenever the visible set changes (filter or page).
   // Otherwise selectedIds may contain rows the user can no longer see, and
@@ -127,26 +129,8 @@ export function Transactions() {
   const rowAnchor = useTourAnchor('transactions:row');
   const multiAnchor = useTourAnchor('transactions:multi-select');
 
-  const {
-    updateCategory,
-    updateNotes,
-    deleteTransaction,
-    bulkDelete,
-    bulkCategorize,
-    createCheckpointM,
-    removeCheckpointM,
-  } = useTransactionsMutations({
-    setDeletingTx,
-    setDeleteError,
-    setConfirmBulkDelete,
-    setBulkDeleteError,
-    setSelectedIds,
-    setBulkSelectValue,
-    setBulkCategorizeError,
-    setBulkCategorizeNotice,
-    setCheckpointError,
-    setPendingCheckpointDate,
-  });
+  const { updateCategory, updateNotes, deleteTransaction, bulkDelete, bulkCategorize, createCheckpointM, removeCheckpointM } =
+    useTransactionsMutations({ setDeletingTx, setDeleteError, setConfirmBulkDelete, setBulkDeleteError, setSelectedIds, setBulkSelectValue, setBulkCategorizeError, setBulkCategorizeNotice, setCheckpointError, setPendingCheckpointDate });
 
   const accounts = accountsQ.data?.accounts ?? [];
   const categories = categoriesQ.data?.categories ?? [];
@@ -185,6 +169,16 @@ export function Transactions() {
     removeCheckpointM,
     setPendingCheckpointDate,
   });
+
+  // Row-action handlers shared by the desktop table AND the mobile view.
+  // Hoisted so both branches reference the same stable callbacks instead
+  // of allocating equivalent arrows in JSX.
+  const onUpdateCategory = (id: number, patch: { categoryId: number | null }) =>
+    updateCategory.mutate({ id, ...patch });
+  const onUpdateNotes = (id: number, patch: { notes: string | null }) =>
+    updateNotes.mutate({ id, ...patch });
+  const onEditTx = (tx: Transaction) => setModalTx(tx);
+  const onDeleteTx = (tx: Transaction) => { setDeleteError(null); setDeletingTx(tx); };
 
   return (
     <div className="flex flex-col gap-6">
@@ -252,6 +246,18 @@ export function Transactions() {
           error={txQ.error}
           onRetry={() => void txQ.refetch()}
         />
+      ) : isMobile ? (
+        <TransactionsMobileView
+          transactions={visibleTxs}
+          accountById={accountById}
+          catById={catById}
+          sortedCategories={sortedCategories}
+          isLoading={txQ.isLoading}
+          onUpdateCategory={onUpdateCategory}
+          onUpdateNotes={onUpdateNotes}
+          onAdvancedEdit={onEditTx}
+          onDelete={onDeleteTx}
+        />
       ) : (
         <TransactionsTable
           transactions={visibleTxs}
@@ -270,15 +276,12 @@ export function Transactions() {
           onToggleSelectAll={(checked) =>
             setSelectedIds((s) => toggleAllInSet(s, visibleTxs.map((tx) => tx.id), checked))
           }
-          onUpdateCategory={(id, patch) => updateCategory.mutate({ id, ...patch })}
-          onUpdateNotes={(id, patch) => updateNotes.mutate({ id, ...patch })}
+          onUpdateCategory={onUpdateCategory}
+          onUpdateNotes={onUpdateNotes}
           expandedIds={expandedIds}
           onToggleExpanded={(id) => setExpandedIds((s) => toggleInSet(s, id, !s.has(id)))}
-          onEdit={(tx) => setModalTx(tx)}
-          onDelete={(tx) => {
-            setDeleteError(null);
-            setDeletingTx(tx);
-          }}
+          onEdit={onEditTx}
+          onDelete={onDeleteTx}
           firstRowRef={rowAnchor}
           multiSelectRef={multiAnchor}
           cursorId={cursorId}
@@ -313,10 +316,7 @@ export function Transactions() {
           setDeletingTx(null);
           deferredDelete.begin([id], 'single', () => deleteTransaction.mutate(id));
         }}
-        onCancelDelete={() => {
-          setDeletingTx(null);
-          setDeleteError(null);
-        }}
+        onCancelDelete={() => { setDeletingTx(null); setDeleteError(null); }}
         confirmBulkDelete={confirmBulkDelete}
         bulkDeleteCount={selectedIds.size}
         bulkDeleteError={bulkDeleteError}
@@ -327,10 +327,7 @@ export function Transactions() {
           setSelectedIds(new Set());
           deferredDelete.begin(ids, 'bulk', () => bulkDelete.mutate(ids));
         }}
-        onCancelBulkDelete={() => {
-          setConfirmBulkDelete(false);
-          setBulkDeleteError(null);
-        }}
+        onCancelBulkDelete={() => { setConfirmBulkDelete(false); setBulkDeleteError(null); }}
       />
 
       {deferredDelete.pending && (
