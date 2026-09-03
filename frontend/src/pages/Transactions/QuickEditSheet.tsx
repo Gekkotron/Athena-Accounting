@@ -4,10 +4,11 @@ import type { Account, Category, Transaction } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 
-// Mobile-only quick-edit affordance for a single transaction: notes + category.
-// Opens as a bottom sheet from the card list. Full-form editing (label, date,
-// account, splits, attachments…) still routes to the desktop TransactionModal
-// via the "Advanced edit" action so this sheet stays a light-touch flow.
+// Mobile-only quick-edit affordance for a single transaction: notes +
+// category. Reuses the app's three type roles — Fraunces italic for the
+// merchant label (as a serif "entry"), Hanken for meta and controls,
+// JetBrains for the amount — so the sheet reads as the same object the
+// day-grouped list shows, just opened.
 export function QuickEditSheet({
   tx,
   account,
@@ -40,9 +41,9 @@ export function QuickEditSheet({
     }
   }, [tx]);
 
-  // Lock the background from scrolling while the sheet is open — mobile
-  // sheets usually pin the page, and touch-scrolling the page under the
-  // sheet feels broken.
+  // Lock the background from scrolling while the sheet is open — otherwise
+  // the page peeks and scrolls behind the sheet, breaking the "focused on
+  // this one entry" feeling.
   useEffect(() => {
     if (!tx) return;
     const prev = document.body.style.overflow;
@@ -66,8 +67,11 @@ export function QuickEditSheet({
   };
 
   const categoriesForPicker = useMemo(
-    () => [{ id: null as number | null, label: '—' }, ...sortedCategories.map((c) => ({ id: c.id as number | null, label: formatCategoryPath(c, catById) }))],
-    [sortedCategories, catById],
+    () => [
+      { id: null as number | null, label: t('table.uncategorized', { defaultValue: '—' }), muted: true },
+      ...sortedCategories.map((c) => ({ id: c.id as number | null, label: formatCategoryPath(c, catById), muted: false })),
+    ],
+    [sortedCategories, catById, t],
   );
 
   if (!tx) return null;
@@ -81,51 +85,56 @@ export function QuickEditSheet({
       <button
         type="button"
         aria-label={t('close', { ns: 'common' })}
-        className="absolute inset-0 bg-ink-950/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-ink-950/75 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-full max-h-[85vh] rounded-t-2xl bg-ink-900 border-t border-ink-800 shadow-card flex flex-col animate-[slideup_0.18s_ease-out]">
-        <div className="flex items-center justify-center pt-2 pb-1">
-          <span className="block h-1 w-10 rounded-full bg-ink-700" aria-hidden />
+      <div className="relative w-full max-h-[88vh] rounded-t-3xl bg-ink-900 border-t border-ink-800 shadow-card flex flex-col animate-[slideup_0.22s_cubic-bezier(0.2,0.8,0.2,1)]">
+        <div className="flex items-center justify-center pt-2.5 pb-1">
+          <span className="block h-1 w-9 rounded-full bg-ink-700" aria-hidden />
         </div>
 
-        <div className="px-4 pb-3 border-b border-ink-800/70">
-          <div className="flex items-baseline justify-between gap-3">
+        {/* Summary — merchant as a Fraunces italic entry, meta as a hairline
+            beneath, amount right-aligned in the same mono weight the list uses. */}
+        <div className="px-5 pt-2 pb-4 border-b border-ink-800/60">
+          <div className="flex items-baseline justify-between gap-4">
             <div className="min-w-0">
-              <div className="truncate text-ink-100 font-medium" title={tx.rawLabel}>
+              <div className="display-italic text-ink-50 text-xl truncate leading-tight" title={tx.rawLabel}>
                 {tx.rawLabel}
               </div>
-              <div className="text-[11px] text-ink-500 mt-0.5">
-                <span className="font-mono">{formatDate(tx.date)}</span>
-                <span aria-hidden> · </span>
+              <div className="mt-1.5 text-[11px] text-ink-500 flex items-center gap-1.5">
+                <span className="font-mono tabular-nums">{formatDate(tx.date)}</span>
+                <span aria-hidden className="text-ink-700">·</span>
                 <span>{account?.name ?? '?'}</span>
               </div>
             </div>
-            <div className={`font-mono text-sm tabular-nums whitespace-nowrap ${amountSignClass(tx.amount)}`}>
+            <div className={`font-mono text-lg tabular-nums whitespace-nowrap ${amountSignClass(tx.amount)}`}>
               {formatAmount(tx.amount, currency)}
             </div>
           </div>
         </div>
 
-        <div className="px-4 py-4 overflow-y-auto flex flex-col gap-4 flex-1">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="sheet-notes" className="label">
-              {t('table.columns.notes')}
-            </label>
+        <div className="px-5 py-5 overflow-y-auto flex flex-col gap-6 flex-1">
+          {/* Note — bare textarea framed as "writing in the margin". No
+              boxy input styling, just a single hairline underneath. */}
+          <div className="flex flex-col gap-2">
+            <span className="label">{t('table.columns.notes')}</span>
             <textarea
               id="sheet-notes"
-              rows={3}
-              className="input-sm w-full resize-y"
-              placeholder="…"
+              rows={2}
+              className="w-full bg-transparent border-0 border-b border-ink-800 focus:border-sage-300/60 focus:outline-none text-[15px] text-ink-100 placeholder:text-ink-600 placeholder:display-italic px-0 py-1.5 resize-none transition-colors"
+              placeholder={t('sheetNotesPlaceholder', { defaultValue: 'note…' })}
               value={notesDraft}
               onChange={(e) => setNotesDraft(e.target.value)}
               maxLength={2000}
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          {/* Categories — flush-list; selected item gets a left sage rail
+              (no boxy border) so the picker reads as a chosen entry rather
+              than a form control. */}
+          <div className="flex flex-col gap-2">
             <span className="label">{t('table.columns.category')}</span>
-            <ul className="flex flex-col gap-1 max-h-64 overflow-y-auto pr-1 -mr-1">
+            <ul className="flex flex-col max-h-[42vh] overflow-y-auto -mx-2">
               {categoriesForPicker.map((c) => {
                 const selected = catDraft === c.id;
                 return (
@@ -133,14 +142,19 @@ export function QuickEditSheet({
                     <button
                       type="button"
                       onClick={() => setCatDraft(c.id)}
-                      className={`w-full text-left px-3 py-2 rounded border transition ${
+                      className={`w-full text-left pl-3 pr-3 py-3 text-[15px] flex items-center gap-3 border-l-2 transition-colors ${
                         selected
-                          ? 'border-sage-700 bg-sage-900/30 text-sage-100'
-                          : 'border-ink-800 hover:bg-ink-850 text-ink-200'
-                      }`}
+                          ? 'border-sage-300 bg-sage-900/20 text-sage-100'
+                          : 'border-transparent hover:bg-ink-850/60 text-ink-200'
+                      } ${c.muted && !selected ? 'display-italic text-ink-500' : ''}`}
                       aria-pressed={selected}
                     >
-                      {c.label}
+                      <span className="flex-1 truncate">{c.label}</span>
+                      {selected && (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                          <path d="M3 7.5l2.5 2.5L11 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
                     </button>
                   </li>
                 );
@@ -149,20 +163,22 @@ export function QuickEditSheet({
           </div>
         </div>
 
-        <div className="px-4 py-3 border-t border-ink-800/70 flex flex-wrap items-center gap-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          <button type="button" className="btn-ghost text-clay-300" onClick={() => onDelete(tx)}>
+        {/* Action row — Delete and Advanced sit quiet on the left as text
+            buttons; the commit action is the only weighted button. */}
+        <div className="px-5 py-3 border-t border-ink-800/60 flex items-center gap-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <button type="button" className="text-[13px] text-clay-300/90 hover:text-clay-200 px-2 py-2 transition-colors" onClick={() => onDelete(tx)}>
             {t('delete', { ns: 'common' })}
           </button>
-          <button type="button" className="btn-ghost text-ink-300" onClick={() => onAdvancedEdit(tx)}>
+          <button type="button" className="text-[13px] text-ink-400 hover:text-ink-200 px-2 py-2 transition-colors" onClick={() => onAdvancedEdit(tx)}>
             {t('row.advancedEditLabel')}
           </button>
-          <div className="ml-auto flex items-center gap-2">
-            <button type="button" className="btn-ghost" onClick={onClose}>
+          <div className="ml-auto flex items-center gap-1">
+            <button type="button" className="text-[13px] text-ink-400 hover:text-ink-200 px-3 py-2 transition-colors" onClick={onClose}>
               {t('cancel', { ns: 'common' })}
             </button>
             <button
               type="button"
-              className="btn-primary"
+              className="btn-primary !py-2 !px-4 text-[13px]"
               disabled={!canSave}
               onClick={commit}
             >
