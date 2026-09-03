@@ -158,22 +158,21 @@ html.privacy-on .private {
   .table-scroll {
     @apply overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0;
   }
-  .table-scroll table {
+  .table-scroll table:not(.stack-md) {
     @apply min-w-[640px] w-full;
+  }
+  .table-scroll table.stack-md {
+    @apply w-full;
   }
 
   /* Mobile table reflow. Add `.stack-md` to a <table> whose cells are
      self-explanatory when read top-to-bottom (a label input, a value, a
      select, an action) — below the md breakpoint the row becomes a
      vertical block, thead vanishes, and any explicit min-widths are lifted
-     so the row fits any viewport. Above md the table stays a table.
-     Cells marked `data-hide-mobile` disappear entirely on mobile — use for
-     redundant meta the mobile card should suppress. */
-  .stack-md {
-    /* Neutralize .table-scroll's min-width for stacked mode. */
-    @apply md:min-w-[640px];
-    min-width: 0;
-  }
+     (see the `.table-scroll table.stack-md` override above) so the row
+     fits any viewport. Above md the table stays a table. Cells marked
+     `data-hide-mobile` disappear entirely on mobile — use for redundant
+     meta the mobile card should suppress. */
   @media (max-width: 767px) {
     .stack-md { display: block; }
     .stack-md thead { display: none; }
