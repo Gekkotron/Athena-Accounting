@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // VITE_DEMO=1 enables the browser-only demo build: output goes to
 // dist-demo/ so the real dist/ is never overwritten, and the demo API
@@ -13,7 +14,44 @@ export default defineConfig(({ mode }) => {
   // A build-time base override lets local previews still use '/'.
   const demoBase = env.VITE_DEMO_BASE ?? '/Athena-Accounting/demo/';
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // PWA plumbing — manifest + service worker for install-to-home-screen.
+      // Skipped in demo builds: the demo lives on gh-pages and has no
+      // long-lived origin identity worth installing. Precache is app-shell
+      // only; /api/* is explicitly ignored so live data never gets cached
+      // (auth cookies + freshness matter more than offline reads here).
+      !isDemo && VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['owl-logo.png', 'owl-192.png', 'owl-512.png'],
+        manifest: {
+          name: 'Athena Accounting',
+          short_name: 'Athena',
+          description: 'Personal accounting — self-hosted, LAN-friendly.',
+          theme_color: '#0b0d11',
+          background_color: '#0b0d11',
+          display: 'standalone',
+          start_url: '/',
+          scope: '/',
+          lang: 'fr',
+          icons: [
+            { src: '/owl-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/owl-512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/owl-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          ],
+        },
+        workbox: {
+          // Precache the app shell. Route-level chunks are still fetched
+          // on-demand; the SW just serves cached copies when the network
+          // is slow or absent. Every /api/* and /events/* request always
+          // hits the network so cookie auth + SSE stay correct.
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//, /^\/events\//],
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          runtimeCaching: [],
+        },
+      }),
+    ].filter(Boolean),
     base: isDemo ? demoBase : '/',
     define: {
       'import.meta.env.VITE_DEMO': JSON.stringify(viteDemo),
