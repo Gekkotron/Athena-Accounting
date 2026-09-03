@@ -111,7 +111,7 @@ export function CategoryTableRow(props: {
       </td>
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className={kindBadgeClass(c.kind)}>{kindLabel(c.kind, t)}</span>
+          <span className={`${kindBadgeClass(c.kind)} hidden sm:inline-flex`}>{kindLabel(c.kind, t)}</span>
           <select
             className="input-sm"
             value={c.kind}

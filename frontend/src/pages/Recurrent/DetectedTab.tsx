@@ -245,28 +245,31 @@ function SeriesRow({
         ? 'Marqué comme discrétionnaire. Cliquer pour retirer.'
         : "Marquer cette série comme essentielle.";
 
+  // Three-tier row on mobile: (1) label + amount, (2) cadence/next/count
+  // meta, (3) actions wrap. Prevents the label from getting squeezed by
+  // the Confirmer/Ignorer/Marquer trio at 375px viewports.
   return (
-    <li className="flex flex-wrap items-center gap-3 py-2 px-1 border-b border-ink-900/50 last:border-b-0">
-      <div className="flex flex-col min-w-0 flex-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm text-ink-100 truncate">{row.label}</span>
+    <li className="flex flex-col gap-1.5 py-3 px-1 border-b border-ink-900/50 last:border-b-0">
+      <div className="flex items-baseline gap-3 min-w-0">
+        <div className="flex items-baseline gap-2 min-w-0 flex-1">
+          <span className="text-sm text-ink-100 truncate min-w-0">{row.label}</span>
           {isConfirmed && (
-            <span className="text-[10px] uppercase tracking-wider text-sage-300/80 border border-sage-800/60 rounded-full px-1.5 py-[1px]">
+            <span className="text-[10px] uppercase tracking-wider text-sage-300/80 border border-sage-800/60 rounded-full px-1.5 py-[1px] shrink-0">
               Confirmé
             </span>
           )}
         </div>
-        <div className="text-xs text-ink-500 flex flex-wrap gap-x-3 mt-0.5">
-          <span>{cadenceLabel(row.cadenceDays)}</span>
-          <span>Prochain le {formatDate(row.nextDueAt)}</span>
-          <span>{row.memberCount} occurrences</span>
+        <div className={`text-sm font-mono tabular-nums shrink-0 ${amountSignClass(row.avgAmount)}`}>
+          {formatAmount(row.avgAmount)}
         </div>
-        {row.priceCreep && <PriceCreepChip creep={row.priceCreep} />}
       </div>
-      <div className={`text-sm tabular-nums shrink-0 ${amountSignClass(row.avgAmount)}`}>
-        {formatAmount(row.avgAmount)}
+      <div className="text-xs text-ink-500 flex flex-wrap gap-x-3 gap-y-0.5">
+        <span>{cadenceLabel(row.cadenceDays)}</span>
+        <span>Prochain le {formatDate(row.nextDueAt)}</span>
+        <span>{row.memberCount} occurrences</span>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      {row.priceCreep && <PriceCreepChip creep={row.priceCreep} />}
+      <div className="flex flex-wrap items-center gap-1 pt-0.5">
         {!isConfirmed && (
           <button
             type="button"

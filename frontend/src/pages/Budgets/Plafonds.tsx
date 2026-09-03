@@ -150,8 +150,11 @@ export function Plafonds(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <div className="grid grid-cols-3 items-center gap-3">
-        <div className="justify-self-start">
+      {/* Header — stacks on mobile so the title, period picker, and
+          account filter don't compete for the same 375px row. Grid
+          restores at md+ where the three-column identity works. */}
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-3 md:items-center md:gap-3">
+        <div className="md:justify-self-start">
           <div className="flex items-center gap-2">
             <h1 className="display text-2xl text-ink-50">{t('header.title')}</h1>
             <TourReplayIcon pageId="budgets" />
@@ -160,10 +163,10 @@ export function Plafonds(): JSX.Element {
             {t('header.subtitle')}
           </p>
         </div>
-        <div className="justify-self-center">
+        <div className="md:justify-self-center">
           <PeriodSelector period={period} monthOrYear={monthOrYear} onChange={setPeriodState} />
         </div>
-        <div className="justify-self-end">
+        <div className="md:justify-self-end">
           {accounts.length > 1 && (
             <AccountFilter accountId={accountId} accounts={accounts} onChange={setAccountFilter} />
           )}

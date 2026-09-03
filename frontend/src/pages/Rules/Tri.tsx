@@ -215,7 +215,7 @@ export function Tri() {
                 <th className="px-4 py-3 w-8"></th>
                 <th className="px-4 py-3 label font-normal">{t('tri.columns.normalizedLabel')}</th>
                 <th className="px-4 py-3 label font-normal hidden lg:table-cell">{t('tri.columns.example')}</th>
-                <th className="px-4 py-3 label font-normal text-right">{t('tri.columns.count')}</th>
+                <th className="px-4 py-3 label font-normal text-right hidden sm:table-cell">{t('tri.columns.count')}</th>
                 <th className="px-4 py-3 label font-normal text-right">{t('tri.columns.total')}</th>
                 <th className="px-4 py-3 label font-normal hidden md:table-cell">{t('tri.columns.period')}</th>
                 <th className="px-4 py-3 label font-normal">{t('tri.columns.category')}</th>
@@ -254,7 +254,7 @@ export function Tri() {
                       <td className="px-4 py-2.5 text-ink-400 text-xs truncate max-w-xs hidden lg:table-cell" title={g.example_raw_label}>
                         {g.example_raw_label}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-ink-200 font-mono">{g.transaction_count}</td>
+                      <td className="px-4 py-2.5 text-right text-ink-200 font-mono hidden sm:table-cell">{g.transaction_count}</td>
                       <td className={`px-4 py-2.5 text-right font-mono tabular-nums ${amountSignClass(g.total_amount)}`}>
                         {formatAmount(g.total_amount, 'EUR')}
                       </td>

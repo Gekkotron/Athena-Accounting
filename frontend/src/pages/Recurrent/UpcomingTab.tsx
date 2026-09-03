@@ -177,19 +177,29 @@ function UpcomingRow({
   cat: Category | null;
   lateDays?: number;
 }): JSX.Element {
+  // Two-tier row: label + amount on top, secondary chips (status,
+  // essential, late) wrap on their own line below so the label never
+  // gets squeezed by pill overflow at 375px viewports.
   return (
-    <li className="flex flex-wrap items-center gap-3 py-2 px-1 border-b border-ink-900/50 last:border-b-0">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {cat && (
-          <span
-            className="h-2 w-2 rounded-full border border-ink-700 shrink-0"
-            style={{ backgroundColor: resolveCategoryColor(cat) }}
-            aria-hidden
-          />
-        )}
-        <span className="text-sm text-ink-100 truncate">{row.label}</span>
+    <li className="flex flex-col gap-1 py-2.5 px-1 border-b border-ink-900/50 last:border-b-0">
+      <div className="flex items-baseline gap-3 min-w-0">
+        <div className="flex items-baseline gap-2 min-w-0 flex-1">
+          {cat && (
+            <span
+              className="h-2 w-2 rounded-full border border-ink-700 shrink-0 translate-y-[-1px]"
+              style={{ backgroundColor: resolveCategoryColor(cat) }}
+              aria-hidden
+            />
+          )}
+          <span className="text-sm text-ink-100 truncate min-w-0">{row.label}</span>
+        </div>
+        <span className={`text-sm font-mono tabular-nums shrink-0 ${amountSignClass(row.avgAmount)}`}>
+          {formatAmount(row.avgAmount)}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 pl-4 text-[10px]">
         <span
-          className={`text-[10px] uppercase tracking-wider rounded-full px-1.5 py-[1px] border shrink-0 ${
+          className={`uppercase tracking-wider rounded-full px-1.5 py-[1px] border ${
             row.status === 'confirmed'
               ? 'text-sage-300/80 border-sage-800/60'
               : 'text-ink-400 border-ink-700/70'
@@ -198,20 +208,17 @@ function UpcomingRow({
           {row.status === 'confirmed' ? 'Confirmé' : 'Détecté'}
         </span>
         {row.essentialness === 'essential' && (
-          <span className="text-[10px] uppercase tracking-wider rounded-full px-1.5 py-[1px] border border-sage-800/60 text-sage-300/80 shrink-0">
+          <span className="uppercase tracking-wider rounded-full px-1.5 py-[1px] border border-sage-800/60 text-sage-300/80">
             Essentiel
           </span>
         )}
         {lateDays !== undefined && (
-          <span className="text-[10px] uppercase tracking-wider rounded-full px-1.5 py-[1px] border border-clay-700/70 text-clay-200 shrink-0">
+          <span className="uppercase tracking-wider rounded-full px-1.5 py-[1px] border border-clay-700/70 text-clay-200">
             Retard : {lateDays} jours
           </span>
         )}
+        {cat && <span className="text-ink-500 ml-auto text-xs">{cat.name}</span>}
       </div>
-      {cat && <span className="text-xs text-ink-500 shrink-0">{cat.name}</span>}
-      <span className={`text-sm tabular-nums shrink-0 ${amountSignClass(row.avgAmount)}`}>
-        {formatAmount(row.avgAmount)}
-      </span>
     </li>
   );
 }
