@@ -276,7 +276,7 @@ export function TransactionModal({
     >
       <form
         onSubmit={submit}
-        className="surface w-full max-w-lg p-6"
+        className="surface w-full max-w-lg max-h-[90vh] flex flex-col p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="display text-xl text-ink-50 mb-1">
@@ -286,6 +286,7 @@ export function TransactionModal({
           {isEdit ? t('modal.header.editHint') : t('modal.header.createHint')}
         </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6 pb-2">
         <TransactionModalFields
           accounts={accounts}
           categories={categories}
@@ -326,8 +327,9 @@ export function TransactionModal({
               : error}
           </div>
         )}
+        </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-ink-800/60">
           <button type="button" className="btn-ghost" onClick={onClose} disabled={pending}>
             {createdTxIdOnFailure != null ? t('close', { ns: 'common' }) : t('cancel', { ns: 'common' })}
           </button>
