@@ -49,7 +49,7 @@ describe('ConsolidatedTotalCard', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('hides the "Converted from" chip when only one currency is in the pot', () => {
+  it('renders nothing when only one currency is in the pot — no real consolidation, DashboardHero already shows that amount', () => {
     const consolidated: ConsolidatedBlock = {
       display: 'EUR',
       total: '190.00',
@@ -57,9 +57,8 @@ describe('ConsolidatedTotalCard', () => {
       invested: '0.00',
       unmapped: [],
     };
-    renderCard(consolidated, 1);
-    expect(screen.getByText(/190,00/)).toBeInTheDocument();
-    expect(screen.queryByText(/Convertie depuis/)).not.toBeInTheDocument();
+    const { container } = renderCard(consolidated, 1);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('hides the chip when a second currency is unmapped (mapped count drops to 1)', () => {

@@ -27,12 +27,15 @@ interface Props {
 // Collapses every currency the manual FX table can convert (Settings →
 // Multi-devises) into one total. `currencyCount` is the full perCurrency
 // row count from the balance report; the "converted from N" chip subtracts
-// however many of those `consolidated.unmapped` couldn't be converted, and
-// is suppressed entirely when at most one currency is in the pot — nothing
-// was actually converted, so "Converted from 1 currency" would be false.
+// however many of those `consolidated.unmapped` couldn't be converted.
+//
+// The whole card is suppressed when at most one currency is in the pot —
+// nothing is actually being consolidated, so the total would just repeat
+// the single-currency amount already shown in the DashboardHero above.
 export function ConsolidatedTotalCard({ consolidated, currencyCount }: Props): JSX.Element | null {
   const { t } = useTranslation('common');
   if (!consolidated) return null;
+  if (currencyCount <= 1) return null;
   const mappedCount = Math.max(currencyCount - consolidated.unmapped.length, 0);
   return (
     <div className="surface p-5 md:p-6 min-w-[220px]">

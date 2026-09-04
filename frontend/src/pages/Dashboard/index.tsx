@@ -132,8 +132,14 @@ export function Dashboard(): JSX.Element {
 
   // The consolidated block aggregates ALL accounts server-side — only valid
   // when the chart itself is scoped to 'all'. A single-account scope keeps
-  // the raw per-currency curve.
-  const chartConsolidated = chartScope === 'all' ? seriesQ.data?.consolidated ?? null : null;
+  // the raw per-currency curve. Also suppressed when the user only has one
+  // currency: there's nothing to FX-consolidate, and the server's
+  // consolidated line for a 1-currency pot doesn't match the client-side
+  // per-account sum (missing quiet-account carry, no pre-window baseline),
+  // which reads as "the curve looks like just the primary account".
+  const chartConsolidated = chartScope === 'all' && currencies.length > 1
+    ? seriesQ.data?.consolidated ?? null
+    : null;
   // The forecast overlay's anchor/points are computed from raw single-currency
   // balances (see useForecastProjection), while the consolidated series is
   // FX-converted into `chartConsolidated.display`. Mixing the two would shift

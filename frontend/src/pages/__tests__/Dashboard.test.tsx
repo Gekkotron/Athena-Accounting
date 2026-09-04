@@ -244,7 +244,32 @@ describe('Dashboard', () => {
     expect(screen.getByText(/50,00/)).toBeInTheDocument();
   });
 
-  it('passes the timeseries consolidated block through to BalanceChart when scoped to all accounts', async () => {
+  it('passes the timeseries consolidated block through to BalanceChart when scoped to all accounts across multiple currencies', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0, displayCurrency: 'EUR',
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [acc(1, 'Compte'), acc(2, 'USD Compte', { currency: 'USD' })] };
+      if (path === '/api/reports/balance') return {
+        perCurrency: [
+          { currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 },
+          { currency: 'USD', total: '50.00',  available: '50.00',  invested: '0.00', account_count: 1 },
+        ],
+      };
+      if (path === '/api/reports/timeseries') return {
+        points: [],
+        consolidated: { display: 'EUR', points: [] },
+      };
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderDashboard();
+    expect(await screen.findByText(/consolidated:EUR/)).toBeInTheDocument();
+  });
+
+  it('suppresses the timeseries consolidated block on the chart when only one currency is in the pot', async () => {
     apiMock.mockImplementation(async (path: string) => {
       if (path === '/api/settings') return {
         settings: {
@@ -263,7 +288,9 @@ describe('Dashboard', () => {
       throw new Error(`unexpected: ${path}`);
     });
     renderDashboard();
-    expect(await screen.findByText(/consolidated:EUR/)).toBeInTheDocument();
+    // Ensure the chart section has mounted before asserting on its content.
+    await screen.findAllByLabelText(/compte affiché/i);
+    expect(screen.queryByText(/consolidated:/)).not.toBeInTheDocument();
   });
 
   it('does not pass consolidated to BalanceChart when scoped to a single account', async () => {
