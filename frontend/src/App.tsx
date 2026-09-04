@@ -8,6 +8,7 @@ import type { Notification } from '../../shared/api-contracts.js';
 import { startNotificationsStream } from './lib/notifications/stream.js';
 import { showToast } from './lib/notifications/channels/toast.js';
 import { sendWebPush } from './lib/notifications/channels/webPush.js';
+import { sendOsNotification } from './lib/notifications/channels/osNative.js';
 import { useNotificationPrefs } from './lib/notifications/hooks.js';
 import type { NotificationPrefs } from './lib/settings';
 import { ToastProvider, useToast } from './components/Toast';
@@ -47,16 +48,18 @@ import { SettingsNotifications } from './pages/Settings/SettingsNotifications';
 import { Notifications } from './pages/Notifications';
 import { BankSyncCallback } from './pages/BankSyncCallback';
 
-// Single fan-out point for live notification channels. Toast lands in Task
-// 10; Task 12 adds the webPush channel alongside it here. Channel/privacy
-// prefs come from useNotificationPrefs() (Task 15), fed in by NotificationsBridge.
+// Single fan-out point for live notification channels. Each adapter is a
+// no-op unless its runtime is present (toast: always; webPush: the browser
+// Notification API + granted permission; osNative: window.__TAURI__), so
+// the channel toggles are the only gate — the adapters handle the rest.
 function fanoutToChannels(
   n: Notification,
   push: (t: { title: string; body: string }) => void,
   prefs: NotificationPrefs,
 ): void {
-  if (prefs.channels.toast)   showToast(push, n, prefs.privacy);
-  if (prefs.channels.webPush) sendWebPush(n, prefs.privacy);
+  if (prefs.channels.toast)    showToast(push, n, prefs.privacy);
+  if (prefs.channels.webPush)  sendWebPush(n, prefs.privacy);
+  if (prefs.channels.osNative) void sendOsNotification(n, prefs.privacy);
 }
 
 // Lives inside <ToastProvider> so it can obtain `push` via useToast(); the

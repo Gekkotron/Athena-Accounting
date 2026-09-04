@@ -211,6 +211,7 @@ fn terminate_gracefully(mut child: Child) {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let handle = app.handle().clone();
             let (child, port) = spawn_sidecar(&handle);
