@@ -22,11 +22,16 @@ interface Props {
   /** When set to a specific account id, the report is filtered server-side
       to that account only. 'all' or undefined aggregates across every
       account the user owns. Mirrors the CategoryBreakdown contract. */
-  accountId?: number | 'all';
+  accountId?: number | 'all' | 'available';
+  /** Multi-account filter (wins over `accountId`). Drives the CSV
+      `accountIds` server param — used by the Dashboard's "All available
+      accounts" scope. */
+  accountIds?: number[];
   /** Accounts and setter for the header's compact scope dropdown. */
   accounts: Account[];
-  onAccountChange: (v: 'all' | number) => void;
+  onAccountChange: (v: 'all' | 'available' | number) => void;
   primaryCurrency?: string;
+  hideAvailableInSelect?: boolean;
 }
 
 export function SankeySection({
@@ -34,9 +39,11 @@ export function SankeySection({
   onRangeChange,
   currency,
   accountId,
+  accountIds,
   accounts,
   onAccountChange,
   primaryCurrency,
+  hideAvailableInSelect,
 }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
   const { t: tCharts } = useTranslation('charts');
@@ -45,6 +52,17 @@ export function SankeySection({
   const fromDate = fromDateFor(range);
   const toDate = toDateFor(range);
   const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
+  // See CategoryBreakdown for the empty-accountIds rationale.
+  const multiSelectExplicit = accountIds !== undefined;
+  const multiSelectEmpty = multiSelectExplicit && accountIds.length === 0;
+  const scopedAccountIds = accountIds && accountIds.length > 0
+    ? Array.from(new Set(accountIds)).sort((a, b) => a - b)
+    : undefined;
+  const accountIdsKey = multiSelectEmpty
+    ? '__empty__'
+    : scopedAccountIds
+      ? scopedAccountIds.join(',')
+      : (scopedAccountId ?? 'all');
 
   const catListQ = useQuery({
     queryKey: ['categories'],
@@ -54,16 +72,21 @@ export function SankeySection({
     queryKey: [
       'reports',
       'categories',
-      { fromDate: fromDate ?? 'all', toDate: toDate ?? 'all', accountId: scopedAccountId ?? 'all' },
+      { fromDate: fromDate ?? 'all', toDate: toDate ?? 'all', accountIds: accountIdsKey },
     ],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
         query: {
           ...(fromDate ? { fromDate } : {}),
           ...(toDate ? { toDate } : {}),
-          ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
+          ...(scopedAccountIds
+            ? { accountIds: scopedAccountIds.join(',') }
+            : scopedAccountId
+              ? { accountId: scopedAccountId }
+              : {}),
         },
       }),
+    enabled: !multiSelectEmpty,
   });
 
   const model = useMemo(
@@ -93,6 +116,7 @@ export function SankeySection({
             onChange={onAccountChange}
             accounts={accounts}
             primaryCurrency={primaryCurrency}
+            hideAvailable={hideAvailableInSelect}
           />
           <RangePicker value={range} onChange={onRangeChange} />
         </div>

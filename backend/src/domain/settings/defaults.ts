@@ -42,6 +42,10 @@ export const DEFAULTS = {
 } as const;
 
 export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
-export type DashboardChartScope = 'all' | number;
+// 'available' aggregates only accounts whose lock has elapsed (see
+// isAccountAvailable on the frontend); the account list is computed client-
+// side from Account.lockYears + openingDate, so the backend just stores the
+// literal.
+export type DashboardChartScope = 'all' | 'available' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 export type DisplayCurrency = string | null;

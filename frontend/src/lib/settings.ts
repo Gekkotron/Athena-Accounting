@@ -3,7 +3,10 @@
 // value wins on the first GET (see design doc).
 
 export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
-export type DashboardChartScope = 'all' | number;
+// 'available' = aggregate only accounts whose lock has elapsed (or that
+// have no lock). Resolved to an actual id list on the frontend via
+// isAccountAvailable in pages/Dashboard/helpers.
+export type DashboardChartScope = 'all' | 'available' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 
 export interface NotificationChannels {

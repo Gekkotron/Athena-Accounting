@@ -174,9 +174,14 @@ export function ForecastTab(): JSX.Element {
             </label>
             <AccountSelect
               value={scope}
-              onChange={setScope}
+              // The recurring forecast is not defined over the "All available
+              // accounts" subset (see useForecastProjection's note on the
+              // Dashboard for the same reason), so we hide that option here
+              // and narrow the callback back to 'all' | number.
+              onChange={(v) => { if (v !== 'available') setScope(v); }}
               accounts={accounts}
               primaryCurrency={primaryCurrency}
+              hideAvailable
             />
             <ForecastHorizonPicker value={horizon} onChange={setHorizon} />
           </div>

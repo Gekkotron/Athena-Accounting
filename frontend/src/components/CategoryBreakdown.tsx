@@ -23,6 +23,10 @@ interface Props {
       to that account only. 'all' or undefined aggregates across every
       account the user owns (legacy default). */
   accountId?: number | 'all';
+  /** Multi-account filter used by the Dashboard's "All available accounts"
+      scope. When present, wins over `accountId` and drives a CSV
+      `accountIds` server param (SQL IN clause). Empty array = no rows. */
+  accountIds?: number[];
 }
 
 export function CategoryBreakdown({
@@ -32,6 +36,7 @@ export function CategoryBreakdown({
   range: controlledRange,
   onRangeChange,
   accountId,
+  accountIds,
 }: Props) {
   const { t } = useTranslation('charts');
   const [internalRange, setInternalRange] = useState<RangeKey>(defaultRange);
@@ -45,21 +50,42 @@ export function CategoryBreakdown({
   const fromDate = useMemo(() => fromDateFor(range), [range]);
   const toDate = useMemo(() => toDateFor(range), [range]);
   const scopedAccountId = typeof accountId === 'number' ? accountId : undefined;
+  // Multi-account filter wins. Normalised for a stable query key: sorted,
+  // deduped, and stringified so React Query doesn't refetch on prop-shuffle.
+  // An empty accountIds array is meaningful: "no accounts" (e.g. the
+  // Dashboard's 'available' scope with every account locked) — we skip the
+  // query entirely and render an empty donut instead of falling through to
+  // "no filter" which would show all accounts.
+  const multiSelectExplicit = accountIds !== undefined;
+  const multiSelectEmpty = multiSelectExplicit && accountIds.length === 0;
+  const scopedAccountIds = accountIds && accountIds.length > 0
+    ? Array.from(new Set(accountIds)).sort((a, b) => a - b)
+    : undefined;
+  const accountIdsKey = multiSelectEmpty
+    ? '__empty__'
+    : scopedAccountIds
+      ? scopedAccountIds.join(',')
+      : (scopedAccountId ?? 'all');
 
   const reportQ = useQuery({
     queryKey: [
       'reports',
       'categories',
-      { fromDate: fromDate ?? 'all', toDate: toDate ?? 'all', accountId: scopedAccountId ?? 'all' },
+      { fromDate: fromDate ?? 'all', toDate: toDate ?? 'all', accountIds: accountIdsKey },
     ],
     queryFn: () =>
       api<{ rows: CategoryReportRow[] }>('/api/reports/categories', {
         query: {
           ...(fromDate ? { fromDate } : {}),
           ...(toDate ? { toDate } : {}),
-          ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
+          ...(scopedAccountIds
+            ? { accountIds: scopedAccountIds.join(',') }
+            : scopedAccountId
+              ? { accountId: scopedAccountId }
+              : {}),
         },
       }),
+    enabled: !multiSelectEmpty,
   });
   const categoriesQ = useQuery({
     queryKey: ['categories'],

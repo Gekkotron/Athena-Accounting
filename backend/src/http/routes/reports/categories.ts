@@ -16,7 +16,15 @@ export function registerCategoriesReportRoute(app: FastifyInstance): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
     }
-    const { fromDate, toDate, accountId } = parsed.data;
+    const { fromDate, toDate, accountId, accountIds } = parsed.data;
+    // accountIds (multi-account) wins over accountId (single) when both are
+    // sent — the Dashboard's "All available accounts" scope always uses the
+    // multi form so both filters shouldn't collide in practice.
+    const accountFilter = accountIds && accountIds.length > 0
+      ? sql`AND e.account_id IN (${sql.join(accountIds.map((id) => sql`${id}`), sql`, `)})`
+      : accountId
+        ? sql`AND e.account_id = ${accountId}`
+        : sql``;
 
     const rows = await db.execute<{
       category_id: number | null;
@@ -51,7 +59,7 @@ export function registerCategoriesReportRoute(app: FastifyInstance): void {
         AND e.transfer_group_id IS NULL
         ${fromDate ? sql`AND e.date >= ${fromDate}` : sql``}
         ${toDate ? sql`AND e.date <= ${toDate}` : sql``}
-        ${accountId ? sql`AND e.account_id = ${accountId}` : sql``}
+        ${accountFilter}
       GROUP BY c.id, c.name, c.kind, cp.is_internal_transfer, month
       ORDER BY month DESC, total ASC
     `);

@@ -96,6 +96,7 @@
   },
   "accountSelect": {
     "allAccounts": "Tous les comptes",
+    "availableAccounts": "Tous les comptes disponibles",
     "ariaLabel": "Compte affiché"
   },
   "envelopeTile": {

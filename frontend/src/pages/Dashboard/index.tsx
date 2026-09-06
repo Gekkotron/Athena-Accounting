@@ -21,6 +21,7 @@ import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
 import { AccountSelect } from './AccountSelect';
+import { isAccountAvailable } from './helpers';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
 
@@ -70,7 +71,7 @@ export function Dashboard(): JSX.Element {
   // mount; in-session changes are ephemeral (no writeback). To make a
   // change stick, edit Réglages.
   const [range, setRange] = useState<RangeKey>(settings.dashboardRange);
-  const [chartScope, setChartScope] = useState<'all' | number>(settings.dashboardChartScope);
+  const [chartScope, setChartScope] = useState<'all' | 'available' | number>(settings.dashboardChartScope);
   // If settings arrive after the initial render (first paint used DEFAULTS),
   // hydrate the local state once — gated on isReady so we don't latch onto
   // the DEFAULTS fallback while the settings query is still loading.
@@ -83,29 +84,47 @@ export function Dashboard(): JSX.Element {
   }, [isReady, settings.dashboardRange, settings.dashboardChartScope]);
   const rangeFromDate = fromDateFor(range);
 
+  // Resolve the 'available' scope into a concrete set of account ids. This
+  // set is the source of truth for every chart: the balance chart filters
+  // its points against it, the donut and Sankey send it as an accountIds
+  // param. Memoised over accounts so the identity is stable across renders.
+  const availableAccountIds = useMemo(() => {
+    const now = new Date();
+    return accounts.filter((a) => isAccountAvailable(a, now)).map((a) => a.id);
+  }, [accounts]);
+  const hasAnyLocked = accounts.length > 0 && availableAccountIds.length < accounts.length;
+  // Guard against a persisted 'available' pick becoming invalid once every
+  // account is unlocked — treat it as 'all' so the chart doesn't quietly go
+  // empty (an unlocked-only set equals the full set anyway).
+  const effectiveScope: 'all' | 'available' | number = chartScope === 'available' && !hasAnyLocked
+    ? 'all'
+    : chartScope;
+
   // Checkpoints for the currently scoped account. Skipped entirely when scope
-  // is 'all' — checkpoints are per-account by design.
+  // is 'all' or 'available' — checkpoints are per-account by design.
   const checkpointsQ = useQuery({
-    queryKey: ['balance-checkpoints', chartScope],
-    queryFn: () => listCheckpoints(chartScope as number),
-    enabled: chartScope !== 'all',
+    queryKey: ['balance-checkpoints', effectiveScope],
+    queryFn: () => listCheckpoints(effectiveScope as number),
+    enabled: typeof effectiveScope === 'number',
   });
 
   const chartCheckpoints = useMemo(() => {
-    if (chartScope === 'all') return undefined;
+    if (typeof effectiveScope !== 'number') return undefined;
     const raw = checkpointsQ.data?.checkpoints ?? [];
     return raw.map((c: BalanceCheckpoint) => ({
       date: c.checkpointDate,
       expectedAmount: Number(c.expectedAmount),
       note: c.note ?? undefined,
     }));
-  }, [checkpointsQ.data, chartScope]);
+  }, [checkpointsQ.data, effectiveScope]);
 
   const chartCurrency = useMemo(() => {
-    if (chartScope === 'all') return primary?.currency ?? 'EUR';
-    const acc = accounts.find((a) => a.id === chartScope);
+    if (effectiveScope === 'all' || effectiveScope === 'available') {
+      return primary?.currency ?? 'EUR';
+    }
+    const acc = accounts.find((a) => a.id === effectiveScope);
     return acc?.currency ?? primary?.currency ?? 'EUR';
-  }, [chartScope, accounts, primary]);
+  }, [effectiveScope, accounts, primary]);
 
   // Only feed the chart points matching the chosen scope. BalanceChart already
   // filters by currency on top of this, so cross-currency rows are dropped too.
@@ -115,15 +134,23 @@ export function Dashboard(): JSX.Element {
   // bucket filter dropped them, sagging the curve by their whole balance.
   const chartPoints = useMemo<BalancePoint[]>(() => {
     const all = seriesQ.data?.points ?? [];
-    const scoped = chartScope === 'all' ? all : all.filter((p) => p.account_id === chartScope);
+    let scoped: BalancePoint[];
+    if (effectiveScope === 'all') {
+      scoped = all;
+    } else if (effectiveScope === 'available') {
+      const idSet = new Set(availableAccountIds);
+      scoped = all.filter((p) => idSet.has(p.account_id));
+    } else {
+      scoped = all.filter((p) => p.account_id === effectiveScope);
+    }
     return withCarriedBaselines(scoped, rangeFromDate);
-  }, [seriesQ.data, chartScope, rangeFromDate]);
+  }, [seriesQ.data, effectiveScope, availableAccountIds, rangeFromDate]);
 
   // Average-based forecast overlay for the Trend chart — see
   // useForecastProjection for the rationale and the per-scope math.
   const forecastProjection = useForecastProjection({
     enabled: settings.showForecast,
-    chartScope,
+    chartScope: effectiveScope,
     chartCurrency,
     accounts,
     perCurrency: balanceQ.data?.perCurrency,
@@ -137,7 +164,7 @@ export function Dashboard(): JSX.Element {
   // consolidated line for a 1-currency pot doesn't match the client-side
   // per-account sum (missing quiet-account carry, no pre-window baseline),
   // which reads as "the curve looks like just the primary account".
-  const chartConsolidated = chartScope === 'all' && currencies.length > 1
+  const chartConsolidated = effectiveScope === 'all' && currencies.length > 1
     ? seriesQ.data?.consolidated ?? null
     : null;
   // The forecast overlay's anchor/points are computed from raw single-currency
@@ -244,10 +271,11 @@ export function Dashboard(): JSX.Element {
                 {t('forecast.label')}
               </label>
               <AccountSelect
-                value={chartScope}
+                value={effectiveScope}
                 onChange={setChartScope}
                 accounts={accounts}
                 primaryCurrency={primary?.currency}
+                hideAvailable={!hasAnyLocked}
               />
               <RangePicker value={range} onChange={setRange} />
             </div>
@@ -283,10 +311,11 @@ export function Dashboard(): JSX.Element {
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
               <AccountSelect
-                value={chartScope}
+                value={effectiveScope}
                 onChange={setChartScope}
                 accounts={accounts}
                 primaryCurrency={primary?.currency}
+                hideAvailable={!hasAnyLocked}
               />
               <RangePicker value={range} onChange={setRange} />
             </div>
@@ -295,7 +324,8 @@ export function Dashboard(): JSX.Element {
             range={range}
             onRangeChange={setRange}
             currency={chartCurrency}
-            accountId={chartScope}
+            accountId={typeof effectiveScope === 'number' ? effectiveScope : 'all'}
+            accountIds={effectiveScope === 'available' ? availableAccountIds : undefined}
           />
         </section>
       )}
@@ -312,10 +342,12 @@ export function Dashboard(): JSX.Element {
             range={range}
             onRangeChange={setRange}
             currency={chartCurrency}
-            accountId={chartScope}
+            accountId={effectiveScope}
+            accountIds={effectiveScope === 'available' ? availableAccountIds : undefined}
             accounts={accounts}
             onAccountChange={setChartScope}
             primaryCurrency={primary?.currency}
+            hideAvailableInSelect={!hasAnyLocked}
           />
         </div>
       )}

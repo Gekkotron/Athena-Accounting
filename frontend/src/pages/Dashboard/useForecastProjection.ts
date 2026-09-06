@@ -21,7 +21,7 @@ export interface ForecastProjection {
 
 interface Input {
   enabled: boolean;
-  chartScope: 'all' | number;
+  chartScope: 'all' | 'available' | number;
   chartCurrency: string;
   accounts: Account[];
   perCurrency: Array<{ currency: string; total: string }> | undefined;
@@ -55,6 +55,12 @@ export function useForecastProjection({
 
   return useMemo(() => {
     if (!enabled) return undefined;
+    // Forecast is disabled for the 'available' scope: computing an average
+    // from a subset of accounts requires per-account cash-flow separation
+    // that the category report doesn't give us, and reusing the 'all'
+    // averages would misrepresent the projection. The historical curve
+    // still renders — only the dashed forward line is suppressed.
+    if (chartScope === 'available') return undefined;
     const today = todayLocalIso();
     // Anchor the projection to today's total for the current scope.
     let startBalance: number;

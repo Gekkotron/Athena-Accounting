@@ -56,7 +56,7 @@ export const SettingsSchema = z
       .transform((v) => (v === '30d' ? ('1m' as const) : v))
       .optional(),
     dashboardChartScope: z
-      .union([z.literal('all'), z.number().int().positive()])
+      .union([z.literal('all'), z.literal('available'), z.number().int().positive()])
       .optional(),
     chartGapThresholdDays: z.number().int().min(1).max(60).optional(),
     duplicateSimilarityThreshold: z.number().int().min(0).max(100).optional(),

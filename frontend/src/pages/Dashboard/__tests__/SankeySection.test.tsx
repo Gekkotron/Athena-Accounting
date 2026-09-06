@@ -16,8 +16,8 @@ const apiMock = vi.mocked(api);
 function renderSection(opts: {
   range?: RangeKey;
   onRangeChange?: (r: RangeKey) => void;
-  accountId?: number | 'all';
-  onAccountChange?: (v: 'all' | number) => void;
+  accountId?: number | 'all' | 'available';
+  onAccountChange?: (v: 'all' | 'available' | number) => void;
 } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onRangeChange = opts.onRangeChange ?? vi.fn();
