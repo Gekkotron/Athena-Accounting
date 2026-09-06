@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseDecimal } from '../../../lib/format';
+import { todayLocalIso } from '../../../lib/dates';
 
 export interface AddRateFormValues {
   from: string;
@@ -20,10 +21,6 @@ interface AddRateFormProps {
   initialTo?: string;
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function AddRateForm({
   currencies,
   onSubmit,
@@ -34,7 +31,7 @@ export function AddRateForm({
   const { t } = useTranslation('settings');
   const [from, setFrom] = useState(initialFrom ?? currencies[0] ?? '');
   const [to, setTo] = useState(initialTo ?? currencies[1] ?? currencies[0] ?? '');
-  const [effectiveFrom, setEffectiveFrom] = useState(todayIso());
+  const [effectiveFrom, setEffectiveFrom] = useState(todayLocalIso());
   const [rate, setRate] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 

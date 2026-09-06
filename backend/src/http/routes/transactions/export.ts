@@ -5,6 +5,7 @@ import { accounts, categories, transactions } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { ListQuery } from './schemas.js';
 import { buildListWhere } from './filters.js';
+import { todayLocalIso } from '../../../lib/dates.js';
 
 // Quote per RFC 4180, with ';' added to the trigger set since the separator
 // is a semicolon (Excel-FR convention).
@@ -84,7 +85,7 @@ export function registerExport(app: FastifyInstance): void {
     // BOM so Excel detects UTF-8 instead of guessing a legacy codepage.
     const csv = '\uFEFF' + lines.join('\r\n') + '\r\n';
 
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = todayLocalIso();
     return reply
       .header('content-type', 'text/csv; charset=utf-8')
       .header('content-disposition', `attachment; filename="transactions-${stamp}.csv"`)

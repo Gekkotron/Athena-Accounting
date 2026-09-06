@@ -1,5 +1,6 @@
 import type { ParsedTransaction } from './ofx-parser.js';
 import type { EbTransaction } from '../../services/enable-banking/client.js';
+import { todayLocalIso } from '../../lib/dates.js';
 
 // Pure normalization from the Enable Banking transaction shape to the row
 // shape the OFX parser produces, so bank-sync batches flow through the exact
@@ -78,7 +79,7 @@ export function syncWindowStart(lastSyncedAt: Date | null): string | undefined {
 // transaction; full history only when the account is empty.
 export function firstSyncStart(
   latestTxDate: string | null,
-  todayIso: string = new Date().toISOString().slice(0, 10),
+  todayIso: string = todayLocalIso(),
 ): string | undefined {
   if (!latestTxDate) return undefined;
   const next = new Date(`${latestTxDate.slice(0, 10)}T00:00:00Z`);

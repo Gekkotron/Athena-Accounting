@@ -1,5 +1,6 @@
 import type { NotificationKind, NotificationPayload } from './types.js';
 import { emitNotification } from './emit.js';
+import { todayLocalIso } from '../../lib/dates.js';
 
 export const IDLE_MS = 2000;
 export const MAX_ITEMS = 10;
@@ -31,6 +32,6 @@ export async function flushBatch(userId: number, batchKey: string): Promise<void
   if (buf.items.length === 0) return;
   const accountId = buf.items[0]!.accountId;
   const total = buf.items.reduce((s, i) => s + i.amount, 0);
-  const idempotency = `bt:${accountId}:${new Date().toISOString().slice(0, 10)}:${Date.now()}`;
+  const idempotency = `bt:${accountId}:${todayLocalIso()}:${Date.now()}`;
   await emitter(userId, 'big_transaction', { kind: 'big_transaction', summary: { accountId, count: buf.items.length, total } }, { idempotency });
 }

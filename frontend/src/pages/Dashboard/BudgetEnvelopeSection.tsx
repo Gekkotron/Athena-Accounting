@@ -9,6 +9,16 @@ function currentMonthYm(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Render "September 2026" from a "YYYY-MM" key. Building the Date via the
+// (year, month-1, day) constructor keeps the calendar day local — parsing
+// "2026-01-01" via new Date(str) would be UTC and drift into the prior month
+// for viewers west of UTC.
+function monthLabel(ym: string, locale: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  const date = new Date(y ?? 0, (m ?? 1) - 1, 1);
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date);
+}
+
 export function BudgetEnvelopeSection(): JSX.Element | null {
   const { t, i18n } = useTranslation('dashboard');
   const month = currentMonthYm();
@@ -37,7 +47,7 @@ export function BudgetEnvelopeSection(): JSX.Element | null {
       <div className="flex items-center justify-between">
         <div>
           <div className="label">{t('envelopeTile.header')}</div>
-          <div className="text-sm text-ink-400 capitalize">{new Date(month + '-01').toLocaleDateString(locale, { month: 'long', year: 'numeric' })}</div>
+          <div className="text-sm text-ink-400 capitalize">{monthLabel(month, locale)}</div>
         </div>
         <Link className="text-sage-300 text-sm hover:underline" to={`/budgets/envelopes?month=${month}`}>
           {t('envelopeTile.actions.viewAll')}

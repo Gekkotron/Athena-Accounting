@@ -7,6 +7,7 @@ import {
 } from '../../api/goals';
 import type { Account, SavingsGoal } from '../../api/types';
 import { parseDecimal } from '../../lib/format';
+import { todayLocalIso } from '../../lib/dates';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { GoalForm } from './GoalForm';
 import { EventRow } from './EventRow';
@@ -70,7 +71,7 @@ export function GoalDetailDrawer({
   });
 
   const [amountRaw, setAmountRaw] = useState('');
-  const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [eventDate, setEventDate] = useState(() => todayLocalIso());
   const [eventNote, setEventNote] = useState('');
 
   const addEventMut = useMutation({

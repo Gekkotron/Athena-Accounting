@@ -6,6 +6,7 @@ import { loadUserRates } from '../../../domain/fx/rates-repo.js';
 import { consolidate } from '../../../domain/fx/consolidate.js';
 import { loadUserDisplayCurrency } from '../../../domain/settings/loader.js';
 import type { FxRate } from '../../../domain/fx/types.js';
+import { todayLocalIso } from '../../../lib/dates.js';
 
 type PerCurrencyRow = {
   currency: string;
@@ -131,7 +132,7 @@ export function registerBalanceRoute(app: FastifyInstance): void {
     let consolidated: ConsolidatedBlock | null = null;
     if (resolved !== null) {
       const rates = await loadUserRates(uid);
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocalIso();
       consolidated = buildConsolidatedBlock(rows.rows, resolved, rates, today);
     }
 

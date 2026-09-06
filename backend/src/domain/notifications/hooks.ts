@@ -5,6 +5,7 @@ import { mergeSettings } from '../settings/schema.js';
 import { emitNotification } from './emit.js';
 import { queueBatched, flushBatch } from './batcher.js';
 import { computeEnvelope } from './envelope-check.js';
+import { todayLocalIso } from '../../lib/dates.js';
 
 async function loadPrefs(userId: number) {
   const [row] = await db.select({ settings: userSettings.settings })
@@ -64,7 +65,7 @@ export async function afterTransactionInserted(userId: number, tx: {
     // account_low
     const floor = prefs.triggers.accountLow.floors[String(tx.accountId)];
     if (prefs.triggers.accountLow.enabled && floor != null && tx.newBalance < floor) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocalIso();
       await emitNotification(userId, 'account_low',
         { kind: 'account_low', accountId: tx.accountId, balance: tx.newBalance, floor },
         { idempotency: `low:${tx.accountId}:${today}` });
@@ -91,7 +92,7 @@ export async function afterTransactionInserted(userId: number, tx: {
 export async function afterBankSyncCompleted(userId: number, accountId: number, ok: boolean, reason?: string): Promise<void> {
   try {
     const prefs = await loadPrefs(userId);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalIso();
     if (!ok && prefs.triggers.bankSyncFailed.enabled) {
       await emitNotification(userId, 'bank_sync_failed',
         { kind: 'bank_sync_failed', accountId, reason: reason ?? 'unknown' },

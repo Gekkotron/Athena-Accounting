@@ -1,14 +1,18 @@
 import { useTranslation } from 'react-i18next';
 import type { Notification } from '../../../../shared/api-contracts.js';
 import { NotificationRow } from './NotificationRow';
+import { toLocalIso } from '../../lib/dates';
 
-// Groups notifications by calendar day using createdAt.slice(0,10) as the
-// key. Assumes items arrive newest-first from the API (as /api/notifications
-// does), so same-day items stay contiguous and each day yields one group.
+// Groups notifications by LOCAL calendar day. createdAt is a UTC timestamp
+// ("…Z"); slicing its 10 leading chars keys by the UTC date instead, which
+// misgroups items created near midnight local time (a 00:30 CEST notification
+// keys under the previous UTC day, and the "Today"/"Yesterday" label would
+// disagree with the viewer's own clock). Assumes items arrive newest-first
+// from the API so same-day items stay contiguous.
 function groupByDay(items: Notification[]): [string, Notification[]][] {
   const groups: [string, Notification[]][] = [];
   for (const item of items) {
-    const key = item.createdAt.slice(0, 10);
+    const key = toLocalIso(new Date(item.createdAt));
     const last = groups[groups.length - 1];
     if (last && last[0] === key) {
       last[1].push(item);
@@ -21,8 +25,8 @@ function groupByDay(items: Notification[]): [string, Notification[]][] {
 
 function dayLabel(key: string, locale: string, t: (k: string) => string): string {
   const now = new Date();
-  const todayKey = now.toISOString().slice(0, 10);
-  const yesterdayKey = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const todayKey = toLocalIso(now);
+  const yesterdayKey = toLocalIso(new Date(now.getTime() - 24 * 60 * 60 * 1000));
   if (key === todayKey) return t('today');
   if (key === yesterdayKey) return t('yesterday');
   const [y, m, d] = key.split('-').map(Number);
