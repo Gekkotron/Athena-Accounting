@@ -131,12 +131,12 @@
       "optional": "— optional"
     },
     "placeholders": {
-      "date": "DD/MM/YYYY",
+      "date": "MM/DD/YYYY",
       "amount": "-25.30",
       "label": "Whole Foods Market"
     },
     "hints": {
-      "dateFormat": "Format DD/MM/YYYY — pasting directly from a bank statement is supported.",
+      "dateFormat": "Format MM/DD/YYYY — pasting directly from a bank statement is supported.",
       "amountSign": "Signed: negative = expense, positive = income.",
       "lockYearsTooltip": "Locks ONLY this transaction for N years from its date (term deposits / Natixis-style). Leave empty for a PEA: the transaction then inherits the account's global lock (opening date + N years, a single deadline for the whole account).",
       "lockYearsNoAccountLock": "The account has no lock. Fill this in only if this transaction must be locked for N years from its date.",
@@ -147,7 +147,7 @@
     },
     "errors": {
       "accountRequired": "Choose an account.",
-      "invalidDate": "Invalid date. Expected format: DD/MM/YYYY (e.g. 14/07/2025).",
+      "invalidDate": "Invalid date. Expected format: MM/DD/YYYY (e.g. 07/14/2025).",
       "invalidAmount": "Invalid amount. Expected format: 338.50, -25.30, 1234, …",
       "labelRequired": "The label is required.",
       "invalidLockYears": "Lock: an integer between 0 and 99, or leave empty.",

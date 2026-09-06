@@ -4,6 +4,15 @@ function currentLocale(): string {
   return i18n.language?.startsWith('en') ? 'en-US' : 'fr-FR';
 }
 
+// English is month-first (MM/DD/YYYY); every other supported UI language is
+// day-first (DD/MM/YYYY). Drives both parsing and the hint text so the input
+// round-trips cleanly with formatDate — otherwise "09/02/2026" pre-filled by
+// Intl.DateTimeFormat in en-US would be re-parsed as day-first and silently
+// swap day and month at submit time.
+function isDayFirstLocale(): boolean {
+  return !i18n.language?.startsWith('en');
+}
+
 // Interpret a user-typed money value. Accepts French decimal comma, English
 // decimal period, integers, interior whitespace, and a trailing €. Returns
 // the canonical "X" / "X.Y" / "X.YY" form, or null when the input can't be
@@ -42,9 +51,10 @@ export function formatAmountCompact(value: string | number, currency = 'EUR'): s
 }
 
 // Parse a user-entered date string into ISO YYYY-MM-DD. Accepts:
-//   "14/07/2025", "14-07-2025", "14.07.2025"  (French day-first)
+//   "14/07/2025", "14-07-2025", "14.07.2025"  (day-first in FR and other non-en locales)
+//   "07/14/2025"                               (month-first when the UI locale is English)
 //   "14/7/25"                                  (2-digit year, '70+ → 19xx, else 20xx)
-//   "2025-07-14"                               (ISO, passthrough)
+//   "2025-07-14"                               (ISO, passthrough — locale-independent)
 // Returns null when the input can't be parsed.
 export function parseUserDate(input: string): string | null {
   const s = input.trim();
@@ -52,11 +62,14 @@ export function parseUserDate(input: string): string | null {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})$/);
   if (!m) return null;
-  const d = m[1]!;
-  const mo = m[2]!;
+  const first = m[1]!;
+  const second = m[2]!;
   let y = m[3]!;
   if (y.length === 2) y = (Number(y) >= 70 ? '19' : '20') + y;
-  // Sanity-check ranges so "32/01/2025" doesn't sneak through.
+  const dayFirst = isDayFirstLocale();
+  const d = dayFirst ? first : second;
+  const mo = dayFirst ? second : first;
+  // Sanity-check ranges so "32/01/2025" or "13/25/2025" (en) don't sneak through.
   const dn = Number(d), mn = Number(mo);
   if (mn < 1 || mn > 12 || dn < 1 || dn > 31) return null;
   return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
