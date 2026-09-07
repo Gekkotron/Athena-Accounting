@@ -1,4 +1,4 @@
-import type { Account } from '../../api/types';
+import type { Account, BalancePoint } from '../../api/types';
 
 // Look back N complete months (excludes the current month, since a
 // half-finished month drags the average toward zero).
@@ -18,6 +18,61 @@ export function isAccountAvailable(a: Account, today: Date = new Date()): boolea
   const unlockAt = Date.UTC(y + years, m - 1, d);
   const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   return unlockAt <= todayUtc;
+}
+
+// ISO date (YYYY-MM-DD) at which the account's opening balance becomes
+// available, or null when it was never locked.
+export function accountUnlockDate(a: Account): string | null {
+  if (a.lockYears == null) return null;
+  const [y, m, d] = a.openingDate.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  // padStart so JS's default numeric formatting doesn't collapse the month.
+  const yy = String(y + a.lockYears).padStart(4, '0');
+  const mm = String(m).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+// For the Dashboard's 'available' chart scope: drop each locked account's
+// pre-unlock buckets so it contributes zero to the aggregate before its
+// unlock date, then re-enters at full balance on/after. On a sparse-point
+// account (livret with occasional interest deposits, no daily entries) the
+// first post-unlock BalancePoint can land much later than the unlock date,
+// so we inject a synthetic zero-delta baseline AT the unlock date carrying
+// the last known pre-unlock cumulative — the aggregate then steps up on
+// the unlock date instead of quietly staying flat until the next entry.
+export function filterToAvailableOverTime(
+  points: BalancePoint[],
+  accounts: Account[],
+): BalancePoint[] {
+  const unlockDateByAcc = new Map<number, string | null>();
+  for (const a of accounts) unlockDateByAcc.set(a.id, accountUnlockDate(a));
+
+  const out: BalancePoint[] = [];
+  const lastPreUnlock = new Map<number, BalancePoint>();
+  const hasAtUnlock = new Set<number>();
+
+  for (const p of points) {
+    const unlock = unlockDateByAcc.get(p.account_id);
+    if (unlock == null) {
+      out.push(p);
+      continue;
+    }
+    if (p.bucket < unlock) {
+      const prev = lastPreUnlock.get(p.account_id);
+      if (!prev || p.bucket > prev.bucket) lastPreUnlock.set(p.account_id, p);
+    } else {
+      out.push(p);
+      if (p.bucket === unlock) hasAtUnlock.add(p.account_id);
+    }
+  }
+  for (const [accId, p] of lastPreUnlock) {
+    if (hasAtUnlock.has(accId)) continue;
+    const unlock = unlockDateByAcc.get(accId);
+    if (!unlock) continue;
+    out.push({ ...p, bucket: unlock, delta: '0' });
+  }
+  return out;
 }
 
 export function monthAgoISODate(monthsBack: number): string {

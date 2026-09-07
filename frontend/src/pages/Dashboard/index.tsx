@@ -21,7 +21,7 @@ import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
 import { AccountSelect } from './AccountSelect';
-import { isAccountAvailable } from './helpers';
+import { isAccountAvailable, filterToAvailableOverTime } from './helpers';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
 
@@ -138,13 +138,18 @@ export function Dashboard(): JSX.Element {
     if (effectiveScope === 'all') {
       scoped = all;
     } else if (effectiveScope === 'available') {
-      const idSet = new Set(availableAccountIds);
-      scoped = all.filter((p) => idSet.has(p.account_id));
+      // "As money unlocks, the curve steps up": every account contributes,
+      // but a locked account only starts contributing on its unlock date
+      // (see filterToAvailableOverTime). withCarriedBaselines still runs
+      // afterward for the range-window clip — its lastBefore map is
+      // populated from post-unlock points only, so a locked account whose
+      // unlock lies before rangeFromDate is carried in like any other.
+      scoped = filterToAvailableOverTime(all, accounts);
     } else {
       scoped = all.filter((p) => p.account_id === effectiveScope);
     }
     return withCarriedBaselines(scoped, rangeFromDate);
-  }, [seriesQ.data, effectiveScope, availableAccountIds, rangeFromDate]);
+  }, [seriesQ.data, effectiveScope, accounts, rangeFromDate]);
 
   // Average-based forecast overlay for the Trend chart — see
   // useForecastProjection for the rationale and the per-scope math.
