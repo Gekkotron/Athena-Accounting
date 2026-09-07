@@ -96,4 +96,18 @@ describe('filterToAvailableOverTime', () => {
     expect(out.some((p) => p.bucket === '2020-01-01' && p.account_id === 11)).toBe(false);
     expect(out.some((p) => p.bucket === '2023-01-01' && p.account_id === 11)).toBe(true);
   });
+
+  it('drops every point from investment accounts, matching the hero\'s Disponible = available - invested', () => {
+    const cash = acc({ id: 20, openingDate: '2020-01-01' });
+    const pea = acc({ id: 21, openingDate: '2020-01-01', type: 'investment' });
+    const pts = [
+      pt(20, '2020-01-01', '1000'),
+      pt(21, '2020-01-01', '5000'),
+      pt(21, '2024-01-01', '7500'),
+      pt(20, '2024-01-01', '1200'),
+    ];
+    const out = filterToAvailableOverTime(pts, [cash, pea]);
+    // PEA is fully dropped; cash account is untouched.
+    expect(out.map((p) => p.account_id)).toEqual([20, 20]);
+  });
 });

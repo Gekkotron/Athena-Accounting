@@ -84,21 +84,36 @@ export function Dashboard(): JSX.Element {
   }, [isReady, settings.dashboardRange, settings.dashboardChartScope]);
   const rangeFromDate = fromDateFor(range);
 
-  // Resolve the 'available' scope into a concrete set of account ids. This
-  // set is the source of truth for every chart: the balance chart filters
-  // its points against it, the donut and Sankey send it as an accountIds
-  // param. Memoised over accounts so the identity is stable across renders.
+  // Resolve the 'available' scope into a concrete set of account ids for
+  // the donut and Sankey (as an accountIds param). Matches the hero's
+  // Disponible definition: unlocked AND non-investment (see helpers'
+  // filterToAvailableOverTime and backend/reports/balance.ts for the same
+  // exclusion). Memoised over accounts so the identity is stable across
+  // renders.
   const availableAccountIds = useMemo(() => {
     const now = new Date();
-    return accounts.filter((a) => isAccountAvailable(a, now)).map((a) => a.id);
+    return accounts
+      .filter((a) => a.type !== 'investment' && isAccountAvailable(a, now))
+      .map((a) => a.id);
   }, [accounts]);
-  const hasAnyLocked = accounts.length > 0 && availableAccountIds.length < accounts.length;
-  // Guard against a persisted 'available' pick becoming invalid once every
-  // account is unlocked — treat it as 'all' so the chart doesn't quietly go
-  // empty (an unlocked-only set equals the full set anyway).
-  const effectiveScope: 'all' | 'available' | number = chartScope === 'available' && !hasAnyLocked
-    ? 'all'
-    : chartScope;
+  const nonInvestmentAccounts = useMemo(
+    () => accounts.filter((a) => a.type !== 'investment'),
+    [accounts],
+  );
+  // Only hide the "All available accounts" option when every non-investment
+  // account is already unlocked (redundant with 'all' among the liquid set).
+  // If there are investment accounts on top, the option still adds value
+  // because it excludes them.
+  const hasAnyLocked = nonInvestmentAccounts.length > 0
+    && availableAccountIds.length < nonInvestmentAccounts.length;
+  const hasAnyInvestment = accounts.some((a) => a.type === 'investment');
+  // Guard against a persisted 'available' pick becoming meaningless — with
+  // no locked accounts AND no investment accounts, the 'available' subset
+  // equals the full set, so fall back to 'all' rather than duplicating.
+  const effectiveScope: 'all' | 'available' | number =
+    chartScope === 'available' && !hasAnyLocked && !hasAnyInvestment
+      ? 'all'
+      : chartScope;
 
   // Checkpoints for the currently scoped account. Skipped entirely when scope
   // is 'all' or 'available' — checkpoints are per-account by design.
@@ -280,7 +295,7 @@ export function Dashboard(): JSX.Element {
                 onChange={setChartScope}
                 accounts={accounts}
                 primaryCurrency={primary?.currency}
-                hideAvailable={!hasAnyLocked}
+                hideAvailable={!hasAnyLocked && !hasAnyInvestment}
               />
               <RangePicker value={range} onChange={setRange} />
             </div>
@@ -320,7 +335,7 @@ export function Dashboard(): JSX.Element {
                 onChange={setChartScope}
                 accounts={accounts}
                 primaryCurrency={primary?.currency}
-                hideAvailable={!hasAnyLocked}
+                hideAvailable={!hasAnyLocked && !hasAnyInvestment}
               />
               <RangePicker value={range} onChange={setRange} />
             </div>
@@ -352,7 +367,7 @@ export function Dashboard(): JSX.Element {
             accounts={accounts}
             onAccountChange={setChartScope}
             primaryCurrency={primary?.currency}
-            hideAvailableInSelect={!hasAnyLocked}
+            hideAvailableInSelect={!hasAnyLocked && !hasAnyInvestment}
           />
         </div>
       )}

@@ -33,26 +33,38 @@ export function accountUnlockDate(a: Account): string | null {
   return `${yy}-${mm}-${dd}`;
 }
 
-// For the Dashboard's 'available' chart scope: drop each locked account's
-// pre-unlock buckets so it contributes zero to the aggregate before its
-// unlock date, then re-enters at full balance on/after. On a sparse-point
-// account (livret with occasional interest deposits, no daily entries) the
-// first post-unlock BalancePoint can land much later than the unlock date,
-// so we inject a synthetic zero-delta baseline AT the unlock date carrying
-// the last known pre-unlock cumulative — the aggregate then steps up on
-// the unlock date instead of quietly staying flat until the next entry.
+// For the Dashboard's 'available' chart scope: build the historical curve
+// of "Disponible" (matches the hero's figure at today's date). Two things
+// happen on top of the standard aggregate:
+//   1. Investment accounts (type = 'investment') are excluded entirely —
+//      they're the "Placé" tier the hero subtracts from `available` to get
+//      Disponible (see backend/reports/balance.ts).
+//   2. A locked account contributes zero before its unlock date, then its
+//      full balance on/after. On a sparse-point account (livret with the
+//      odd interest deposit, no daily entries) the first post-unlock
+//      BalancePoint can land well after the unlock date, so we inject a
+//      synthetic zero-delta baseline AT the unlock date carrying the last
+//      known pre-unlock cumulative — the aggregate then steps up on the
+//      unlock date instead of staying flat until the next entry.
+// This is still an account-level approximation of the SQL rule: per-
+// transaction lockYears (rare) aren't reflected.
 export function filterToAvailableOverTime(
   points: BalancePoint[],
   accounts: Account[],
 ): BalancePoint[] {
+  const investmentAccIds = new Set<number>();
   const unlockDateByAcc = new Map<number, string | null>();
-  for (const a of accounts) unlockDateByAcc.set(a.id, accountUnlockDate(a));
+  for (const a of accounts) {
+    if (a.type === 'investment') investmentAccIds.add(a.id);
+    unlockDateByAcc.set(a.id, accountUnlockDate(a));
+  }
 
   const out: BalancePoint[] = [];
   const lastPreUnlock = new Map<number, BalancePoint>();
   const hasAtUnlock = new Set<number>();
 
   for (const p of points) {
+    if (investmentAccIds.has(p.account_id)) continue;
     const unlock = unlockDateByAcc.get(p.account_id);
     if (unlock == null) {
       out.push(p);
