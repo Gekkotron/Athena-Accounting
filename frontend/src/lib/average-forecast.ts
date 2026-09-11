@@ -1,8 +1,6 @@
 // Pure balance projection driven by historical monthly averages. No React,
-// no fetch — the Dashboard Trend chart overlay plugs the output into
-// BalanceChart's `projection` prop. Unlike lib/recurring-forecast.ts (which
-// replays confirmed recurring series and therefore ignores everything the
-// user never confirmed), this extrapolates the observed averages, so the
+// no fetch — feeds BalanceChart's `projection` prop from the Dashboard and
+// Recurrent › Prévisions views. Extrapolates the observed averages so the
 // projected slope always matches the historical trend.
 
 export interface AverageProjectionPoint {

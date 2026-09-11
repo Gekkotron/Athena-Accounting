@@ -17,6 +17,10 @@ export interface ForecastProjection {
   // BalanceChart's alignEndTo so the historical endpoint and the projection
   // start at the same value — the join stays continuous.
   anchor: number;
+  // How many complete historical months the projection averaged over. The
+  // Recurrent › Prévisions tab surfaces this in a caption so users can tell
+  // a wobbly one-month projection from a stable twelve-month one.
+  monthCount: number;
 }
 
 interface Input {
@@ -26,6 +30,10 @@ interface Input {
   accounts: Account[];
   perCurrency: Array<{ currency: string; total: string }> | undefined;
   points: BalancePoint[] | undefined;
+  // Optional horizon override (days). Defaults to 180 so the Dashboard's
+  // Trend overlay stays bounded regardless of the range picker; the
+  // Recurrent › Prévisions tab drives this from its horizon picker.
+  horizonDays?: number;
 }
 
 // The optional forecast overlay extrapolates historical AVERAGES instead
@@ -41,6 +49,7 @@ export function useForecastProjection({
   accounts,
   perCurrency,
   points,
+  horizonDays,
 }: Input): ForecastProjection | undefined {
   const statsFromDate = monthAgoISODate(AVG_WINDOW_MONTHS);
   const statsToDate = lastDayOfPrevMonthISODate();
@@ -66,12 +75,14 @@ export function useForecastProjection({
     let startBalance: number;
     let avgMonthlyIncome: number;
     let avgMonthlySpend: number;
+    let monthCount: number;
     if (chartScope === 'all') {
       startBalance = Number(perCurrency?.find((c) => c.currency === chartCurrency)?.total ?? 0);
       const stats = computeMonthlyStats(statsQ.data?.rows ?? []);
       if (stats.monthCount === 0) return undefined;
       avgMonthlyIncome = stats.avgIncome;
       avgMonthlySpend = -stats.avgSpend; // signed → positive magnitude
+      monthCount = stats.monthCount;
     } else {
       // Single account: internal transfers move its balance, so derive the
       // averages from its own balance deltas rather than the transfer-free
@@ -83,18 +94,16 @@ export function useForecastProjection({
       if (!flows) return undefined;
       avgMonthlyIncome = flows.avgIncome;
       avgMonthlySpend = flows.avgSpend;
+      monthCount = flows.monthCount;
     }
-    // Cap at 180 days ahead so the overlay stays bounded regardless of
-    // how the range picker was set.
-    const HORIZON = 180;
     // Drop index 0 (today) — the historical line already ends there.
     const projPoints = projectAverageBalance({
       startBalance,
       avgMonthlyIncome,
       avgMonthlySpend,
-      horizonDays: HORIZON,
+      horizonDays: horizonDays ?? 180,
       startDate: today,
     }).slice(1);
-    return { points: projPoints, anchor: startBalance };
-  }, [enabled, statsQ.data, points, chartScope, chartCurrency, accounts, perCurrency]);
+    return { points: projPoints, anchor: startBalance, monthCount };
+  }, [enabled, statsQ.data, points, chartScope, chartCurrency, accounts, perCurrency, horizonDays]);
 }
