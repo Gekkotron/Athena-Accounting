@@ -63,23 +63,35 @@ export function FlatTable({
                     />
                   </td>
                   <td className="px-4 py-2.5">
-                    <select
-                      className="input-sm"
-                      value={r.categoryId}
-                      onChange={(e) =>
-                        updateRule.mutate({ id: r.id, patch: { categoryId: Number(e.target.value) } })
-                      }
-                    >
-                      {[...cats]
-                        .sort((a, b) => {
-                          const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
-                          const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
-                          return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-                        })
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
-                        ))}
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="input-sm flex-1"
+                        value={r.categoryId}
+                        onChange={(e) =>
+                          updateRule.mutate({ id: r.id, patch: { categoryId: Number(e.target.value) } })
+                        }
+                      >
+                        {[...cats]
+                          .sort((a, b) => {
+                            const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
+                            const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
+                            return pa.localeCompare(pb) || a.name.localeCompare(b.name);
+                          })
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
+                          ))}
+                      </select>
+                      {(r.splits ?? []).length >= 2 && (
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded bg-sage-900/40 text-sage-200 font-mono whitespace-nowrap"
+                          title={r.splits!.map((s) =>
+                            `${(byId.get(s.categoryId ?? -1)?.name ?? '?')} ${s.percent}%`,
+                          ).join(' · ')}
+                        >
+                          {t('split.badge', { count: r.splits!.length - 1 })}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 hidden md:table-cell">
                     <select

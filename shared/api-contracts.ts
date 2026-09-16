@@ -52,6 +52,12 @@ export interface Transaction {
   dedupKey: string;
   categoryId: number | null;
   categorySource: CategorySource;
+  // Independent of categorySource: tracks the ventilation's origin
+  // (backend migration 0042). NULL/undefined = no splits or splits
+  // cleared; 'auto' = engine-emitted from a split-mode rule; 'manual' =
+  // user-edited via PUT /api/transactions/:id/splits. Optional so
+  // pre-0042 payloads still validate.
+  splitsSource?: CategorySource | null;
   transferGroupId: string | null;
   sourceFileId: number | null;
   importedAt: string;

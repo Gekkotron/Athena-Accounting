@@ -50,6 +50,7 @@ export function SplitEditor({
   resetKey,
   categories,
   onChange,
+  splitsSource,
 }: {
   parentAmountMagnitude: number;
   parentAmountSign: -1 | 1 | 0;
@@ -58,6 +59,11 @@ export function SplitEditor({
   resetKey: string | number;
   categories: Category[];
   onChange: (splits: DraftSplit[]) => void;
+  // Origin of the current split set (backend migration 0042). 'auto' means
+  // the ventilation was engine-emitted from a split-mode rule; editing any
+  // row via the PUT flow will flip it to 'manual' on the backend and freeze
+  // the row from future re-emissions.
+  splitsSource?: string | null;
 }) {
   const { t } = useTranslation('transactions');
   const [rows, setRows] = useState<DraftSplit[]>(() => fromInitial(initial));
@@ -178,7 +184,17 @@ export function SplitEditor({
 
   return (
     <div className="mt-4">
-      <div className="label mb-2">{t('splitEditor.title')}</div>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="label">{t('splitEditor.title')}</div>
+        {splitsSource === 'auto' && (
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded bg-sage-900/40 text-sage-200 uppercase tracking-wider"
+            title={t('splitEditor.autoTagTitle')}
+          >
+            {t('splitEditor.autoTag')}
+          </span>
+        )}
+      </div>
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={r.key} className="flex items-center gap-2">

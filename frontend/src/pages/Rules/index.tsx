@@ -43,6 +43,7 @@ export function Rules() {
       signConstraint: SignConstraint;
       matchMode: MatchMode;
       priority: number;
+      splits?: Array<{ categoryId: number; percent: number }>;
     }) => {
       await Promise.all(
         input.keywords.map((kw) =>
@@ -54,6 +55,7 @@ export function Rules() {
               signConstraint: input.signConstraint,
               matchMode: input.matchMode,
               priority: input.priority,
+              ...(input.splits ? { splits: input.splits } : {}),
             },
           }),
         ),

@@ -14,6 +14,7 @@ function handleRuleCreate(req: DemoRequest) {
     priority: body.priority ?? 100,
     enabled: body.enabled ?? true,
     createdAt: new Date().toISOString(),
+    splits: Array.isArray(body.splits) ? body.splits : [],
   };
   setState((s) => { s.rules.push(rule); });
   return { rule };
@@ -21,12 +22,19 @@ function handleRuleCreate(req: DemoRequest) {
 
 function handleRuleUpdate(req: DemoRequest) {
   const id = Number(req.query.id);
-  const patch = (req.body ?? {}) as Partial<Rule>;
+  const patch = (req.body ?? {}) as Partial<Rule> & { splits?: Rule['splits'] | null };
   let updated: Rule | null = null;
   setState((s) => {
     const idx = s.rules.findIndex((r) => r.id === id);
     if (idx < 0) return;
-    s.rules[idx] = { ...s.rules[idx], ...patch };
+    // splits: undefined = untouched, null / [] = revert to single-category,
+    // non-empty = replace. Mirrors the backend three-state semantics.
+    const { splits, ...rest } = patch;
+    const nextSplits =
+      splits === undefined ? s.rules[idx].splits
+      : splits === null ? []
+      : splits;
+    s.rules[idx] = { ...s.rules[idx], ...rest, splits: nextSplits };
     updated = s.rules[idx];
   });
   return { rule: updated };

@@ -162,6 +162,8 @@
   "splitEditor": {
     "disabledHint": "La ventilation n'est pas disponible pour un virement interne.",
     "title": "Ventilation par catégorie",
+    "autoTag": "Automatique",
+    "autoTagTitle": "Ventilation générée par une règle. Toute modification manuelle la marquera comme personnalisée et empêchera la régénération automatique.",
     "placeholders": {
       "amount": "0,00",
       "memo": "mémo (optionnel)"

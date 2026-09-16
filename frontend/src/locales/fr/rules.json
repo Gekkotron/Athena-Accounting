@@ -36,6 +36,22 @@
     "substring": "Sous-chaîne",
     "regex": "Regex"
   },
+  "split": {
+    "toggleLabel": "Ventilation multi-catégories",
+    "toggleHelp": "Répartit chaque transaction correspondante selon les pourcentages indiqués.",
+    "primaryCategoryLabel": "Catégorie principale",
+    "primaryCategoryHelp": "Utilisée pour l'affichage et les filtres monocatégorie.",
+    "categoryLabel": "Catégorie",
+    "percentLabel": "%",
+    "addRow": "+ Ajouter une catégorie",
+    "removeRow": "Retirer",
+    "sumLabel": "Somme",
+    "sumMustBe100": "La somme doit faire exactement 100 %.",
+    "minRowsError": "Au moins 2 catégories.",
+    "maxRowsError": "Maximum 20 catégories.",
+    "badge": "+{{count}}",
+    "flatTableBadgeTitle": "Ventilée en {{count}} catégories"
+  },
   "advancedEditor": {
     "ruleLabel": "Règle",
     "keywordLabel": "Mot-clé",

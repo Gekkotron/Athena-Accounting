@@ -5,6 +5,7 @@ import type { Category, MatchMode, SignConstraint } from '../../api/types';
 import { formatCategoryPath } from '../../lib/categories';
 import { amountSignClass, formatAmount } from '../../lib/format';
 import { NormalizationHint } from './NormalizationHint';
+import { RuleSplitEditor, type SplitDraft } from './RuleSplitEditor';
 
 interface PreviewMatch {
   id: number;
@@ -37,6 +38,7 @@ export function RuleCreateForm({
     signConstraint: SignConstraint;
     matchMode: MatchMode;
     priority: number;
+    splits?: Array<{ categoryId: number; percent: number }>;
   }) => void;
   submitting?: boolean;
   successCount?: number;
@@ -53,6 +55,10 @@ export function RuleCreateForm({
   const [preview, setPreview] = useState<KeywordPreview[] | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitState, setSplitState] = useState<{ splits: SplitDraft[]; valid: boolean }>({
+    splits: [], valid: false,
+  });
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
     [categories],
@@ -103,11 +109,15 @@ export function RuleCreateForm({
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!categoryId || !keyword.trim()) return;
+    if (splitMode && !splitState.valid) return;
     const keywords = Array.from(
       new Set(keyword.split(',').map((s) => s.trim()).filter(Boolean)),
     );
     if (keywords.length === 0) return;
-    onSubmit({ keywords, categoryId, signConstraint, matchMode, priority });
+    const splitsPayload = splitMode
+      ? splitState.splits.map((s) => ({ categoryId: s.categoryId as number, percent: s.percent }))
+      : undefined;
+    onSubmit({ keywords, categoryId, signConstraint, matchMode, priority, splits: splitsPayload });
   };
 
   return (
@@ -171,8 +181,24 @@ export function RuleCreateForm({
           onChange={(e) => setPriority(Number(e.target.value))}
         />
       </div>
+      <div className="sm:col-span-2 lg:col-span-6">
+        <label className="flex items-center gap-2 text-sm text-ink-200">
+          <input
+            type="checkbox"
+            checked={splitMode}
+            onChange={(e) => setSplitMode(e.target.checked)}
+            className="h-4 w-4 accent-sage-300"
+          />
+          {t('split.toggleLabel')}
+        </label>
+        {splitMode && (
+          <div className="mt-3">
+            <RuleSplitEditor categories={categories} onChange={setSplitState} />
+          </div>
+        )}
+      </div>
       <div className="sm:col-span-2 lg:col-span-6 flex items-center gap-3">
-        <button className="btn-primary" disabled={submitting}>
+        <button className="btn-primary" disabled={submitting || (splitMode && !splitState.valid)}>
           {submitting ? t('ruleCreateForm.submitPending') : t('ruleCreateForm.submit')}
         </button>
         <button

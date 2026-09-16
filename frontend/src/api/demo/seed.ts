@@ -42,15 +42,24 @@ const categories: Category[] = [
 ];
 
 const rules: Rule[] = [
-  { id: 1, categoryId: CAT.Transport,   keyword: 'sncf',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 2, categoryId: CAT.Courses,     keyword: 'carrefour', signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 3, categoryId: CAT.Energie,     keyword: 'edf',       signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 4, categoryId: CAT.Courses,     keyword: 'monoprix',  signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 5, categoryId: CAT.Logement,    keyword: 'loyer',     signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 6, categoryId: CAT.Impots,      keyword: 'impots',    signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 7, categoryId: CAT.Assurance,   keyword: 'maif',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 8, categoryId: CAT.Abonnements, keyword: 'netflix',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
-  { id: 9, categoryId: CAT.Abonnements, keyword: 'spotify',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z' },
+  { id: 1, categoryId: CAT.Transport,   keyword: 'sncf',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 2, categoryId: CAT.Courses,     keyword: 'carrefour', signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 3, categoryId: CAT.Energie,     keyword: 'edf',       signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 4, categoryId: CAT.Courses,     keyword: 'monoprix',  signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 5, categoryId: CAT.Logement,    keyword: 'loyer',     signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 6, categoryId: CAT.Impots,      keyword: 'impots',    signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 7, categoryId: CAT.Assurance,   keyword: 'maif',      signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 8, categoryId: CAT.Abonnements, keyword: 'netflix',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  { id: 9, categoryId: CAT.Abonnements, keyword: 'spotify',   signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z', splits: [] },
+  // Rule-driven auto-splits demo: Amazon → 70% Loisirs / 30% Abonnements.
+  // The primary categoryId is used by single-category consumers; the splits
+  // array is what the engine ventilates a matched transaction across.
+  { id: 10, categoryId: CAT.Loisirs, keyword: 'amazon', signConstraint: 'negative', matchMode: 'substring', priority: 100, enabled: true, createdAt: '2026-02-01T09:00:00.000Z',
+    splits: [
+      { categoryId: CAT.Loisirs,     percent: 70 },
+      { categoryId: CAT.Abonnements, percent: 30 },
+    ],
+  },
 ];
 
 const budgets: Budget[] = [

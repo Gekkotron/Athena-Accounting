@@ -31,6 +31,22 @@
     "negative": "Negative",
     "positive": "Positive"
   },
+  "split": {
+    "toggleLabel": "Split across multiple categories",
+    "toggleHelp": "Ventilates each matching transaction according to the percentages below.",
+    "primaryCategoryLabel": "Primary category",
+    "primaryCategoryHelp": "Used for display and single-category filters.",
+    "categoryLabel": "Category",
+    "percentLabel": "%",
+    "addRow": "+ Add a category",
+    "removeRow": "Remove",
+    "sumLabel": "Sum",
+    "sumMustBe100": "The sum must equal exactly 100%.",
+    "minRowsError": "At least 2 categories.",
+    "maxRowsError": "Maximum 20 categories.",
+    "badge": "+{{count}}",
+    "flatTableBadgeTitle": "Split across {{count}} categories"
+  },
   "matchModeOptions": {
     "word": "Whole word",
     "substring": "Substring",

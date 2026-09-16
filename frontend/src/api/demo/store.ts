@@ -24,7 +24,7 @@ import type { FxRate } from '../../lib/fx';
 //   v=4 → v=5  savingsGoals + savingsGoalEvents seeded (migration 0037)
 //   v=5 → v=6  fxRates seeded (empty) + settings.displayCurrency (manual
 //              FX table, Task 7)
-export const DEMO_SCHEMA_VERSION = 6;
+export const DEMO_SCHEMA_VERSION = 7;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 

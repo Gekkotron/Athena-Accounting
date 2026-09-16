@@ -26,6 +26,11 @@ export interface User {
   username: string;
 }
 
+export interface RuleSplit {
+  categoryId: number | null;
+  percent: number;
+}
+
 export interface Rule {
   id: number;
   categoryId: number;
@@ -35,6 +40,11 @@ export interface Rule {
   priority: number;
   enabled: boolean;
   createdAt: string;
+  // Rule-driven auto-splits (backend migration 0042). Optional — absent on
+  // pre-feature payloads, empty array on single-category rules. When
+  // splits.length >= 2 the engine emits transaction_splits at match time
+  // instead of stamping the single categoryId.
+  splits?: RuleSplit[];
 }
 
 export interface AccountFilenamePattern {

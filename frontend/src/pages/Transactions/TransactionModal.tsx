@@ -309,13 +309,13 @@ export function TransactionModal({
         />
 
         <SplitEditor
-          parentAmountMagnitude={parentAmountMagnitude}
-          parentAmountSign={parentAmountSign}
+          parentAmountMagnitude={parentAmountMagnitude} parentAmountSign={parentAmountSign}
           disabled={isTransfer}
           initial={transaction?.splits ?? []}
           resetKey={transaction?.id ?? 'new'}
           categories={categories}
           onChange={setSplitsDraft}
+          splitsSource={transaction?.splitsSource ?? null}
         />
 
         <TransactionAttachments transactionId={transaction?.id ?? null} />

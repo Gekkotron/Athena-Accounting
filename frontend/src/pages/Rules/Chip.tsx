@@ -31,6 +31,14 @@ export function Chip({
       <button onClick={onToggle} className="py-0.5">
         {rule.keyword}
       </button>
+      {(rule.splits ?? []).length >= 2 && (
+        <span
+          className="text-[10px] px-1 rounded bg-sage-800/40 text-sage-100"
+          title={t('split.flatTableBadgeTitle', { count: rule.splits!.length })}
+        >
+          {t('split.badge', { count: rule.splits!.length - 1 })}
+        </span>
+      )}
       <button
         onClick={onAdvanced}
         className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-ink-400 hover:text-ink-100 transition px-0.5"
