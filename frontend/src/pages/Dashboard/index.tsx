@@ -1,19 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
-import type { BalancePoint, BalanceCheckpoint, TimeseriesConsolidatedBlock } from '../../api/types';
-import { listCheckpoints } from '../../api/checkpoints';
+import type { BalancePoint, TimeseriesConsolidatedBlock } from '../../api/types';
 import { useSettings } from '../../lib/useSettings';
 import { useAccounts } from '../../lib/useReferenceData';
 import { BalanceChart } from '../../components/BalanceChart';
-import { withCarriedBaselines } from '../../components/BalanceChart/series';
 import { useForecastProjection } from './useForecastProjection';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
-import { RangePicker, fromDateFor, type RangeKey } from '../../components/RangePicker';
 import { DashboardHero } from './DashboardHero';
 import { BalanceCardBlock, type ConsolidatedBlock, type PerCurrencyRow } from './BalanceCardBlock';
 import { MoyennesMensuellesSection } from './MoyennesMensuellesSection';
@@ -21,8 +17,8 @@ import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
-import { AccountSelect } from './AccountSelect';
-import { isAccountAvailable, filterToAvailableOverTime } from './helpers';
+import { ScopeControls } from './ScopeControls';
+import { useDashboardScope } from './useDashboardScope';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
 
@@ -55,9 +51,7 @@ export function Dashboard(): JSX.Element {
   // Truthy only once accounts have actually arrived — !rootEmpty is also
   // true while accountsQ is still loading (rootLoading gates rootEmpty),
   // which let the tour auto-start against a page whose anchors haven't
-  // mounted yet on a fresh visit. Checking accounts.length directly still
-  // lets the tour fire the moment the first account is created, since
-  // React Query re-renders this component on cache updates.
+  // mounted yet on a fresh visit.
   useAutoStartTour('dashboard', { requireData: () => accounts.length > 0 });
   const balanceAnchor = useTourAnchor('dashboard:balance');
   const curveAnchor = useTourAnchor('dashboard:curve');
@@ -65,107 +59,22 @@ export function Dashboard(): JSX.Element {
   const insightsAnchor = useTourAnchor('dashboard:insights');
   const sankeyAnchor = useTourAnchor('dashboard:sankey');
 
-  // Page-wide period and chart scope. Both seeded from user settings on
-  // mount; in-session changes are ephemeral (no writeback). To make a
-  // change stick, edit Réglages.
-  const [range, setRange] = useState<RangeKey>(settings.dashboardRange);
-  const [chartScope, setChartScope] = useState<'all' | 'available' | number>(settings.dashboardChartScope);
-  // If settings arrive after the initial render (first paint used DEFAULTS),
-  // hydrate the local state once — gated on isReady so we don't latch onto
-  // the DEFAULTS fallback while the settings query is still loading.
-  const hydrated = useRef(false);
-  useEffect(() => {
-    if (hydrated.current || !isReady) return;
-    hydrated.current = true;
-    setRange(settings.dashboardRange);
-    setChartScope(settings.dashboardChartScope);
-  }, [isReady, settings.dashboardRange, settings.dashboardChartScope]);
-  const rangeFromDate = fromDateFor(range);
-
-  // Resolve the 'available' scope into a concrete set of account ids for
-  // the donut and Sankey (as an accountIds param). Matches the hero's
-  // Disponible definition: unlocked AND non-investment (see helpers'
-  // filterToAvailableOverTime and backend/reports/balance.ts for the same
-  // exclusion). Memoised over accounts so the identity is stable across
-  // renders.
-  const availableAccountIds = useMemo(() => {
-    const now = new Date();
-    return accounts
-      .filter((a) => a.type !== 'investment' && isAccountAvailable(a, now))
-      .map((a) => a.id);
-  }, [accounts]);
-  const nonInvestmentAccounts = useMemo(
-    () => accounts.filter((a) => a.type !== 'investment'),
-    [accounts],
-  );
-  // Only hide the "All available accounts" option when every non-investment
-  // account is already unlocked (redundant with 'all' among the liquid set).
-  // If there are investment accounts on top, the option still adds value
-  // because it excludes them.
-  const hasAnyLocked = nonInvestmentAccounts.length > 0
-    && availableAccountIds.length < nonInvestmentAccounts.length;
-  const hasAnyInvestment = accounts.some((a) => a.type === 'investment');
-  // Guard against a persisted 'available' pick becoming meaningless — with
-  // no locked accounts AND no investment accounts, the 'available' subset
-  // equals the full set, so fall back to 'all' rather than duplicating.
-  const effectiveScope: 'all' | 'available' | number =
-    chartScope === 'available' && !hasAnyLocked && !hasAnyInvestment
-      ? 'all'
-      : chartScope;
-
-  // Checkpoints for the currently scoped account. Skipped entirely when scope
-  // is 'all' or 'available' — checkpoints are per-account by design.
-  const checkpointsQ = useQuery({
-    queryKey: ['balance-checkpoints', effectiveScope],
-    queryFn: () => listCheckpoints(effectiveScope as number),
-    enabled: typeof effectiveScope === 'number',
+  const {
+    range, setRange, setChartScope, effectiveScope,
+    availableAccountIds, hasAnyLocked, hasAnyInvestment,
+    chartCheckpoints, chartCurrency, chartPoints,
+    chartConsolidated, chartUsesConsolidated,
+  } = useDashboardScope({
+    accounts, settings, isReady,
+    seriesData: seriesQ.data,
+    perCurrencyCount: currencies.length,
+    primaryCurrency: primary?.currency,
   });
 
-  const chartCheckpoints = useMemo(() => {
-    if (typeof effectiveScope !== 'number') return undefined;
-    const raw = checkpointsQ.data?.checkpoints ?? [];
-    return raw.map((c: BalanceCheckpoint) => ({
-      date: c.checkpointDate,
-      expectedAmount: Number(c.expectedAmount),
-      note: c.note ?? undefined,
-    }));
-  }, [checkpointsQ.data, effectiveScope]);
-
-  const chartCurrency = useMemo(() => {
-    if (effectiveScope === 'all' || effectiveScope === 'available') {
-      return primary?.currency ?? 'EUR';
-    }
-    const acc = accounts.find((a) => a.id === effectiveScope);
-    return acc?.currency ?? primary?.currency ?? 'EUR';
-  }, [effectiveScope, accounts, primary]);
-
-  // Only feed the chart points matching the chosen scope. BalanceChart already
-  // filters by currency on top of this, so cross-currency rows are dropped too.
-  // Range window applied client-side (backend returns the whole series so we
-  // can use it for per-account baselines below). withCarriedBaselines keeps
-  // accounts that were quiet inside the window in the aggregate — a plain
-  // bucket filter dropped them, sagging the curve by their whole balance.
-  const chartPoints = useMemo<BalancePoint[]>(() => {
-    const all = seriesQ.data?.points ?? [];
-    let scoped: BalancePoint[];
-    if (effectiveScope === 'all') {
-      scoped = all;
-    } else if (effectiveScope === 'available') {
-      // "As money unlocks, the curve steps up": every account contributes,
-      // but a locked account only starts contributing on its unlock date
-      // (see filterToAvailableOverTime). withCarriedBaselines still runs
-      // afterward for the range-window clip — its lastBefore map is
-      // populated from post-unlock points only, so a locked account whose
-      // unlock lies before rangeFromDate is carried in like any other.
-      scoped = filterToAvailableOverTime(all, accounts);
-    } else {
-      scoped = all.filter((p) => p.account_id === effectiveScope);
-    }
-    return withCarriedBaselines(scoped, rangeFromDate);
-  }, [seriesQ.data, effectiveScope, accounts, rangeFromDate]);
-
   // Average-based forecast overlay for the Trend chart — see
-  // useForecastProjection for the rationale and the per-scope math.
+  // useForecastProjection for the rationale and the per-scope math. The
+  // overlay is suppressed whenever the chart is showing the consolidated
+  // (FX-converted) series (cross-currency forecast is out of scope).
   const forecastProjection = useForecastProjection({
     enabled: settings.showForecast,
     chartScope: effectiveScope,
@@ -174,25 +83,6 @@ export function Dashboard(): JSX.Element {
     perCurrency: balanceQ.data?.perCurrency,
     points: seriesQ.data?.points,
   });
-
-  // The consolidated block aggregates ALL accounts server-side — only valid
-  // when the chart itself is scoped to 'all'. A single-account scope keeps
-  // the raw per-currency curve. Also suppressed when the user only has one
-  // currency: there's nothing to FX-consolidate, and the server's
-  // consolidated line for a 1-currency pot doesn't match the client-side
-  // per-account sum (missing quiet-account carry, no pre-window baseline),
-  // which reads as "the curve looks like just the primary account".
-  const chartConsolidated = effectiveScope === 'all' && currencies.length > 1
-    ? seriesQ.data?.consolidated ?? null
-    : null;
-  // The forecast overlay's anchor/points are computed from raw single-currency
-  // balances (see useForecastProjection), while the consolidated series is
-  // FX-converted into `chartConsolidated.display`. Mixing the two would shift
-  // the historical curve by a bogus amount (mergeHistoricalAndProjection's
-  // `alignEndTo` assumes both magnitudes share a currency) — so the forecast
-  // overlay is suppressed whenever the chart is showing the consolidated
-  // series. Cross-currency forecast support is out of scope for now.
-  const chartUsesConsolidated = chartConsolidated !== null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -221,27 +111,20 @@ export function Dashboard(): JSX.Element {
         <EmptyState
           title={t('empty.title')}
           hint={t('empty.hint')}
-          action={
-            <Link to="/accounts" className="btn-primary text-sm">
-              {t('empty.cta')}
-            </Link>
-          }
+          action={<Link to="/accounts" className="btn-primary text-sm">{t('empty.cta')}</Link>}
         />
       )}
 
       {!rootErr && !rootEmpty && (
         <div className="relative">
-          <span
-            ref={balanceAnchor}
-            aria-hidden
-            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
-          />
+          <span ref={balanceAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <DashboardHero primary={primary} />
         </div>
       )}
 
-      {/* Sections below are hidden while the root queries are erroring or empty
-          — no point showing a wall of skeletons behind a top-level error. */}
+      {/* Sections below are hidden while the root queries are erroring or
+          empty — no point showing a wall of skeletons behind a top-level
+          error. */}
       {!rootErr && !rootEmpty && (
         <BalanceCardBlock currencies={currencies} consolidated={balanceQ.data?.consolidated ?? null} />
       )}
@@ -249,11 +132,7 @@ export function Dashboard(): JSX.Element {
       {!rootErr && !rootEmpty && primary && <MoyennesMensuellesSection currency={primary.currency} />}
       {!rootErr && !rootEmpty && primary && (
         <div className="relative">
-          <span
-            ref={insightsAnchor}
-            aria-hidden
-            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
-          />
+          <span ref={insightsAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <InsightsSection currency={primary.currency} />
         </div>
       )}
@@ -262,40 +141,24 @@ export function Dashboard(): JSX.Element {
 
       {/* Time series — the account scope and period picker sit in the card
           header (right-aligned). Both drive the donut and the Sankey below
-          via the shared `range` / `chartScope` state, and each chart card
-          mirrors the same control cluster for visibility. Persistent
-          defaults live in Réglages; in-session changes are ephemeral. */}
+          via the shared `range` / `chartScope` state. */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6 relative">
-          <span
-            ref={curveAnchor}
-            aria-hidden
-            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
-          />
+          <span ref={curveAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
-              <label
-                className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none"
-                title={t('forecast.tooltip')}
-              >
-                <input
-                  type="checkbox"
-                  checked={settings.showForecast}
-                  onChange={(e) => patchSettings({ showForecast: e.target.checked })}
-                  className="accent-sage-500"
-                />
+              <label className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none" title={t('forecast.tooltip')}>
+                <input type="checkbox" checked={settings.showForecast} onChange={(e) => patchSettings({ showForecast: e.target.checked })} className="accent-sage-500" />
                 {t('forecast.label')}
               </label>
-              <AccountSelect
-                value={effectiveScope}
-                onChange={setChartScope}
-                accounts={accounts}
-                primaryCurrency={primary?.currency}
+              <ScopeControls
+                value={effectiveScope} onValueChange={setChartScope}
+                accounts={accounts} primaryCurrency={primary?.currency}
                 hideAvailable={!hasAnyLocked && !hasAnyInvestment}
+                range={range} onRangeChange={setRange}
               />
-              <RangePicker value={range} onChange={setRange} />
             </div>
           </div>
           {seriesQ.isError ? (
@@ -319,23 +182,17 @@ export function Dashboard(): JSX.Element {
       {/* Category breakdown — donut */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6 relative">
-          <span
-            ref={donutAnchor}
-            aria-hidden
-            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
-          />
+          <span ref={donutAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
             <div className="flex-1 h-px bg-ink-800" />
             <div className="flex items-center gap-2 flex-wrap">
-              <AccountSelect
-                value={effectiveScope}
-                onChange={setChartScope}
-                accounts={accounts}
-                primaryCurrency={primary?.currency}
+              <ScopeControls
+                value={effectiveScope} onValueChange={setChartScope}
+                accounts={accounts} primaryCurrency={primary?.currency}
                 hideAvailable={!hasAnyLocked && !hasAnyInvestment}
+                range={range} onRangeChange={setRange}
               />
-              <RangePicker value={range} onChange={setRange} />
             </div>
           </div>
           <CategoryBreakdown
@@ -351,11 +208,7 @@ export function Dashboard(): JSX.Element {
       {/* Cash-flow Sankey — follows the page range and account scope */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
         <div className="relative">
-          <span
-            ref={sankeyAnchor}
-            aria-hidden
-            className="pointer-events-none absolute right-4 top-4 h-1 w-1"
-          />
+          <span ref={sankeyAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <SankeySection
             range={range}
             onRangeChange={setRange}

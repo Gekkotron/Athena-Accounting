@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import { getAccountName } from '../../lib/accounts';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
 import { DemoUnavailableState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { isDemoStubError } from '../../api/errorMessage';
 import { useDuplicatesMutations } from './useDuplicatesMutations';
 import { useAccounts } from '../../lib/useReferenceData';
+import { DuplicateGroupRow } from './DuplicateGroupRow';
+import { DuplicatesBulkBar } from './DuplicatesBulkBar';
 
 export function DuplicatesPanel(): JSX.Element {
   const { t } = useTranslation(['imports', 'common', 'transactions']);
@@ -51,13 +52,12 @@ export function DuplicatesPanel(): JSX.Element {
       setBulkError,
     });
 
-  const toggleSelect = (id: number, checked: boolean) =>
+  const toggleSelect = useCallback((id: number, checked: boolean) =>
     setSelectedIds((s) => {
       const next = new Set(s);
-      if (checked) next.add(id);
-      else next.delete(id);
+      if (checked) next.add(id); else next.delete(id);
       return next;
-    });
+    }), []);
 
   // Label-similarity threshold (0..100), seeded from user settings on mount;
   // in-session changes are ephemeral (no writeback — edit Réglages to make a
@@ -186,33 +186,12 @@ export function DuplicatesPanel(): JSX.Element {
           )}
         </div>
         {selectedIds.size > 0 && (
-          <div className="mb-3 rounded-lg border border-sage-800/40 bg-sage-900/15 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span className="text-ink-100">
-              <span className="font-mono">{selectedIds.size}</span> {t('duplicates.selectedCount', { count: selectedIds.size })}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                className="text-[11px] text-ink-500 hover:text-ink-100 transition"
-                onClick={() => { setSelectedIds(new Set()); setBulkError(null); }}
-              >
-                {t('duplicates.clearSelection')}
-              </button>
-              <button
-                className="text-xs text-sage-300 hover:text-sage-200 border border-sage-300/40 hover:border-sage-300 rounded-md px-2 py-1 transition disabled:opacity-40"
-                disabled={bulkMarkNotDupMut.isPending || bulkDeleteMut.isPending}
-                onClick={() => bulkMarkNotDupMut.mutate(Array.from(selectedIds))}
-              >
-                {t('duplicates.markNotDuplicate')}
-              </button>
-              <button
-                className="text-xs text-clay-300 hover:text-clay-200 border border-clay-800/60 hover:border-clay-700 rounded-md px-2 py-1 transition disabled:opacity-40"
-                disabled={bulkDeleteMut.isPending || bulkMarkNotDupMut.isPending}
-                onClick={() => bulkDeleteMut.mutate(Array.from(selectedIds))}
-              >
-                {t('delete', { ns: 'common' })}
-              </button>
-            </div>
-          </div>
+          <DuplicatesBulkBar
+            selectedIds={selectedIds}
+            onClear={() => { setSelectedIds(new Set()); setBulkError(null); }}
+            bulkMarkNotDupMut={bulkMarkNotDupMut}
+            bulkDeleteMut={bulkDeleteMut}
+          />
         )}
         {bulkError && (
           <div className="mb-3 rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
@@ -233,70 +212,20 @@ export function DuplicatesPanel(): JSX.Element {
             </thead>
             <tbody>
               {visibleGroups.map(({ group: g, similarity }, gi) => (
-                <tr key={`${g.accountId}-${g.date}-${g.amount}-${gi}`} className="border-b border-ink-800/40 last:border-0 align-top">
-                  <td className="px-4 py-2.5 text-ink-300">{getAccountName(accounts, g.accountId)}</td>
-                  <td className="px-4 py-2.5 text-ink-300 font-mono text-xs whitespace-nowrap">{g.date}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-ink-100">
-                    {Number(g.amount).toFixed(2).replace('.', ',')} €
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <ul className="space-y-1">
-                      {g.transactions.map((tx) => {
-                        const confirming = confirmDeleteTxId === tx.id;
-                        return (
-                          <li key={tx.id} className="flex items-baseline gap-2">
-                            <input
-                              type="checkbox"
-                              className="accent-sage-300"
-                              checked={selectedIds.has(tx.id)}
-                              onChange={(e) => toggleSelect(tx.id, e.target.checked)}
-                              aria-label={t('duplicates.selectTransactionAriaLabel', { id: tx.id })}
-                            />
-                            <code className="text-xs text-ink-500 min-w-[3.5rem]">#{tx.id}</code>
-                            <span className="font-mono text-xs text-ink-100 flex-1">{tx.raw_label}</span>
-                            {confirming ? (
-                              <span className="flex items-center gap-1">
-                                <button
-                                  className="px-2 py-0.5 rounded-md bg-clay-300 text-ink-950 text-xs font-medium hover:bg-clay-200 transition disabled:opacity-40"
-                                  disabled={deleteTxMut.isPending}
-                                  onClick={() => deleteTxMut.mutate(tx.id)}
-                                >{deleteTxMut.isPending ? '…' : t('delete', { ns: 'common' })}</button>
-                                <button
-                                  className="px-2 py-0.5 rounded-md border border-ink-700 text-ink-200 text-xs hover:bg-ink-850 transition"
-                                  onClick={() => { setConfirmDeleteTxId(null); setDupDeleteError(null); }}
-                                >{t('cancel', { ns: 'common' })}</button>
-                              </span>
-                            ) : (
-                              <button
-                                className="text-ink-500 hover:text-clay-300 transition px-1"
-                                onClick={() => { setConfirmDeleteTxId(tx.id); setDupDeleteError(null); }}
-                                title={t('duplicates.deleteTransactionTitle', { id: tx.id })}
-                                aria-label={t('duplicates.deleteTransactionAriaLabel')}
-                              >🗑</button>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {dupDeleteError && confirmDeleteTxId !== null &&
-                      g.transactions.some((tx) => tx.id === confirmDeleteTxId) && (
-                        <p className="mt-2 text-xs text-clay-300">{dupDeleteError}</p>
-                      )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right align-top font-mono text-xs text-ink-400" title={t('duplicates.similarityTitle')}>
-                    {Math.round(similarity * 100)}%
-                  </td>
-                  <td className="px-4 py-2.5 text-right align-top">
-                    <button
-                      className="text-xs text-sage-300 hover:text-sage-200 border border-sage-300/40 hover:border-sage-300 rounded-md px-2 py-1 transition disabled:opacity-40"
-                      disabled={markNotDuplicateMut.isPending}
-                      onClick={() => markNotDuplicateMut.mutate(g.transactions.map((tx) => tx.id))}
-                      title={t('duplicates.markNotDuplicateTitle')}
-                    >
-                      {t('duplicates.markNotDuplicate')}
-                    </button>
-                  </td>
-                </tr>
+                <DuplicateGroupRow
+                  key={`${g.accountId}-${g.date}-${g.amount}-${gi}`}
+                  group={g}
+                  similarity={similarity}
+                  accounts={accounts}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  confirmDeleteTxId={confirmDeleteTxId}
+                  setConfirmDeleteTxId={setConfirmDeleteTxId}
+                  dupDeleteError={dupDeleteError}
+                  setDupDeleteError={setDupDeleteError}
+                  deleteTxMut={deleteTxMut}
+                  markNotDuplicateMut={markNotDuplicateMut}
+                />
               ))}
             </tbody>
           </table>

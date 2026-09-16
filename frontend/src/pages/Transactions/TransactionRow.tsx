@@ -4,6 +4,8 @@ import type { Account, Category, Transaction, BalanceCheckpoint } from '../../ap
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 import { isCheckpointDrifted } from '../../components/BalanceChart/checkpoints';
+import { CheckpointPinCell } from './CheckpointPinCell';
+import { TransactionSplitRows } from './TransactionSplitRows';
 
 export type TransactionRowProps = {
   tx: Transaction;
@@ -184,41 +186,15 @@ export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRo
           {formatAmount(tx.amount, account?.currency ?? 'EUR')}
         </td>
         {showBalance && (
-          <td className="px-4 py-2.5 text-right font-mono whitespace-nowrap tabular-nums text-ink-300">
-            <span className="inline-flex items-center justify-end gap-2">
-              {isEndOfDay && tx.runningBalance != null && (
-                <button
-                  type="button"
-                  onClick={() => onToggleCheckpoint(tx, !(checkpoint != null))}
-                  disabled={checkpointPending}
-                  aria-pressed={checkpoint != null}
-                  aria-label={`${t('row.checkpointAriaLabel', { date: formatDate(tx.date) })}${driftMessage ? ` — ${driftMessage}` : ''}`}
-                  title={driftMessage ?? t('row.checkpointTitle')}
-                  className={`inline-flex items-center gap-0.5 rounded p-0.5 transition disabled:opacity-40 disabled:cursor-wait ${
-                    checkpoint != null
-                      ? checkpointDrifted
-                        ? 'text-amber-300 hover:text-amber-200'
-                        : 'text-sage-300 hover:text-sage-200'
-                      : 'text-ink-600 hover:text-sage-300 hover:bg-ink-900'
-                  }`}
-                >
-                  {checkpointDrifted && (
-                    <span className="text-[10px] font-bold leading-none" aria-hidden>!</span>
-                  )}
-                  {checkpoint != null ? (
-                    <svg width="11" height="13" viewBox="0 0 12 14" fill="currentColor" aria-hidden>
-                      <path d="M2 1h8v11.2L6 9.6 2 12.2z" />
-                    </svg>
-                  ) : (
-                    <svg width="11" height="13" viewBox="0 0 12 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" aria-hidden>
-                      <path d="M2.5 1.5h7v9.7L6 9.05 2.5 11.2z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-              <span>{tx.runningBalance != null ? formatAmount(tx.runningBalance, account?.currency ?? 'EUR') : '—'}</span>
-            </span>
-          </td>
+          <CheckpointPinCell
+            tx={tx} account={account}
+            isEndOfDay={isEndOfDay}
+            checkpoint={checkpoint}
+            checkpointPending={checkpointPending}
+            onToggleCheckpoint={onToggleCheckpoint}
+            checkpointDrifted={checkpointDrifted}
+            driftMessage={driftMessage}
+          />
         )}
         <td className="px-3 py-2.5 text-right whitespace-nowrap">
           <div className="inline-flex gap-0.5">
@@ -245,29 +221,9 @@ export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRo
           </div>
         </td>
       </tr>
-      {expanded &&
-        tx.splits.length > 0 &&
-        tx.splits.map((s) => {
-          const cat = s.categoryId ? catById.get(s.categoryId) : null;
-          return (
-            <tr key={`split-${s.id}`} className="border-b border-ink-900/30 bg-ink-900/20">
-              <td />
-              <td />
-              <td className="hidden sm:table-cell" />
-              <td className="px-4 py-1.5 pl-8 text-ink-300 text-xs">
-                ⤷ {cat ? formatCategoryPath(cat, catById) : '—'}
-                {s.memo && <span className="text-ink-500 ml-2">· {s.memo}</span>}
-              </td>
-              <td />
-              <td className="hidden md:table-cell" />
-              <td className="px-4 py-1.5 text-right font-mono text-xs tabular-nums">
-                {s.amount} {account?.currency ?? 'EUR'}
-              </td>
-              {showBalance && <td />}
-              <td />
-            </tr>
-          );
-        })}
+      {expanded && tx.splits.length > 0 && (
+        <TransactionSplitRows tx={tx} catById={catById} account={account} showBalance={showBalance} />
+      )}
     </>
   );
   },
