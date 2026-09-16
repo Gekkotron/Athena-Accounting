@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../../../api/client';
 import { getTotpStatus } from '../../../api/totp';
 import { TotpEnrollModal } from './TotpEnrollModal';
@@ -55,7 +55,16 @@ export function TotpSection(): JSX.Element | null {
       <div>
         <div className="label">{t('settings.twoFactor.sectionTitle')}</div>
         <p className="text-sm text-ink-400 mt-1">
-          {t('settings.twoFactor.description')}
+          <Trans i18nKey="settings:settings.twoFactor.description">
+            Ajoute un second facteur au login : un code à 6 chiffres généré par une
+            application authentificateur (Google Authenticator, Aegis, 1Password…).{' '}
+            <a
+              className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
+              href="https://gekkotron.github.io/Athena-Accounting/docs/users/two-factor-auth"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Guide complet</a>.
+          </Trans>
         </p>
       </div>
 

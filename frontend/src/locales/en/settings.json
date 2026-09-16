@@ -185,7 +185,7 @@
     },
     "twoFactor": {
       "sectionTitle": "Two-factor authentication (2FA)",
-      "description": "Adds a second factor on login: a 6-digit code from an authenticator app (Google Authenticator, Aegis, 1Password…).",
+      "description": "Adds a second factor on login: a 6-digit code from an authenticator app (Google Authenticator, Aegis, 1Password…). <1>Full guide</1>.",
       "disabledStatus": "Disabled",
       "enabledStatus": "Enabled",
       "remainingCodes_one": "{{count}} recovery code left",

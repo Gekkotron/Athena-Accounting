@@ -185,7 +185,7 @@
     },
     "twoFactor": {
       "sectionTitle": "Double authentification (2FA)",
-      "description": "Ajoute un second facteur au login : un code à 6 chiffres généré par une application authentificateur (Google Authenticator, Aegis, 1Password…).",
+      "description": "Ajoute un second facteur au login : un code à 6 chiffres généré par une application authentificateur (Google Authenticator, Aegis, 1Password…). <1>Guide complet</1>.",
       "disabledStatus": "Désactivée",
       "enabledStatus": "Activée",
       "remainingCodes_one": "{{count}} code de récupération restant",
