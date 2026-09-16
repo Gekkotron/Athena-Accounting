@@ -106,6 +106,71 @@ les deux. L'interface pour ces règles est actuellement minimale — la
 plupart des utilisateurs les configurent via l'API ou en important
 une sauvegarde qui les contient déjà.
 
+## Ventilation automatique par règle
+
+Une règle attribue normalement **une seule** catégorie à une
+transaction correspondante. Quand le même marchand couvre
+systématiquement des postes distincts — un revendeur mixte
+(`Amazon` → 70 % *Livres* / 30 % *Électro*), une note de restaurant
+mi-pro mi-perso, un hypermarché avec pompe à essence — vous pouvez
+basculer une règle en **mode ventilation** pour que chaque
+correspondance soit répartie automatiquement sur N pourcentages
+pré-déclarés.
+
+**Activer le mode ventilation.** Sur la page Règles, cochez
+**Ventilation multi-catégories** dans le formulaire d'ajout rapide
+(ou dans l'éditeur avancé d'une règle). Un petit tableau de
+pourcentages apparaît : 2 lignes minimum, 20 maximum, chacune avec
+une catégorie et un pourcentage entier entre 1 et 99. L'indicateur
+**Somme** passe au vert quand les lignes totalisent exactement
+100 % ; le bouton de soumission reste désactivé jusque-là. La règle
+conserve son champ **Catégorie** principal — cette catégorie
+« primaire » est celle affichée dans les listes et utilisée par les
+filtres monocatégorie.
+
+**À l'import.** Une transaction correspondante reçoit N lignes de
+ventilation (`transaction_splits`) dont les montants sont mis à
+l'échelle sur le parent — calcul en centimes avec correction de la
+dérive absorbée par la dernière ligne, pour qu'une ventilation de
+10,03 € en 33 / 33 / 34 tombe exactement sur 3,31 € / 3,31 € /
+3,41 €. La `category_source` du parent est `auto`, et une nouvelle
+colonne `splits_source` est également fixée à `auto` — c'est le
+drapeau que le moteur vérifie sur les ré-exécutions ultérieures
+pour savoir qu'il peut régénérer la ventilation en toute sécurité.
+
+**Modifier ce qu'une règle a produit.** Ouvrez la transaction et
+modifiez n'importe quelle ligne de l'éditeur **Ventilation par
+catégorie** (changez un montant, changez de catégorie, ajoutez ou
+supprimez une ligne). Enregistrer bascule `splits_source` à
+`manual` sur le parent — l'étiquette « Automatique » qui décore les
+ventilations auto-générées disparaît, et le moteur ne touchera plus
+jamais aux ventilations de cette transaction lors d'une passe
+Recatégoriser, quelle que soit la valeur de `preserveManual`.
+C'est la frontière de propriété : une ventilation auto-générée est
+une suggestion que le moteur maintient cohérente ; une ventilation
+modifiée manuellement vous appartient.
+
+**Changer la règle après coup.** Modifier les pourcentages d'une
+règle en mode ventilation ne recompose pas rétroactivement chaque
+transaction passée — cliquez sur **Recatégoriser l'historique**
+pour ré-appliquer. Les ventilations auto-générées
+(`splits_source='auto'`) sont régénérées avec les nouveaux
+ratios ; les manuelles (`splits_source='manual'`) sont préservées.
+
+**Revenir à monocatégorie.** Désactiver le bouton dans l'éditeur
+avancé et enregistrer envoie le signal « vider les ventilations »
+— les lignes-enfants de pourcentages disparaissent côté serveur,
+la règle retombe à l'attribution de sa seule catégorie primaire,
+et une passe Recatégoriser suivante efface les ventilations
+auto-générées des transactions que la règle avait précédemment
+ventilées (les modifiées manuellement restent intactes).
+
+**Ré-importer** le même fichier est sûr — la dédup saute les lignes
+déjà présentes, donc les ventilations auto et manuelles survivent
+sans modification. Les nouvelles transactions du fichier sont
+ventilées par la règle si elle correspond toujours, aux
+pourcentages actuels.
+
 ## Comment les sources interagissent
 
 Chaque transaction stocke une **source** qui dit à Athena d'où vient

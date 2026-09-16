@@ -34,6 +34,7 @@
   "split": {
     "toggleLabel": "Split across multiple categories",
     "toggleHelp": "Ventilates each matching transaction according to the percentages below.",
+    "toggleHelpLinkLabel": "Guide",
     "primaryCategoryLabel": "Primary category",
     "primaryCategoryHelp": "Used for display and single-category filters.",
     "categoryLabel": "Category",

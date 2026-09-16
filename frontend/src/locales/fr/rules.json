@@ -39,6 +39,7 @@
   "split": {
     "toggleLabel": "Ventilation multi-catégories",
     "toggleHelp": "Répartit chaque transaction correspondante selon les pourcentages indiqués.",
+    "toggleHelpLinkLabel": "Guide",
     "primaryCategoryLabel": "Catégorie principale",
     "primaryCategoryHelp": "Utilisée pour l'affichage et les filtres monocatégorie.",
     "categoryLabel": "Catégorie",

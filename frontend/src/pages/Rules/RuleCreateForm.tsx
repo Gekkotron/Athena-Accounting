@@ -190,6 +190,12 @@ export function RuleCreateForm({
             className="h-4 w-4 accent-sage-300"
           />
           {t('split.toggleLabel')}
+          <a
+            href="https://gekkotron.github.io/Athena-Accounting/docs/users/categorization"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-sage-300 hover:text-sage-200 underline underline-offset-2"
+          >{t('split.toggleHelpLinkLabel')}</a>
         </label>
         {splitMode && (
           <div className="mt-3">

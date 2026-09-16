@@ -94,6 +94,64 @@ Older data may carry a `transfer_group_id` from the previous
 rule-driven detector — that column is kept so historical groups
 still filter out correctly, but no new groups are created on import.
 
+## Auto-splits from rules
+
+A rule normally stamps **one** category on a matched transaction. When
+the same merchant covers systematically distinct expense buckets — a
+mixed retailer (`Amazon` → 70 % *Books* / 30 % *Electronics*), a
+work-and-personal restaurant tab, a hypermarket with a fuel pump —
+you can turn a rule into **split mode** so every match is ventilated
+automatically across N pre-declared percentages.
+
+**Turning split mode on.** In the Rules page, tick
+**Ventilation multi-catégories** on the quick-add form (or in a
+rule's Advanced editor). A small percentage table appears: two rows
+minimum, twenty maximum, each with a category and an integer
+percentage between 1 and 99. The **Somme** indicator turns green
+when the row sums to exactly 100 %; the submit button stays
+disabled until it does. The rule still keeps its top-level
+**Catégorie** field — that "primary" category is what the
+transaction row will show in listings and what single-category
+filters key off.
+
+**On import.** A matching transaction gets N split rows
+(`transaction_splits`) whose amounts scale against the parent — cents
+math with a last-row-absorbs-drift correction so a €10.03 split
+across 33 / 33 / 34 lands exactly on €3.31 / €3.31 / €3.41. The
+parent's `category_source` is `auto`, and a new
+`splits_source` column is also set to `auto` — that's the flag the
+engine checks on later re-runs to know it may safely regenerate the
+ventilation.
+
+**Editing what a rule produced.** Open the transaction and edit any
+row in the **Ventilation par catégorie** editor (change an amount,
+swap a category, add a row, delete one). Saving flips
+`splits_source` to `manual` on the parent — the "Automatique" tag
+that decorates auto-generated ventilations disappears, and the
+engine will never touch that transaction's splits again on a
+Recategorize pass, regardless of the `preserveManual` flag. This is
+the ownership boundary: an auto-generated split is a suggestion the
+engine keeps consistent; a manually edited one is yours.
+
+**Changing the rule after the fact.** Bumping the percentages on a
+split rule does not retroactively re-shuffle every past transaction
+— hit **Recatégoriser l'historique** to reapply. Auto-generated
+splits (`splits_source='auto'`) are regenerated with the new ratios;
+manual ones (`splits_source='manual'`) are preserved.
+
+**Reverting a rule to single-category.** Turning the toggle off in
+the Advanced editor and saving sends the "clear splits" signal —
+the child percent rows disappear on the backend, the rule falls
+back to stamping just its primary category, and a subsequent
+Recategorize pass clears the auto-generated splits from any
+transactions the rule previously ventilated (leaving manually
+edited ones untouched).
+
+**Re-importing** the same file is safe — dedup skips the rows that
+are already there, so both auto and manual splits survive
+unmodified. New transactions from the file are ventilated by the
+rule if it still matches, at the current percentages.
+
 ## How sources interact
 
 Every transaction stores a **source** that tells Athena where its
