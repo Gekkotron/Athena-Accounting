@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { BalancePoint } from '../../api/types';
 import { useAccounts } from '../../lib/useReferenceData';
+import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
 import { ErrorState, LoadingBlock, EmptyState } from '../../components/StateBlocks';
 import { AccountSelect } from '../Dashboard/AccountSelect';
@@ -22,15 +23,19 @@ import { TourReplayIcon } from '../../components/TourReplayIcon';
 export function ForecastTab(): JSX.Element {
   const [horizon, setHorizon] = useState<Horizon>(60);
   const [scope, setScope] = useState<'all' | number>('all');
+  // displayCurrency must key the report queries — Dashboard already does
+  // this, and a bare key silently returned raw per-currency totals here.
+  const { settings } = useSettings();
+  const displayQuery = settings.displayCurrency ? { display: settings.displayCurrency } : {};
 
   const accountsQ = useAccounts();
   const balanceQ = useQuery({
-    queryKey: ['reports', 'balance'],
-    queryFn: () => api<{ perCurrency: { currency: string; total: string }[] }>('/api/reports/balance'),
+    queryKey: ['reports', 'balance', settings.displayCurrency],
+    queryFn: () => api<{ perCurrency: { currency: string; total: string }[] }>('/api/reports/balance', { query: displayQuery }),
   });
   const timeseriesQ = useQuery({
-    queryKey: ['reports', 'timeseries'],
-    queryFn: () => api<{ points: BalancePoint[] }>('/api/reports/timeseries', { query: { granularity: 'day' } }),
+    queryKey: ['reports', 'timeseries', settings.displayCurrency],
+    queryFn: () => api<{ points: BalancePoint[] }>('/api/reports/timeseries', { query: { granularity: 'day', ...displayQuery } }),
   });
 
   const accounts = accountsQ.data ?? [];

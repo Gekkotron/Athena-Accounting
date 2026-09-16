@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InsightsSection } from '../InsightsSection';
@@ -100,6 +100,32 @@ describe('InsightsSection', () => {
     fireEvent.click(screen.getByLabelText('Mois précédent'));
     expect(await screen.findByText(/— mai 2026/i)).toBeInTheDocument();
     expect(await screen.findByText(/Vos dépenses de mai/i)).toBeInTheDocument();
+  });
+
+  it('shifts the reference month forward when the local day rolls into a new month', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path.includes('budget')) return Promise.resolve({ month: '', rows: [], totals: { limit: '0', spent: '0' } });
+      return Promise.resolve({
+        rows: [
+          { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-05', total: '-1000.00', transaction_count: 1 },
+          { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-06', total: '-1200.00', transaction_count: 1 },
+          { category_id: 1, category_name: 'Courses', category_kind: null, category_is_internal_transfer: false, month: '2026-07', total: '-1400.00', transaction_count: 1 },
+        ],
+      });
+    });
+    renderWithProviders();
+    // Clock is 2026-07-15 → last complete month is June.
+    expect(await screen.findByText(/— juin 2026/i)).toBeInTheDocument();
+
+    // Cross midnight into August; useToday's visibilitychange listener picks
+    // up the new date on the next tab-focus and shifts the window forward.
+    vi.setSystemTime(new Date('2026-08-01T00:05:00Z'));
+    act(() => {
+      // Nudge useToday via its visibilitychange listener — simpler than
+      // waiting for the 60 s interval under the test's Date-only fake clock.
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(await screen.findByText(/— juillet 2026/i)).toBeInTheDocument();
   });
 
   it('still renders money insights when the budget query fails', async () => {

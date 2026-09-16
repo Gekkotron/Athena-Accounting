@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { CategoryReportRow, BudgetReportRow, RecurringSeries } from '../../api/types';
 import { useCategories } from '../../lib/useReferenceData';
+import { useToday } from '../../lib/useToday';
 import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { buildInsights, monthLabel, priceCreepInsight, type InsightTone } from './insights';
@@ -34,7 +35,10 @@ interface Props {
 export function InsightsSection({ currency }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation('dashboard');
   const lang = i18n.language?.startsWith('en') ? 'en' : 'fr';
-  const months = useMemo(() => completeMonthWindow(AVG_WINDOW_MONTHS, new Date()), []);
+  // Recompute when the local day changes — a tab left open across midnight
+  // otherwise pins the window to yesterday's month range.
+  const today = useToday();
+  const months = useMemo(() => completeMonthWindow(AVG_WINDOW_MONTHS, new Date()), [today]);
   // 0 = last complete month; higher steps further back. Capped so a prior month
   // always remains in-window for the month-over-month comparison.
   const [monthOffset, setMonthOffset] = useState(0);

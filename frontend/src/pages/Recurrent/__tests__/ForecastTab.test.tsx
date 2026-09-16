@@ -70,9 +70,11 @@ function mockApi(routes: {
   points?: BalancePoint[];
   categoryRows?: CategoryReportRow[];
   balanceError?: Error;
+  settings?: { displayCurrency?: string | null };
 }) {
   vi.mocked(api).mockImplementation(async (url: string) => {
     if (url === '/api/accounts') return { accounts: routes.accounts ?? [] };
+    if (url === '/api/settings') return { settings: { displayCurrency: null, ...(routes.settings ?? {}) } };
     if (url === '/api/reports/balance') {
       if (routes.balanceError) throw routes.balanceError;
       return { perCurrency: routes.perCurrency ?? [{ currency: 'EUR', total: '1000.00' }] };
@@ -124,6 +126,25 @@ describe('ForecastTab', () => {
     await waitFor(() => {
       expect(screen.getByText(/Solde prévu à J\+180/i)).toBeInTheDocument();
     });
+  });
+
+  it('forwards settings.displayCurrency as the display query param on report queries', async () => {
+    mockApi({
+      accounts: [account({ id: 1 })],
+      categoryRows: historyRows,
+      settings: { displayCurrency: 'USD' },
+    });
+    render(wrap(<ForecastTab />));
+    await screen.findByTestId('balance-chart');
+
+    const calls = vi.mocked(api).mock.calls;
+    const balanceCalls = calls.filter(([url]) => url === '/api/reports/balance');
+    const timeseriesCalls = calls.filter(([url]) => url === '/api/reports/timeseries');
+    // Both report queries must include display=USD once settings are ready,
+    // matching the Dashboard cache key — otherwise ForecastTab shows raw
+    // per-currency totals while Dashboard shows the converted view.
+    expect(balanceCalls.some(([, init]) => (init as { query?: { display?: string } })?.query?.display === 'USD')).toBe(true);
+    expect(timeseriesCalls.some(([, init]) => (init as { query?: { display?: string } })?.query?.display === 'USD')).toBe(true);
   });
 
   it('renders the error state when the balance query fails', async () => {
