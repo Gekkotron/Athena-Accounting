@@ -1,38 +1,15 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import {
-  accountFilenamePatterns,
-  accounts,
-  fileImports,
-  transactions,
-} from '../../db/schema.js';
+import { accountFilenamePatterns } from '../../db/schema.js';
 import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
-import { normalizeLabel } from './normalize.js';
-import { computeDedupKey } from './dedup.js';
-import { emitAutoSplits, loadRuleEngine } from '../rules/recategorize.js';
-import { firstMatch } from '../rules/matcher.js';
-import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
-import { afterTransactionsBatchInserted, computeCurrentBalance } from '../notifications/hooks.js';
-import { todayLocalIso } from '../../lib/dates.js';
+import type { ImportFormat, ImportResult } from './import-service-types.js';
+import { runImportTransaction } from './run-import-transaction.js';
+import { runPostCommitFanOut } from './post-commit-fan-out.js';
+import { trace } from './import-trace.js';
 
-export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync' | 'camt';
-
-export interface ImportResult {
-  fileImportId: number;
-  format: ImportFormat;
-  accountId: number;
-  totalLines: number;
-  insertedCount: number;
-  dedupSkipped: number;
-  userSkipped: number;
-  insertedIds: number[];
-  // Rows the parser produced but the DB dedup-skipped (a matching
-  // (account_id, dedup_key) already existed). Surfaced in the import
-  // summary so the user can see WHAT was skipped, not just how many.
-  dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }>;
-}
+export type { ImportFormat, ImportResult } from './import-service-types.js';
 
 // Pick the destination account from the filename via the configured patterns.
 // Returns the highest-priority match; null when no pattern matches.
@@ -67,25 +44,6 @@ function parseFile(buf: Buffer, format: ImportFormat): ParsedTransaction[] {
   throw new Error(`parseFile: format ${format} not handled here`);
 }
 
-// Unbuffered progress logger. console.log on Node routes through stdout which
-// is block-buffered when piped (Tauri sidecar) — a stuck transaction can leave
-// its last few logs invisible in the buffer. process.stderr on Node is
-// synchronous when piped, so every line reaches the parent process
-// immediately. Prefixed for grep-ability in the sidecar output.
-function trace(msg: string): void {
-  try {
-    process.stderr.write(`[imports:trace] ${msg}\n`);
-  } catch {
-    // Never let logging failure break an import.
-  }
-}
-
-// PGlite bulk INSERT with hundreds of rows in one shot has been observed to
-// stall in some driver/version combinations. Chunk so no single INSERT
-// carries more than this many rows; kept small enough to be safely under
-// any postgres 16-bit-parameter limit and to keep progress logging useful.
-const INSERT_CHUNK_SIZE = 100;
-
 export async function runImport(opts: {
   filename: string;
   accountId: number;
@@ -108,226 +66,7 @@ export async function runImport(opts: {
   }
   const userSkipped = skipSet.size;
 
-  const result = await db.transaction(async (tx) => {
-    trace('tx: begin');
-    const [fileImport] = await tx
-      .insert(fileImports)
-      .values({
-        userId: opts.userId,
-        filename: opts.filename,
-        accountId: opts.accountId,
-        format: opts.format,
-        totalLines: parsed.length,
-        insertedCount: 0,
-        dedupSkipped: 0,
-      })
-      .returning();
-
-    if (!fileImport) throw new Error('failed to create file_imports row');
-    trace(`tx: fileImport row id=${fileImport.id}`);
-
-    // Auto-heal a common footgun: user creates an account whose opening_date
-    // is today (default) or later, then imports historical transactions. The
-    // list-endpoint balance rollup only sums transactions where
-    // t.date >= a.opening_date, so all the imported rows silently drop out of
-    // currentBalance and the account keeps reporting its opening_balance.
-    // When we detect this case, shift opening_date back to the earliest
-    // imported date so the sum picks them up.
-    //
-    // Guard: only shift when the CURRENT opening_date is today or in the
-    // future — i.e. the account hasn't "happened" yet. An account whose
-    // opening_date is already in the past was deliberately started at a
-    // specific point (with a corresponding opening_balance that reflects
-    // reality on that date); rewriting its date would invalidate that
-    // factual claim.
-    if (parsed.length > 0) {
-      const earliestDate = parsed.reduce(
-        (min, p) => (p.date < min ? p.date : min),
-        parsed[0]!.date,
-      );
-      // Local calendar, not UTC — compared against a DATE column, so a
-      // French user at 22:30 UTC (00:30 local next day) must see the DB's
-      // "tomorrow" too or the guard misfires.
-      const todayIso = todayLocalIso();
-      const [acct] = await tx
-        .select({
-          openingBalance: accounts.openingBalance,
-          openingDate: accounts.openingDate,
-        })
-        .from(accounts)
-        .where(and(eq(accounts.id, opts.accountId), eq(accounts.userId, opts.userId)));
-      if (
-        acct &&
-        acct.openingDate >= todayIso &&
-        earliestDate < acct.openingDate
-      ) {
-        trace(
-          `tx: shifting account.opening_date ${acct.openingDate} → ${earliestDate} ` +
-          `(opening_date was today-or-future, historical import) account=${opts.accountId}`,
-        );
-        await tx
-          .update(accounts)
-          .set({ openingDate: earliestDate })
-          .where(and(eq(accounts.id, opts.accountId), eq(accounts.userId, opts.userId)));
-      }
-    }
-
-    let inserted = 0;
-    let skipped = 0;
-    const insertedIds: number[] = [];
-    const dedupSkippedRows: Array<{ date: string; amount: string; rawLabel: string }> = [];
-
-    // Pre-compute normalization + dedup keys once, JS-side, then chunk the
-    // INSERTs. Per-row was 474 round-trips = 20+s on PGlite; a single 474-row
-    // bulk INSERT hung silently; chunking splits the difference: ~5 INSERTs of
-    // 100 rows each, each with its own trace line so a stuck chunk is
-    // pinpointed by the last visible log.
-    if (parsed.length > 0) {
-      trace(`prep: normalizing + computing dedup keys for ${parsed.length} rows (skipping ${userSkipped})`);
-      const rowValues: Array<{
-        userId: number;
-        accountId: number;
-        date: string;
-        amount: string;
-        rawLabel: string;
-        normalizedLabel: string;
-        memo: string | null;
-        fitid: string | null;
-        dedupKey: string;
-        sourceFileId: number;
-      }> = [];
-      const parsedIndexForRowValue: number[] = [];
-      for (let i = 0; i < parsed.length; i++) {
-        if (skipSet.has(i)) continue;
-        const p = parsed[i]!;
-        const normalizedLabel = normalizeLabel(p.rawLabel);
-        const dedupKey = computeDedupKey({
-          accountId: opts.accountId,
-          date: p.date,
-          amount: p.amount,
-          normalizedLabel,
-          fitid: p.fitid,
-        });
-        rowValues.push({
-          userId: opts.userId,
-          accountId: opts.accountId,
-          date: p.date,
-          amount: p.amount,
-          rawLabel: p.rawLabel,
-          normalizedLabel,
-          memo: p.memo,
-          fitid: p.fitid,
-          dedupKey,
-          sourceFileId: fileImport.id,
-        });
-        parsedIndexForRowValue.push(i);
-      }
-      trace('prep: done');
-
-      const insertedByKey = new Map<string, number>();
-      for (let start = 0; start < rowValues.length; start += INSERT_CHUNK_SIZE) {
-        const chunk = rowValues.slice(start, start + INSERT_CHUNK_SIZE);
-        const tChunkStart = Date.now();
-        trace(`insert: chunk ${start}..${start + chunk.length - 1} (${chunk.length} rows) begin`);
-        const insertedRows = await tx
-          .insert(transactions)
-          .values(chunk)
-          .onConflictDoNothing({
-            target: [transactions.accountId, transactions.dedupKey],
-          })
-          .returning({ id: transactions.id, dedupKey: transactions.dedupKey });
-        for (const r of insertedRows) insertedByKey.set(r.dedupKey, r.id);
-        trace(
-          `insert: chunk ${start}..${start + chunk.length - 1} end ` +
-          `inserted=${insertedRows.length}/${chunk.length} ` +
-          `elapsed=${Date.now() - tChunkStart}ms`,
-        );
-      }
-
-      trace('match: reconciling inserted vs skipped');
-      for (let j = 0; j < rowValues.length; j++) {
-        const i = parsedIndexForRowValue[j]!;
-        const p = parsed[i]!;
-        const key = rowValues[j]!.dedupKey;
-        const id = insertedByKey.get(key);
-        if (id !== undefined) {
-          inserted++;
-          insertedIds.push(id);
-          insertedByKey.delete(key);
-        } else {
-          skipped++;
-          dedupSkippedRows.push({ date: p.date, amount: p.amount, rawLabel: p.rawLabel });
-        }
-      }
-      trace(`match: done inserted=${inserted} skipped=${skipped}`);
-    }
-
-    trace('tx: updating file_imports counts');
-    await tx
-      .update(fileImports)
-      .set({ insertedCount: inserted, dedupSkipped: skipped, userSkipped })
-      .where(eq(fileImports.id, fileImport.id));
-
-    // Apply the rule engine to freshly inserted rows. We do this *inside* the
-    // import transaction so an import either lands fully categorized or not at all.
-    if (insertedIds.length > 0) {
-      trace('tx: loading rule engine');
-      // Pass `tx` explicitly — loadRuleEngine defaults to the top-level `db`
-      // client, which on PGlite would deadlock waiting for the connection
-      // that this very transaction is holding.
-      const { compiled, defaultId } = await loadRuleEngine(opts.userId, tx);
-      trace(`tx: rule engine loaded (${compiled.length} rules, defaultId=${defaultId ?? 'null'})`);
-
-      const freshRows = await tx
-        .select({
-          id: transactions.id,
-          amount: transactions.amount,
-          normalizedLabel: transactions.normalizedLabel,
-          transferGroupId: transactions.transferGroupId,
-        })
-        .from(transactions)
-        .where(inArray(transactions.id, insertedIds));
-
-      const autoBuckets = new Map<number, number[]>();
-      const defaultBucket: number[] = [], splitEmits: Array<{ id: number; amount: number; hit: (typeof compiled)[number] }> = [];
-      for (const row of freshRows) {
-        if (row.transferGroupId) continue;
-        const amount = Number(row.amount);
-        const hit = firstMatch(compiled, row.normalizedLabel, amount);
-        if (hit && hit.splits && hit.splits.length >= 2) splitEmits.push({ id: row.id, amount, hit });
-        else if (hit) {
-          const arr = autoBuckets.get(hit.rule.categoryId) ?? [];
-          arr.push(row.id);
-          autoBuckets.set(hit.rule.categoryId, arr);
-        } else defaultBucket.push(row.id);
-      }
-
-      trace(`tx: applying categories (auto=${autoBuckets.size}, split=${splitEmits.length}, default=${defaultBucket.length})`);
-      // Single UPDATE ... FROM (VALUES ...) replaces the pre-refactor
-      // one-UPDATE-per-distinct-category loop.
-      if (autoBuckets.size > 0) {
-        const parts: ReturnType<typeof sql>[] = [];
-        for (const [categoryId, ids] of autoBuckets) for (const id of ids) parts.push(sql`(${id}::bigint, ${categoryId}::int)`);
-        await tx.execute(sql`UPDATE transactions AS t SET category_id = m.cat_id, category_source = 'auto' FROM (VALUES ${sql.join(parts, sql`, `)}) AS m(id, cat_id) WHERE t.id = m.id`);
-      }
-      if (defaultBucket.length > 0 && defaultId !== null) await tx.update(transactions).set({ categoryId: defaultId, categorySource: 'default' }).where(inArray(transactions.id, defaultBucket));
-      for (const e of splitEmits) await emitAutoSplits(tx, e.id, e.amount, e.hit);
-      trace('tx: categories applied');
-    }
-
-    trace('tx: about to commit');
-    return {
-      fileImportId: fileImport.id,
-      format: opts.format,
-      accountId: opts.accountId,
-      totalLines: parsed.length,
-      insertedCount: inserted,
-      dedupSkipped: skipped,
-      userSkipped,
-      insertedIds,
-      dedupSkippedRows,
-    };
-  });
+  const result = await runImportTransaction(opts, parsed, userSkipped, skipSet);
   trace('tx: committed');
 
   const tCommitted = Date.now();
@@ -337,49 +76,7 @@ export async function runImport(opts: {
     `parse=${tParsed - tStart}ms tx=${tCommitted - tParsed}ms total=${tCommitted - tStart}ms`,
   );
 
-  // Notification triggers (big transaction / low balance / envelope
-  // exceeded) — one batched dispatch per import. `afterTransactionsBatchInserted`
-  // loads prefs once, computes envelopes once per distinct category, and
-  // relies on notification idempotency for per-day / per-month dedup —
-  // replaces the pre-refactor per-row loop that ran a full budget aggregate
-  // per matching category × N rows.
-  if (result.insertedIds.length > 0) {
-    const freshRows = await db
-      .select({
-        id: transactions.id,
-        amount: transactions.amount,
-        rawLabel: transactions.rawLabel,
-        categoryId: transactions.categoryId,
-      })
-      .from(transactions)
-      .where(inArray(transactions.id, result.insertedIds));
-    const newBalance = await computeCurrentBalance(opts.userId, opts.accountId);
-    await afterTransactionsBatchInserted(opts.userId, {
-      accountId: opts.accountId,
-      newBalance,
-      transactions: freshRows.map((row) => ({
-        id: row.id,
-        amount: Number(row.amount),
-        merchant: row.rawLabel,
-        categoryId: row.categoryId,
-      })),
-    });
-  }
-
-  // Recurring-series detection was previously awaited inside the import
-  // transaction — clustering the last 12 months of transactions on PGlite
-  // (single-threaded WASM) can take many seconds on a 500-row import,
-  // during which the /api/imports request never responds and the UI stays
-  // stuck on the preview modal. Kick it off fire-and-forget instead; it
-  // gets its own transaction (runRecurringDetectionStandalone) and users
-  // can also trigger a refresh manually via POST /api/recurring/regenerate.
-  runRecurringDetectionStandalone(opts.userId)
-    .then((r) => {
-      trace(`recurring detection: detected=${r.detected} refreshed=${r.refreshed} elapsed=${Date.now() - tCommitted}ms`);
-    })
-    .catch((err) => {
-      trace(`recurring detection FAILED: ${err instanceof Error ? err.message : String(err)}`);
-    });
+  await runPostCommitFanOut(opts, result.insertedIds, tCommitted);
 
   return result;
 }
