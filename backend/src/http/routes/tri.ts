@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { categories, rules, transactions } from '../../db/schema.js';
+import { categories, rules } from '../../db/schema.js';
 import { userId } from '../plugins/auth.js';
 
 const GroupsQuery = z.object({
@@ -107,52 +107,55 @@ export async function triRoutes(app: FastifyInstance): Promise<void> {
     }
     const catKind = new Map(cats.map((c) => [c.id, c.kind] as const));
 
-    let assigned = 0;
-    let rulesCreated = 0;
+    // Wrap the write path in db.transaction so a partial failure (a DB
+    // constraint hit mid-batch, a lost connection) rolls back cleanly
+    // — the pre-refactor loop left users in a split state with some
+    // groups categorised and others' rules missing. Inside the tx we
+    // batch into ≤ 2 statements: one UPDATE ... FROM (VALUES ...) for
+    // every (label → category) assignment, then one multi-values
+    // INSERT INTO rules when createRules is on. Skip-preserve
+    // semantics stay identical: only rows still marked `default`/`auto`
+    // or uncategorised get overwritten — a manual choice on a sibling
+    // row of the same normalized_label is never touched.
+    return db.transaction(async (tx) => {
+      const valuesSql = sql.join(
+        groups.map((g) => sql`(${g.normalizedLabel}, ${g.categoryId}::int)`),
+        sql`, `,
+      );
+      const updated = await tx.execute<{ id: number }>(sql`
+        UPDATE transactions AS t
+        SET category_id = m.cat_id, category_source = 'manual'
+        FROM (VALUES ${valuesSql}) AS m(nlabel, cat_id)
+        WHERE t.user_id = ${uid}
+          AND t.normalized_label = m.nlabel
+          AND t.transfer_group_id IS NULL
+          AND (t.category_id IS NULL OR t.category_source IN ('default', 'auto'))
+        RETURNING t.id
+      `);
+      const assigned = updated.rows.length;
 
-    for (const g of groups) {
-      // Only touch transactions that are still "to be categorized" — never
-      // overwrite a manual choice the user already made on a sibling row.
-      const result = await db
-        .update(transactions)
-        .set({ categoryId: g.categoryId, categorySource: 'manual' })
-        .where(
-          and(
-            eq(transactions.userId, uid),
-            eq(transactions.normalizedLabel, g.normalizedLabel),
-            isNull(transactions.transferGroupId),
-            or(
-              isNull(transactions.categoryId),
-              eq(transactions.categorySource, 'default'),
-              eq(transactions.categorySource, 'auto'),
-            ),
-          ),
-        )
-        .returning({ id: transactions.id });
-      assigned += result.length;
-
+      let rulesCreated = 0;
       if (createRules) {
-        const kind = catKind.get(g.categoryId);
-        const signConstraint =
-          kind === 'expense'
-            ? 'negative'
-            : kind === 'income'
-              ? 'positive'
-              : 'any';
-
-        await db.insert(rules).values({
-          userId: uid,
-          categoryId: g.categoryId,
-          keyword: g.normalizedLabel,
-          signConstraint,
-          matchMode: 'word',
-          priority: 100,
-          enabled: true,
+        const ruleRows = groups.map((g) => {
+          const kind = catKind.get(g.categoryId);
+          const signConstraint = kind === 'expense' ? 'negative' as const
+            : kind === 'income' ? 'positive' as const
+            : 'any' as const;
+          return {
+            userId: uid,
+            categoryId: g.categoryId,
+            keyword: g.normalizedLabel,
+            signConstraint,
+            matchMode: 'word' as const,
+            priority: 100,
+            enabled: true,
+          };
         });
-        rulesCreated++;
+        await tx.insert(rules).values(ruleRows);
+        rulesCreated = ruleRows.length;
       }
-    }
 
-    return { assigned, rulesCreated };
+      return { assigned, rulesCreated };
+    });
   });
 }
