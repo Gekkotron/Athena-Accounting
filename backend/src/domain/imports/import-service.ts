@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import {
   accountFilenamePatterns,
@@ -300,12 +300,14 @@ export async function runImport(opts: {
       }
 
       trace(`tx: applying categories (auto=${autoBuckets.size}, split=${splitEmits.length}, default=${defaultBucket.length})`);
-      for (const [categoryId, ids] of autoBuckets) {
-        await tx.update(transactions).set({ categoryId, categorySource: 'auto' }).where(inArray(transactions.id, ids));
+      // Single UPDATE ... FROM (VALUES ...) replaces the pre-refactor
+      // one-UPDATE-per-distinct-category loop.
+      if (autoBuckets.size > 0) {
+        const parts: ReturnType<typeof sql>[] = [];
+        for (const [categoryId, ids] of autoBuckets) for (const id of ids) parts.push(sql`(${id}::bigint, ${categoryId}::int)`);
+        await tx.execute(sql`UPDATE transactions AS t SET category_id = m.cat_id, category_source = 'auto' FROM (VALUES ${sql.join(parts, sql`, `)}) AS m(id, cat_id) WHERE t.id = m.id`);
       }
-      if (defaultBucket.length > 0 && defaultId !== null) {
-        await tx.update(transactions).set({ categoryId: defaultId, categorySource: 'default' }).where(inArray(transactions.id, defaultBucket));
-      }
+      if (defaultBucket.length > 0 && defaultId !== null) await tx.update(transactions).set({ categoryId: defaultId, categorySource: 'default' }).where(inArray(transactions.id, defaultBucket));
       for (const e of splitEmits) await emitAutoSplits(tx, e.id, e.amount, e.hit);
       trace('tx: categories applied');
     }

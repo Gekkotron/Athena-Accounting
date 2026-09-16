@@ -21,13 +21,16 @@ export async function restoreFileImports(
   accountIdByName: Map<string, number>,
 ): Promise<{ map: Map<string, number>; count: number }> {
   const map = new Map<string, number>();
-  let count = 0;
+  const resolved: Array<{
+    input: NonNullable<BackupDump['fileImports']>[number];
+    values: typeof fileImports.$inferInsert;
+  }> = [];
   for (const f of dumpFileImports) {
     const accId = resolveNameToId(f.account, accountIdByName);
     if (accId === null) continue;
-    const [inserted] = await tx
-      .insert(fileImports)
-      .values({
+    resolved.push({
+      input: f,
+      values: {
         userId: uid,
         accountId: accId,
         filename: f.filename,
@@ -39,15 +42,29 @@ export async function restoreFileImports(
         userSkipped: f.userSkipped,
         statedBalance: f.statedBalance ?? null,
         statedBalanceDate: f.statedBalanceDate ?? null,
-      })
+      },
+    });
+  }
+  if (resolved.length === 0) return { map, count: 0 };
+  // Chunked bulk INSERT — RETURNING preserves VALUES order, so we can zip
+  // returned ids back onto the input list to rebuild the natural-key map.
+  for (let i = 0; i < resolved.length; i += RESTORE_TX_CHUNK) {
+    const slice = resolved.slice(i, i + RESTORE_TX_CHUNK);
+    const returned = await tx
+      .insert(fileImports)
+      .values(slice.map((r) => r.values))
       .returning({ id: fileImports.id });
-    if (inserted) {
-      map.set(fileImportKey(f.filename, f.importedAt), inserted.id);
-      count++;
+    for (let j = 0; j < returned.length; j++) {
+      map.set(fileImportKey(slice[j]!.input.filename, slice[j]!.input.importedAt), returned[j]!.id);
     }
   }
-  return { map, count };
+  return { map, count: resolved.length };
 }
+
+// Chunk size for bulk INSERT — matches the pattern already used by
+// runImport. Kept at 500 so a single VALUES clause stays well under any
+// Postgres parameter-count limit even for wide rows.
+const RESTORE_TX_CHUNK = 500;
 
 export async function restoreTransactions(
   tx: Tx,
@@ -57,47 +74,81 @@ export async function restoreTransactions(
   cats: CategoryMaps,
   fileImportIdByKey: Map<string, number>,
 ): Promise<number> {
-  let count = 0;
+  // Pre-resolve every row's foreign keys once and drop any whose account
+  // did not resolve (matches the pre-refactor per-row skip). This gives us
+  // a flat array we can chunk-INSERT in constant round-trips.
+  const rows: Array<{
+    input: BackupDump['transactions'][number];
+    values: typeof transactions.$inferInsert;
+  }> = [];
   for (const t of dumpTransactions) {
     const accId = resolveNameToId(t.account, accountIdByName);
     if (accId === null) continue;
     const catId = resolveCategoryRef(t.category, t.categoryParent, cats.categoryIdByPath, cats.categoryIdsByName);
     const srcId = resolveNameToId(t.sourceFileKey, fileImportIdByKey);
-    const [insertedTx] = await tx.insert(transactions).values({
-      userId: uid,
-      accountId: accId,
-      date: t.date,
-      amount: t.amount,
-      rawLabel: t.rawLabel,
-      normalizedLabel: t.normalizedLabel,
-      memo: t.memo ?? null,
-      notes: t.notes ?? null,
-      fitid: t.fitid ?? null,
-      dedupKey: t.dedupKey,
-      categoryId: catId,
-      categorySource: t.categorySource,
-      transferGroupId: t.transferGroupId ?? null,
-      sourceFileId: srcId,
-      // Backup restores represent a known-good dataset the user has already
-      // lived with — mark every imported row as "not a duplicate" so the
-      // Possibles doublons panel starts empty after restore. Fresh imports
-      // (PDF / OFX / CSV) made later will still surface new suspect groups.
-      notDuplicate: true,
-      lockYears: t.lockYears ?? null,
-    }).returning({ id: transactions.id });
-    count++;
+    rows.push({
+      input: t,
+      values: {
+        userId: uid,
+        accountId: accId,
+        date: t.date,
+        amount: t.amount,
+        rawLabel: t.rawLabel,
+        normalizedLabel: t.normalizedLabel,
+        memo: t.memo ?? null,
+        notes: t.notes ?? null,
+        fitid: t.fitid ?? null,
+        dedupKey: t.dedupKey,
+        categoryId: catId,
+        categorySource: t.categorySource,
+        transferGroupId: t.transferGroupId ?? null,
+        sourceFileId: srcId,
+        // Backup restores represent a known-good dataset the user has already
+        // lived with — mark every imported row as "not a duplicate" so the
+        // Possibles doublons panel starts empty after restore. Fresh imports
+        // (PDF / OFX / CSV) made later will still surface new suspect groups.
+        notDuplicate: true,
+        lockYears: t.lockYears ?? null,
+      },
+    });
+  }
+  if (rows.length === 0) return 0;
 
-    if (insertedTx && t.splits && t.splits.length > 0) {
-      const rows = t.splits.map((s) => ({
-        transactionId: insertedTx.id,
+  // Chunked bulk INSERT — RETURNING id preserves VALUES order in Postgres
+  // (and PGlite), so we can zip inserted ids back onto their inputs to
+  // build the (input → new tx id) map used by the splits fan-out below.
+  const insertedIds: number[] = [];
+  for (let i = 0; i < rows.length; i += RESTORE_TX_CHUNK) {
+    const slice = rows.slice(i, i + RESTORE_TX_CHUNK);
+    const returned = await tx
+      .insert(transactions)
+      .values(slice.map((r) => r.values))
+      .returning({ id: transactions.id });
+    for (const r of returned) insertedIds.push(r.id);
+  }
+
+  // Bulk INSERT every split row from every restored parent. Same
+  // chunking so the wire payload stays bounded on very large libraries.
+  const splitRows: Array<typeof transactionSplits.$inferInsert> = [];
+  for (let i = 0; i < rows.length; i++) {
+    const input = rows[i]!.input;
+    const parentId = insertedIds[i]!;
+    if (!input.splits || input.splits.length === 0) continue;
+    for (const s of input.splits) {
+      splitRows.push({
+        transactionId: parentId,
         categoryId: resolveCategoryRef(s.category, s.categoryParent, cats.categoryIdByPath, cats.categoryIdsByName),
         amount: s.amount,
         memo: s.memo ?? null,
-      }));
-      await tx.insert(transactionSplits).values(rows);
+      });
     }
   }
-  return count;
+  for (let i = 0; i < splitRows.length; i += RESTORE_TX_CHUNK) {
+    const slice = splitRows.slice(i, i + RESTORE_TX_CHUNK);
+    await tx.insert(transactionSplits).values(slice);
+  }
+
+  return rows.length;
 }
 
 export type GoalCounters = {
@@ -119,40 +170,53 @@ export async function restoreSavingsGoalsAndEvents(
   accountIdByName: Map<string, number>,
 ): Promise<GoalCounters> {
   const goalIdByKey = new Map<string, number>();
-  let goalsInserted = 0;
   let goalsSkipped = 0;
+  const resolvedGoals: Array<{
+    input: NonNullable<BackupDump['savingsGoals']>[number];
+    values: typeof savingsGoals.$inferInsert;
+  }> = [];
   for (const g of dumpGoals) {
     const accId = resolveNameToId(g.account, accountIdByName);
     if (accId === null) { goalsSkipped++; continue; }
-    const [inserted] = await tx.insert(savingsGoals).values({
-      userId: uid,
-      accountId: accId,
-      name: g.name,
-      targetAmount: g.targetAmount,
-      targetDate: g.targetDate ?? null,
-      color: g.color ?? null,
-      closedAt: g.closedAt ? new Date(g.closedAt) : null,
-    }).returning({ id: savingsGoals.id });
-    if (inserted) {
-      goalIdByKey.set(`${g.account}::${g.name}`, inserted.id);
-      goalsInserted++;
+    resolvedGoals.push({
+      input: g,
+      values: {
+        userId: uid,
+        accountId: accId,
+        name: g.name,
+        targetAmount: g.targetAmount,
+        targetDate: g.targetDate ?? null,
+        color: g.color ?? null,
+        closedAt: g.closedAt ? new Date(g.closedAt) : null,
+      },
+    });
+  }
+  let goalsInserted = 0;
+  for (let i = 0; i < resolvedGoals.length; i += RESTORE_TX_CHUNK) {
+    const slice = resolvedGoals.slice(i, i + RESTORE_TX_CHUNK);
+    const returned = await tx.insert(savingsGoals).values(slice.map((r) => r.values)).returning({ id: savingsGoals.id });
+    for (let j = 0; j < returned.length; j++) {
+      goalIdByKey.set(`${slice[j]!.input.account}::${slice[j]!.input.name}`, returned[j]!.id);
     }
+    goalsInserted += returned.length;
   }
 
-  let eventsInserted = 0;
+  const eventRows: Array<typeof savingsGoalEvents.$inferInsert> = [];
   let eventsSkipped = 0;
   for (const e of dumpEvents) {
     const goalId = goalIdByKey.get(`${e.account}::${e.goal}`);
     if (goalId === undefined) { eventsSkipped++; continue; }
-    await tx.insert(savingsGoalEvents).values({
+    eventRows.push({
       userId: uid,
       goalId,
       amount: e.amount,
       eventDate: e.eventDate,
       note: e.note ?? null,
     });
-    eventsInserted++;
+  }
+  for (let i = 0; i < eventRows.length; i += RESTORE_TX_CHUNK) {
+    await tx.insert(savingsGoalEvents).values(eventRows.slice(i, i + RESTORE_TX_CHUNK));
   }
 
-  return { goalsInserted, goalsSkipped, eventsInserted, eventsSkipped };
+  return { goalsInserted, goalsSkipped, eventsInserted: eventRows.length, eventsSkipped };
 }

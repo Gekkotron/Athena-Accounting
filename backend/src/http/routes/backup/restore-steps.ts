@@ -67,10 +67,12 @@ export async function restoreCategoryTree(
   const rootRows = dumpCategories.filter((c) => !c.parent);
   const childRows = dumpCategories.filter((c) => !!c.parent);
 
-  for (const c of rootRows) {
-    const [inserted] = await tx
+  // Roots: one bulk INSERT. RETURNING order matches VALUES order in
+  // Postgres + PGlite, so we can zip returned ids back onto the input.
+  if (rootRows.length > 0) {
+    const returned = await tx
       .insert(categories)
-      .values({
+      .values(rootRows.map((c) => ({
         userId: uid,
         name: c.name,
         kind: normalizeCategoryKind(c.kind),
@@ -78,27 +80,29 @@ export async function restoreCategoryTree(
         parentId: null,
         isDefault: c.isDefault,
         isInternalTransfer: c.isInternalTransfer ?? false,
-      })
+      })))
       .returning({ id: categories.id });
-    if (inserted) {
-      categoryIdByPath.set(`::${c.name}`, inserted.id);
+    for (let i = 0; i < returned.length; i++) {
+      const c = rootRows[i]!;
+      const id = returned[i]!.id;
+      categoryIdByPath.set(`::${c.name}`, id);
       const arr = categoryIdsByName.get(c.name) ?? [];
-      arr.push(inserted.id);
+      arr.push(id);
       categoryIdsByName.set(c.name, arr);
-      if (c.isDefault) defaultId = inserted.id;
+      if (c.isDefault) defaultId = id;
     }
   }
 
-  for (const c of childRows) {
-    const parentId = categoryIdByPath.get(`::${c.parent!}`);
-    if (parentId == null) {
-      // Parent didn't restore (self-orphan or missing) — skip this child;
-      // its downstream refs will fall through to the name-only fallback.
-      continue;
-    }
-    const [inserted] = await tx
+  // Children: filter out orphans (parent didn't restore), then one bulk
+  // INSERT. Parent ids come from the freshly-populated map, so this MUST
+  // run after the roots pass commits its RETURNING.
+  const resolvableChildren = childRows
+    .map((c) => ({ c, parentId: categoryIdByPath.get(`::${c.parent!}`) ?? null }))
+    .filter((r): r is { c: typeof childRows[number]; parentId: number } => r.parentId !== null);
+  if (resolvableChildren.length > 0) {
+    const returned = await tx
       .insert(categories)
-      .values({
+      .values(resolvableChildren.map(({ c, parentId }) => ({
         userId: uid,
         name: c.name,
         kind: normalizeCategoryKind(c.kind),
@@ -106,14 +110,16 @@ export async function restoreCategoryTree(
         parentId,
         isDefault: c.isDefault,
         isInternalTransfer: c.isInternalTransfer ?? false,
-      })
+      })))
       .returning({ id: categories.id });
-    if (inserted) {
-      categoryIdByPath.set(`${c.parent!}::${c.name}`, inserted.id);
+    for (let i = 0; i < returned.length; i++) {
+      const { c } = resolvableChildren[i]!;
+      const id = returned[i]!.id;
+      categoryIdByPath.set(`${c.parent!}::${c.name}`, id);
       const arr = categoryIdsByName.get(c.name) ?? [];
-      arr.push(inserted.id);
+      arr.push(id);
       categoryIdsByName.set(c.name, arr);
-      if (c.isDefault) defaultId = inserted.id;
+      if (c.isDefault) defaultId = id;
     }
   }
 
@@ -138,15 +144,14 @@ export async function restoreFilenamePatterns(
   patterns: BackupDump['accountFilenamePatterns'],
   accountIdByName: Map<string, number>,
 ): Promise<void> {
+  const rows: Array<typeof accountFilenamePatterns.$inferInsert> = [];
   for (const p of patterns) {
     const accId = resolveNameToId(p.account, accountIdByName);
     if (accId === null) continue;
-    await tx.insert(accountFilenamePatterns).values({
-      userId: uid,
-      pattern: p.pattern,
-      accountId: accId,
-      priority: p.priority,
-    });
+    rows.push({ userId: uid, pattern: p.pattern, accountId: accId, priority: p.priority });
+  }
+  if (rows.length > 0) {
+    await tx.insert(accountFilenamePatterns).values(rows);
   }
 }
 
@@ -156,12 +161,16 @@ export async function restoreRules(
   dumpRules: BackupDump['rules'],
   cats: CategoryMaps,
 ): Promise<{ inserted: number; skippedSplits: number }> {
-  let inserted = 0;
   let skippedSplits = 0;
+  // Pre-resolve every rule's category + splits so the write path is a
+  // pair of bulk INSERTs regardless of rule count.
+  const resolved: Array<{
+    values: typeof rules.$inferInsert;
+    splits: Array<{ categoryId: number; percent: number }> | null;
+  }> = [];
   for (const r of dumpRules) {
     const catId = resolveCategoryRef(r.category, r.categoryParent, cats.categoryIdByPath, cats.categoryIdsByName);
     if (catId === null) continue;
-
     // Split-mode rule: resolve every split's category first. If any one
     // can't be resolved, the whole rule is dropped — dropping only some
     // splits would break the sum=100 invariant.
@@ -179,29 +188,37 @@ export async function restoreRules(
       if (sum !== 100) { skippedSplits++; continue; }
       resolvedSplits = acc;
     }
+    resolved.push({
+      values: {
+        userId: uid,
+        keyword: r.keyword,
+        categoryId: catId,
+        signConstraint: r.signConstraint,
+        matchMode: r.matchMode,
+        priority: r.priority,
+        enabled: r.enabled,
+      },
+      splits: resolvedSplits,
+    });
+  }
+  if (resolved.length === 0) return { inserted: 0, skippedSplits };
 
-    const [ruleRow] = await tx.insert(rules).values({
-      userId: uid,
-      keyword: r.keyword,
-      categoryId: catId,
-      signConstraint: r.signConstraint,
-      matchMode: r.matchMode,
-      priority: r.priority,
-      enabled: r.enabled,
-    }).returning({ id: rules.id });
-    inserted++;
-    if (resolvedSplits && ruleRow) {
-      await tx.insert(ruleSplits).values(
-        resolvedSplits.map((s, i) => ({
-          ruleId: ruleRow.id,
-          categoryId: s.categoryId,
-          percent: s.percent,
-          position: i,
-        })),
-      );
+  // Bulk INSERT of rules, then bulk INSERT of every split row keyed onto
+  // the freshly-returned rule ids. RETURNING order matches VALUES order.
+  const returned = await tx.insert(rules).values(resolved.map((r) => r.values)).returning({ id: rules.id });
+  const splitRows: Array<typeof ruleSplits.$inferInsert> = [];
+  for (let i = 0; i < returned.length; i++) {
+    const splits = resolved[i]!.splits;
+    if (!splits) continue;
+    const ruleId = returned[i]!.id;
+    for (let j = 0; j < splits.length; j++) {
+      splitRows.push({ ruleId, categoryId: splits[j]!.categoryId, percent: splits[j]!.percent, position: j });
     }
   }
-  return { inserted, skippedSplits };
+  if (splitRows.length > 0) {
+    await tx.insert(ruleSplits).values(splitRows);
+  }
+  return { inserted: resolved.length, skippedSplits };
 }
 
 export async function restoreBalanceCheckpoints(
@@ -210,20 +227,22 @@ export async function restoreBalanceCheckpoints(
   dumpCheckpoints: NonNullable<BackupDump['balanceCheckpoints']>,
   accountIdByName: Map<string, number>,
 ): Promise<number> {
-  let inserted = 0;
+  const rows: Array<typeof balanceCheckpoints.$inferInsert> = [];
   for (const c of dumpCheckpoints) {
     const accId = resolveNameToId(c.account, accountIdByName);
     if (accId === null) continue;
-    await tx.insert(balanceCheckpoints).values({
+    rows.push({
       userId: uid,
       accountId: accId,
       checkpointDate: c.checkpointDate,
       expectedAmount: c.expectedAmount,
       note: c.note ?? null,
     });
-    inserted++;
   }
-  return inserted;
+  if (rows.length > 0) {
+    await tx.insert(balanceCheckpoints).values(rows);
+  }
+  return rows.length;
 }
 
 export async function restoreBudgets(
@@ -234,7 +253,7 @@ export async function restoreBudgets(
   cats: CategoryMaps,
   log: FastifyBaseLogger,
 ): Promise<number> {
-  let inserted = 0;
+  const rows: Array<typeof categoryBudgets.$inferInsert> = [];
   for (const b of dumpBudgets) {
     const catId = resolveCategoryRef(b.category, b.categoryParent, cats.categoryIdByPath, cats.categoryIdsByName);
     if (catId === null) continue;
@@ -251,7 +270,7 @@ export async function restoreBudgets(
       );
       continue;
     }
-    await tx.insert(categoryBudgets).values({
+    rows.push({
       userId: uid,
       categoryId: catId,
       monthlyLimit: b.monthlyLimit,
@@ -259,7 +278,9 @@ export async function restoreBudgets(
       period: b.period ?? 'monthly',
       accountId: budgetAccountId,
     });
-    inserted++;
   }
-  return inserted;
+  if (rows.length > 0) {
+    await tx.insert(categoryBudgets).values(rows);
+  }
+  return rows.length;
 }
