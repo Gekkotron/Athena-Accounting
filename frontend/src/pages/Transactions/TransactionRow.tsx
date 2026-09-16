@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Account, Category, Transaction, BalanceCheckpoint } from '../../api/types';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
@@ -30,7 +30,12 @@ export type TransactionRowProps = {
   cursor?: boolean;
 };
 
-export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProps>(
+// React.memo skips the row when every prop is reference-equal. That relies
+// on the Transactions page hoisting handlers with useCallback and map lookups
+// (accountById, checkpointByDate) into useMemo — a keystroke in the search
+// box otherwise rebuilds them and would defeat the memo. See the sibling
+// TransactionRow.memo test for the invariant.
+export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRowProps>(
   function TransactionRow(
     {
       tx,
@@ -266,4 +271,4 @@ export const TransactionRow = forwardRef<HTMLTableRowElement, TransactionRowProp
     </>
   );
   },
-);
+));

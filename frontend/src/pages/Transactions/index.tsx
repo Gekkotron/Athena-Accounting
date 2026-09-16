@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -76,7 +76,7 @@ export function Transactions() {
 
   // Whenever the search input changes, route it to either `amount` or
   // `search`. We never send both at once.
-  const onSearchChange = (value: string) => {
+  const onSearchChange = useCallback((value: string) => {
     setSearchInput(value);
     setOffset(0);
     const amt = parseAmountQuery(value);
@@ -85,7 +85,7 @@ export function Transactions() {
     } else {
       setFilters((f) => ({ ...f, amount: undefined, search: value || undefined }));
     }
-  };
+  }, []);
 
   const accountsQ = useAccounts();
   const categoriesQ = useCategories();
@@ -143,7 +143,10 @@ export function Transactions() {
   );
   const total = txQ.data?.pagination.total ?? 0;
 
-  const accountById = new Map(accounts.map((a) => [a.id, a] as const));
+  const accountById = useMemo(
+    () => new Map(accounts.map((a) => [a.id, a] as const)),
+    [accounts],
+  );
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { cursorId } = useTransactionShortcuts({
@@ -165,15 +168,16 @@ export function Transactions() {
     setPendingCheckpointDate,
   });
 
-  // Row-action handlers shared by the desktop table AND the mobile view.
-  // Hoisted so both branches reference the same stable callbacks instead
-  // of allocating equivalent arrows in JSX.
-  const onUpdateCategory = (id: number, patch: { categoryId: number | null }) =>
-    updateCategory.mutate({ id, ...patch });
-  const onUpdateNotes = (id: number, patch: { notes: string | null }) =>
-    updateNotes.mutate({ id, ...patch });
-  const onEditTx = (tx: Transaction) => setModalTx(tx);
-  const onDeleteTx = (tx: Transaction) => { setDeleteError(null); setDeletingTx(tx); };
+  // Row-action handlers — useCallback so React.memo'd TransactionRow can
+  // shallow-bail on parent re-renders (a keystroke in the search box would
+  // otherwise re-render every visible row).
+  const onUpdateCategory = useCallback((id: number, patch: { categoryId: number | null }) => updateCategory.mutate({ id, ...patch }), [updateCategory]);
+  const onUpdateNotes = useCallback((id: number, patch: { notes: string | null }) => updateNotes.mutate({ id, ...patch }), [updateNotes]);
+  const onEditTx = useCallback((tx: Transaction) => setModalTx(tx), []);
+  const onDeleteTx = useCallback((tx: Transaction) => { setDeleteError(null); setDeletingTx(tx); }, []);
+  const onToggleSelect = useCallback((id: number, checked: boolean) => setSelectedIds((s) => toggleInSet(s, id, checked)), []);
+  const onToggleSelectAll = useCallback((checked: boolean) => setSelectedIds((s) => toggleAllInSet(s, visibleTxs.map((tx) => tx.id), checked)), [visibleTxs]);
+  const onToggleExpanded = useCallback((id: number) => setExpandedIds((s) => toggleInSet(s, id, !s.has(id))), []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -267,14 +271,12 @@ export function Transactions() {
           setFilters={setFilters}
           setOffset={setOffset}
           selectedIds={selectedIds}
-          onToggleSelect={(id, checked) => setSelectedIds((s) => toggleInSet(s, id, checked))}
-          onToggleSelectAll={(checked) =>
-            setSelectedIds((s) => toggleAllInSet(s, visibleTxs.map((tx) => tx.id), checked))
-          }
+          onToggleSelect={onToggleSelect}
+          onToggleSelectAll={onToggleSelectAll}
           onUpdateCategory={onUpdateCategory}
           onUpdateNotes={onUpdateNotes}
           expandedIds={expandedIds}
-          onToggleExpanded={(id) => setExpandedIds((s) => toggleInSet(s, id, !s.has(id)))}
+          onToggleExpanded={onToggleExpanded}
           onEdit={onEditTx}
           onDelete={onDeleteTx}
           firstRowRef={rowAnchor}
