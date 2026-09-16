@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, lte, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { accounts, fileImports, pdfImportDrafts, transactions } from '../../db/schema.js';
+import { fileImports, pdfImportDrafts } from '../../db/schema.js';
 import {
   inferFormat,
   resolveAccountFromFilename,
@@ -15,33 +16,39 @@ import { flushSnapshots } from '../../db/snapshotScheduler.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
 
-// Sum of opening_balance + every transaction up to and including `asOf`.
-// Returns a "14.2"-style string so the API surface stays consistent with
-// how Drizzle serializes numeric(14,2) columns elsewhere.
-async function computedBalanceAt(accountId: number, asOf: string): Promise<string> {
-  const [row] = await db
-    .select({
-      opening: accounts.openingBalance,
-      sum: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`.as('sum'),
-    })
-    .from(accounts)
-    .leftJoin(
-      transactions,
-      and(eq(transactions.accountId, accounts.id), lte(transactions.date, asOf)),
-    )
-    .where(eq(accounts.id, accountId))
-    .groupBy(accounts.openingBalance);
-  if (!row) return '0.00';
-  return (Number(row.opening) + Number(row.sum)).toFixed(2);
-}
-
-async function enrichImport(row: typeof fileImports.$inferSelect) {
-  if (!row.statedBalance || !row.statedBalanceDate) {
-    return { ...row, computedBalance: null as string | null, delta: null as string | null };
-  }
-  const computed = await computedBalanceAt(row.accountId, row.statedBalanceDate);
-  const delta = (Number(row.statedBalance) - Number(computed)).toFixed(2);
-  return { ...row, computedBalance: computed, delta };
+// Enriched-import select: one query, one round-trip. Hydrates
+// `computedBalance` per row via a correlated subquery — replaces the
+// pre-refactor per-row `Promise.all(rows.map(enrichImport))` fan-out
+// that serialised behind PGlite's single WASM connection and blew
+// request latency on users with many imports. The scalar subquery
+// returns NULL when the row has no statedBalance / statedBalanceDate
+// (reconciliation not set); JS then folds `delta` from the same
+// values already on the wire.
+async function selectEnrichedImports(where: SQL, order: 'list' | 'single') {
+  const computedSubquery = sql<string | null>`(
+    SELECT ((a.opening_balance) + COALESCE(
+      (SELECT SUM(t.amount) FROM transactions AS t
+        WHERE t.account_id = a.id AND t.date <= ${fileImports.statedBalanceDate}), 0
+    ))::numeric(14,2)
+    FROM accounts AS a
+    WHERE a.id = ${fileImports.accountId}
+      AND ${fileImports.statedBalance} IS NOT NULL
+      AND ${fileImports.statedBalanceDate} IS NOT NULL
+  )`;
+  const query = db
+    .select({ fi: fileImports, computed: computedSubquery })
+    .from(fileImports)
+    .where(where);
+  const rows = order === 'list'
+    ? await query.orderBy(desc(fileImports.importedAt)).limit(100)
+    : await query.limit(1);
+  return rows.map(({ fi, computed }) => {
+    if (computed == null || fi.statedBalance == null) {
+      return { ...fi, computedBalance: null as string | null, delta: null as string | null };
+    }
+    const delta = (Number(fi.statedBalance) - Number(computed)).toFixed(2);
+    return { ...fi, computedBalance: computed, delta };
+  });
 }
 
 export async function importsRoutes(app: FastifyInstance): Promise<void> {
@@ -215,26 +222,20 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/api/imports', async (req) => {
     const uid = userId(req);
-    const rows = await db
-      .select()
-      .from(fileImports)
-      .where(eq(fileImports.userId, uid))
-      .orderBy(desc(fileImports.importedAt))
-      .limit(100);
-    const enriched = await Promise.all(rows.map(enrichImport));
-    return { imports: enriched };
+    const imports = await selectEnrichedImports(eq(fileImports.userId, uid), 'list');
+    return { imports };
   });
 
   app.get('/api/imports/:id', async (req, reply) => {
     const uid = userId(req);
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
-    const [row] = await db
-      .select()
-      .from(fileImports)
-      .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)));
+    const [row] = await selectEnrichedImports(
+      and(eq(fileImports.id, id), eq(fileImports.userId, uid))!,
+      'single',
+    );
     if (!row) return reply.code(404).send({ error: 'not found' });
-    return { fileImport: await enrichImport(row) };
+    return { fileImport: row };
   });
 
   app.get('/api/imports/pdf/drafts/:id', async (req, reply) => {
@@ -310,12 +311,16 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
         updates.statedBalanceDate = body.statedBalanceDate;
       }
     }
-    const [row] = await db
+    const [updated] = await db
       .update(fileImports)
       .set(updates)
       .where(and(eq(fileImports.id, id), eq(fileImports.userId, uid)))
-      .returning();
-    if (!row) return reply.code(404).send({ error: 'not found' });
-    return { fileImport: await enrichImport(row) };
+      .returning({ id: fileImports.id });
+    if (!updated) return reply.code(404).send({ error: 'not found' });
+    const [row] = await selectEnrichedImports(
+      and(eq(fileImports.id, id), eq(fileImports.userId, uid))!,
+      'single',
+    );
+    return { fileImport: row };
   });
 }

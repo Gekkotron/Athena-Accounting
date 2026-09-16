@@ -107,6 +107,65 @@ describe.skipIf(!RUN)('/api/imports', () => {
     expect(res.json().imports).toEqual([]);
   });
 
+  it('GET /api/imports hydrates computedBalance + delta per row for a multi-import fixture', async () => {
+    // Reconciliation math regression guard for the CTE-fold refactor.
+    // Uses a fresh account with openingBalance=100 so the shared test
+    // account keeps its default of 0 for the sibling PATCH-enriches test.
+    // Three imports on the fresh account:
+    //   - fi1: statedBalance 30.00 as of 2026-01-15 (opening + tx1 = 100 - 40 = 60 → delta -30)
+    //   - fi2: statedBalance 25.00 as of 2026-02-15 (opening + tx1 + tx2 = 100 - 40 + 20 = 80 → delta -55)
+    //   - fi3: no reconciliation set → computedBalance and delta both null
+    const { db } = await import('../src/db/client.js');
+    const { accounts, fileImports, transactions } = await import('../src/db/schema.js');
+    const uid = await getUid();
+    const [freshAcc] = await db.insert(accounts).values({
+      userId: uid, name: 'Multi-import fixture', type: 'checking',
+      openingBalance: '100.00', openingDate: '2025-12-31',
+    }).returning();
+    const freshAccId = freshAcc!.id;
+    await db.insert(transactions).values([
+      { userId: uid, accountId: freshAccId, date: '2026-01-10', amount: '-40.00',
+        rawLabel: 'tx1', normalizedLabel: 'tx1', dedupKey: 'multi-1', categorySource: 'auto' },
+      { userId: uid, accountId: freshAccId, date: '2026-02-05', amount: '20.00',
+        rawLabel: 'tx2', normalizedLabel: 'tx2', dedupKey: 'multi-2', categorySource: 'auto' },
+    ]);
+    await db.insert(fileImports).values([
+      { userId: uid, accountId: freshAccId, filename: 'fi1.ofx', format: 'ofx',
+        importedAt: new Date('2026-01-15T10:00:00Z'),
+        totalLines: 1, insertedCount: 1, dedupSkipped: 0,
+        statedBalance: '30.00', statedBalanceDate: '2026-01-15' },
+      { userId: uid, accountId: freshAccId, filename: 'fi2.ofx', format: 'ofx',
+        importedAt: new Date('2026-02-15T10:00:00Z'),
+        totalLines: 1, insertedCount: 1, dedupSkipped: 0,
+        statedBalance: '25.00', statedBalanceDate: '2026-02-15' },
+      { userId: uid, accountId: freshAccId, filename: 'fi3.ofx', format: 'ofx',
+        importedAt: new Date('2026-03-01T10:00:00Z'),
+        totalLines: 0, insertedCount: 0, dedupSkipped: 0 },
+    ]);
+
+    const res = await app.inject({ method: 'GET', url: '/api/imports', headers: { cookie } });
+    expect(res.statusCode).toBe(200);
+    const rows = res.json().imports as Array<{
+      filename: string; statedBalance: string | null; statedBalanceDate: string | null;
+      computedBalance: string | null; delta: string | null;
+    }>;
+    const byName = new Map(rows.map((r) => [r.filename, r]));
+    expect(byName.get('fi1.ofx')).toMatchObject({
+      statedBalance: '30.00', statedBalanceDate: '2026-01-15',
+      computedBalance: '60.00', delta: '-30.00',
+    });
+    expect(byName.get('fi2.ofx')).toMatchObject({
+      statedBalance: '25.00', statedBalanceDate: '2026-02-15',
+      computedBalance: '80.00', delta: '-55.00',
+    });
+    expect(byName.get('fi3.ofx')).toMatchObject({
+      statedBalance: null, statedBalanceDate: null,
+      computedBalance: null, delta: null,
+    });
+    // Ordering — most recent importedAt first (matches the existing route contract).
+    expect(rows.map((r) => r.filename)).toEqual(['fi3.ofx', 'fi2.ofx', 'fi1.ofx']);
+  });
+
   it('GET /api/imports/:id rejects a non-integer id (400)', async () => {
     const res = await app.inject({
       method: 'GET', url: '/api/imports/not-a-number',
