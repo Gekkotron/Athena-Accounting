@@ -4,6 +4,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../../api/mcp';
 import { SettingsSecurity } from '../SettingsSecurity';
 import { SettingsLock } from '../SettingsLock';
+import { TotpSection } from './totp/TotpSection';
 
 // The MCP token is an app-wide access credential, so it lives in the
 // security tab next to the password + lock forms instead of a standalone
@@ -84,6 +85,7 @@ export function SettingsSecurityPage(): JSX.Element {
       <div className="surface p-6 flex flex-col gap-6">
         <SettingsSecurity />
         <SettingsLock />
+        <TotpSection />
         <McpAccessSection />
       </div>
     </div>

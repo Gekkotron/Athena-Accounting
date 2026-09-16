@@ -159,6 +159,104 @@ describe('Login', () => {
     expect(await screen.findByText(/ne correspondent pas/i)).toBeInTheDocument();
   });
 
+  it('advances to the TOTP step when /api/auth/login returns requiresTotp:true', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/onboarding/status') return { needsOnboarding: false };
+      if (path === '/api/auth/login') return { requiresTotp: true };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderLogin();
+    await screen.findByRole('heading', { name: /bon retour/i });
+    const inputs = screen.getAllByRole('textbox').concat(
+      Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[],
+    );
+    await u.type(inputs[0]!, 'julien');
+    await u.type(inputs[1]!, 'secretpwd');
+    await u.click(screen.getByRole('button', { name: /se connecter/i }));
+    // Second step: 6-digit input + verify button + recovery link.
+    expect(await screen.findByLabelText(/code à 6 chiffres/i)).toHaveAttribute('inputmode', 'numeric');
+    expect(screen.getByLabelText(/code à 6 chiffres/i)).toHaveAttribute('autocomplete', 'one-time-code');
+    expect(screen.getByRole('button', { name: /vérifier/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /utiliser un code de récupération/i })).toBeInTheDocument();
+  });
+
+  it('POSTs the 6-digit code to /api/auth/2fa/verify on submit', async () => {
+    const posted: unknown[] = [];
+    apiMock.mockImplementation(async (path: string, init?: any) => {
+      if (path === '/api/onboarding/status') return { needsOnboarding: false };
+      if (path === '/api/auth/login') return { requiresTotp: true };
+      if (path === '/api/auth/2fa/verify') {
+        posted.push(init.json);
+        return { user: { id: 1, username: 'julien' } };
+      }
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderLogin();
+    await screen.findByRole('heading', { name: /bon retour/i });
+    const inputs = screen.getAllByRole('textbox').concat(
+      Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[],
+    );
+    await u.type(inputs[0]!, 'julien');
+    await u.type(inputs[1]!, 'secretpwd');
+    await u.click(screen.getByRole('button', { name: /se connecter/i }));
+    const codeInput = await screen.findByLabelText(/code à 6 chiffres/i);
+    await u.type(codeInput, '123456');
+    await u.click(screen.getByRole('button', { name: /vérifier/i }));
+    await waitFor(() => expect(posted).toEqual([{ code: '123456' }]));
+  });
+
+  it('toggles the recovery-code input via "Utiliser un code de récupération"', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/onboarding/status') return { needsOnboarding: false };
+      if (path === '/api/auth/login') return { requiresTotp: true };
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderLogin();
+    await screen.findByRole('heading', { name: /bon retour/i });
+    const inputs = screen.getAllByRole('textbox').concat(
+      Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[],
+    );
+    await u.type(inputs[0]!, 'julien');
+    await u.type(inputs[1]!, 'secretpwd');
+    await u.click(screen.getByRole('button', { name: /se connecter/i }));
+    await screen.findByLabelText(/code à 6 chiffres/i);
+    await u.click(screen.getByRole('button', { name: /utiliser un code de récupération/i }));
+    expect(await screen.findByLabelText(/code de récupération/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /utiliser un code totp/i })).toBeInTheDocument();
+  });
+
+  it('shows the error inline on an invalid TOTP code (401)', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/onboarding/status') return { needsOnboarding: false };
+      if (path === '/api/auth/login') return { requiresTotp: true };
+      if (path === '/api/auth/2fa/verify') {
+        const err = Object.assign(new Error('invalid code'), {
+          status: 401, data: { error: 'invalid code' }, name: 'ApiError',
+        });
+        throw err;
+      }
+      throw new Error(`unexpected: ${path}`);
+    });
+    const u = userEvent.setup();
+    renderLogin();
+    await screen.findByRole('heading', { name: /bon retour/i });
+    const inputs = screen.getAllByRole('textbox').concat(
+      Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[],
+    );
+    await u.type(inputs[0]!, 'julien');
+    await u.type(inputs[1]!, 'secretpwd');
+    await u.click(screen.getByRole('button', { name: /se connecter/i }));
+    const codeInput = await screen.findByLabelText(/code à 6 chiffres/i);
+    await u.type(codeInput, '999999');
+    await u.click(screen.getByRole('button', { name: /vérifier/i }));
+    expect(await screen.findByText(/code invalide/i)).toBeInTheDocument();
+    // Still on the TOTP step, not bounced back to step 1.
+    expect(screen.getByLabelText(/code à 6 chiffres/i)).toBeInTheDocument();
+  });
+
   it('POSTs /api/onboarding/create on successful register', async () => {
     const posted: any[] = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {

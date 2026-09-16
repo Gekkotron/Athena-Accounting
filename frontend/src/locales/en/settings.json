@@ -183,6 +183,58 @@
         "note": "Disabling only takes effect the next time the application starts."
       }
     },
+    "twoFactor": {
+      "sectionTitle": "Two-factor authentication (2FA)",
+      "description": "Adds a second factor on login: a 6-digit code from an authenticator app (Google Authenticator, Aegis, 1Password…).",
+      "disabledStatus": "Disabled",
+      "enabledStatus": "Enabled",
+      "remainingCodes_one": "{{count}} recovery code left",
+      "remainingCodes_other": "{{count}} recovery codes left",
+      "noRemainingCodesWarning": "You have no recovery codes left. Regenerate a fresh set before you risk losing access to your device.",
+      "backupWarning": "2FA is tied to this installation. It is not included in backups, and you will need to re-enrol after restoring to a new device.",
+      "activateButton": "Activate",
+      "regenerateButton": "Regenerate codes",
+      "disableButton": "Disable",
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "wrongPassword": "Incorrect password.",
+        "invalidCode": "Invalid code.",
+        "rateLimited": "Too many attempts. Please try again in a minute."
+      },
+      "enroll": {
+        "step1Title": "Confirm your password",
+        "step1Description": "Prevents a stolen session from silently activating 2FA in your place.",
+        "passwordLabel": "Current password",
+        "continueButton": "Continue",
+        "step2Title": "Scan the QR code",
+        "step2Description": "Open your authenticator app and scan this code. You can also enter the key manually.",
+        "manualKeyLabel": "Manual key",
+        "codeLabel": "6-digit code",
+        "verifyButton": "Verify",
+        "step3Title": "Save your recovery codes",
+        "step3Description": "These 10 single-use codes let you sign in if you lose your device. They will only be shown once — print them out or store them somewhere safe.",
+        "copyButton": "Copy",
+        "copiedButton": "Copied",
+        "downloadButton": "Download",
+        "savedCheckboxLabel": "I have saved my recovery codes",
+        "finishButton": "Finish",
+        "qrLoading": "Generating QR code…"
+      },
+      "disable": {
+        "title": "Disable 2FA",
+        "description": "This immediately removes 2FA from your account. Both a password and a TOTP (or recovery) code are required.",
+        "passwordLabel": "Password",
+        "codeLabel": "TOTP or recovery code",
+        "submitButton": "Disable",
+        "success": "2FA disabled."
+      },
+      "regenerate": {
+        "title": "Regenerate recovery codes",
+        "description": "Existing codes will be invalidated immediately. You will receive 10 fresh codes to save.",
+        "passwordLabel": "Password",
+        "submitButton": "Regenerate"
+      }
+    },
     "notifications": {
       "sectionLabel": "Notifications",
       "description": "Choose how and for which events you get alerted.",
@@ -278,6 +330,21 @@
       "switchToRegisterButton": "Create an account",
       "localFirstBadge": "Local-first.",
       "localFirstText": "Your data never leaves your network."
+    },
+    "totp": {
+      "title": "Two-step verification",
+      "subtitle": "Open your authenticator app and enter the 6-digit code.",
+      "codeLabel": "6-digit code",
+      "codePlaceholder": "123456",
+      "recoveryCodeLabel": "Recovery code",
+      "recoveryCodePlaceholder": "xxxx-xxxx",
+      "submitButton": "Verify",
+      "useRecoveryCodeLink": "Use a recovery code",
+      "useTotpCodeLink": "Use a TOTP code",
+      "logoutLink": "Sign out and go back",
+      "invalidCodeError": "Invalid code.",
+      "rateLimitedError": "Too many attempts. Please try again in a minute.",
+      "sessionExpiredError": "Session expired. Please sign in again."
     }
   },
   "profile": {

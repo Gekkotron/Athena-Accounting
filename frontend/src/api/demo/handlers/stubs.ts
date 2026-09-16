@@ -91,6 +91,18 @@ export function registerStubHandlers(): void {
   registerHandler('GET',    '/api/attachments/:id/download', stub);
   registerHandler('DELETE', '/api/attachments/:id', stub);
 
+  // TOTP 2FA — session-mode-only in the real backend. The demo also
+  // hides the Security card's TOTP section outright (TotpSection returns
+  // null under VITE_DEMO=1), so these stubs are a safety net for
+  // anything that reaches the API surface directly. Status is a harmless
+  // "not enabled" read; every mutation is a demoStub 501.
+  registerHandler('GET',    '/api/auth/2fa/status', () => ({ enabled: false, remainingRecoveryCodes: 0 }));
+  registerHandler('POST',   '/api/auth/2fa/enroll', stub);
+  registerHandler('POST',   '/api/auth/2fa/confirm', stub);
+  registerHandler('POST',   '/api/auth/2fa/verify', stub);
+  registerHandler('POST',   '/api/auth/2fa/disable', stub);
+  registerHandler('POST',   '/api/auth/2fa/regenerate-codes', stub);
+
   // Tips (per-page guided tours) — TipsContext posts to these on every
   // dismissal and rolls back optimistically on failure, so a plain 501
   // would keep the tour's popover stuck open. Storing dismissals

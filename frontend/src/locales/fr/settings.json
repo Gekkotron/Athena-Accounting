@@ -183,6 +183,58 @@
         "note": "La désactivation ne prend effet qu'au prochain démarrage de l'application."
       }
     },
+    "twoFactor": {
+      "sectionTitle": "Double authentification (2FA)",
+      "description": "Ajoute un second facteur au login : un code à 6 chiffres généré par une application authentificateur (Google Authenticator, Aegis, 1Password…).",
+      "disabledStatus": "Désactivée",
+      "enabledStatus": "Activée",
+      "remainingCodes_one": "{{count}} code de récupération restant",
+      "remainingCodes_other": "{{count}} codes de récupération restants",
+      "noRemainingCodesWarning": "Vous n'avez plus de codes de récupération. Régénérez-en avant de perdre l'accès à votre appareil.",
+      "backupWarning": "La 2FA est liée à cette installation. Elle n'est pas incluse dans les sauvegardes et il faudra la réactiver après une restauration sur un nouvel appareil.",
+      "activateButton": "Activer",
+      "regenerateButton": "Régénérer les codes",
+      "disableButton": "Désactiver",
+      "errors": {
+        "generic": "Une erreur est survenue. Réessayez.",
+        "wrongPassword": "Mot de passe incorrect.",
+        "invalidCode": "Code invalide.",
+        "rateLimited": "Trop de tentatives. Réessayez dans une minute."
+      },
+      "enroll": {
+        "step1Title": "Confirmer votre mot de passe",
+        "step1Description": "Pour éviter qu'une session volée n'active la 2FA à votre place.",
+        "passwordLabel": "Mot de passe actuel",
+        "continueButton": "Continuer",
+        "step2Title": "Scanner le QR code",
+        "step2Description": "Ouvrez votre application authentificateur et scannez ce code. Vous pouvez aussi saisir la clé manuellement.",
+        "manualKeyLabel": "Clé manuelle",
+        "codeLabel": "Code à 6 chiffres",
+        "verifyButton": "Vérifier",
+        "step3Title": "Sauvegarder vos codes de récupération",
+        "step3Description": "Ces 10 codes à usage unique permettent de vous connecter si vous perdez votre appareil. Ils ne seront affichés qu'une seule fois — imprimez-les ou stockez-les dans un endroit sûr.",
+        "copyButton": "Copier",
+        "copiedButton": "Copié",
+        "downloadButton": "Télécharger",
+        "savedCheckboxLabel": "J'ai sauvegardé mes codes de récupération",
+        "finishButton": "Terminer",
+        "qrLoading": "Génération du QR code…"
+      },
+      "disable": {
+        "title": "Désactiver la 2FA",
+        "description": "Cette action supprime immédiatement la 2FA de votre compte. Le mot de passe et un code TOTP (ou de récupération) sont requis.",
+        "passwordLabel": "Mot de passe",
+        "codeLabel": "Code TOTP ou code de récupération",
+        "submitButton": "Désactiver",
+        "success": "2FA désactivée."
+      },
+      "regenerate": {
+        "title": "Régénérer les codes de récupération",
+        "description": "Les codes existants seront invalidés immédiatement. Vous en recevrez 10 nouveaux à sauvegarder.",
+        "passwordLabel": "Mot de passe",
+        "submitButton": "Régénérer"
+      }
+    },
     "notifications": {
       "sectionLabel": "Notifications",
       "description": "Choisissez comment et pour quels événements être alerté.",
@@ -278,6 +330,21 @@
       "switchToRegisterButton": "Créer un compte",
       "localFirstBadge": "Local-first.",
       "localFirstText": "Vos données ne quittent jamais votre réseau."
+    },
+    "totp": {
+      "title": "Vérification en deux étapes",
+      "subtitle": "Ouvrez votre application authentificateur et saisissez le code à 6 chiffres.",
+      "codeLabel": "Code à 6 chiffres",
+      "codePlaceholder": "123456",
+      "recoveryCodeLabel": "Code de récupération",
+      "recoveryCodePlaceholder": "xxxx-xxxx",
+      "submitButton": "Vérifier",
+      "useRecoveryCodeLink": "Utiliser un code de récupération",
+      "useTotpCodeLink": "Utiliser un code TOTP",
+      "logoutLink": "Se déconnecter et revenir en arrière",
+      "invalidCodeError": "Code invalide.",
+      "rateLimitedError": "Trop de tentatives. Réessayez dans une minute.",
+      "sessionExpiredError": "Session expirée. Veuillez vous reconnecter."
     }
   },
   "profile": {

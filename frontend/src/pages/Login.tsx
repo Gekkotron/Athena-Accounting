@@ -6,6 +6,12 @@ import { api, ApiError } from '../api/client';
 import type { User } from '../api/types';
 import { LOCK_FLAG_KEY } from '../contexts/LockContext';
 import { Logo } from '../components/Logo';
+import { LoginTotpStep } from './LoginTotpStep';
+
+type LoginResponse = { user: User } | { requiresTotp: true };
+function isRequiresTotp(r: LoginResponse): r is { requiresTotp: true } {
+  return 'requiresTotp' in r && r.requiresTotp === true;
+}
 
 export function Login() {
   const { t } = useTranslation('settings');
@@ -28,6 +34,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<'form' | 'totp'>('form');
 
   // A fresh authentication just proved the password, so any leftover lock
   // flag is stale (the app locked itself, then the session expired before
@@ -41,8 +48,15 @@ export function Login() {
 
   const login = useMutation({
     mutationFn: (input: { username: string; password: string }) =>
-      api<{ user: User }>('/api/auth/login', { method: 'POST', json: input }),
-    onSuccess: onAuthed,
+      api<LoginResponse>('/api/auth/login', { method: 'POST', json: input }),
+    onSuccess: (data) => {
+      if (isRequiresTotp(data)) {
+        setStep('totp');
+        setError(null);
+      } else {
+        onAuthed(data);
+      }
+    },
     onError: (err: ApiError) => setError(err.message),
   });
 
@@ -86,6 +100,17 @@ export function Login() {
         </div>
 
         <div className="surface p-7 md:p-8">
+          {step === 'totp' ? (
+            <LoginTotpStep
+              onAuthed={onAuthed}
+              onSessionExpired={(message) => {
+                setStep('form');
+                setPassword('');
+                setError(message || null);
+              }}
+            />
+          ) : (
+          <>
           <div className="mb-6">
             <h1 className="text-lg font-semibold text-ink-50 mb-1">
               {isOnboarding ? t('login.onboarding.title') : isRegister ? t('login.form.titleRegister') : t('login.form.titleLogin')}
@@ -171,6 +196,8 @@ export function Login() {
                 </>
               )}
             </div>
+          )}
+          </>
           )}
         </div>
 
