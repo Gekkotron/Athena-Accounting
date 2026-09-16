@@ -1,12 +1,23 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { rules, transactions } from '../../db/schema.js';
+import { categories, ruleSplits, rules, transactions } from '../../db/schema.js';
 import { compileRule, isSafeRulePattern, type Rule } from '../../domain/rules/matcher.js';
 import { recategorizeAll } from '../../domain/rules/recategorize.js';
 import { isPgError, parseId } from '../../lib/http.js';
 import { userId } from '../plugins/auth.js';
+
+// A rule can carry an optional splits payload (migration 0042) — when
+// present, ≥2 rows summing to exactly 100 % turn the rule into
+// split-mode. The engine emits transaction_splits on match instead of
+// stamping a single categoryId. See
+// docs/superpowers/specs/2026-09-16-rule-auto-splits-design.md.
+const SplitInput = z.object({
+  categoryId: z.number().int().positive(),
+  percent: z.number().int().min(1).max(99),
+});
+const SplitsArray = z.array(SplitInput).min(2).max(20);
 
 const CreateBody = z.object({
   categoryId: z.number().int().positive(),
@@ -15,20 +26,41 @@ const CreateBody = z.object({
   matchMode: z.enum(['word', 'substring', 'regex']).default('word'),
   priority: z.number().int().min(0).max(1000).default(0),
   enabled: z.boolean().default(true),
+  splits: SplitsArray.optional(),
 });
 
-const UpdateBody = CreateBody.partial();
+// PUT accepts a partial patch. `splits` here is a three-state field:
+//   - undefined: leave the current rule_splits set untouched
+//   - null or empty array: revert the rule to single-category mode
+//   - non-empty array: replace the current set
+const UpdateBody = CreateBody.omit({ splits: true }).partial().extend({
+  splits: z.union([SplitsArray, z.null(), z.array(SplitInput).length(0)]).optional(),
+});
 
-// POST /api/recategorize runs every rule against every transaction on the
-// event loop, so a catastrophic-backtracking pattern would hang the process
-// for every user. Only enforce this on 'regex' matchMode — 'word' and
-// 'substring' build their own patterns and pass user text through
-// escapeRegex first.
 function guardRegexPattern(body: { matchMode?: string; keyword?: string }): string | null {
   if (body.matchMode !== 'regex' || typeof body.keyword !== 'string') return null;
   const check = isSafeRulePattern(body.keyword);
   return check.ok ? null : check.reason;
 }
+
+function validateSplitsPayload(splits: z.infer<typeof SplitsArray>): string | null {
+  const total = splits.reduce((acc, s) => acc + s.percent, 0);
+  if (total !== 100) return 'la somme des ventilations doit faire exactement 100';
+  return null;
+}
+
+async function assertCategoriesOwned(
+  uid: number,
+  ids: readonly number[],
+): Promise<boolean> {
+  const wanted = Array.from(new Set(ids));
+  const owned = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.userId, uid), inArray(categories.id, wanted)));
+  return owned.length === wanted.length;
+}
+
 const RecatBody = z.object({ preserveManual: z.boolean().default(true) });
 
 const PreviewBody = z.object({
@@ -38,10 +70,32 @@ const PreviewBody = z.object({
   accountId: z.number().int().positive().optional(),
 });
 
-// Enough rows to judge whether a draft rule over- or under-matches without
-// shipping the whole history to the client. totalCount still reflects every
-// match.
 const PREVIEW_MATCH_LIMIT = 20;
+
+// Fetch each rule's splits in one grouped query, matches the loadCompiledRules
+// pattern from the engine — cheap for the O(rules) list.
+async function hydrateSplitsForRules(
+  ruleIds: readonly number[],
+): Promise<Map<number, Array<{ categoryId: number | null; percent: number }>>> {
+  const out = new Map<number, Array<{ categoryId: number | null; percent: number }>>();
+  if (ruleIds.length === 0) return out;
+  const rows = await db
+    .select({
+      ruleId: ruleSplits.ruleId,
+      categoryId: ruleSplits.categoryId,
+      percent: ruleSplits.percent,
+      position: ruleSplits.position,
+    })
+    .from(ruleSplits)
+    .where(inArray(ruleSplits.ruleId, ruleIds as number[]))
+    .orderBy(asc(ruleSplits.ruleId), asc(ruleSplits.position), asc(ruleSplits.id));
+  for (const r of rows) {
+    const arr = out.get(r.ruleId) ?? [];
+    arr.push({ categoryId: r.categoryId, percent: r.percent });
+    out.set(r.ruleId, arr);
+  }
+  return out;
+}
 
 export async function rulesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireAuth);
@@ -53,7 +107,10 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
       .from(rules)
       .where(eq(rules.userId, uid))
       .orderBy(desc(rules.priority), rules.id);
-    return { rules: rows };
+    const splitsByRule = await hydrateSplitsForRules(rows.map((r) => r.id));
+    return {
+      rules: rows.map((r) => ({ ...r, splits: splitsByRule.get(r.id) ?? [] })),
+    };
   });
 
   app.post('/api/rules', async (req, reply) => {
@@ -66,12 +123,37 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
     if (patternError) {
       return reply.code(400).send({ error: patternError });
     }
+    const { splits, ...ruleData } = parsed.data;
+    if (splits) {
+      const sumError = validateSplitsPayload(splits);
+      if (sumError) return reply.code(400).send({ error: sumError });
+      const catIds = [ruleData.categoryId, ...splits.map((s) => s.categoryId)];
+      if (!(await assertCategoriesOwned(uid, catIds))) {
+        return reply.code(400).send({ error: 'catégorie inconnue' });
+      }
+    }
     try {
-      const [created] = await db
-        .insert(rules)
-        .values({ ...parsed.data, userId: uid })
-        .returning();
-      return reply.code(201).send({ rule: created });
+      const created = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(rules)
+          .values({ ...ruleData, userId: uid })
+          .returning();
+        if (!row) throw new Error('insert rules returned empty');
+        if (splits) {
+          await tx.insert(ruleSplits).values(
+            splits.map((s, i) => ({
+              ruleId: row.id,
+              categoryId: s.categoryId,
+              percent: s.percent,
+              position: i,
+            })),
+          );
+        }
+        return row;
+      });
+      return reply.code(201).send({
+        rule: { ...created, splits: splits ?? [] },
+      });
     } catch (err) {
       if (isPgError(err) && err.code === '23503') {
         return reply.code(400).send({ error: 'unknown categoryId' });
@@ -95,13 +177,55 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
     if (patternError) {
       return reply.code(400).send({ error: patternError });
     }
-    const [updated] = await db
-      .update(rules)
-      .set(parsed.data)
-      .where(and(eq(rules.id, id), eq(rules.userId, uid)))
-      .returning();
+    const { splits: splitsPatch, ...ruleFields } = parsed.data;
+
+    // Ownership guard for split categories only fires when the patch
+    // actually swaps them.
+    if (Array.isArray(splitsPatch) && splitsPatch.length > 0) {
+      const sumError = validateSplitsPayload(splitsPatch);
+      if (sumError) return reply.code(400).send({ error: sumError });
+      const catIds = splitsPatch.map((s) => s.categoryId);
+      if (ruleFields.categoryId) catIds.push(ruleFields.categoryId);
+      if (!(await assertCategoriesOwned(uid, catIds))) {
+        return reply.code(400).send({ error: 'catégorie inconnue' });
+      }
+    }
+
+    const updated = await db.transaction(async (tx) => {
+      let row: typeof rules.$inferSelect | undefined;
+      if (Object.keys(ruleFields).length > 0) {
+        [row] = await tx
+          .update(rules)
+          .set(ruleFields)
+          .where(and(eq(rules.id, id), eq(rules.userId, uid)))
+          .returning();
+      } else {
+        [row] = await tx
+          .select()
+          .from(rules)
+          .where(and(eq(rules.id, id), eq(rules.userId, uid)))
+          .limit(1);
+      }
+      if (!row) return null;
+      if (splitsPatch !== undefined) {
+        await tx.delete(ruleSplits).where(eq(ruleSplits.ruleId, id));
+        if (Array.isArray(splitsPatch) && splitsPatch.length > 0) {
+          await tx.insert(ruleSplits).values(
+            splitsPatch.map((s, i) => ({
+              ruleId: id,
+              categoryId: s.categoryId,
+              percent: s.percent,
+              position: i,
+            })),
+          );
+        }
+      }
+      return row;
+    });
     if (!updated) return reply.code(404).send({ error: 'not found' });
-    return { rule: updated };
+
+    const splitsByRule = await hydrateSplitsForRules([id]);
+    return { rule: { ...updated, splits: splitsByRule.get(id) ?? [] } };
   });
 
   app.delete('/api/rules/:id', async (req, reply) => {
@@ -132,8 +256,6 @@ export async function rulesRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: patternError });
     }
     const { keyword, signConstraint, matchMode, accountId } = parsed.data;
-    // compileRule only reads keyword/matchMode/signConstraint; the rest of
-    // the Rule shape is irrelevant to a dry run.
     const compiled = compileRule({ keyword, signConstraint, matchMode } as Rule);
 
     const where = [eq(transactions.userId, uid), isNull(transactions.transferGroupId)];

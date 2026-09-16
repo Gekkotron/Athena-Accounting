@@ -121,6 +121,14 @@ export function registerSplitsRoutes(app: FastifyInstance): void {
             memo: s.memo && s.memo.trim() ? s.memo : null,
           })))
           .returning();
+        // Stamp the parent as manually ventilated. The engine's re-emission
+        // path checks splits_source='manual' to skip the row from now on —
+        // any prior auto stamp from a matched rule is overridden here so
+        // POST /api/recategorize won't overwrite what the user just typed.
+        await tx
+          .update(transactions)
+          .set({ splitsSource: 'manual' })
+          .where(eq(transactions.id, txId));
         return rows;
       });
       return { splits: inserted.map(serialize) };
@@ -140,10 +148,19 @@ export function registerSplitsRoutes(app: FastifyInstance): void {
     if (txId === null) return;
     const parent = await loadOwnedTransaction(uid, txId);
     if (!parent) return reply.code(404).send({ error: 'not found' });
-    const deleted = await db
-      .delete(transactionSplits)
-      .where(eq(transactionSplits.transactionId, txId))
-      .returning({ id: transactionSplits.id });
+    // Atomic clear: drop the child rows AND wipe splits_source so a later
+    // re-import can re-emit them fresh.
+    const deleted = await db.transaction(async (tx) => {
+      const rows = await tx
+        .delete(transactionSplits)
+        .where(eq(transactionSplits.transactionId, txId))
+        .returning({ id: transactionSplits.id });
+      await tx
+        .update(transactions)
+        .set({ splitsSource: null })
+        .where(eq(transactions.id, txId));
+      return rows;
+    });
     return { deleted: deleted.length };
   });
 }

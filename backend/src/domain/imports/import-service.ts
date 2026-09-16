@@ -11,7 +11,7 @@ import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
-import { loadRuleEngine } from '../rules/recategorize.js';
+import { emitAutoSplits, loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 import { afterTransactionInserted, computeCurrentBalance } from '../notifications/hooks.js';
@@ -286,34 +286,27 @@ export async function runImport(opts: {
         .where(inArray(transactions.id, insertedIds));
 
       const autoBuckets = new Map<number, number[]>();
-      const defaultBucket: number[] = [];
+      const defaultBucket: number[] = [], splitEmits: Array<{ id: number; amount: number; hit: (typeof compiled)[number] }> = [];
       for (const row of freshRows) {
-        // Skip transfer legs — they don't get a category.
         if (row.transferGroupId) continue;
         const amount = Number(row.amount);
         const hit = firstMatch(compiled, row.normalizedLabel, amount);
-        if (hit) {
+        if (hit && hit.splits && hit.splits.length >= 2) splitEmits.push({ id: row.id, amount, hit });
+        else if (hit) {
           const arr = autoBuckets.get(hit.rule.categoryId) ?? [];
           arr.push(row.id);
           autoBuckets.set(hit.rule.categoryId, arr);
-        } else {
-          defaultBucket.push(row.id);
-        }
+        } else defaultBucket.push(row.id);
       }
 
-      trace(`tx: applying categories (autoBuckets=${autoBuckets.size}, defaultBucket=${defaultBucket.length})`);
+      trace(`tx: applying categories (auto=${autoBuckets.size}, split=${splitEmits.length}, default=${defaultBucket.length})`);
       for (const [categoryId, ids] of autoBuckets) {
-        await tx
-          .update(transactions)
-          .set({ categoryId, categorySource: 'auto' })
-          .where(inArray(transactions.id, ids));
+        await tx.update(transactions).set({ categoryId, categorySource: 'auto' }).where(inArray(transactions.id, ids));
       }
       if (defaultBucket.length > 0 && defaultId !== null) {
-        await tx
-          .update(transactions)
-          .set({ categoryId: defaultId, categorySource: 'default' })
-          .where(inArray(transactions.id, defaultBucket));
+        await tx.update(transactions).set({ categoryId: defaultId, categorySource: 'default' }).where(inArray(transactions.id, defaultBucket));
       }
+      for (const e of splitEmits) await emitAutoSplits(tx, e.id, e.amount, e.hit);
       trace('tx: categories applied');
     }
 

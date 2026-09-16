@@ -73,6 +73,19 @@ export const BackupBody = z.object({
       matchMode,
       priority: z.number().int(),
       enabled: z.boolean(),
+      // Rule-driven auto-splits (migration 0042). Absent on all pre-0042
+      // dumps and on any single-category rule. When present, restore
+      // resolves each entry's category the same way rules resolve theirs
+      // (`category` + `categoryParent`) — any unresolved entry drops the
+      // whole rule (silently dropping only one split would break the
+      // sum=100 invariant), and the count surfaces in the response summary.
+      splits: z.array(
+        z.object({
+          category: z.string().nullable(),
+          categoryParent: z.string().nullable().optional(),
+          percent: z.number().int().min(1).max(99),
+        }),
+      ).optional(),
     }),
   ),
   // (transferRules were dropped as a feature — any legacy field on an old dump

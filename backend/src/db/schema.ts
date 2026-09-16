@@ -323,6 +323,33 @@ export const rules = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// rule_splits — companion table (migration 0042). Presence of one or more
+// rows for a rule flips the engine from single-category mode to split mode:
+// each row becomes a transaction_splits row on match, with `percent` scaled
+// against parent.amount. Percentages sum to exactly 100, enforced by a
+// deferrable trigger (same pattern as transaction_splits_checksum from 0014).
+// See docs/superpowers/specs/2026-09-16-rule-auto-splits-design.md.
+// ---------------------------------------------------------------------------
+
+export const ruleSplits = pgTable(
+  'rule_splits',
+  {
+    id: serial('id').primaryKey(),
+    ruleId: integer('rule_id')
+      .notNull()
+      .references(() => rules.id, { onDelete: 'cascade' }),
+    categoryId: integer('category_id').references(() => categories.id, {
+      onDelete: 'set null',
+    }),
+    percent: integer('percent').notNull(),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => ({
+    idxRule: index('rule_splits_rule_idx').on(t.ruleId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // file_imports  —  audit row per uploaded file. Lets the UI explain "this
 // import inserted 0 transactions because every row was already in the DB".
 // ---------------------------------------------------------------------------
@@ -380,6 +407,12 @@ export const transactions = pgTable(
       onDelete: 'set null',
     }),
     categorySource: categorySourceEnum('category_source').notNull().default('auto'),
+    // Independent of category_source: tracks the ventilation's origin so a
+    // user who accepts an auto-emitted split then re-tags the parent's
+    // primary category (a category_source='manual' bump) doesn't accidentally
+    // lock the ventilation from re-emission. NULL = no splits on this row
+    // (or splits were cleared). See migration 0042.
+    splitsSource: categorySourceEnum('splits_source'),
     transferGroupId: uuid('transfer_group_id'),
     sourceFileId: integer('source_file_id').references(() => fileImports.id, {
       onDelete: 'set null',

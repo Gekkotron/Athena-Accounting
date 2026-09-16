@@ -61,7 +61,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
       const accountIdByName = await restoreAccounts(tx, uid, dump.accounts);
       const cats = await restoreCategoryTree(tx, uid, dump.categories);
       await restoreFilenamePatterns(tx, uid, dump.accountFilenamePatterns, accountIdByName);
-      const rulesInserted = await restoreRules(tx, uid, dump.rules, cats);
+      const rulesResult = await restoreRules(tx, uid, dump.rules, cats);
       // transferRules were removed as a feature — any values present in an
       // older dump are silently dropped on restore.
       const checkpointsInserted = await restoreBalanceCheckpoints(tx, uid, dump.balanceCheckpoints ?? [], accountIdByName);
@@ -82,7 +82,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           accounts: accountIdByName.size,
           categories: cats.categoryIdByPath.size,
           accountFilenamePatterns: dump.accountFilenamePatterns.length,
-          rules: rulesInserted,
+          rules: rulesResult.inserted,
           balanceCheckpoints: checkpointsInserted,
           budgets: budgetsInserted,
           transactions: txCount,
@@ -91,6 +91,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           savingsGoalEvents: goals.eventsInserted,
         },
         skipped: {
+          rules: rulesResult.skippedSplits,
           savingsGoals: goals.goalsSkipped,
           savingsGoalEvents: goals.eventsSkipped,
         },

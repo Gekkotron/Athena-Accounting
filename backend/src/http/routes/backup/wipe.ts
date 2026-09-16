@@ -7,6 +7,7 @@ import {
   categories,
   categoryBudgets,
   fileImports,
+  ruleSplits,
   rules,
   savingsGoalEvents,
   savingsGoals,
@@ -39,6 +40,7 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
       user_totp_recovery_codes, user_totp,
       savings_goal_events, savings_goals,
       transaction_splits, transaction_attachments,
+      rule_splits,
       recurring_series_transactions, recurring_series,
       envelope_assignments, envelope_category_settings,
       pdf_import_drafts, pdf_statement_templates,
@@ -68,6 +70,12 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
     .where(sql`transaction_id IN (SELECT id FROM transactions WHERE user_id = ${uid})`);
   await tx.delete(transactions).where(eq(transactions.userId, uid));
   await tx.delete(fileImports).where(eq(fileImports.userId, uid));
+  // rule_splits cascades via rule_id ON DELETE CASCADE from the DELETE
+  // below, but drop them explicitly first to match the transaction_splits
+  // + transaction_attachments precedent (explicit ordering keeps this
+  // section readable when a new table joins the chain).
+  await tx.delete(ruleSplits)
+    .where(sql`rule_id IN (SELECT id FROM rules WHERE user_id = ${uid})`);
   await tx.delete(rules).where(eq(rules.userId, uid));
   await tx.delete(balanceCheckpoints).where(eq(balanceCheckpoints.userId, uid));
   await tx.delete(categoryBudgets).where(eq(categoryBudgets.userId, uid));

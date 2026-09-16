@@ -64,9 +64,13 @@ export function registerCreate(app: FastifyInstance): void {
 
       // If the user didn't pick a category, run the same rule engine the
       // importer runs — keeps semantics consistent across creation paths.
+      // Wrap in a transaction so a split-mode rule's DELETE+INSERT+UPDATE
+      // fan-out commits atomically under the deferred sum trigger.
       if (!v.categoryId) {
-        const { compiled, defaultId } = await loadRuleEngine(userId(req));
-        await categorizeOne(compiled, defaultId, inserted.id, Number(amount), normalized);
+        await db.transaction(async (tx) => {
+          const { compiled, defaultId } = await loadRuleEngine(userId(req), tx);
+          await categorizeOne(compiled, defaultId, inserted.id, Number(amount), normalized, tx);
+        });
       }
 
       const [final] = await db.select().from(transactions).where(eq(transactions.id, inserted.id));

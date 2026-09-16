@@ -7,6 +7,7 @@ import {
   categories,
   categoryBudgets,
   fileImports,
+  ruleSplits,
   rules,
   savingsGoalEvents,
   savingsGoals,
@@ -27,7 +28,7 @@ export async function buildDump(uid: number) {
   {
     const [
       accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets,
-      goals, goalEvents,
+      goals, goalEvents, ruleSplitRows,
     ] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
@@ -45,7 +46,19 @@ export async function buildDump(uid: number) {
       db.select().from(categoryBudgets).where(eq(categoryBudgets.userId, uid)),
       db.select().from(savingsGoals).where(eq(savingsGoals.userId, uid)),
       db.select().from(savingsGoalEvents).where(eq(savingsGoalEvents.userId, uid)),
+      db
+        .select()
+        .from(ruleSplits)
+        .innerJoin(rules, eq(ruleSplits.ruleId, rules.id))
+        .where(eq(rules.userId, uid))
+        .then((rows) => rows.map((r) => r.rule_splits)),
     ]);
+    const ruleSplitsByRule = new Map<number, Array<typeof ruleSplitRows[number]>>();
+    for (const rs of ruleSplitRows) {
+      const arr = ruleSplitsByRule.get(rs.ruleId) ?? [];
+      arr.push(rs);
+      ruleSplitsByRule.set(rs.ruleId, arr);
+    }
 
     const accountById = new Map(accs.map((a) => [a.id, a]));
     const categoryById = new Map(cats.map((c) => [c.id, c]));
@@ -102,15 +115,28 @@ export async function buildDump(uid: number) {
         account: accountById.get(p.accountId)?.name ?? null,
         priority: p.priority,
       })),
-      rules: rls.map((r) => ({
-        keyword: r.keyword,
-        category: categoryById.get(r.categoryId)?.name ?? null,
-        categoryParent: categoryParentName(r.categoryId),
-        signConstraint: r.signConstraint,
-        matchMode: r.matchMode,
-        priority: r.priority,
-        enabled: r.enabled,
-      })),
+      rules: rls.map((r) => {
+        const rsRows = (ruleSplitsByRule.get(r.id) ?? []).slice().sort(
+          (a, b) => a.position - b.position || a.id - b.id,
+        );
+        const splitsPayload = rsRows.length > 0
+          ? rsRows.map((s) => ({
+              category: s.categoryId != null ? categoryById.get(s.categoryId)?.name ?? null : null,
+              categoryParent: categoryParentName(s.categoryId),
+              percent: s.percent,
+            }))
+          : undefined;
+        return {
+          keyword: r.keyword,
+          category: categoryById.get(r.categoryId)?.name ?? null,
+          categoryParent: categoryParentName(r.categoryId),
+          signConstraint: r.signConstraint,
+          matchMode: r.matchMode,
+          priority: r.priority,
+          enabled: r.enabled,
+          ...(splitsPayload ? { splits: splitsPayload } : {}),
+        };
+      }),
       transactions: txs.map((t) => {
         const src = t.sourceFileId ? fileImportById.get(t.sourceFileId) : undefined;
         const rows = splitsByTx.get(t.id) ?? [];

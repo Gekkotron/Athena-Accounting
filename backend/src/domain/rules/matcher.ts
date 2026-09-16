@@ -4,9 +4,19 @@ import { normalizeLabel } from '../imports/normalize.js';
 
 export type Rule = InferSelectModel<typeof rules>;
 
+export interface CompiledRuleSplit {
+  categoryId: number | null;
+  percent: number;
+}
+
 export interface CompiledRule {
   rule: Rule;
   test: (normalizedLabel: string, amount: number) => boolean;
+  // Populated when this rule has ≥ 2 rule_splits rows (migration 0042).
+  // Empty / absent = single-category mode: engine sets the parent's
+  // category_id from rule.categoryId. Present = split mode: engine emits
+  // transaction_splits and stamps splits_source='auto' on the parent.
+  splits?: CompiledRuleSplit[];
 }
 
 function escapeRegex(s: string): string {

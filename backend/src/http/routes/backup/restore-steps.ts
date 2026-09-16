@@ -6,6 +6,7 @@ import {
   balanceCheckpoints,
   categories,
   categoryBudgets,
+  ruleSplits,
   rules,
 } from '../../../db/schema.js';
 import type { BackupDump } from './schema.js';
@@ -154,12 +155,32 @@ export async function restoreRules(
   uid: number,
   dumpRules: BackupDump['rules'],
   cats: CategoryMaps,
-): Promise<number> {
+): Promise<{ inserted: number; skippedSplits: number }> {
   let inserted = 0;
+  let skippedSplits = 0;
   for (const r of dumpRules) {
     const catId = resolveCategoryRef(r.category, r.categoryParent, cats.categoryIdByPath, cats.categoryIdsByName);
     if (catId === null) continue;
-    await tx.insert(rules).values({
+
+    // Split-mode rule: resolve every split's category first. If any one
+    // can't be resolved, the whole rule is dropped — dropping only some
+    // splits would break the sum=100 invariant.
+    let resolvedSplits: Array<{ categoryId: number; percent: number }> | null = null;
+    if (r.splits && r.splits.length > 0) {
+      const acc: Array<{ categoryId: number; percent: number }> = [];
+      let allResolved = true;
+      for (const s of r.splits) {
+        const sid = resolveCategoryRef(s.category, s.categoryParent, cats.categoryIdByPath, cats.categoryIdsByName);
+        if (sid === null) { allResolved = false; break; }
+        acc.push({ categoryId: sid, percent: s.percent });
+      }
+      if (!allResolved) { skippedSplits++; continue; }
+      const sum = acc.reduce((a, s) => a + s.percent, 0);
+      if (sum !== 100) { skippedSplits++; continue; }
+      resolvedSplits = acc;
+    }
+
+    const [ruleRow] = await tx.insert(rules).values({
       userId: uid,
       keyword: r.keyword,
       categoryId: catId,
@@ -167,10 +188,20 @@ export async function restoreRules(
       matchMode: r.matchMode,
       priority: r.priority,
       enabled: r.enabled,
-    });
+    }).returning({ id: rules.id });
     inserted++;
+    if (resolvedSplits && ruleRow) {
+      await tx.insert(ruleSplits).values(
+        resolvedSplits.map((s, i) => ({
+          ruleId: ruleRow.id,
+          categoryId: s.categoryId,
+          percent: s.percent,
+          position: i,
+        })),
+      );
+    }
   }
-  return inserted;
+  return { inserted, skippedSplits };
 }
 
 export async function restoreBalanceCheckpoints(
