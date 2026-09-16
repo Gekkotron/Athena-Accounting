@@ -9,13 +9,21 @@ import { env } from '../../env.js';
 import { LOCAL_USER_ID, LOCAL_USERNAME } from '../../domain/auth/localUser.js';
 
 declare module 'fastify' {
-  interface Session { userId?: number; username?: string; }
+  interface Session { userId?: number; username?: string; totpPending?: boolean; }
   interface FastifyInstance {
     requireAuth: preHandlerHookHandler;
     internalAuthSecret: string;
   }
   interface FastifyRequest { mcpUserId: number | null; }
 }
+
+// Routes reachable during the half-authenticated (totpPending) window
+// between the password step and the /2fa/verify step. Every other route
+// short-circuits with 401 { error: 'totp required' } until the flag clears.
+const TOTP_PENDING_ALLOWLIST = new Set<string>([
+  '/api/auth/2fa/verify',
+  '/api/auth/logout',
+]);
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -66,7 +74,20 @@ export const authPlugin = fp(async function authPlugin(app: FastifyInstance) {
   }
 
   const requireAuth: preHandlerHookHandler = async (req: FastifyRequest, reply: FastifyReply) => {
-    if (req.session.userId) return;
+    if (req.session.userId) {
+      // Half-auth guard: password succeeded but TOTP not yet verified.
+      // The route allowlist covers the two-step completion path
+      // (/api/auth/2fa/verify) and the escape hatch (/api/auth/logout);
+      // everything else must wait for the second factor.
+      if (req.session.totpPending) {
+        const url = req.routeOptions?.url;
+        if (!url || !TOTP_PENDING_ALLOWLIST.has(url)) {
+          reply.code(401).send({ error: 'totp required' });
+          return;
+        }
+      }
+      return;
+    }
     const secret = req.headers['x-athena-internal-auth'];
     const uidHeader = req.headers['x-athena-internal-uid'];
     if (typeof secret === 'string' && safeEqual(secret, internalAuthSecret) && typeof uidHeader === 'string') {

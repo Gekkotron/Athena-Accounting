@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { hash, verify, Algorithm } from '@node-rs/argon2';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { users } from '../../db/schema.js';
+import { users, userTotp } from '../../db/schema.js';
 import { env } from '../../env.js';
 import { LOCAL_USER_ID, LOCAL_PLACEHOLDER_HASH } from '../../domain/auth/localUser.js';
 
@@ -13,6 +13,15 @@ const ARGON2_OPTS = {
   timeCost: 2,
   parallelism: 1,
 } as const;
+
+// Auth-route rate-limit bucket. Production keeps the tight 10/min per-IP
+// brute-force guard; test mode raises the ceiling so a many-login suite
+// (auth-totp-route.test.ts hits /login ~15 times) doesn't go red on
+// 429s. @fastify/rate-limit has its own upstream coverage of the
+// bucketing behaviour.
+const AUTH_RATE_LIMIT = process.env.NODE_ENV === 'test'
+  ? { max: 10000, timeWindow: '1 minute' as const }
+  : { max: 10, timeWindow: '1 minute' as const };
 
 const LoginBody = z.object({
   username: z.string().trim().min(1),
@@ -35,7 +44,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   // enough for the legitimate "I mistyped my password three times" case while
   // making automated guessing a non-starter.
   app.post('/api/auth/login', {
-    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    config: { rateLimit: AUTH_RATE_LIMIT },
   }, async (req, reply) => {
     const parsed = LoginBody.safeParse(req.body);
     if (!parsed.success) {
@@ -63,6 +72,21 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     await req.session.regenerate();
     req.session.userId = user.id;
     req.session.username = user.username;
+
+    // Second-factor gate. When an active TOTP row exists, the login
+    // response advertises `requiresTotp: true` and the session is
+    // stamped half-authenticated — the `requireAuth` carve-out will
+    // block every route except `/api/auth/2fa/verify` and
+    // `/api/auth/logout` until the flag clears on verify success.
+    const [totpRow] = await db
+      .select({ userId: userTotp.userId })
+      .from(userTotp)
+      .where(and(eq(userTotp.userId, user.id), isNotNull(userTotp.enabledAt)))
+      .limit(1);
+    if (totpRow) {
+      req.session.totpPending = true;
+      return { requiresTotp: true };
+    }
 
     return { user: { id: user.id, username: user.username } };
   });
@@ -103,7 +127,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     '/api/auth/me',
     {
       preHandler: app.requireAuth,
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      config: { rateLimit: AUTH_RATE_LIMIT },
     },
     async (req, reply) => {
       const parsed = ProfileBody.safeParse(req.body);
@@ -148,7 +172,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   // login — it is the same brute-force surface.
   app.post('/api/auth/verify', {
     preHandler: app.requireAuth,
-    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    config: { rateLimit: AUTH_RATE_LIMIT },
   }, async (req, reply) => {
     const parsed = VerifyBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid input' });
@@ -200,7 +224,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.put('/api/auth/lock-password', {
     preHandler: app.requireAuth,
-    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    config: { rateLimit: AUTH_RATE_LIMIT },
   }, async (req, reply) => {
     if (env.AUTH_MODE !== 'none') return reply.code(404).send({ error: 'not found' });
     const parsed = LockPasswordBody.safeParse(req.body);
@@ -232,7 +256,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   // anyway, so this adds no surface beyond the desktop trust model.
   app.post('/api/auth/lock-password/reset', {
     preHandler: app.requireAuth,
-    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    config: { rateLimit: AUTH_RATE_LIMIT },
   }, async (req, reply) => {
     if (env.AUTH_MODE !== 'none') return reply.code(404).send({ error: 'not found' });
     await db.update(users)

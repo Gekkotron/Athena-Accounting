@@ -14,6 +14,8 @@ import {
   transactions,
   transactionSplits,
   users,
+  userTotp,
+  userTotpRecoveryCodes,
 } from '../../../db/schema.js';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -34,6 +36,7 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   const [userCount] = await tx.select({ n: sql<number>`count(*)::int` }).from(users);
   if ((userCount?.n ?? 0) === 1) {
     await tx.execute(sql`TRUNCATE
+      user_totp_recovery_codes, user_totp,
       savings_goal_events, savings_goals,
       transaction_splits, transaction_attachments,
       recurring_series_transactions, recurring_series,
@@ -53,6 +56,11 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   // see backup/schema.ts for the deferred-attachments rationale.
   // Savings goals: events cascade via goal_id, but delete explicitly to keep
   // ordering readable and to match the transaction_attachments precedent.
+  // TOTP secret + recovery codes: 2FA is per-device, so a restore into
+  // a wiped install re-enrols. Cascades via userTotp, but delete both
+  // explicitly to keep ordering readable.
+  await tx.delete(userTotpRecoveryCodes).where(eq(userTotpRecoveryCodes.userId, uid));
+  await tx.delete(userTotp).where(eq(userTotp.userId, uid));
   await tx.delete(savingsGoalEvents).where(eq(savingsGoalEvents.userId, uid));
   await tx.delete(savingsGoals).where(eq(savingsGoals.userId, uid));
   await tx.delete(transactionAttachments).where(eq(transactionAttachments.userId, uid));

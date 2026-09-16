@@ -12,6 +12,7 @@ import { HttpError, isPgError } from './lib/http.js';
 import { authPlugin } from './http/plugins/auth.js';
 import { onboardingRoutes } from './http/routes/onboarding.js';
 import { authRoutes } from './http/routes/auth.js';
+import { totpRoutes } from './http/routes/auth/totp.js';
 import { mcpRpcRoutes } from './http/routes/mcp/index.js';
 import { accountsRoutes } from './http/routes/accounts/index.js';
 import { patternRoutes } from './http/routes/account-patterns.js';
@@ -133,6 +134,7 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
   // Public routes (no auth required to discover / complete onboarding, or log in).
   await app.register(onboardingRoutes);
   await app.register(authRoutes);
+await app.register(totpRoutes);
   // /api/mcp/rpc performs its own crypto-based auth (see mcp/index.ts), so it
   // belongs with the public routes rather than the requireAuth-gated block.
   await app.register(mcpRpcRoutes);

@@ -70,6 +70,42 @@ export const users = pgTable('users', {
 });
 
 // ---------------------------------------------------------------------------
+// user_totp — optional RFC 6238 TOTP second factor (migration 0041).
+// secret_ciphertext is a base64-encoded AES-256-GCM envelope under a
+// SESSION_SECRET-derived key, with user_id bound as AAD (see
+// domain/auth/totp-crypto.ts). enabled_at is NULL while enrolment is
+// pending; a confirm flip it to now(). Deleting the row disables 2FA.
+// See docs/superpowers/specs/2026-09-11-totp-2fa-design.md.
+// ---------------------------------------------------------------------------
+
+export const userTotp = pgTable('user_totp', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  secretCiphertext: text('secret_ciphertext').notNull(),
+  enabledAt: timestamp('enabled_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// One-shot recovery codes, argon2id-hashed at rest. A successful /verify
+// with a recovery code sets used_at in the same transaction that clears
+// session.totpPending — no double-spend under a connection retry.
+export const userTotpRecoveryCodes = pgTable(
+  'user_totp_recovery_codes',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    idxUserUnused: index('user_totp_recovery_codes_user_unused_idx').on(t.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // accounts  —  one row per bank account (current, savings, etc.)
 //
 // opening_balance + opening_date are mandatory: every reported balance is
