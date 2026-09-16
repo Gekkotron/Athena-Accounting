@@ -1,4 +1,4 @@
-import { and, eq, gte } from 'drizzle-orm';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import { db } from '../db/client.js';
 import {
@@ -85,60 +85,87 @@ export async function runRecurringDetection(
     .delete(recurringSeries)
     .where(and(eq(recurringSeries.userId, userId), eq(recurringSeries.status, 'detected')));
 
+  // Split the counts up-front from the JS-side preservedByKey map — cheaper
+  // than distinguishing INSERT vs. UPDATE from the RETURNING result and
+  // keeps the API surface stable for callers.
   let insertedCount = 0;
   let refreshedCount = 0;
-
   for (const s of detected) {
-    const key = `${s.label}|${s.cadenceDays}`;
-    const preserved = preservedByKey.get(key);
+    if (preservedByKey.has(`${s.label}|${s.cadenceDays}`)) refreshedCount++;
+    else insertedCount++;
+  }
 
-    if (preserved) {
-      await tx
-        .update(recurringSeries)
-        .set({
-          avgAmount: s.avgAmount.toFixed(2),
-          amountStddev: s.amountStddev.toFixed(2),
-          categoryId: s.categoryId,
-          firstSeenAt: s.firstSeenAt,
-          lastSeenAt: s.lastSeenAt,
-          nextDueAt: s.nextDueAt,
-          updatedAt: now,
-        })
-        .where(eq(recurringSeries.id, preserved.id));
+  if (detected.length === 0) {
+    return { detected: insertedCount, refreshed: refreshedCount };
+  }
 
-      await tx
-        .delete(recurringSeriesTransactions)
-        .where(eq(recurringSeriesTransactions.seriesId, preserved.id));
+  // Batched write path (perf audit 2026-09-11) — the pre-refactor loop
+  // paid 2-3 sequential round-trips per detected series (UPDATE|INSERT
+  // + DELETE members + INSERT members). Collapse to 3 statements
+  // regardless of detected-series count:
+  //   1. One INSERT ... ON CONFLICT (user_id, label, cadence_days)
+  //      DO UPDATE that either inserts a fresh 'detected' row or
+  //      refreshes the stats on a preserved row (never touches status /
+  //      essentialness). RETURNING gives us id + label + cadence_days
+  //      so we can map (series → id) without a second SELECT.
+  //   2. One DELETE FROM recurring_series_transactions WHERE series_id
+  //      IN (...) clears every affected series's prior member set in
+  //      one round-trip.
+  //   3. One multi-values INSERT INTO recurring_series_transactions
+  //      writes every series's fresh member set at once.
+  const upserted = await tx
+    .insert(recurringSeries)
+    .values(detected.map((s) => ({
+      userId,
+      label: s.label,
+      cadenceDays: s.cadenceDays,
+      avgAmount: s.avgAmount.toFixed(2),
+      amountStddev: s.amountStddev.toFixed(2),
+      categoryId: s.categoryId,
+      firstSeenAt: s.firstSeenAt,
+      lastSeenAt: s.lastSeenAt,
+      nextDueAt: s.nextDueAt,
+    })))
+    .onConflictDoUpdate({
+      target: [recurringSeries.userId, recurringSeries.label, recurringSeries.cadenceDays],
+      set: {
+        avgAmount: sql`excluded.avg_amount`,
+        amountStddev: sql`excluded.amount_stddev`,
+        categoryId: sql`excluded.category_id`,
+        firstSeenAt: sql`excluded.first_seen_at`,
+        lastSeenAt: sql`excluded.last_seen_at`,
+        nextDueAt: sql`excluded.next_due_at`,
+        updatedAt: now,
+      },
+    })
+    .returning({
+      id: recurringSeries.id,
+      label: recurringSeries.label,
+      cadenceDays: recurringSeries.cadenceDays,
+    });
 
-      if (s.memberIds.length > 0) {
-        await tx.insert(recurringSeriesTransactions).values(
-          s.memberIds.map((id) => ({ seriesId: preserved.id, transactionId: id })),
-        );
-      }
-      refreshedCount++;
-    } else {
-      const [row] = await tx
-        .insert(recurringSeries)
-        .values({
-          userId,
-          label: s.label,
-          cadenceDays: s.cadenceDays,
-          avgAmount: s.avgAmount.toFixed(2),
-          amountStddev: s.amountStddev.toFixed(2),
-          categoryId: s.categoryId,
-          firstSeenAt: s.firstSeenAt,
-          lastSeenAt: s.lastSeenAt,
-          nextDueAt: s.nextDueAt,
-        })
-        .returning({ id: recurringSeries.id });
+  const idByKey = new Map<string, number>();
+  for (const r of upserted) {
+    idByKey.set(`${r.label}|${r.cadenceDays}`, r.id);
+  }
 
-      if (row && s.memberIds.length > 0) {
-        await tx.insert(recurringSeriesTransactions).values(
-          s.memberIds.map((id) => ({ seriesId: row.id, transactionId: id })),
-        );
-      }
-      insertedCount++;
+  const affectedIds = upserted.map((r) => r.id);
+  if (affectedIds.length > 0) {
+    await tx
+      .delete(recurringSeriesTransactions)
+      .where(inArray(recurringSeriesTransactions.seriesId, affectedIds));
+  }
+
+  const memberRows: Array<{ seriesId: number; transactionId: number }> = [];
+  for (const s of detected) {
+    const seriesId = idByKey.get(`${s.label}|${s.cadenceDays}`);
+    if (seriesId == null) continue;
+    for (const memberId of s.memberIds) {
+      memberRows.push({ seriesId, transactionId: memberId });
     }
+  }
+  if (memberRows.length > 0) {
+    await tx.insert(recurringSeriesTransactions).values(memberRows);
   }
 
   return { detected: insertedCount, refreshed: refreshedCount };
