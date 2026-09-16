@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { createReadStream } from 'node:fs';
 import { db } from '../../db/client.js';
 import { transactionAttachments, transactions } from '../../db/schema.js';
@@ -7,7 +7,7 @@ import { detectAttachmentMime } from '../../domain/attachments/mime.js';
 import {
   absPathFor,
   unlinkAttachment,
-  writeAttachmentBytes,
+  writeAttachmentStream,
 } from '../../domain/attachments/storage.js';
 import { userId } from '../plugins/auth.js';
 
@@ -62,57 +62,78 @@ export async function attachmentsRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: 'invalid filename' });
     }
 
-    const buffer = await data.toBuffer();
+    // Reserve the id via the sequence BEFORE streaming, so the on-disk
+    // filename (which derives from the id, see storage.ts:relPathFor) can
+    // be written in one shot. This lets us drop the pre-refactor insert-
+    // then-UPDATE dance — one INSERT is enough now.
+    const seqResult = await db.execute<{ next_id: number | string }>(sql`
+      SELECT nextval('transaction_attachments_id_seq') AS next_id
+    `);
+    const newId = Number(seqResult.rows[0]?.next_id);
+    if (!Number.isInteger(newId) || newId <= 0) {
+      throw new Error('failed to reserve attachment id');
+    }
+
+    // Stream the multipart body straight to disk. Memory footprint stays
+    // bounded (a single chunk at a time) instead of loading the full 10 MB
+    // into a Buffer via data.toBuffer(). The helper hands back the first
+    // 16 bytes for the magic-bytes MIME sniff below.
+    let streamed: Awaited<ReturnType<typeof writeAttachmentStream>>;
+    try {
+      streamed = await writeAttachmentStream(uid, newId, data.file);
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === 'FST_REQ_FILE_TOO_LARGE') {
+        return reply.code(413).send({ error: 'attachment exceeds 10 MB limit' });
+      }
+      throw err;
+    }
     // fastify-multipart sets `truncated` when the cap was hit mid-stream.
     if (data.file.truncated) {
+      await unlinkAttachment(streamed.rel);
       return reply.code(413).send({ error: 'attachment exceeds 10 MB limit' });
     }
-    if (buffer.length === 0) return reply.code(400).send({ error: 'empty file' });
-
-    const mime = detectAttachmentMime(buffer);
+    if (streamed.sizeBytes === 0) {
+      await unlinkAttachment(streamed.rel);
+      return reply.code(400).send({ error: 'empty file' });
+    }
+    const mime = detectAttachmentMime(streamed.head);
     if (!mime) {
+      await unlinkAttachment(streamed.rel);
       return reply.code(400).send({
         error: 'unsupported file type (allowed: JPEG, PNG, WebP, HEIC, PDF)',
       });
     }
 
-    // Insert the row first to reserve the id — the on-disk filename derives
-    // from that id, so we cannot write the file before it exists.
-    const [row] = await db
-      .insert(transactionAttachments)
-      .values({
-        userId: uid,
-        transactionId: txId,
-        filename,
-        mime,
-        sizeBytes: buffer.length,
-        storedPath: '', // patched below
-      })
-      .returning();
-    if (!row) throw new Error('attachment insert failed');
-
+    // Single INSERT with the pre-reserved id + final stored_path — no
+    // follow-up UPDATE. If the INSERT fails (transaction id disappeared
+    // between the ownership check and here, or another constraint hits),
+    // best-effort unlink the just-written file so we don't leak bytes.
     try {
-      const rel = await writeAttachmentBytes(uid, row.id, buffer);
-      await db
-        .update(transactionAttachments)
-        .set({ storedPath: rel })
-        .where(eq(transactionAttachments.id, row.id));
+      const [row] = await db
+        .insert(transactionAttachments)
+        .values({
+          id: newId,
+          userId: uid,
+          transactionId: txId,
+          filename,
+          mime,
+          sizeBytes: streamed.sizeBytes,
+          storedPath: streamed.rel,
+        })
+        .returning();
+      if (!row) throw new Error('attachment insert failed');
       return reply.code(201).send({
         attachment: {
           id: row.id,
           transactionId: txId,
           filename,
           mime,
-          sizeBytes: buffer.length,
+          sizeBytes: streamed.sizeBytes,
           createdAt: row.createdAt.toISOString(),
         },
       });
     } catch (err) {
-      // Best-effort rollback of the reservation row so a failed disk write
-      // doesn't leave a phantom entry pointing at a missing file.
-      await db
-        .delete(transactionAttachments)
-        .where(eq(transactionAttachments.id, row.id));
+      await unlinkAttachment(streamed.rel);
       throw err;
     }
   });
