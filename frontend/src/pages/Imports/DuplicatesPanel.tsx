@@ -2,22 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { Account } from '../../api/types';
 import { getAccountName } from '../../lib/accounts';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
 import { DemoUnavailableState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { isDemoStubError } from '../../api/errorMessage';
 import { useDuplicatesMutations } from './useDuplicatesMutations';
+import { useAccounts } from '../../lib/useReferenceData';
 
 export function DuplicatesPanel(): JSX.Element {
   const { t } = useTranslation(['imports', 'common', 'transactions']);
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accountsQ = useAccounts();
+  const accounts = accountsQ.data ?? [];
 
   // Soft-dup detection: groups of transactions sharing (account, date, amount)
   // but with different dedup_keys. Surfaces after each import so the user can

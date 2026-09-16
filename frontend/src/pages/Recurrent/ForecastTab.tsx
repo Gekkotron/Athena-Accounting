@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { Account, BalancePoint } from '../../api/types';
+import type { BalancePoint } from '../../api/types';
+import { useAccounts } from '../../lib/useReferenceData';
 import { BalanceChart } from '../../components/BalanceChart';
 import { ErrorState, LoadingBlock, EmptyState } from '../../components/StateBlocks';
 import { AccountSelect } from '../Dashboard/AccountSelect';
@@ -22,10 +23,7 @@ export function ForecastTab(): JSX.Element {
   const [horizon, setHorizon] = useState<Horizon>(60);
   const [scope, setScope] = useState<'all' | number>('all');
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
+  const accountsQ = useAccounts();
   const balanceQ = useQuery({
     queryKey: ['reports', 'balance'],
     queryFn: () => api<{ perCurrency: { currency: string; total: string }[] }>('/api/reports/balance'),
@@ -35,7 +33,7 @@ export function ForecastTab(): JSX.Element {
     queryFn: () => api<{ points: BalancePoint[] }>('/api/reports/timeseries', { query: { granularity: 'day' } }),
   });
 
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accounts = accountsQ.data ?? [];
   const primaryCurrency = balanceQ.data?.perCurrency?.[0]?.currency ?? 'EUR';
 
   const currency = useMemo(() => {

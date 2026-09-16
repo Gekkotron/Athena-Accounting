@@ -5,9 +5,10 @@ import { api } from '../../api/client';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
-import type { Account, BalancePoint, BalanceCheckpoint, TimeseriesConsolidatedBlock } from '../../api/types';
+import type { BalancePoint, BalanceCheckpoint, TimeseriesConsolidatedBlock } from '../../api/types';
 import { listCheckpoints } from '../../api/checkpoints';
 import { useSettings } from '../../lib/useSettings';
+import { useAccounts } from '../../lib/useReferenceData';
 import { BalanceChart } from '../../components/BalanceChart';
 import { withCarriedBaselines } from '../../components/BalanceChart/series';
 import { useForecastProjection } from './useForecastProjection';
@@ -30,10 +31,7 @@ export function Dashboard(): JSX.Element {
   // Hoisted above the queries below so the timeseries query can key on and
   // send the user's display currency (Settings → Multi-devises).
   const { settings, isReady, patch: patchSettings } = useSettings();
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
+  const accountsQ = useAccounts();
   const balanceQ = useQuery({
     queryKey: ['reports', 'balance', settings.displayCurrency],
     queryFn: () => api<{ perCurrency: PerCurrencyRow[]; consolidated: ConsolidatedBlock | null }>('/api/reports/balance', {
@@ -48,7 +46,7 @@ export function Dashboard(): JSX.Element {
   });
 
   const currencies = balanceQ.data?.perCurrency ?? [];
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accounts = accountsQ.data ?? [];
   const primary = currencies[0];
   const rootErr = accountsQ.error ?? balanceQ.error;
   const rootLoading = accountsQ.isLoading || balanceQ.isLoading;

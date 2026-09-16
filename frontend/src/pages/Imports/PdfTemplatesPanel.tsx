@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../api/client';
-import type { Account } from '../../api/types';
 import {
   listPdfTemplates,
   deletePdfTemplate,
@@ -12,6 +10,7 @@ import {
 import { getAccountName } from '../../lib/accounts';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { useAccounts } from '../../lib/useReferenceData';
 
 // Reads YYYY-MM-DD from an ISO timestamp and formats it as a short
 // human-readable date. Kept inline to avoid pulling in the full formatDate
@@ -24,10 +23,7 @@ export function PdfTemplatesPanel(): JSX.Element {
   const { t } = useTranslation(['imports', 'common']);
   const qc = useQueryClient();
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
+  const accountsQ = useAccounts();
   const templatesQ = useQuery({
     queryKey: ['pdf-templates'],
     queryFn: listPdfTemplates,
@@ -70,7 +66,7 @@ export function PdfTemplatesPanel(): JSX.Element {
     onError: (err: Error) => setDeleteError(err.message),
   });
 
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accounts = accountsQ.data ?? [];
   const templates = templatesQ.data ?? [];
 
   if (templatesQ.isError) {

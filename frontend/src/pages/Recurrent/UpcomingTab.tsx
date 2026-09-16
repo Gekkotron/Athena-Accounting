@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Category, RecurringSeries } from '../../api/types';
+import { useCategories } from '../../lib/useReferenceData';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { amountSignClass, formatAmount } from '../../lib/format';
 import { resolveCategoryColor } from '../../lib/categories';
@@ -58,14 +59,11 @@ export function UpcomingTab(): JSX.Element {
     queryKey: ['recurring', { upcoming: 30 }],
     queryFn: () => api<{ recurring: RecurringSeries[] }>('/api/recurring', { query: { upcoming: 30 } }),
   });
-  const catQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const catQ = useCategories();
 
   const catsById = useMemo(() => {
     const m = new Map<number, Category>();
-    for (const c of catQ.data?.categories ?? []) m.set(c.id, c);
+    for (const c of catQ.data ?? []) m.set(c.id, c);
     return m;
   }, [catQ.data]);
 

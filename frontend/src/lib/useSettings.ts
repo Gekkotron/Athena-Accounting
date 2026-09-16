@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { getSettings, patchSettings } from '../api/settings';
 import { DEFAULTS, mergeNotifications, type Settings, type SettingsPatch } from './settings';
+import { REFERENCE_STALE_TIME_MS } from './useReferenceData';
 
 export function useSettings(): {
   settings: Settings;
@@ -9,7 +10,11 @@ export function useSettings(): {
   mutation: UseMutationResult<{ settings: Settings }, Error, SettingsPatch>;
 } {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['settings'], queryFn: getSettings });
+  const q = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+    staleTime: REFERENCE_STALE_TIME_MS,
+  });
   const mut = useMutation({
     mutationFn: patchSettings,
     onMutate: async (patch) => {

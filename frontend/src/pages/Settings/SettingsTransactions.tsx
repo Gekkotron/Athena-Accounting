@@ -1,20 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../api/client';
-import type { Account } from '../../api/types';
 import { LoadingBlock } from '../../components/StateBlocks';
 import { SavedChip } from '../Settings-fields';
 import { useSettingsFlash } from './useSettingsFlash';
+import { useAccounts } from '../../lib/useReferenceData';
 
 export function SettingsTransactions(): JSX.Element {
   const { t } = useTranslation('settings');
   const { settings, isReady, flashKey, send, mutation } = useSettingsFlash();
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accountsQ = useAccounts();
+  const accounts = accountsQ.data ?? [];
 
   if (!isReady) {
     return (

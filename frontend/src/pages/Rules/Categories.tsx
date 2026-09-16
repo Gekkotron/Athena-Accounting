@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
+import { useCategories } from '../../lib/useReferenceData';
 import { kindLabel, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -19,10 +20,7 @@ import { TourReplayIcon } from '../../components/TourReplayIcon';
 export function Categories() {
   const { t } = useTranslation(['rules', 'common']);
   const qc = useQueryClient();
-  const catQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const catQ = useCategories();
   const reportQ = useQuery({
     queryKey: ['reports', 'categories'],
     queryFn: () => api<{ rows: CategoryReportRow[] }>('/api/reports/categories'),
@@ -81,7 +79,7 @@ export function Categories() {
   const tableRef = useRef<HTMLTableElement>(null);
   const [colorPickerFor, setColorPickerFor] = useState<Category | null>(null);
 
-  const cats = catQ.data?.categories ?? [];
+  const cats = catQ.data ?? [];
   const { activeDragId, sensors, onDragStart, onDragEnd, onDragCancel } = useCategoriesDrag({
     cats,
     tableRef,

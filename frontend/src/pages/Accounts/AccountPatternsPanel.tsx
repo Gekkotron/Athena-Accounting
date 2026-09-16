@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { AccountFilenamePattern } from '../../api/types';
+import { useAccountPatterns } from '../../lib/useReferenceData';
 
 export function AccountPatternsPanel({ accountId }: { accountId: number }) {
   const { t } = useTranslation('accounts');
@@ -10,12 +10,9 @@ export function AccountPatternsPanel({ accountId }: { accountId: number }) {
   const [pattern, setPattern] = useState('');
   const [priority, setPriority] = useState('0');
 
-  const patternsQ = useQuery({
-    queryKey: ['patterns'],
-    queryFn: () => api<{ patterns: AccountFilenamePattern[] }>('/api/account-filename-patterns'),
-  });
+  const patternsQ = useAccountPatterns();
 
-  const rows = (patternsQ.data?.patterns ?? []).filter((p) => p.accountId === accountId);
+  const rows = (patternsQ.data ?? []).filter((p) => p.accountId === accountId);
 
   const create = useMutation({
     mutationFn: (input: { pattern: string; accountId: number; priority: number }) =>

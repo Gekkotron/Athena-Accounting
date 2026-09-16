@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
-import type { Category, CategoryReportRow } from '../api/types';
+import type { CategoryReportRow } from '../api/types';
+import { useCategories } from '../lib/useReferenceData';
 import { CategoryDonut, type CategorySegment } from './CategoryDonut';
 import { RangePicker, fromDateFor, toDateFor, type RangeKey } from './RangePicker';
 import { ErrorState } from './StateBlocks';
@@ -87,14 +88,11 @@ export function CategoryBreakdown({
       }),
     enabled: !multiSelectEmpty,
   });
-  const categoriesQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const categoriesQ = useCategories();
 
   const donutData: CategorySegment[] = useMemo(() => {
     const rows = reportQ.data?.rows ?? [];
-    const cats = categoriesQ.data?.categories ?? [];
+    const cats = categoriesQ.data ?? [];
     const byCatId = new Map(cats.map((c) => [c.id, c] as const));
 
     // Aggregate the per-month rows into a single total per category, filtered

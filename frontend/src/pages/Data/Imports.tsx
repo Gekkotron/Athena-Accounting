@@ -1,7 +1,8 @@
 import { useRef, useState, useMemo } from 'react';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
-import type { Account, FileImport } from '../../api/types';
+import type { FileImport } from '../../api/types';
+import { useAccounts } from '../../lib/useReferenceData';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
@@ -35,10 +36,7 @@ export function Imports() {
   // (false). Cleared after firing.
   const wizardResolverRef = useRef<((success: boolean) => void) | null>(null);
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
+  const accountsQ = useAccounts();
   // Cursor pagination (perf audit 2026-09-11) — 100 imports per page,
   // fetched on demand via "Load more". nextCursor: null on the response
   // marks the end of history, so `hasNextPage` is derived directly.
@@ -97,7 +95,7 @@ export function Imports() {
 
       <div ref={dropzoneAnchor}>
         <UploadForm
-          accounts={accountsQ.data?.accounts ?? []}
+          accounts={accountsQ.data ?? []}
           onPdfNeedsTemplate={(p, ctx) => {
             wizardResolverRef.current = ctx?.resolve ?? null;
             setNeedsTpl(p);
@@ -196,7 +194,7 @@ export function Imports() {
         <>
           <FileImportsList
             imports={importsFlat}
-            accounts={accountsQ.data?.accounts ?? []}
+            accounts={accountsQ.data ?? []}
             onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
           />
           {importsQ.hasNextPage && (

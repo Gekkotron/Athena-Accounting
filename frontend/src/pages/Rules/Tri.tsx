@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
-import type { Category, TriGroup } from '../../api/types';
+import type { TriGroup } from '../../api/types';
+import { useCategories } from '../../lib/useReferenceData';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -21,10 +22,7 @@ export function Tri() {
         pagination: { total: number; limit: number; offset: number };
       }>('/api/tri/groups', { query: { limit: 200, offset: 0 } }),
   });
-  const categoriesQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const categoriesQ = useCategories();
 
   useAutoStartTour('rules');
   const rulesListAnchor = useTourAnchor('rules:list');
@@ -43,7 +41,7 @@ export function Tri() {
 
   const groups = groupsQ.data?.groups ?? [];
   const total = groupsQ.data?.pagination.total ?? groups.length;
-  const categories = categoriesQ.data?.categories ?? [];
+  const categories = categoriesQ.data ?? [];
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
     [categories],

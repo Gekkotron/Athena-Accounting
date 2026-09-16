@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import type { Category, CategoryReportRow, BudgetReportRow, RecurringSeries } from '../../api/types';
+import type { CategoryReportRow, BudgetReportRow, RecurringSeries } from '../../api/types';
+import { useCategories } from '../../lib/useReferenceData';
 import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { buildInsights, monthLabel, priceCreepInsight, type InsightTone } from './insights';
@@ -52,10 +53,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
     queryFn: () =>
       api<{ rows: BudgetReportRow[] }>('/api/reports/budget', { query: { month: referenceMonth } }),
   });
-  const categoriesQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const categoriesQ = useCategories();
   const recurringQ = useQuery({
     queryKey: ['recurring'],
     queryFn: () => api<{ recurring: RecurringSeries[] }>('/api/recurring'),
@@ -64,7 +62,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
   const insights = useMemo(() => {
     const base = buildInsights(
       catQ.data?.rows ?? [],
-      categoriesQ.data?.categories ?? [],
+      categoriesQ.data ?? [],
       budgetQ.data?.rows ?? [],
       months,
       referenceMonth,

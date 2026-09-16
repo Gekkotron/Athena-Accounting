@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../api/client';
-import type { Account } from '../../api/types';
 import { useNotificationPrefs } from '../../lib/notifications/hooks';
+import { useAccounts } from '../../lib/useReferenceData';
 import { NotificationsChannelsCard } from './NotificationsChannelsCard';
 import { NotificationsPrivacyCard } from './NotificationsPrivacyCard';
 import { NotificationsTriggersCard } from './NotificationsTriggersCard';
@@ -16,11 +14,8 @@ export function SettingsNotifications(): JSX.Element {
   const { prefs, patch, mutation } = useNotificationPrefs();
   const [tab, setTab] = useState<TabId>('channels');
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accountsQ = useAccounts();
+  const accounts = accountsQ.data ?? [];
 
   const tabs: readonly { id: TabId; label: string }[] = [
     { id: 'channels', label: t('settings.notifications.channels.sectionLabel') },

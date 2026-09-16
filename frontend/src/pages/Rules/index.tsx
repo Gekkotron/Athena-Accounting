@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
-import type { Category, MatchMode, Rule, SignConstraint } from '../../api/types';
+import type { MatchMode, Rule, SignConstraint } from '../../api/types';
+import { useCategories, useRules } from '../../lib/useReferenceData';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AdvancedEditor } from './AdvancedEditor';
 import { FlatTable } from './FlatTable';
@@ -19,14 +20,8 @@ type View = 'grouped' | 'flat';
 export function Rules() {
   const { t } = useTranslation('rules');
   const qc = useQueryClient();
-  const rulesQ = useQuery({
-    queryKey: ['rules'],
-    queryFn: () => api<{ rules: Rule[] }>('/api/rules'),
-  });
-  const catQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const rulesQ = useRules();
+  const catQ = useCategories();
 
   const [view, setView] = useState<View>('grouped');
   const [editing, setEditing] = useState<Rule | null>(null);
@@ -103,8 +98,8 @@ export function Rules() {
   const overviewAnchor = useTourAnchor('rules-list:overview');
   const reapplyAnchor = useTourAnchor('rules-list:reapply');
 
-  const cats = catQ.data?.categories ?? [];
-  const rules = rulesQ.data?.rules ?? [];
+  const cats = catQ.data ?? [];
+  const rules = rulesQ.data ?? [];
   const byId = useMemo(
     () => new Map(cats.map((c) => [c.id, c] as const)),
     [cats],

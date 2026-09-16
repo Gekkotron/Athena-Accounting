@@ -161,9 +161,11 @@ export default function App() {
         throw err;
       }
     },
+    staleTime: 5 * 60 * 1000,
+    select: (d) => d.user,
   });
 
-  const user = me.data?.user ?? null;
+  const user = me.data ?? null;
 
   if (me.isLoading) {
     return (

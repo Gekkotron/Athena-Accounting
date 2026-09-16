@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { Account, Category, Transaction } from '../../api/types';
+import type { Transaction } from '../../api/types';
+import { useAccounts, useCategories } from '../../lib/useReferenceData';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TransactionsHeader } from './TransactionsHeader';
@@ -86,19 +87,13 @@ export function Transactions() {
     }
   };
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const categoriesQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const accountsQ = useAccounts();
+  const categoriesQ = useCategories();
 
   const defaultResolved = useDefaultAccountResolver({
     initialAccountId,
     settingsReady,
-    accounts: accountsQ.data?.accounts,
+    accounts: accountsQ.data,
     transactionsDefaultAccount: settings.transactionsDefaultAccount,
     setFilters,
   });
@@ -132,8 +127,8 @@ export function Transactions() {
   const { updateCategory, updateNotes, deleteTransaction, bulkDelete, bulkCategorize, createCheckpointM, removeCheckpointM } =
     useTransactionsMutations({ setDeletingTx, setDeleteError, setConfirmBulkDelete, setBulkDeleteError, setSelectedIds, setBulkSelectValue, setBulkCategorizeError, setBulkCategorizeNotice, setCheckpointError, setPendingCheckpointDate });
 
-  const accounts = accountsQ.data?.accounts ?? [];
-  const categories = categoriesQ.data?.categories ?? [];
+  const accounts = accountsQ.data ?? [];
+  const categories = categoriesQ.data ?? [];
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c] as const)), [categories]);
   const sortedCategories = useMemo(
     () => sortCategoriesForPicker(categories, catById),

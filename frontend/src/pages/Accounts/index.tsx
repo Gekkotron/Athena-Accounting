@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAccounts } from '../../lib/useReferenceData';
 import { useTour } from '../../contexts/TourContext';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
@@ -21,10 +22,7 @@ import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 export function Accounts() {
   const { t } = useTranslation(['accounts', 'common']);
   const qc = useQueryClient();
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
+  const accountsQ = useAccounts();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +61,7 @@ export function Accounts() {
     onError: (err: ApiError) => setEditError(err.message),
   });
 
-  const { sensors, onDragEnd } = useAccountsReorder(accountsQ.data?.accounts ?? []);
+  const { sensors, onDragEnd } = useAccountsReorder(accountsQ.data ?? []);
 
   // One Set for expanded-drawer account ids. Rendering many cards at once, so a
   // Set keeps toggling O(log n) and avoids per-card boolean state.
@@ -192,15 +190,15 @@ export function Accounts() {
           />
         ) : accountsQ.isLoading ? (
           <LoadingBlock height="min-h-40" />
-        ) : (accountsQ.data?.accounts ?? []).length === 0 ? (
+        ) : (accountsQ.data ?? []).length === 0 ? (
           <div className="surface p-6 text-sm text-ink-400 display-italic">
             {t('emptyState')}
           </div>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={(accountsQ.data?.accounts ?? []).map((a) => a.id)} strategy={rectSortingStrategy}>
+            <SortableContext items={(accountsQ.data ?? []).map((a) => a.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(accountsQ.data?.accounts ?? []).map((a) => {
+                {(accountsQ.data ?? []).map((a) => {
                   if (editingId === a.id && editDraft) {
                     return (
                       <div key={a.id} className="surface p-5 relative">
@@ -273,7 +271,7 @@ export function Accounts() {
         <MergeModal
           open
           source={mergeSource}
-          candidates={accountsQ.data?.accounts ?? []}
+          candidates={accountsQ.data ?? []}
           onCancel={() => setMergeSource(null)}
           onDone={(result: MergeResult) => {
             setMergeSource(null);

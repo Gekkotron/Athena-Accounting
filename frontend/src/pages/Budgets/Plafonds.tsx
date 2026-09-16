@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { api, ApiError } from '../../api/client';
-import type { Account, BudgetPeriod, Category } from '../../api/types';
+import { ApiError } from '../../api/client';
+import type { BudgetPeriod } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
+import { useAccounts, useCategories } from '../../lib/useReferenceData';
 import { ConsolidatedSummary } from './ConsolidatedSummary';
 import { groupCategories } from '../../lib/categories';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
@@ -70,17 +70,11 @@ export function Plafonds(): JSX.Element {
   });
   const rows = report.data?.rows ?? [];
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accountsQ = useAccounts();
+  const accounts = accountsQ.data ?? [];
 
-  const categoriesQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
-  const cats = categoriesQ.data?.categories ?? [];
+  const categoriesQ = useCategories();
+  const cats = categoriesQ.data ?? [];
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
   const rowsByCategory = useMemo(
     () => new Map(rows.map((r) => [r.categoryId, r] as const)),

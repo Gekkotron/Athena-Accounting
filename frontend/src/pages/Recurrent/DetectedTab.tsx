@@ -7,6 +7,7 @@ import type {
   RecurringSeries,
   RecurringStatus,
 } from '../../api/types';
+import { useCategories } from '../../lib/useReferenceData';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { amountSignClass, formatAmount, formatDate } from '../../lib/format';
 import { resolveCategoryColor } from '../../lib/categories';
@@ -27,10 +28,7 @@ export function DetectedTab(): JSX.Element {
     queryKey: ['recurring'],
     queryFn: () => api<{ recurring: RecurringSeries[] }>('/api/recurring'),
   });
-  const catQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const catQ = useCategories();
 
   const update = useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: UpdatePatch }) =>
@@ -45,7 +43,7 @@ export function DetectedTab(): JSX.Element {
 
   const catsById = useMemo(() => {
     const m = new Map<number, Category>();
-    for (const c of catQ.data?.categories ?? []) m.set(c.id, c);
+    for (const c of catQ.data ?? []) m.set(c.id, c);
     return m;
   }, [catQ.data]);
 

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
-import type { Account } from '../api/types';
 import { LoadingBlock } from '../components/StateBlocks';
 import { bankAccountLabel } from './SettingsBankSync-lib';
+import { useAccounts } from '../lib/useReferenceData';
 
 interface SessionResponse {
   connection: { id: number; aspspName: string; validUntil: string };
@@ -30,11 +30,8 @@ export function BankSyncCallback(): JSX.Element {
   const [mappings, setMappings] = useState<Record<string, number | null>>({});
   const [saving, setSaving] = useState(false);
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accountsQ = useAccounts();
+  const accounts = accountsQ.data ?? [];
 
   useEffect(() => {
     if (started.current) return;

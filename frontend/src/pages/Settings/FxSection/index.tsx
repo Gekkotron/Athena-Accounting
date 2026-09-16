@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../../api/client';
 import type { Account } from '../../../api/types';
 import { useSettings } from '../../../lib/useSettings';
+import { useAccounts } from '../../../lib/useReferenceData';
 import { DisplayCurrencyPicker } from './DisplayCurrencyPicker';
 import { RatesTable, type FxRateWire } from './RatesTable';
 import { AddRateForm, type AddRateFormValues } from './AddRateForm';
@@ -24,11 +25,8 @@ export function FxSection(): JSX.Element {
   const { t } = useTranslation('settings');
   const qc = useQueryClient();
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accountsQ = useAccounts();
+  const accounts = accountsQ.data ?? [];
   const currencies = useMemo(() => currencyUnion(accounts), [accounts]);
 
   const ratesQ = useQuery({

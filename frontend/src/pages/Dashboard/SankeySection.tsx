@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
-import type { Account, Category, CategoryReportRow } from '../../api/types';
+import type { Account, CategoryReportRow } from '../../api/types';
+import { useCategories } from '../../lib/useReferenceData';
 import {
   RangePicker,
   fromDateFor,
@@ -64,10 +65,7 @@ export function SankeySection({
       ? scopedAccountIds.join(',')
       : (scopedAccountId ?? 'all');
 
-  const catListQ = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api<{ categories: Category[] }>('/api/categories'),
-  });
+  const catListQ = useCategories();
   const reportQ = useQuery({
     queryKey: [
       'reports',
@@ -91,7 +89,7 @@ export function SankeySection({
 
   const model = useMemo(
     () =>
-      buildSankeyModel(reportQ.data?.rows ?? [], catListQ.data?.categories ?? [], currency, {
+      buildSankeyModel(reportQ.data?.rows ?? [], catListQ.data ?? [], currency, {
         otherLabel: tCharts('sankey.other'),
       }),
     [reportQ.data, catListQ.data, currency, tCharts],

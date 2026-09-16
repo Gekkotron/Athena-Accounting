@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../../api/client';
-import type { Account } from '../../api/types';
 import { createGoal, listGoals } from '../../api/goals';
+import { useAccounts } from '../../lib/useReferenceData';
 import { formatAmount } from '../../lib/format';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import type { SavingsGoal } from '../../api/types';
@@ -36,10 +35,7 @@ export function Goals() {
     queryFn: () => listGoals(includeClosed),
   });
 
-  const accountsQ = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
-  });
+  const accountsQ = useAccounts();
 
   const createMut = useMutation({
     mutationFn: (v: {
@@ -73,7 +69,7 @@ export function Goals() {
     return m;
   }, [goals]);
 
-  const accounts = accountsQ.data?.accounts ?? [];
+  const accounts = accountsQ.data ?? [];
   const perAccount = goalsQ.data?.perAccount ?? {};
 
   return (
