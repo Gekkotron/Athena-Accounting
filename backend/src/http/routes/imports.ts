@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { SQL } from 'drizzle-orm';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { fileImports, pdfImportDrafts } from '../../db/schema.js';
 import {
@@ -24,7 +24,7 @@ const PDF_MAX_BYTES = 10 * 1024 * 1024;
 // returns NULL when the row has no statedBalance / statedBalanceDate
 // (reconciliation not set); JS then folds `delta` from the same
 // values already on the wire.
-async function selectEnrichedImports(where: SQL, order: 'list' | 'single') {
+async function selectEnrichedImports(where: SQL, order: 'list' | 'single', limit = 100) {
   const computedSubquery = sql<string | null>`(
     SELECT ((a.opening_balance) + COALESCE(
       (SELECT SUM(t.amount) FROM transactions AS t
@@ -39,8 +39,11 @@ async function selectEnrichedImports(where: SQL, order: 'list' | 'single') {
     .select({ fi: fileImports, computed: computedSubquery })
     .from(fileImports)
     .where(where);
+  // list mode sorts by id DESC so cursor pagination on `?before=<id>` stays
+  // stable (id is monotonic + unique; ties on importedAt would break a
+  // (timestamp, id) cursor). single mode preserves the pre-refactor limit(1).
   const rows = order === 'list'
-    ? await query.orderBy(desc(fileImports.importedAt)).limit(100)
+    ? await query.orderBy(desc(fileImports.id)).limit(limit)
     : await query.limit(1);
   return rows.map(({ fi, computed }) => {
     if (computed == null || fi.statedBalance == null) {
@@ -220,20 +223,29 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get('/api/imports', async (req) => {
+  app.get('/api/imports', async (req, reply) => {
     const uid = userId(req);
-    const imports = await selectEnrichedImports(eq(fileImports.userId, uid), 'list');
-    return { imports };
+    // Cursor pagination on id DESC. ?before=<id> pages backwards, ?limit=<n>
+    // sizes a page (default 100, max 500). nextCursor = last-row id when
+    // the page is full; null on the last page.
+    const q = req.query as { before?: string; limit?: string };
+    const parsedBefore = q.before === undefined ? null : Number(q.before);
+    if (parsedBefore !== null && (!Number.isInteger(parsedBefore) || parsedBefore <= 0)) return reply.code(400).send({ error: 'before must be a positive integer id' });
+    const parsedLimit = q.limit === undefined ? 100 : Number(q.limit);
+    if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 500) return reply.code(400).send({ error: 'limit must be an integer between 1 and 500' });
+    const where = parsedBefore !== null
+      ? and(eq(fileImports.userId, uid), lt(fileImports.id, parsedBefore))!
+      : eq(fileImports.userId, uid);
+    const imports = await selectEnrichedImports(where, 'list', parsedLimit);
+    const nextCursor = imports.length === parsedLimit ? imports[imports.length - 1]!.id : null;
+    return { imports, nextCursor };
   });
 
   app.get('/api/imports/:id', async (req, reply) => {
     const uid = userId(req);
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id) || id <= 0) return reply.code(400).send({ error: 'invalid id' });
-    const [row] = await selectEnrichedImports(
-      and(eq(fileImports.id, id), eq(fileImports.userId, uid))!,
-      'single',
-    );
+    const [row] = await selectEnrichedImports(and(eq(fileImports.id, id), eq(fileImports.userId, uid))!, 'single');
     if (!row) return reply.code(404).send({ error: 'not found' });
     return { fileImport: row };
   });

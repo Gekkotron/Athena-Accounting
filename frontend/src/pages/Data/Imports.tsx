@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState, useMemo } from 'react';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import type { Account, FileImport } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -39,10 +39,24 @@ export function Imports() {
     queryKey: ['accounts'],
     queryFn: () => api<{ accounts: Account[] }>('/api/accounts'),
   });
-  const importsQ = useQuery({
+  // Cursor pagination (perf audit 2026-09-11) — 100 imports per page,
+  // fetched on demand via "Load more". nextCursor: null on the response
+  // marks the end of history, so `hasNextPage` is derived directly.
+  const importsQ = useInfiniteQuery({
     queryKey: ['imports'],
-    queryFn: () => api<{ imports: FileImport[] }>('/api/imports'),
+    queryFn: ({ pageParam }) => {
+      const url = pageParam == null
+        ? '/api/imports'
+        : `/api/imports?before=${pageParam}`;
+      return api<{ imports: FileImport[]; nextCursor: number | null }>(url);
+    },
+    initialPageParam: null as number | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
+  const importsFlat = useMemo(
+    () => importsQ.data?.pages.flatMap((p) => p.imports) ?? [],
+    [importsQ.data],
+  );
 
   // Cascading delete: removes the import row and all transactions that came
   // from it. Used to undo a bad import or replay an old PDF with the new label
@@ -179,11 +193,27 @@ export function Imports() {
       ) : importsQ.isLoading ? (
         <LoadingBlock height="min-h-32" />
       ) : (
-        <FileImportsList
-          imports={importsQ.data?.imports ?? []}
-          accounts={accountsQ.data?.accounts ?? []}
-          onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
-        />
+        <>
+          <FileImportsList
+            imports={importsFlat}
+            accounts={accountsQ.data?.accounts ?? []}
+            onRequestDelete={(fi) => { setDeleteError(null); setPendingDeleteImport(fi); }}
+          />
+          {importsQ.hasNextPage && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => void importsQ.fetchNextPage()}
+                disabled={importsQ.isFetchingNextPage}
+              >
+                {importsQ.isFetchingNextPage
+                  ? t('fileImports.loadingMore')
+                  : t('fileImports.loadMore')}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

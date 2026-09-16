@@ -199,7 +199,9 @@
     },
     "viewTransactionsTitle": "Voir les transactions issues de cet import",
     "deleteTitle": "Supprimer cet import et toutes ses transactions",
-    "deleteAriaLabel": "Supprimer l'import"
+    "deleteAriaLabel": "Supprimer l'import",
+    "loadMore": "Charger plus",
+    "loadingMore": "Chargement…"
   },
   "previewModal": {
     "ariaLabel": "Prévisualiser l'import",

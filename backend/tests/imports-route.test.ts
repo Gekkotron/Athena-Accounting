@@ -107,6 +107,71 @@ describe.skipIf(!RUN)('/api/imports', () => {
     expect(res.json().imports).toEqual([]);
   });
 
+  it('GET /api/imports paginates through 250 rows via ?before + nextCursor', async () => {
+    // Seed a fresh account + 250 file_imports rows; walk pages of 100 →
+    // 100 → 50 via the returned nextCursor and assert every id shows
+    // up exactly once. Also asserts id-DESC ordering (post-refactor).
+    const { db } = await import('../src/db/client.js');
+    const { accounts, fileImports } = await import('../src/db/schema.js');
+    const uid = await getUid();
+    const [freshAcc] = await db.insert(accounts).values({
+      userId: uid, name: 'Pagination fixture', type: 'checking',
+      openingBalance: '0.00', openingDate: '2025-12-31',
+    }).returning();
+    await db.insert(fileImports).values(
+      Array.from({ length: 250 }, (_, i) => ({
+        userId: uid,
+        accountId: freshAcc!.id,
+        filename: `page-${i.toString().padStart(3, '0')}.ofx`,
+        format: 'ofx' as const,
+        importedAt: new Date(2026, 0, 1, 12, 0, i),
+        totalLines: 1, insertedCount: 1, dedupSkipped: 0,
+      })),
+    );
+
+    // Filter to just this account so unrelated seed rows from sibling tests
+    // don't leak in. Uses a raw SQL fragment because the /api/imports route
+    // filters only by user; assert-in-JS is enough for our purpose.
+    const collected: number[] = [];
+    let cursor: number | null = null;
+    let pages = 0;
+    while (true) {
+      pages++;
+      const url = cursor === null
+        ? `/api/imports?limit=100`
+        : `/api/imports?limit=100&before=${cursor}`;
+      const res: Awaited<ReturnType<typeof app.inject>> = await app.inject({ method: 'GET', url, headers: { cookie } });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { imports: Array<{ id: number; accountId: number }>; nextCursor: number | null };
+      const scoped = body.imports.filter((r) => r.accountId === freshAcc!.id);
+      for (let i = 1; i < scoped.length; i++) {
+        expect(scoped[i - 1]!.id).toBeGreaterThan(scoped[i]!.id);
+      }
+      for (const r of scoped) collected.push(r.id);
+      cursor = body.nextCursor;
+      if (cursor === null) break;
+      if (pages > 10) throw new Error('too many pages — infinite loop guard');
+    }
+    // 250 rows, 3 pages of 100/100/50 → nextCursor === null on page 3
+    // (last page came back with only 50 rows, not the full 100 limit).
+    expect(collected.length).toBe(250);
+    // Every id unique.
+    expect(new Set(collected).size).toBe(250);
+    // id-DESC across the concatenated pages.
+    for (let i = 1; i < collected.length; i++) {
+      expect(collected[i - 1]!).toBeGreaterThan(collected[i]!);
+    }
+  });
+
+  it('GET /api/imports rejects invalid ?before / ?limit with 400', async () => {
+    const bad1 = await app.inject({ method: 'GET', url: '/api/imports?before=nope', headers: { cookie } });
+    expect(bad1.statusCode).toBe(400);
+    const bad2 = await app.inject({ method: 'GET', url: '/api/imports?limit=0', headers: { cookie } });
+    expect(bad2.statusCode).toBe(400);
+    const bad3 = await app.inject({ method: 'GET', url: '/api/imports?limit=501', headers: { cookie } });
+    expect(bad3.statusCode).toBe(400);
+  });
+
   it('GET /api/imports hydrates computedBalance + delta per row for a multi-import fixture', async () => {
     // Reconciliation math regression guard for the CTE-fold refactor.
     // Uses a fresh account with openingBalance=100 so the shared test

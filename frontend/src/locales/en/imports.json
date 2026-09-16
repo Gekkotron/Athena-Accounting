@@ -199,7 +199,9 @@
     },
     "viewTransactionsTitle": "View the transactions from this import",
     "deleteTitle": "Delete this import and all its transactions",
-    "deleteAriaLabel": "Delete the import"
+    "deleteAriaLabel": "Delete the import",
+    "loadMore": "Load more",
+    "loadingMore": "Loading…"
   },
   "previewModal": {
     "ariaLabel": "Preview the import",
