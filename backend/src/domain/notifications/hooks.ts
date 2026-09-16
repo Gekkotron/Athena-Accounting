@@ -7,7 +7,10 @@ import { queueBatched, flushBatch } from './batcher.js';
 import { computeEnvelope } from './envelope-check.js';
 import { todayLocalIso } from '../../lib/dates.js';
 
-async function loadPrefs(userId: number) {
+// Exported for tests that need to spy on the per-batch prefs load and
+// assert it fires exactly once. Runtime callers always go through the
+// hooks below, never here directly.
+export async function loadPrefs(userId: number) {
   const [row] = await db.select({ settings: userSettings.settings })
     .from(userSettings).where(eq(userSettings.userId, userId));
   return mergeSettings(row?.settings ?? {}).notifications;
@@ -82,6 +85,77 @@ export async function afterTransactionInserted(userId: number, tx: {
     }
   } catch (err) {
     reportHookError('afterTransactionInserted', err);
+  }
+}
+
+// Batched variant of afterTransactionInserted for callers that dispatch
+// N transactions at once (imports, bank-sync). Preserves every side effect
+// of the per-row version but folds the three expensive per-row queries
+// into their batch-wide equivalents:
+//   - `loadPrefs` is called once, not N times.
+//   - `computeEnvelope` runs at most once per DISTINCT categoryId, not
+//     N times — a 500-row import matching 8 categories drops from ~500
+//     full budget aggregates to 8.
+//   - `emitNotification` for `envelope_exceeded` fires once per distinct
+//     over-budget category — the idempotency key `env:catId:month` already
+//     dedupes at the notification layer, so the per-row loop was
+//     re-computing state only to hit an idempotency short-circuit.
+// `account_low` fires at most once per batch (its idempotency key is
+// per-day, and `newBalance` is a single post-commit snapshot for the whole
+// batch). `big_transaction` still queues per matching row via the
+// batcher's own aggregator.
+export async function afterTransactionsBatchInserted(
+  userId: number,
+  batch: {
+    accountId: number;
+    newBalance: number;
+    transactions: Array<{ id: number; amount: number; merchant: string | null; categoryId: number | null }>;
+  },
+): Promise<void> {
+  if (batch.transactions.length === 0) return;
+  try {
+    const prefs = await loadPrefs(userId);
+    const { accountId, newBalance, transactions: txs } = batch;
+
+    // big_transaction — one queue-append per matching row (dedup happens
+    // in the batcher, not here).
+    const btThreshold = prefs.triggers.bigTransaction.thresholds[String(accountId)];
+    if (prefs.triggers.bigTransaction.enabled && btThreshold != null) {
+      for (const t of txs) {
+        if (Math.abs(t.amount) >= btThreshold) {
+          queueBatched(userId, `bt:${accountId}`, { accountId, amount: Math.abs(t.amount) });
+        }
+      }
+    }
+
+    // account_low — the newBalance snapshot is a single post-commit value
+    // for the whole batch, and the notification's idempotency key is per
+    // (accountId, day), so at most one emit per batch, not per row.
+    const floor = prefs.triggers.accountLow.floors[String(accountId)];
+    if (prefs.triggers.accountLow.enabled && floor != null && newBalance < floor) {
+      const today = todayLocalIso();
+      await emitNotification(userId, 'account_low',
+        { kind: 'account_low', accountId, balance: newBalance, floor },
+        { idempotency: `low:${accountId}:${today}` });
+    }
+
+    // envelope_exceeded — compute once per distinct categoryId in the
+    // batch, emit at most once per over-budget category (idempotency is
+    // `env:catId:month`).
+    if (prefs.triggers.envelopeExceeded.enabled) {
+      const catIds = new Set<number>();
+      for (const t of txs) if (t.categoryId != null) catIds.add(t.categoryId);
+      for (const categoryId of catIds) {
+        const { spent, envelope, month } = await computeEnvelope(userId, categoryId, accountId);
+        if (envelope != null && spent > envelope) {
+          await emitNotification(userId, 'envelope_exceeded',
+            { kind: 'envelope_exceeded', categoryId, envelope, spent, month },
+            { idempotency: `env:${categoryId}:${month}` });
+        }
+      }
+    }
+  } catch (err) {
+    reportHookError('afterTransactionsBatchInserted', err);
   }
 }
 
