@@ -28,105 +28,134 @@ export interface DuplicatesResponse {
   }>;
 }
 
+// Default lookback for the duplicates panel — most bank re-posts and
+// rounding-drift dupes happen within the same statement cycle, so a
+// year of history covers the practical case while capping the SQL
+// self-join at O(recent) rather than O(entire history).
+const DEFAULT_WINDOW_MONTHS = 12;
+const DEFAULT_GROUP_LIMIT = 100;
+const MAX_GROUP_LIMIT = 500;
+
 // Soft-dedup detection: find transactions that share (account, ±date-window,
 // ±amount-window, same sign) but have a different dedup_key — labels that
 // differ enough to evade the strict UNIQUE constraint but match enough on
-// identity to be plausible duplicates worth a human glance. Widened from the
-// exact-tuple match so bank re-posts and rounding drift surface too; groups
-// are then filtered by max-pairwise Jaccard so a coincidental (date, amount)
-// collision with disjoint labels drops out.
+// identity to be plausible duplicates worth a human glance. The pair-emit
+// step runs in SQL (self-join with the ±3d/±0.02 filter), the JS layer
+// only walks the pair list to run Union-Find + max-pairwise-Jaccard —
+// dropping the pre-refactor O(N²) all-pairs comparison that dominated the
+// endpoint on users with a large history.
 export async function getDuplicates(opts: {
   userId: number;
   accountIdFilter?: number | null;
+  windowMonths?: number;
+  limit?: number;
 }): Promise<DuplicatesResponse> {
   const accountIdFilter = opts.accountIdFilter ?? null;
-  const rows = await db.execute<Row>(sql`
-    SELECT t.*
-    FROM transactions t
-    WHERE t.user_id = ${opts.userId}
-      AND t.transfer_group_id IS NULL
-      ${accountIdFilter !== null ? sql`AND t.account_id = ${accountIdFilter}` : sql``}
-      AND EXISTS (
-        SELECT 1 FROM transactions t2
-        WHERE t2.user_id = t.user_id
-          AND t2.account_id = t.account_id
-          AND t2.id <> t.id
-          AND t2.transfer_group_id IS NULL
-          AND ABS(t2.date - t.date) <= ${MAX_DAY_DELTA}
-          AND ABS(t2.amount::numeric - t.amount::numeric) <= ${MAX_AMOUNT_DELTA}
-          AND SIGN(t2.amount::numeric) = SIGN(t.amount::numeric)
-      )
-    ORDER BY t.account_id, t.date DESC, t.amount, t.id
+  const windowMonths = opts.windowMonths ?? DEFAULT_WINDOW_MONTHS;
+  const limit = Math.min(opts.limit ?? DEFAULT_GROUP_LIMIT, MAX_GROUP_LIMIT);
+
+  // Window boundary — computed against real "today" so a long-running
+  // process doesn't drift. YYYY-MM-DD form matches the DATE column type.
+  const windowStart = new Date();
+  windowStart.setUTCMonth(windowStart.getUTCMonth() - windowMonths);
+  const windowStartIso = windowStart.toISOString().slice(0, 10);
+
+  // 1. Candidate pairs — SQL self-join emits (id1, id2, account_id) tuples
+  //    for rows within the ±3d/±0.02/same-sign envelope. `t2.id > t1.id`
+  //    dedupes to one edge per unordered pair. Both legs must fall in the
+  //    window; if you want to catch a duplicate of a very old row, widen
+  //    the ?window= param.
+  const accountFilter1 = accountIdFilter !== null ? sql`AND t1.account_id = ${accountIdFilter}` : sql``;
+  const accountFilter2 = accountIdFilter !== null ? sql`AND t2.account_id = ${accountIdFilter}` : sql``;
+  const pairs = await db.execute<{ id1: number; id2: number; account_id: number }>(sql`
+    SELECT t1.id AS id1, t2.id AS id2, t1.account_id
+    FROM transactions t1
+    JOIN transactions t2
+      ON t2.user_id = t1.user_id
+     AND t2.account_id = t1.account_id
+     AND t2.transfer_group_id IS NULL
+     AND t2.id > t1.id
+     AND t2.date >= ${windowStartIso}
+     AND ABS(t2.date - t1.date) <= ${MAX_DAY_DELTA}
+     AND ABS(t2.amount::numeric - t1.amount::numeric) <= ${MAX_AMOUNT_DELTA}
+     AND SIGN(t2.amount::numeric) = SIGN(t1.amount::numeric)
+     ${accountFilter2}
+    WHERE t1.user_id = ${opts.userId}
+      AND t1.transfer_group_id IS NULL
+      AND t1.date >= ${windowStartIso}
+      ${accountFilter1}
   `);
+  if (pairs.rows.length === 0) return { groups: [] };
 
-  const byAccount = new Map<number, Row[]>();
-  for (const r of rows.rows) {
-    const arr = byAccount.get(r.account_id) ?? [];
-    arr.push(r);
-    byAccount.set(r.account_id, arr);
+  // 2. Metadata for every id that shows up in any pair — narrowed to the
+  //    six fields the UI actually consumes, one query for the whole set.
+  const ids = new Set<number>();
+  for (const p of pairs.rows) { ids.add(p.id1); ids.add(p.id2); }
+  const rowMeta = await db.execute<Row>(sql`
+    SELECT id, account_id, date, amount, raw_label, not_duplicate
+    FROM transactions
+    WHERE user_id = ${opts.userId}
+      AND id IN (${sql.join(Array.from(ids), sql`, `)})
+  `);
+  const rowById = new Map<number, Row>(rowMeta.rows.map((r) => [r.id, r]));
+
+  // 3. Union-Find over the pair set — O(pairs · α(N)) instead of the
+  //    pre-refactor O(rows²) per-account nested loop.
+  const parent = new Map<number, number>();
+  const find = (x: number): number => {
+    let cur = x;
+    while (parent.get(cur) !== cur) {
+      const p = parent.get(cur)!;
+      parent.set(cur, parent.get(p)!);
+      cur = parent.get(cur)!;
+    }
+    return cur;
+  };
+  for (const id of ids) parent.set(id, id);
+  const pairsByAccount = new Map<number, Array<[number, number]>>();
+  for (const p of pairs.rows) {
+    const arr = pairsByAccount.get(p.account_id) ?? [];
+    arr.push([p.id1, p.id2]);
+    pairsByAccount.set(p.account_id, arr);
+    const ra = find(p.id1);
+    const rb = find(p.id2);
+    if (ra !== rb) parent.set(ra, rb);
   }
 
+  // 4. Group by component root, filter by min-pairwise Jaccard, drop
+  //    groups where every member is already marked notDuplicate, sort.
+  const byRoot = new Map<number, Row[]>();
+  for (const id of ids) {
+    const root = find(id);
+    const row = rowById.get(id);
+    if (!row) continue;
+    const arr = byRoot.get(root) ?? [];
+    arr.push(row);
+    byRoot.set(root, arr);
+  }
   const groups: DuplicatesResponse['groups'] = [];
-  for (const [accountId, accountRows] of byAccount) {
-    // Connected-components clustering via Union-Find over the fuzzy-adjacency
-    // graph. A chain a↔b↔c can group without a↔c matching directly.
-    const parent = new Map<number, number>();
-    const find = (x: number): number => {
-      let cur = x;
-      while (parent.get(cur) !== cur) {
-        const p = parent.get(cur)!;
-        parent.set(cur, parent.get(p)!);
-        cur = parent.get(cur)!;
-      }
-      return cur;
-    };
-    for (const r of accountRows) parent.set(r.id, r.id);
-    for (let i = 0; i < accountRows.length; i++) {
-      for (let j = i + 1; j < accountRows.length; j++) {
-        const a = accountRows[i]!;
-        const b = accountRows[j]!;
-        const dateDiff = Math.abs(dateToUtc(a.date) - dateToUtc(b.date)) / 86_400_000;
-        if (dateDiff > MAX_DAY_DELTA) continue;
-        if (Math.abs(Number(a.amount) - Number(b.amount)) > MAX_AMOUNT_DELTA + 1e-9) continue;
-        if (Math.sign(Number(a.amount)) !== Math.sign(Number(b.amount))) continue;
-        const ra = find(a.id);
-        const rb = find(b.id);
-        if (ra !== rb) parent.set(ra, rb);
-      }
-    }
-    const byRoot = new Map<number, Row[]>();
-    for (const r of accountRows) {
-      const root = find(r.id);
-      const arr = byRoot.get(root) ?? [];
-      arr.push(r);
-      byRoot.set(root, arr);
-    }
-    for (const [, members] of byRoot) {
-      if (members.length < 2) continue;
-      const labels = members.map((m) => m.raw_label);
-      if (groupMinPairwiseSimilarity(labels) < LABEL_JACCARD_THRESHOLD) continue;
-      if (members.every((m) => m.not_duplicate)) continue;
-      members.sort((a, b) => (a.date === b.date ? a.id - b.id : a.date.localeCompare(b.date)));
-      groups.push({
-        accountId,
-        date: members[0]!.date,
-        amount: members[0]!.amount,
-        transactions: members,
-      });
-    }
+  for (const [, members] of byRoot) {
+    if (members.length < 2) continue;
+    const labels = members.map((m) => m.raw_label);
+    if (groupMinPairwiseSimilarity(labels) < LABEL_JACCARD_THRESHOLD) continue;
+    if (members.every((m) => m.not_duplicate)) continue;
+    members.sort((a, b) => (a.date === b.date ? a.id - b.id : a.date.localeCompare(b.date)));
+    groups.push({
+      accountId: members[0]!.account_id,
+      date: members[0]!.date,
+      amount: members[0]!.amount,
+      transactions: members,
+    });
   }
-  return { groups };
-}
-
-function dateToUtc(iso: string): number {
-  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
-  return Date.UTC(y, m - 1, d);
+  // Most-recent groups first, then cap at `limit`.
+  groups.sort((a, b) => (b.date === a.date ? 0 : b.date.localeCompare(a.date)));
+  return { groups: groups.slice(0, limit) };
 }
 
 export function registerDuplicateRoutes(app: FastifyInstance): void {
   app.get('/api/transactions/duplicates', async (req, reply) => {
     const uid = userId(req);
-    const q = req.query as { accountId?: string };
+    const q = req.query as { accountId?: string; window?: string; limit?: string };
     let accountIdFilter: number | null = null;
     if (q.accountId) {
       const n = Number(q.accountId);
@@ -135,7 +164,23 @@ export function registerDuplicateRoutes(app: FastifyInstance): void {
       }
       accountIdFilter = n;
     }
-    return getDuplicates({ userId: uid, accountIdFilter });
+    let windowMonths: number | undefined;
+    if (q.window !== undefined) {
+      const n = Number(q.window);
+      if (!Number.isInteger(n) || n < 1 || n > 240) {
+        return reply.code(400).send({ error: 'window must be an integer between 1 and 240 months' });
+      }
+      windowMonths = n;
+    }
+    let limit: number | undefined;
+    if (q.limit !== undefined) {
+      const n = Number(q.limit);
+      if (!Number.isInteger(n) || n < 1) {
+        return reply.code(400).send({ error: 'limit must be a positive integer' });
+      }
+      limit = n;
+    }
+    return getDuplicates({ userId: uid, accountIdFilter, windowMonths, limit });
   });
 
   // Batch-mark a set of transaction ids as "not a duplicate". Used by the
