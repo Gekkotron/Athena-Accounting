@@ -1,5 +1,6 @@
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
+import compress from '@fastify/compress';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
@@ -106,6 +107,21 @@ export async function build(opts?: { logger?: boolean }): Promise<FastifyInstanc
     crossOriginOpenerPolicy: false,
     frameguard: { action: 'deny' },
     referrerPolicy: { policy: 'no-referrer' },
+  });
+
+  // Response compression. Registered EARLY so every route + @fastify/static
+  // reply flows through it. Brotli preferred over gzip when the client
+  // supports both (Accept-Encoding negotiation). Threshold 1024 bytes —
+  // the CPU cost of compressing a sub-1KB payload is worse than the
+  // wire savings.
+  //
+  // Docker path: nginx.conf's `gzip on` compresses static files it serves
+  // directly, and Nginx never touches Content-Encoding on proxied /api/*
+  // responses (default gzip_proxied=off), so pre-compressed backend
+  // replies pass through unchanged — no double-compression.
+  await app.register(compress, {
+    encodings: ['br', 'gzip'],
+    threshold: 1024,
   });
 
   await app.register(multipart);
