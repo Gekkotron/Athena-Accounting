@@ -6,6 +6,7 @@ import { emitNotification } from './emit.js';
 import { queueBatched, flushBatch } from './batcher.js';
 import { computeEnvelope } from './envelope-check.js';
 import { todayLocalIso } from '../../lib/dates.js';
+import { notificationHookFailuresTotal } from '../../lib/hook-metrics.js';
 
 // Exported for tests that need to spy on the per-batch prefs load and
 // assert it fires exactly once. Runtime callers always go through the
@@ -17,12 +18,15 @@ export async function loadPrefs(userId: number) {
 }
 
 // Best-effort logging for the two hook entry points below — never let a
-// broken hook throw into the caller. No `trace()` helper is available in
-// this module (that lives in domain/imports/import-service.ts), so this
-// falls back to console.error, prefixed for grep-ability.
+// broken hook throw into the caller. Bumps a Prometheus counter labeled by
+// the hook name so a silent-failure regression shows up on the scrape
+// target, and logs at warn level (the previous console.error looked like
+// a hard error in log dashboards even though every branch below is best-
+// effort by design).
 function reportHookError(where: string, err: unknown): void {
   try {
-    console.error(`[notifications:hooks] ${where} failed`, err);
+    notificationHookFailuresTotal.inc({ hook: where });
+    console.warn(`[notifications:hooks] ${where} failed`, err);
   } catch {
     // Never let logging itself throw.
   }

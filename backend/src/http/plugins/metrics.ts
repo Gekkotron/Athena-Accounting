@@ -10,6 +10,7 @@ import {
 import { pool } from '../../db/client.js';
 import { env } from '../../env.js';
 import { bearerTokenMatches } from './metrics-auth.js';
+import { attachHookMetrics } from '../../lib/hook-metrics.js';
 
 export interface MetricsBag {
   httpRequestsTotal: Counter<'method' | 'route' | 'status_class'>;
@@ -38,6 +39,10 @@ function statusClass(code: number): string {
 const plugin: FastifyPluginAsync = async (app: FastifyInstance) => {
   const registry = new Registry();
   collectDefaultMetrics({ register: registry });
+  // Shared module-level Counter defined in lib/hook-metrics.ts so domain
+  // code can bump it without holding a Fastify handle. Adding it here
+  // lets /metrics scrape it alongside the plugin-owned metrics.
+  attachHookMetrics(registry);
 
   const httpRequestsTotal = new Counter({
     name: 'athena_http_requests_total',

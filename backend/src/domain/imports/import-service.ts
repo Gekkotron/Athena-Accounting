@@ -15,6 +15,7 @@ import { emitAutoSplits, loadRuleEngine } from '../rules/recategorize.js';
 import { firstMatch } from '../rules/matcher.js';
 import { runRecurringDetectionStandalone } from '../../services/recurring-detect.js';
 import { afterTransactionsBatchInserted, computeCurrentBalance } from '../notifications/hooks.js';
+import { todayLocalIso } from '../../lib/dates.js';
 
 export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync' | 'camt';
 
@@ -144,8 +145,10 @@ export async function runImport(opts: {
         (min, p) => (p.date < min ? p.date : min),
         parsed[0]!.date,
       );
-      const now = new Date();
-      const todayIso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+      // Local calendar, not UTC — compared against a DATE column, so a
+      // French user at 22:30 UTC (00:30 local next day) must see the DB's
+      // "tomorrow" too or the guard misfires.
+      const todayIso = todayLocalIso();
       const [acct] = await tx
         .select({
           openingBalance: accounts.openingBalance,
