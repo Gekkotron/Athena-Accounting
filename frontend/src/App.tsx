@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { lazy, useEffect, useRef } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -19,34 +19,41 @@ import { TourBubble } from './components/TourBubble';
 import { LockScreen } from './components/LockScreen';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
-import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { Transactions } from './pages/Transactions';
-import { Tri } from './pages/Rules/Tri';
-import { Categories } from './pages/Rules/Categories';
-import { Plafonds } from './pages/Budgets/Plafonds';
-import { Enveloppes } from './pages/Budgets/Enveloppes/Enveloppes';
-import { Rules } from './pages/Rules';
-import { DetectedTab } from './pages/Recurrent/DetectedTab';
-import { UpcomingTab } from './pages/Recurrent/UpcomingTab';
-import { ForecastTab } from './pages/Recurrent/ForecastTab';
-import { Accounts } from './pages/Accounts';
-import { Goals } from './pages/Goals';
-import { Imports } from './pages/Data/Imports';
-import { BankSync } from './pages/Data/BankSync';
-import { Duplicates } from './pages/Data/Duplicates';
-import { PdfTemplates } from './pages/Data/PdfTemplates';
-import { Backup } from './pages/Data/Backup';
-import { Profile } from './pages/Profile';
-import { SettingsGeneral } from './pages/Settings/SettingsGeneral';
-import { SettingsDashboard } from './pages/Settings/SettingsDashboard';
-import { SettingsTransactions } from './pages/Settings/SettingsTransactions';
-import { SettingsImport } from './pages/Settings/SettingsImport';
-import { SettingsFx } from './pages/Settings/SettingsFx';
-import { SettingsSecurityPage } from './pages/Settings/SettingsSecurityPage';
-import { SettingsNotifications } from './pages/Settings/SettingsNotifications';
-import { Notifications } from './pages/Notifications';
-import { BankSyncCallback } from './pages/BankSyncCallback';
+
+// Route-level code splitting (perf audit 2026-09-11). Each page component
+// lands in its own Vite chunk, fetched on demand when the route is first
+// visited. The Suspense boundary that gates these lazies lives in main.tsx
+// (see the <Suspense fallback> wrapping <App />). Layout / providers / the
+// auth-gate query itself stay eager so the shell paints without a network
+// round-trip.
+const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Transactions = lazy(() => import('./pages/Transactions').then((m) => ({ default: m.Transactions })));
+const Tri = lazy(() => import('./pages/Rules/Tri').then((m) => ({ default: m.Tri })));
+const Categories = lazy(() => import('./pages/Rules/Categories').then((m) => ({ default: m.Categories })));
+const Plafonds = lazy(() => import('./pages/Budgets/Plafonds').then((m) => ({ default: m.Plafonds })));
+const Enveloppes = lazy(() => import('./pages/Budgets/Enveloppes/Enveloppes').then((m) => ({ default: m.Enveloppes })));
+const Rules = lazy(() => import('./pages/Rules').then((m) => ({ default: m.Rules })));
+const DetectedTab = lazy(() => import('./pages/Recurrent/DetectedTab').then((m) => ({ default: m.DetectedTab })));
+const UpcomingTab = lazy(() => import('./pages/Recurrent/UpcomingTab').then((m) => ({ default: m.UpcomingTab })));
+const ForecastTab = lazy(() => import('./pages/Recurrent/ForecastTab').then((m) => ({ default: m.ForecastTab })));
+const Accounts = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.Accounts })));
+const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })));
+const Imports = lazy(() => import('./pages/Data/Imports').then((m) => ({ default: m.Imports })));
+const BankSync = lazy(() => import('./pages/Data/BankSync').then((m) => ({ default: m.BankSync })));
+const Duplicates = lazy(() => import('./pages/Data/Duplicates').then((m) => ({ default: m.Duplicates })));
+const PdfTemplates = lazy(() => import('./pages/Data/PdfTemplates').then((m) => ({ default: m.PdfTemplates })));
+const Backup = lazy(() => import('./pages/Data/Backup').then((m) => ({ default: m.Backup })));
+const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const SettingsGeneral = lazy(() => import('./pages/Settings/SettingsGeneral').then((m) => ({ default: m.SettingsGeneral })));
+const SettingsDashboard = lazy(() => import('./pages/Settings/SettingsDashboard').then((m) => ({ default: m.SettingsDashboard })));
+const SettingsTransactions = lazy(() => import('./pages/Settings/SettingsTransactions').then((m) => ({ default: m.SettingsTransactions })));
+const SettingsImport = lazy(() => import('./pages/Settings/SettingsImport').then((m) => ({ default: m.SettingsImport })));
+const SettingsFx = lazy(() => import('./pages/Settings/SettingsFx').then((m) => ({ default: m.SettingsFx })));
+const SettingsSecurityPage = lazy(() => import('./pages/Settings/SettingsSecurityPage').then((m) => ({ default: m.SettingsSecurityPage })));
+const SettingsNotifications = lazy(() => import('./pages/Settings/SettingsNotifications').then((m) => ({ default: m.SettingsNotifications })));
+const Notifications = lazy(() => import('./pages/Notifications').then((m) => ({ default: m.Notifications })));
+const BankSyncCallback = lazy(() => import('./pages/BankSyncCallback').then((m) => ({ default: m.BankSyncCallback })));
 
 // Single fan-out point for live notification channels. Each adapter is a
 // no-op unless its runtime is present (toast: always; webPush: the browser
