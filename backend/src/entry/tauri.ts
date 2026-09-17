@@ -19,6 +19,12 @@ import {
   readMarker, hasSnapshot, clearEncryption, readSnapshot, writeSnapshot,
 } from '../db/snapshotStore.js';
 import { encryptBuffer, decryptBuffer } from '../lib/binaryEnvelope.js';
+import {
+  ensureSessionSecret,
+  writeSessionSecretFile,
+  LEGACY_TAURI_SESSION_SECRET,
+  type SessionSecretResult,
+} from './session-secret.js';
 
 // `Buffer`'s `.buffer` is typed `ArrayBufferLike` (it may be backed by a
 // `SharedArrayBuffer`), which `BlobPart`/`Uint8Array<ArrayBuffer>` reject.
@@ -86,10 +92,22 @@ process.env.PGLITE_PATH = path.join(dir, 'athena.db');
 // and the built frontend. STATIC_ROOT is left overridable so the Rust shell
 // can point at the bundled resource directory.
 process.env.SERVE_STATIC ??= 'true';
-// env.ts requires SESSION_SECRET >= 32 chars even when auth is off. The
-// Tauri app has no remote surface (127.0.0.1 only) so a fixed local secret
-// is fine — sessions are per-install, not shared.
-process.env.SESSION_SECRET ??= 'athena-tauri-local-session-secret-not-remote';
+// env.ts requires SESSION_SECRET >= 32 chars even when auth is off. Every
+// Tauri install now gets its OWN random secret at first boot, persisted to
+// <dataDir>/session-secret.bin (mode 0o600) — the KDF for TOTP, bank-sync,
+// MCP wrap and backup-destination field crypto is per-install, so a stolen
+// athena.db no longer decrypts under a public constant. Legacy installs
+// (session-secret.bin absent, athena.db present) get a one-shot re-encrypt
+// pass right after runMigrations() so their existing ciphertexts survive.
+let sessionSecretResult: SessionSecretResult;
+try {
+  sessionSecretResult = await ensureSessionSecret(dir);
+} catch (err) {
+  process.stdout.write(`ATHENA_FATAL=${fatalMessage(err)}\n`);
+  await releaseLock().catch(() => { /* best effort — process is exiting anyway */ });
+  process.exit(1);
+}
+process.env.SESSION_SECRET = sessionSecretResult.secret;
 
 // Stamp the app version into /health so release smoke tests can assert the
 // running artifact matches the tag. In the shipped bundle, package.json sits
@@ -254,6 +272,26 @@ try {
   const { isSnapshotActive, flushSnapshots, lastSnapshotSucceeded } = await import('../db/snapshotScheduler.js');
 
   await runMigrations();
+
+  // Legacy install detected at boot (no session-secret.bin but athena.db
+  // present): re-encrypt every SESSION_SECRET-derived ciphertext under the
+  // fresh per-install secret in one transaction, then persist the file.
+  // Failure rolls back and leaves the file unwritten — next boot retries.
+  if (sessionSecretResult.needsMigration) {
+    const { migrateSessionSecret } = await import('./session-secret-migration.js');
+    const counts = await migrateSessionSecret(
+      LEGACY_TAURI_SESSION_SECRET,
+      sessionSecretResult.secret,
+    );
+    await writeSessionSecretFile(sessionSecretResult.secretPath, sessionSecretResult.secret);
+    // eslint-disable-next-line no-console -- boot-log line, no logger yet
+    console.warn(
+      `[session-secret] migrated legacy install: totp=${counts.userTotp} ` +
+        `bank-sync=${counts.bankSyncCredentials} backup=${counts.backupDestinations} ` +
+        `mcp=${counts.mcpKeys}`,
+    );
+  }
+
   await ensureLocalUser();
 
   const app = await build();
