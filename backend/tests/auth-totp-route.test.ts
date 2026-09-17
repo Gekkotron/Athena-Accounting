@@ -260,10 +260,11 @@ describe.skipIf(!RUN)('/api/auth/2fa', () => {
         payload: { username: 'totp-user', password: 'totp-user-1234' },
       });
       const halfCookie = await extractCookie(login);
-      // Grab the current code via the outer (fully-authed) cookie — the
-      // debug endpoint requires a full session.
+      // Grab the NEXT window's code (offset=1) — the confirm above bumped
+      // `last_used_counter` to the current counter, so the RFC 6238 §5.2
+      // replay guard now rejects the current window's code as a replay.
       const codeRes = await app.inject({
-        method: 'GET', url: '/api/auth/2fa/__debug/current-code', headers: { cookie },
+        method: 'GET', url: '/api/auth/2fa/__debug/current-code?offset=1', headers: { cookie },
       });
       const verify = await app.inject({
         method: 'POST', url: '/api/auth/2fa/verify',
@@ -460,6 +461,74 @@ describe.skipIf(!RUN)('/api/auth/2fa', () => {
         headers: { cookie }, payload: { password: 'totp-user-1234' },
       });
       expect(res.statusCode).toBe(400);
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // RFC 6238 §5.2 — replay defense
+  // ------------------------------------------------------------------
+  describe('replay defense', () => {
+    async function halfCookieAfterLogin(): Promise<string> {
+      const login = await app.inject({
+        method: 'POST', url: '/api/auth/login',
+        payload: { username: 'totp-user', password: 'totp-user-1234' },
+      });
+      return extractCookie(login);
+    }
+
+    it('rejects the same 6-digit code replayed inside the acceptance window', async () => {
+      await enrolAndConfirm(cookie);
+      const codeRes = await app.inject({
+        method: 'GET', url: '/api/auth/2fa/__debug/current-code?offset=1', headers: { cookie },
+      });
+      const code = codeRes.json().code;
+
+      const firstVerify = await app.inject({
+        method: 'POST', url: '/api/auth/2fa/verify',
+        headers: { cookie: await halfCookieAfterLogin() }, payload: { code },
+      });
+      expect(firstVerify.statusCode).toBe(200);
+
+      const replay = await app.inject({
+        method: 'POST', url: '/api/auth/2fa/verify',
+        headers: { cookie: await halfCookieAfterLogin() }, payload: { code },
+      });
+      expect(replay.statusCode).toBe(401);
+    });
+
+    it('rejects a code from an older ±slop window after a newer one accepted (RFC 6238 §5.2)', async () => {
+      await enrolAndConfirm(cookie);
+      const nextRes = await app.inject({
+        method: 'GET', url: '/api/auth/2fa/__debug/current-code?offset=1', headers: { cookie },
+      });
+      const currentRes = await app.inject({
+        method: 'GET', url: '/api/auth/2fa/__debug/current-code?offset=0', headers: { cookie },
+      });
+      const nextCode = nextRes.json().code;
+      const currentCode = currentRes.json().code;
+
+      const nextVerify = await app.inject({
+        method: 'POST', url: '/api/auth/2fa/verify',
+        headers: { cookie: await halfCookieAfterLogin() }, payload: { code: nextCode },
+      });
+      expect(nextVerify.statusCode).toBe(200);
+
+      // Now try the CURRENT-window code — still within ±slop, but its
+      // counter (< next) is not strictly greater than last_used_counter.
+      const stale = await app.inject({
+        method: 'POST', url: '/api/auth/2fa/verify',
+        headers: { cookie: await halfCookieAfterLogin() }, payload: { code: currentCode },
+      });
+      expect(stale.statusCode).toBe(401);
+    });
+
+    it('recovery-code path is unaffected by the TOTP counter guard', async () => {
+      const { codes } = await enrolAndConfirm(cookie);
+      const verify = await app.inject({
+        method: 'POST', url: '/api/auth/2fa/verify',
+        headers: { cookie: await halfCookieAfterLogin() }, payload: { code: codes[0] },
+      });
+      expect(verify.statusCode).toBe(200);
     });
   });
 });

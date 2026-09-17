@@ -84,6 +84,11 @@ export const userTotp = pgTable('user_totp', {
     .references(() => users.id, { onDelete: 'cascade' }),
   secretCiphertext: text('secret_ciphertext').notNull(),
   enabledAt: timestamp('enabled_at', { withTimezone: true }),
+  // RFC 6238 §5.2 replay defense (migration 0043). Highest TOTP counter
+  // previously accepted for this user (floor(unixSec/30) at the matched
+  // ±windowSlop offset). Every verify accepts only when the code's counter
+  // strictly exceeds this value; the accepting UPDATE writes it back.
+  lastUsedCounter: integer('last_used_counter').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

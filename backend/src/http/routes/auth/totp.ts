@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { hash, verify, Algorithm } from '@node-rs/argon2';
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { users, userTotp, userTotpRecoveryCodes } from '../../../db/schema.js';
 import { env } from '../../../env.js';
@@ -136,7 +136,8 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
     if (!row) return reply.code(400).send({ error: 'no pending enrolment' });
     if (row.enabledAt) return reply.code(409).send({ error: 'totp already enabled' });
     const secret = decryptTotpSecret(key, uid, row.secretCiphertext);
-    if (!verifyCode(secret, parsed.data.code)) {
+    const confirmResult = verifyCode(secret, parsed.data.code);
+    if (!confirmResult.ok) {
       return reply.code(401).send({ error: 'invalid code' });
     }
 
@@ -147,8 +148,15 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
     const hashes = await Promise.all(codes.map((c) => hash(normalizeRecoveryCode(c), ARGON2_OPTS)));
 
     await db.transaction(async (tx) => {
+      // Stamp `last_used_counter` on activation so a snooped enrolment
+      // code can't be replayed against /verify while the same window
+      // is still open (RFC 6238 §5.2 replay defense).
       await tx.update(userTotp)
-        .set({ enabledAt: new Date(), updatedAt: new Date() })
+        .set({
+          enabledAt: new Date(),
+          updatedAt: new Date(),
+          lastUsedCounter: confirmResult.counter,
+        })
         .where(eq(userTotp.userId, uid));
       // Defensive cleanup: previous codes from a prior activation cycle
       // (should not exist here — /disable would have cascaded them —
@@ -191,7 +199,20 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
 
     if (/^\d{6}$/.test(raw)) {
       const secret = decryptTotpSecret(key, uid, totpRow.secretCiphertext);
-      matched = verifyCode(secret, raw);
+      const r = verifyCode(secret, raw);
+      if (r.ok) {
+        // Atomic replay guard: the UPDATE only lands when the row's
+        // counter is still strictly below the matched one. A replay
+        // (same code / same window / earlier code from the ±slop range)
+        // hits `last_used_counter >= r.counter` and affects zero rows,
+        // so `matched` stays false — same 401 shape as a wrong code.
+        const upd = await db
+          .update(userTotp)
+          .set({ lastUsedCounter: r.counter })
+          .where(and(eq(userTotp.userId, uid), lt(userTotp.lastUsedCounter, r.counter)))
+          .returning({ userId: userTotp.userId });
+        matched = upd.length > 0;
+      }
     } else {
       // Recovery-code path. Iterate unused codes and argon2-verify. On a
       // match, burn the row transactionally alongside clearing the flag
@@ -262,7 +283,19 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
     let codeOk = false;
     if (/^\d{6}$/.test(raw)) {
       const secret = decryptTotpSecret(key, uid, totpRow.secretCiphertext);
-      codeOk = verifyCode(secret, raw);
+      const r = verifyCode(secret, raw);
+      if (r.ok) {
+        // Same replay guard as /verify: an atomic conditional UPDATE.
+        // The row is about to be deleted below on success, but that
+        // delete only fires after this check — a replay window before
+        // the delete lands still needs the counter bump to reject.
+        const upd = await db
+          .update(userTotp)
+          .set({ lastUsedCounter: r.counter })
+          .where(and(eq(userTotp.userId, uid), lt(userTotp.lastUsedCounter, r.counter)))
+          .returning({ userId: userTotp.userId });
+        codeOk = upd.length > 0;
+      }
     } else {
       const normalized = normalizeRecoveryCode(raw);
       if (normalized.length >= 6) {
@@ -323,14 +356,18 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
 
   // Exposed for tests: peek at the current TOTP code the server would
   // accept, without going through decrypt+HMAC in the test. Gated on
-  // NODE_ENV=test so it never appears in production.
+  // NODE_ENV=test so it never appears in production. `?offset=<int>`
+  // shifts the counter by n × 30 s so replay-protected verify tests can
+  // grab a fresh-counter code without waiting a real clock window.
   if (process.env.NODE_ENV === 'test') {
     app.get('/api/auth/2fa/__debug/current-code', { preHandler: app.requireAuth }, async (req, reply) => {
       const uid = req.session.userId!;
       const [row] = await db.select().from(userTotp).where(eq(userTotp.userId, uid)).limit(1);
       if (!row) return reply.code(404).send({ error: 'no totp row' });
       const secret = decryptTotpSecret(key, uid, row.secretCiphertext);
-      return { code: generateCode(secret) };
+      const offset = Number((req.query as { offset?: string })?.offset ?? 0);
+      const atSec = Math.floor(Date.now() / 1000) + (Number.isFinite(offset) ? offset : 0) * 30;
+      return { code: generateCode(secret, atSec) };
     });
   }
 }

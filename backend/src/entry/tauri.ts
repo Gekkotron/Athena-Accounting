@@ -284,7 +284,6 @@ try {
       sessionSecretResult.secret,
     );
     await writeSessionSecretFile(sessionSecretResult.secretPath, sessionSecretResult.secret);
-    // eslint-disable-next-line no-console -- boot-log line, no logger yet
     console.warn(
       `[session-secret] migrated legacy install: totp=${counts.userTotp} ` +
         `bank-sync=${counts.bankSyncCredentials} backup=${counts.backupDestinations} ` +

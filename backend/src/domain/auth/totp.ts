@@ -80,20 +80,24 @@ function timingSafeEqualStr(a: string, b: string): boolean {
 // Accept the current window plus `windowSlop` on each side to tolerate
 // clock skew between server and authenticator app. RFC 6238 §6 permits a
 // small look-back-and-forward; ±1 (=60s each way) is the standard trade
-// between usability and replay window.
+// between usability and replay window. Returns the matched counter (the
+// floor(unixSec/30) value at the offset that generated the accepted code)
+// so callers can enforce the RFC 6238 §5.2 last-used-counter check —
+// without it, a snooped code is replayable inside the acceptance window.
 export function verifyCode(
   secretBase32: string,
   submitted: string,
   windowSlop: number = 1,
   nowUnixSec: number = Math.floor(Date.now() / 1000),
-): boolean {
-  if (!/^\d{6}$/.test(submitted)) return false;
+): { ok: boolean; counter: number } {
+  if (!/^\d{6}$/.test(submitted)) return { ok: false, counter: 0 };
   for (let s = -windowSlop; s <= windowSlop; s++) {
-    if (timingSafeEqualStr(generateCode(secretBase32, nowUnixSec + s * PERIOD_S), submitted)) {
-      return true;
+    const atSec = nowUnixSec + s * PERIOD_S;
+    if (timingSafeEqualStr(generateCode(secretBase32, atSec), submitted)) {
+      return { ok: true, counter: Math.floor(atSec / PERIOD_S) };
     }
   }
-  return false;
+  return { ok: false, counter: 0 };
 }
 
 export function otpauthUrl(username: string, base32Secret: string, issuer: string = 'Athena'): string {

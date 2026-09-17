@@ -72,43 +72,52 @@ describe('generateCode — RFC 6238 test vectors', () => {
 });
 
 describe('verifyCode', () => {
-  it('accepts the current window', () => {
+  it('accepts the current window and returns its counter', () => {
     const now = 1234567890;
     const code = generateCode(RFC_SECRET_B32, now);
-    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toBe(true);
+    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toEqual({
+      ok: true,
+      counter: Math.floor(now / 30),
+    });
   });
 
-  it('accepts the previous window (t-30)', () => {
+  it('accepts the previous window (t-30) and returns its counter', () => {
     const now = 1234567890;
     const code = generateCode(RFC_SECRET_B32, now - 30);
-    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toBe(true);
+    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toEqual({
+      ok: true,
+      counter: Math.floor((now - 30) / 30),
+    });
   });
 
-  it('accepts the next window (t+30)', () => {
+  it('accepts the next window (t+30) and returns its counter', () => {
     const now = 1234567890;
     const code = generateCode(RFC_SECRET_B32, now + 30);
-    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toBe(true);
+    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toEqual({
+      ok: true,
+      counter: Math.floor((now + 30) / 30),
+    });
   });
 
   it('rejects a two-windows-old code with default slop', () => {
     const now = 1234567890;
     const code = generateCode(RFC_SECRET_B32, now - 60);
-    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toBe(false);
+    expect(verifyCode(RFC_SECRET_B32, code, 1, now).ok).toBe(false);
   });
 
   it('rejects non-numeric input', () => {
     const now = 1234567890;
-    expect(verifyCode(RFC_SECRET_B32, 'abc123', 1, now)).toBe(false);
-    expect(verifyCode(RFC_SECRET_B32, '12345', 1, now)).toBe(false);
-    expect(verifyCode(RFC_SECRET_B32, '1234567', 1, now)).toBe(false);
-    expect(verifyCode(RFC_SECRET_B32, '', 1, now)).toBe(false);
+    expect(verifyCode(RFC_SECRET_B32, 'abc123', 1, now).ok).toBe(false);
+    expect(verifyCode(RFC_SECRET_B32, '12345', 1, now).ok).toBe(false);
+    expect(verifyCode(RFC_SECRET_B32, '1234567', 1, now).ok).toBe(false);
+    expect(verifyCode(RFC_SECRET_B32, '', 1, now).ok).toBe(false);
   });
 
   it('rejects a code from a different secret', () => {
     const now = 1234567890;
     const otherSecret = base32Encode(Buffer.from('OTHER-SECRET-20-BYTES', 'ascii').subarray(0, 20));
     const code = generateCode(otherSecret, now);
-    expect(verifyCode(RFC_SECRET_B32, code, 1, now)).toBe(false);
+    expect(verifyCode(RFC_SECRET_B32, code, 1, now).ok).toBe(false);
   });
 });
 
