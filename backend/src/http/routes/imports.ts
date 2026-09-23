@@ -16,6 +16,21 @@ import { flushSnapshots } from '../../db/snapshotScheduler.js';
 
 const PDF_MAX_BYTES = 10 * 1024 * 1024;
 
+// Narrows a caught `unknown` to its optional string `code` field —
+// import errors from importPdf / applyTemplateAndImport / previewTemplate
+// carry a discriminator like 'pdf_encrypted' / 'draft_expired' /
+// 'template_yielded_no_rows' that the caller branches on for HTTP status.
+function errCode(err: unknown): string | undefined {
+  if (typeof err === 'object' && err !== null && 'code' in err) {
+    const c = (err as { code: unknown }).code;
+    if (typeof c === 'string') return c;
+  }
+  return undefined;
+}
+function errMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 // Enriched-import select: one query, one round-trip. Hydrates
 // `computedBalance` per row via a correlated subquery — replaces the
 // pre-refactor per-row `Promise.all(rows.map(enrichImport))` fan-out
@@ -113,14 +128,15 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
           return reply.code(201).send(r);
         }
         return reply.code(200).send(r);
-      } catch (err: any) {
+      } catch (err: unknown) {
         app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'error' });
-        if (err?.code === 'pdf_encrypted') return reply.code(400).send({ code: 'pdf_encrypted', error: 'PDF is password-protected' });
-        if (err?.code === 'template_yielded_no_rows') {
+        const code = errCode(err);
+        if (code === 'pdf_encrypted') return reply.code(400).send({ code: 'pdf_encrypted', error: 'PDF is password-protected' });
+        if (code === 'template_yielded_no_rows') {
           return reply.code(422).send({ code: 'template_yielded_no_rows', error: 'saved template did not match this PDF; retrain via /api/pdf-templates' });
         }
         app.log.error({ err, filename }, 'pdf import failed');
-        return reply.code(400).send({ error: 'pdf import failed', message: err instanceof Error ? err.message : String(err) });
+        return reply.code(400).send({ error: 'pdf import failed', message: errMessage(err) });
       }
     }
 
@@ -197,12 +213,13 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
       });
       app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'success' }); void flushSnapshots();
       return reply.code(201).send(r);
-    } catch (err: any) {
+    } catch (err: unknown) {
       app.metrics.importsTotal.inc({ kind: 'pdf', outcome: 'error' });
-      if (err?.code === 'draft_expired') return reply.code(410).send({ code: 'draft_expired', error: 'draft expired or not found' });
-      if (err?.code === 'template_yielded_no_rows') return reply.code(422).send({ code: 'template_yielded_no_rows', error: 'zones produced 0 rows' });
+      const code = errCode(err);
+      if (code === 'draft_expired') return reply.code(410).send({ code: 'draft_expired', error: 'draft expired or not found' });
+      if (code === 'template_yielded_no_rows') return reply.code(422).send({ code: 'template_yielded_no_rows', error: 'zones produced 0 rows' });
       app.log.error({ err }, 'apply template failed');
-      return reply.code(400).send({ error: 'apply template failed', message: err?.message ?? String(err) });
+      return reply.code(400).send({ error: 'apply template failed', message: errMessage(err) });
     }
   });
 
@@ -214,12 +231,12 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     try {
       const r = await previewTemplate({ draftId: body.draftId, zones: body.zones, userId: userId(req) });
       return reply.code(200).send(r);
-    } catch (err: any) {
-      if (err?.code === 'draft_expired') {
+    } catch (err: unknown) {
+      if (errCode(err) === 'draft_expired') {
         return reply.code(410).send({ code: 'draft_expired', error: 'draft expired or not found' });
       }
       app.log.error({ err }, 'preview template failed');
-      return reply.code(400).send({ error: 'preview failed', message: err?.message ?? String(err) });
+      return reply.code(400).send({ error: 'preview failed', message: errMessage(err) });
     }
   });
 
