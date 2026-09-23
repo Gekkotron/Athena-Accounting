@@ -30,6 +30,12 @@ process.env.SESSION_SECRET =
   process.env.SESSION_SECRET ??
   'pglite-test-session-secret-not-a-real-secret-0123456789';
 
+// Opt into test-only routes (e.g. /api/auth/2fa/__debug/current-code). Two
+// independent gates in the route handlers (NODE_ENV=test AND this var) so
+// a misdeployed image with only one of them set can't leak live TOTP
+// codes.
+process.env.ATHENA_TEST_ROUTES = '1';
+
 // Same spirit for the driver: a bare run has no DATABASE_URL, and env.ts
 // hard-requires one under the default postgres driver. Fall back to the
 // docker-free embedded driver; an explicit DB_DRIVER or a configured
