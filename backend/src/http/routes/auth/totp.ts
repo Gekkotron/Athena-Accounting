@@ -30,6 +30,40 @@ const ARGON2_OPTS = {
 } as const;
 
 const RECOVERY_CODE_COUNT = 10;
+
+// Constant-time recovery-code match: does exactly RECOVERY_CODE_COUNT
+// argon2.verify() calls regardless of the user's actual unused-code count
+// or the match position. Otherwise the wall-clock spread (100 ms per
+// verify × N unused codes) is a coarse timing oracle for both "which
+// position matched" and "how many codes remain unused". The dummy hash
+// is pre-computed once at first use — argon2.verify's cost depends on
+// the hash's embedded params, not on the plaintext, so a burn against
+// this dummy has the same wall-clock as a real verify.
+let dummyRecoveryHashPromise: Promise<string> | null = null;
+function getDummyRecoveryHash(): Promise<string> {
+  if (!dummyRecoveryHashPromise) {
+    dummyRecoveryHashPromise = hash('athena-recovery-dummy-code', ARGON2_OPTS);
+  }
+  return dummyRecoveryHashPromise;
+}
+async function matchRecoveryCodeConstantTime(
+  unused: readonly { id: number; codeHash: string }[],
+  normalized: string,
+): Promise<{ id: number; codeHash: string } | null> {
+  const dummy = await getDummyRecoveryHash();
+  let matched: { id: number; codeHash: string } | null = null;
+  for (let i = 0; i < RECOVERY_CODE_COUNT; i++) {
+    const row = unused[i];
+    if (row) {
+      const ok = await verify(row.codeHash, normalized).catch(() => false);
+      if (ok && matched === null) matched = row;
+    } else {
+      // Discard the return — the burn's only purpose is CPU time parity.
+      await verify(dummy, 'x').catch(() => false);
+    }
+  }
+  return matched;
+}
 // The 10/min bucket is the security guard on brute-force verify /
 // wrong-password enroll; in tests the many calls exhaust it and the
 // suite goes red for the wrong reason. @fastify/rate-limit has its
@@ -214,28 +248,27 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
         matched = upd.length > 0;
       }
     } else {
-      // Recovery-code path. Iterate unused codes and argon2-verify. On a
-      // match, burn the row transactionally alongside clearing the flag
-      // so a concurrent retry can't double-spend.
+      // Recovery-code path. Constant-time match across RECOVERY_CODE_COUNT
+      // argon2.verify calls (see matchRecoveryCodeConstantTime), then on a
+      // hit burn the row transactionally alongside clearing the flag so a
+      // concurrent retry can't double-spend.
       const normalized = normalizeRecoveryCode(raw);
       if (normalized.length >= 6) {
         const unused = await db
           .select({ id: userTotpRecoveryCodes.id, codeHash: userTotpRecoveryCodes.codeHash })
           .from(userTotpRecoveryCodes)
           .where(and(eq(userTotpRecoveryCodes.userId, uid), isNull(userTotpRecoveryCodes.usedAt)));
-        for (const row of unused) {
-          if (await verify(row.codeHash, normalized).catch(() => false)) {
-            const upd = await db
-              .update(userTotpRecoveryCodes)
-              .set({ usedAt: new Date() })
-              .where(and(
-                eq(userTotpRecoveryCodes.id, row.id),
-                isNull(userTotpRecoveryCodes.usedAt),
-              ))
-              .returning({ id: userTotpRecoveryCodes.id });
-            matched = upd.length > 0;
-            break;
-          }
+        const hit = await matchRecoveryCodeConstantTime(unused, normalized);
+        if (hit) {
+          const upd = await db
+            .update(userTotpRecoveryCodes)
+            .set({ usedAt: new Date() })
+            .where(and(
+              eq(userTotpRecoveryCodes.id, hit.id),
+              isNull(userTotpRecoveryCodes.usedAt),
+            ))
+            .returning({ id: userTotpRecoveryCodes.id });
+          matched = upd.length > 0;
         }
       }
     }
@@ -303,12 +336,7 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
           .select({ id: userTotpRecoveryCodes.id, codeHash: userTotpRecoveryCodes.codeHash })
           .from(userTotpRecoveryCodes)
           .where(and(eq(userTotpRecoveryCodes.userId, uid), isNull(userTotpRecoveryCodes.usedAt)));
-        for (const row of unused) {
-          if (await verify(row.codeHash, normalized).catch(() => false)) {
-            codeOk = true;
-            break;
-          }
-        }
+        codeOk = (await matchRecoveryCodeConstantTime(unused, normalized)) !== null;
       }
     }
     if (!codeOk) return reply.code(401).send({ error: 'invalid code' });
