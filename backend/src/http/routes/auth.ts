@@ -65,7 +65,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ error: 'invalid credentials' });
     }
 
-    const ok = await verify(user.passwordHash, password);
+    // Run the password verify AND the TOTP-row lookup in parallel — both
+    // must happen on every login for an existing user regardless of the
+    // password-verify outcome. A wrong-password 401 that skips the TOTP
+    // SELECT diverges in wall-clock from a correct-password requiresTotp
+    // path by ~1 indexed query, leaking whether the account has 2FA on.
+    const [ok, totpRows] = await Promise.all([
+      verify(user.passwordHash, password),
+      db
+        .select({ userId: userTotp.userId })
+        .from(userTotp)
+        .where(and(eq(userTotp.userId, user.id), isNotNull(userTotp.enabledAt)))
+        .limit(1),
+    ]);
     if (!ok) return reply.code(401).send({ error: 'invalid credentials' });
 
     // Rotate the session id on login to prevent session fixation.
@@ -78,12 +90,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     // stamped half-authenticated — the `requireAuth` carve-out will
     // block every route except `/api/auth/2fa/verify` and
     // `/api/auth/logout` until the flag clears on verify success.
-    const [totpRow] = await db
-      .select({ userId: userTotp.userId })
-      .from(userTotp)
-      .where(and(eq(userTotp.userId, user.id), isNotNull(userTotp.enabledAt)))
-      .limit(1);
-    if (totpRow) {
+    if (totpRows[0]) {
       req.session.totpPending = true;
       return { requiresTotp: true };
     }
