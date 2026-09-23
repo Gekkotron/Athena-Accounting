@@ -197,12 +197,70 @@ export async function recategorizeAll(opts: RecategorizeOptions): Promise<Recate
   }
 
   // Split emissions run last (they touch transaction_splits, which the amount
-  // lock trigger cares about) and one-per-tx inside a single transaction each
-  // so the deferred sum trigger validates at commit.
-  for (const e of splitEmits) {
-    await db.transaction(async (tx) => {
-      await emitAutoSplits(tx, e.txId, e.amount, e.rule);
-    });
+  // lock trigger cares about). Pre-compute every split row and every parent
+  // update so the DB pass collapses to 3 statements independent of how many
+  // parents matched a split-mode rule — pre-refactor this was a per-parent
+  // db.transaction (3 statements each = O(N) round-trips).
+  if (splitEmits.length > 0) {
+    type SplitInsert = { txId: number; categoryId: number | null; amount: string };
+    type ParentUpdate = { txId: number; categoryId: number };
+    const splitInserts: SplitInsert[] = [];
+    const parentUpdates: ParentUpdate[] = [];
+    for (const e of splitEmits) {
+      const splits = e.rule.splits;
+      if (!splits || splits.length < 2) continue;
+      const parentCents = Math.round(e.amount * 100);
+      // Zero-amount parents skip both the split emit and the parent stamp —
+      // preserves the emitAutoSplits() early-return semantics.
+      if (parentCents === 0) continue;
+      const cents = computeSplitCents(parentCents, splits.map((s) => s.percent));
+      for (let i = 0; i < splits.length; i++) {
+        splitInserts.push({
+          txId: e.txId,
+          categoryId: splits[i]!.categoryId,
+          amount: (cents[i]! / 100).toFixed(2),
+        });
+      }
+      parentUpdates.push({ txId: e.txId, categoryId: e.rule.rule.categoryId });
+    }
+    if (parentUpdates.length > 0) {
+      const parentIds = parentUpdates.map((p) => p.txId);
+      await db.transaction(async (tx) => {
+        // Phase 1: bulk-DELETE prior splits for every touched parent.
+        for (let i = 0; i < parentIds.length; i += BATCH) {
+          const slice = parentIds.slice(i, i + BATCH);
+          await tx.delete(transactionSplits).where(inArray(transactionSplits.transactionId, slice));
+        }
+        // Phase 2: multi-values INSERT of every fresh split row.
+        for (let i = 0; i < splitInserts.length; i += BATCH) {
+          const slice = splitInserts.slice(i, i + BATCH);
+          await tx.insert(transactionSplits).values(slice.map((s) => ({
+            transactionId: s.txId,
+            categoryId: s.categoryId,
+            amount: s.amount,
+          })));
+        }
+        // Phase 3: single VALUES-JOIN UPDATE stamping parent (categoryId,
+        // categorySource='auto', splitsSource='auto') for every parent. The
+        // deferred sum(splits)=parent trigger validates at commit — same
+        // guarantee the per-parent db.transaction gave.
+        for (let i = 0; i < parentUpdates.length; i += BATCH) {
+          const slice = parentUpdates.slice(i, i + BATCH);
+          const valuesSql = sql.join(
+            slice.map((p) => sql`(${p.txId}::int, ${p.categoryId}::int)`),
+            sql`, `,
+          );
+          await tx.execute(sql`
+            UPDATE transactions AS t
+            SET category_id = m.cat_id,
+                category_source = 'auto',
+                splits_source = 'auto'
+            FROM (VALUES ${valuesSql}) AS m(tx_id, cat_id)
+            WHERE t.id = m.tx_id
+          `);
+        }
+      });
+    }
   }
 
   return { total: txs.length, recategorized, splitsEmitted, unknown, preserved };
@@ -248,14 +306,3 @@ export async function loadRuleEngine(userId: number, runner: Runner = db) {
   ]);
   return { compiled, defaultId };
 }
-
-// Kept for compatibility with a future caller that only wants to check
-// "does this rule set contain any split-mode rules?" without running the
-// engine. Not used today.
-export function hasAnySplitMode(compiled: readonly CompiledRule[]): boolean {
-  return compiled.some((c) => c.splits && c.splits.length >= 2);
-}
-
-// Silence unused-import warning under the current codepath — `sql` is
-// retained for future imports.ts fan-out helpers that emit splits directly.
-void sql;
