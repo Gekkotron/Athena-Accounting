@@ -9,6 +9,7 @@ import {
   LABEL_JACCARD_THRESHOLD,
 } from '../../../domain/dedup/fuzzy-match.js';
 import { groupMinPairwiseSimilarity } from '../../../lib/label-similarity.js';
+import { toLocalIso } from '../../../lib/dates.js';
 
 type Row = Record<string, unknown> & {
   id: number;
@@ -54,11 +55,15 @@ export async function getDuplicates(opts: {
   const windowMonths = opts.windowMonths ?? DEFAULT_WINDOW_MONTHS;
   const limit = Math.min(opts.limit ?? DEFAULT_GROUP_LIMIT, MAX_GROUP_LIMIT);
 
-  // Window boundary — computed against real "today" so a long-running
-  // process doesn't drift. YYYY-MM-DD form matches the DATE column type.
+  // Window boundary — computed against LOCAL "today" so a request landing
+  // at 22:30 UTC in Europe/Paris (= 00:30 next-day CEST) keys the local
+  // calendar day, not the UTC one. transactions.date is stored in the
+  // user's local calendar; a UTC compose would drift by one day around
+  // midnight in any offset zone. YYYY-MM-DD form matches the DATE column
+  // type.
   const windowStart = new Date();
-  windowStart.setUTCMonth(windowStart.getUTCMonth() - windowMonths);
-  const windowStartIso = windowStart.toISOString().slice(0, 10);
+  windowStart.setMonth(windowStart.getMonth() - windowMonths);
+  const windowStartIso = toLocalIso(windowStart);
 
   // 1. Candidate pairs — SQL self-join emits (id1, id2, account_id) tuples
   //    for rows within the ±3d/±0.02/same-sign envelope. `t2.id > t1.id`
