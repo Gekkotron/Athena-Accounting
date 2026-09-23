@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import type { MatchMode, Rule, SignConstraint } from '../../api/types';
-import { useCategories, useRules } from '../../lib/useReferenceData';
+import { useCategories, useRules, EMPTY_CATEGORIES, EMPTY_RULES } from '../../lib/useReferenceData';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AdvancedEditor } from './AdvancedEditor';
 import { FlatTable } from './FlatTable';
@@ -98,8 +98,8 @@ export function Rules() {
   const overviewAnchor = useTourAnchor('rules-list:overview');
   const reapplyAnchor = useTourAnchor('rules-list:reapply');
 
-  const cats = catQ.data ?? [];
-  const rules = rulesQ.data ?? [];
+  const cats = catQ.data ?? EMPTY_CATEGORIES;
+  const rules = rulesQ.data ?? EMPTY_RULES;
   const byId = useMemo(
     () => new Map(cats.map((c) => [c.id, c] as const)),
     [cats],

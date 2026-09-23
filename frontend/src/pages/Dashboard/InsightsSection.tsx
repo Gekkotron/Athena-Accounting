@@ -38,7 +38,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
   // Recompute when the local day changes — a tab left open across midnight
   // otherwise pins the window to yesterday's month range.
   const today = useToday();
-  const months = useMemo(() => completeMonthWindow(AVG_WINDOW_MONTHS, new Date()), [today]);
+  const months = useMemo(() => completeMonthWindow(AVG_WINDOW_MONTHS, new Date(today)), [today]);
   // 0 = last complete month; higher steps further back. Capped so a prior month
   // always remains in-window for the month-over-month comparison.
   const [monthOffset, setMonthOffset] = useState(0);

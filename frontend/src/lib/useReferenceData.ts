@@ -11,6 +11,17 @@ import type { Account, AccountFilenamePattern, Category, Rule } from '../api/typ
 // React.memo actually skip work).
 export const REFERENCE_STALE_TIME_MS = 5 * 60 * 1000;
 
+// Module-frozen empty arrays for the `xxxQ.data ?? []` fallback pattern.
+// A fresh `[]` allocated per render before the query settles invalidates
+// every downstream useMemo dep — call sites use these constants instead
+// (`accountsQ.data ?? EMPTY_ACCOUNTS`) so the reference stays stable
+// across the loading→loaded transition. Safe to freeze because consumers
+// only read via .map/.filter/etc.
+export const EMPTY_ACCOUNTS: Account[] = Object.freeze([]) as unknown as Account[];
+export const EMPTY_CATEGORIES: Category[] = Object.freeze([]) as unknown as Category[];
+export const EMPTY_PATTERNS: AccountFilenamePattern[] = Object.freeze([]) as unknown as AccountFilenamePattern[];
+export const EMPTY_RULES: Rule[] = Object.freeze([]) as unknown as Rule[];
+
 export function useAccounts(): UseQueryResult<Account[]> {
   return useQuery({
     queryKey: ['accounts'],
@@ -46,3 +57,4 @@ export function useRules(): UseQueryResult<Rule[]> {
     select: (d) => d.rules,
   });
 }
+

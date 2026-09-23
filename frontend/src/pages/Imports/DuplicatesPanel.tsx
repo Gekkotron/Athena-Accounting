@@ -74,7 +74,7 @@ export function DuplicatesPanel(): JSX.Element {
     setThreshold(settings.duplicateSimilarityThreshold);
   }, [isReady, settings.duplicateSimilarityThreshold]);
 
-  const rawGroups = dupsQ.data?.groups ?? [];
+  const rawGroups = useMemo(() => dupsQ.data?.groups ?? [], [dupsQ.data]);
 
   // Annotate each group with its min-pairwise similarity so we can (a)
   // filter below the threshold and (b) display the score alongside.

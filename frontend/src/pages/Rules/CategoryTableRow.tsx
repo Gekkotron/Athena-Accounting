@@ -43,6 +43,10 @@ export function CategoryTableRow(props: {
       draggable.setNodeRef(node);
       droppable.setNodeRef(node);
     },
+    // Depending on the full draggable/droppable objects would re-create
+    // setRowRef every render (dnd-kit rebuilds them on each call). The
+    // setNodeRef methods are the only pieces we actually invoke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [draggable.setNodeRef, droppable.setNodeRef],
   );
 

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { TriGroup } from '../../api/types';
-import { useCategories } from '../../lib/useReferenceData';
+import { useCategories, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
 import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
 import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -41,7 +41,7 @@ export function Tri() {
 
   const groups = groupsQ.data?.groups ?? [];
   const total = groupsQ.data?.pagination.total ?? groups.length;
-  const categories = categoriesQ.data ?? [];
+  const categories = categoriesQ.data ?? EMPTY_CATEGORIES;
   const byId = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
     [categories],

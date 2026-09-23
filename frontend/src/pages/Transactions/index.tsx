@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { Transaction } from '../../api/types';
-import { useAccounts, useCategories } from '../../lib/useReferenceData';
+import { useAccounts, useCategories, EMPTY_ACCOUNTS, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TransactionsHeader } from './TransactionsHeader';
@@ -93,8 +93,8 @@ export function Transactions() {
   const { updateCategory, updateNotes, deleteTransaction, bulkDelete, bulkCategorize, createCheckpointM, removeCheckpointM } =
     useTransactionsMutations({ setDeletingTx, setDeleteError, setConfirmBulkDelete, setBulkDeleteError, setSelectedIds, setBulkSelectValue, setBulkCategorizeError, setBulkCategorizeNotice, setCheckpointError, setPendingCheckpointDate });
 
-  const accounts = accountsQ.data ?? [];
-  const categories = categoriesQ.data ?? [];
+  const accounts = accountsQ.data ?? EMPTY_ACCOUNTS;
+  const categories = categoriesQ.data ?? EMPTY_CATEGORIES;
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c] as const)), [categories]);
   const sortedCategories = useMemo(() => sortCategoriesForPicker(categories, catById), [categories, catById]);
   const deferredDelete = useDeferredDelete();

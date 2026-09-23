@@ -126,7 +126,7 @@ export function BalanceCheckpointsDrawer({ accountId, currency }: { accountId: n
     onError: (err: unknown) => setMutationError(friendlyCheckpointError(err, 'update', t)),
   });
 
-  const rows = q.data?.checkpoints ?? [];
+  const rows = useMemo(() => q.data?.checkpoints ?? [], [q.data]);
   const groups = useMemo(() => groupByYear(rows), [rows]);
   const mostRecentYear = groups[0]?.year;
 

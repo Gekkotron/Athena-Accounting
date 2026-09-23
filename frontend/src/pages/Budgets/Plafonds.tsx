@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { ApiError } from '../../api/client';
 import type { BudgetPeriod } from '../../api/types';
 import { useBudgets, useBudgetReport } from '../../lib/useBudgets';
-import { useAccounts, useCategories } from '../../lib/useReferenceData';
+import { useAccounts, useCategories, EMPTY_ACCOUNTS, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
 import { ConsolidatedSummary } from './ConsolidatedSummary';
 import { groupCategories } from '../../lib/categories';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
@@ -68,13 +68,13 @@ export function Plafonds(): JSX.Element {
     year: period === 'yearly' ? monthOrYear : undefined,
     accountId,
   });
-  const rows = report.data?.rows ?? [];
+  const rows = useMemo(() => report.data?.rows ?? [], [report.data]);
 
   const accountsQ = useAccounts();
-  const accounts = accountsQ.data ?? [];
+  const accounts = accountsQ.data ?? EMPTY_ACCOUNTS;
 
   const categoriesQ = useCategories();
-  const cats = categoriesQ.data ?? [];
+  const cats = categoriesQ.data ?? EMPTY_CATEGORIES;
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
   const rowsByCategory = useMemo(
     () => new Map(rows.map((r) => [r.categoryId, r] as const)),

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { BalancePoint } from '../../api/types';
-import { useAccounts } from '../../lib/useReferenceData';
+import { useAccounts, EMPTY_ACCOUNTS } from '../../lib/useReferenceData';
 import { useSettings } from '../../lib/useSettings';
 import { BalanceChart } from '../../components/BalanceChart';
 import { ErrorState, LoadingBlock, EmptyState } from '../../components/StateBlocks';
@@ -38,7 +38,7 @@ export function ForecastTab(): JSX.Element {
     queryFn: () => api<{ points: BalancePoint[] }>('/api/reports/timeseries', { query: { granularity: 'day', ...displayQuery } }),
   });
 
-  const accounts = accountsQ.data ?? [];
+  const accounts = accountsQ.data ?? EMPTY_ACCOUNTS;
   const primaryCurrency = balanceQ.data?.perCurrency?.[0]?.currency ?? 'EUR';
 
   const currency = useMemo(() => {

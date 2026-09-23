@@ -4,7 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { api, ApiError } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
-import { useCategories } from '../../lib/useReferenceData';
+import { useCategories, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
 import { kindLabel, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -79,7 +79,7 @@ export function Categories() {
   const tableRef = useRef<HTMLTableElement>(null);
   const [colorPickerFor, setColorPickerFor] = useState<Category | null>(null);
 
-  const cats = catQ.data ?? [];
+  const cats = catQ.data ?? EMPTY_CATEGORIES;
   const { activeDragId, sensors, onDragStart, onDragEnd, onDragCancel } = useCategoriesDrag({
     cats,
     tableRef,
@@ -113,7 +113,7 @@ export function Categories() {
     });
   };
 
-  const report = reportQ.data?.rows ?? [];
+  const report = useMemo(() => reportQ.data?.rows ?? [], [reportQ.data]);
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
   const byId = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
 
