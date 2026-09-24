@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { hash, verify, Algorithm } from '@node-rs/argon2';
+import { hash, verify } from '@node-rs/argon2';
 import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { users, userTotp, userTotpRecoveryCodes } from '../../../db/schema.js';
@@ -18,52 +18,11 @@ import {
   encryptTotpSecret,
   totpKey,
 } from '../../../domain/auth/totp-crypto.js';
-
-// Same argon2 tuning as password hashing — kept in sync deliberately so a
-// recovery-code verify has the same wall-clock as a password verify (both
-// are one-off, both are rate-limited to 10/min).
-const ARGON2_OPTS = {
-  algorithm: Algorithm.Argon2id,
-  memoryCost: 19456,
-  timeCost: 2,
-  parallelism: 1,
-} as const;
-
-const RECOVERY_CODE_COUNT = 10;
-
-// Constant-time recovery-code match: does exactly RECOVERY_CODE_COUNT
-// argon2.verify() calls regardless of the user's actual unused-code count
-// or the match position. Otherwise the wall-clock spread (100 ms per
-// verify × N unused codes) is a coarse timing oracle for both "which
-// position matched" and "how many codes remain unused". The dummy hash
-// is pre-computed once at first use — argon2.verify's cost depends on
-// the hash's embedded params, not on the plaintext, so a burn against
-// this dummy has the same wall-clock as a real verify.
-let dummyRecoveryHashPromise: Promise<string> | null = null;
-function getDummyRecoveryHash(): Promise<string> {
-  if (!dummyRecoveryHashPromise) {
-    dummyRecoveryHashPromise = hash('athena-recovery-dummy-code', ARGON2_OPTS);
-  }
-  return dummyRecoveryHashPromise;
-}
-async function matchRecoveryCodeConstantTime(
-  unused: readonly { id: number; codeHash: string }[],
-  normalized: string,
-): Promise<{ id: number; codeHash: string } | null> {
-  const dummy = await getDummyRecoveryHash();
-  let matched: { id: number; codeHash: string } | null = null;
-  for (let i = 0; i < RECOVERY_CODE_COUNT; i++) {
-    const row = unused[i];
-    if (row) {
-      const ok = await verify(row.codeHash, normalized).catch(() => false);
-      if (ok && matched === null) matched = row;
-    } else {
-      // Discard the return — the burn's only purpose is CPU time parity.
-      await verify(dummy, 'x').catch(() => false);
-    }
-  }
-  return matched;
-}
+import {
+  ARGON2_OPTS,
+  RECOVERY_CODE_COUNT,
+  matchRecoveryCodeConstantTime,
+} from './recovery-match.js';
 // The 10/min bucket is the security guard on brute-force verify /
 // wrong-password enroll; in tests the many calls exhaust it and the
 // suite goes red for the wrong reason. `AUTH_RATE_LIMIT_MAX` bumps
@@ -282,14 +241,14 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
 
     if (!matched) return reply.code(401).send({ error: 'invalid code' });
 
-    // Rotate the session id on second-factor completion (fixation
-    // defence). Explicit save() after the userId write: on the
-    // recovery-code path the implicit onSend save was racing the
-    // response, leaving the store with the empty post-regenerate
-    // session and 401ing /api/auth/me on the next navigation.
+    // Rotate the session id on second-factor completion — fixation
+    // defence. Explicit save() closes a race on the recovery path
+    // (implicit onSend save trailed the response).
     const username = req.session.username;
     await req.session.regenerate();
-    Object.assign(req.session, { userId: uid, username, totpPending: false });
+    req.session.userId = uid;
+    req.session.username = username;
+    req.session.totpPending = false;
     await req.session.save();
     return { user: { id: uid, username } };
   });
