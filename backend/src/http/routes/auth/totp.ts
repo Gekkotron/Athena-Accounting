@@ -284,11 +284,19 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
 
     // Rotate the session id on second-factor completion — a half-auth
     // cookie must not survive full authentication (fixation defence).
+    // The regenerate + set + save shape is important: after regenerate()
+    // the in-memory session is fresh (no userId), so we set the fields
+    // we want and force a save() before returning. Skipping the explicit
+    // save left the store with the empty post-regenerate session on the
+    // recovery-code path — the client's next request presented the new
+    // cookie but the store lookup returned no userId, so /api/auth/me
+    // 401'd and the SPA redirected to /login.
     const username = req.session.username;
     await req.session.regenerate();
     req.session.userId = uid;
     req.session.username = username;
     req.session.totpPending = false;
+    await req.session.save();
     return { user: { id: uid, username } };
   });
 
