@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { api, ApiError } from '../../api/client';
-import type { MatchMode, Rule, SignConstraint } from '../../api/types';
+import type { Rule } from '../../api/types';
 import { useCategories, useRules, EMPTY_CATEGORIES, EMPTY_RULES } from '../../lib/useReferenceData';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AdvancedEditor } from './AdvancedEditor';
@@ -14,12 +12,12 @@ import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
+import { useRulesMutations } from './useRulesMutations';
 
 type View = 'grouped' | 'flat';
 
 export function Rules() {
   const { t } = useTranslation('rules');
-  const qc = useQueryClient();
   const rulesQ = useRules();
   const catQ = useCategories();
 
@@ -28,71 +26,9 @@ export function Rules() {
   // One global "are you sure?" target for any rule deletion across all the
   // sub-views (chips, flat table, advanced editor).
   const [confirmDeleteRule, setConfirmDeleteRule] = useState<Rule | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmRecat, setConfirmRecat] = useState(false);
 
-  const createBatch = useMutation({
-    mutationFn: async (input: {
-      keywords: string[];
-      categoryId: number;
-      signConstraint: SignConstraint;
-      matchMode: MatchMode;
-      priority: number;
-      splits?: Array<{ categoryId: number; percent: number }>;
-    }) => {
-      await Promise.all(
-        input.keywords.map((kw) =>
-          api('/api/rules', {
-            method: 'POST',
-            json: {
-              keyword: kw,
-              categoryId: input.categoryId,
-              signConstraint: input.signConstraint,
-              matchMode: input.matchMode,
-              priority: input.priority,
-              ...(input.splits ? { splits: input.splits } : {}),
-            },
-          }),
-        ),
-      );
-      return input.keywords.length;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rules'] });
-    },
-  });
-
-  const updateRule = useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: Partial<Rule> }) =>
-      api(`/api/rules/${id}`, { method: 'PUT', json: patch }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rules'] }),
-  });
-
-  const del = useMutation({
-    mutationFn: (id: number) => api(`/api/rules/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rules'] });
-      setConfirmDeleteRule(null);
-      setDeleteError(null);
-      // If the deleted rule was open in the advanced editor, close it.
-      if (editing && confirmDeleteRule && editing.id === confirmDeleteRule.id) {
-        setEditing(null);
-      }
-    },
-    onError: (err: ApiError) => setDeleteError(err.message),
-  });
-
-  const recategorize = useMutation({
-    mutationFn: () =>
-      api<{ total: number; recategorized: number; unknown: number; preserved: number }>(
-        '/api/recategorize',
-        { method: 'POST', json: { preserveManual: true } },
-      ),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['tri-groups'] });
-    },
-  });
+  const m = useRulesMutations();
 
   useAutoStartTour('rules-list');
   const overviewAnchor = useTourAnchor('rules-list:overview');
@@ -135,6 +71,11 @@ export function Rules() {
     });
   }, [rules, cats, byId]);
 
+  const requestDelete = (rule: Rule) => {
+    m.setDeleteError(null);
+    setConfirmDeleteRule(rule);
+  };
+
   return (
     <div className="relative flex flex-col gap-8">
       <span ref={overviewAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
@@ -154,27 +95,27 @@ export function Rules() {
         <button
           className="btn-secondary"
           onClick={() => setConfirmRecat(true)}
-          disabled={recategorize.isPending}
+          disabled={m.recategorize.isPending}
         >
-          {recategorize.isPending ? t('recategorize.pending') : t('recategorize.button')}
+          {m.recategorize.isPending ? t('recategorize.pending') : t('recategorize.button')}
         </button>
       </div>
 
-      {recategorize.data && (
+      {m.recategorize.data && (
         <div className="surface p-4 text-sm text-sage-200">
-          {t('recategorize.summary.total')} <span className="font-mono">{recategorize.data.total}</span> ·{' '}
+          {t('recategorize.summary.total')} <span className="font-mono">{m.recategorize.data.total}</span> ·{' '}
           {t('recategorize.summary.recategorized')}{' '}
-          <span className="font-mono text-sage-300">{recategorize.data.recategorized}</span> ·{' '}
-          {t('recategorize.summary.unknown')} <span className="font-mono">{recategorize.data.unknown}</span> ·{' '}
-          {t('recategorize.summary.preserved')} <span className="font-mono">{recategorize.data.preserved}</span>
+          <span className="font-mono text-sage-300">{m.recategorize.data.recategorized}</span> ·{' '}
+          {t('recategorize.summary.unknown')} <span className="font-mono">{m.recategorize.data.unknown}</span> ·{' '}
+          {t('recategorize.summary.preserved')} <span className="font-mono">{m.recategorize.data.preserved}</span>
         </div>
       )}
 
       <RuleCreateForm
         categories={cats}
-        onSubmit={(values) => createBatch.mutate(values)}
-        submitting={createBatch.isPending}
-        successCount={createBatch.isSuccess ? createBatch.data : undefined}
+        onSubmit={(values) => m.createBatch.mutate(values)}
+        submitting={m.createBatch.isPending}
+        successCount={m.createBatch.isSuccess ? m.createBatch.data : undefined}
       />
 
       {/* View toggle */}
@@ -214,23 +155,17 @@ export function Rules() {
         <GroupedView
           grouped={grouped}
           byId={byId}
-          createBatch={createBatch}
-          updateRule={updateRule}
-          onRequestDelete={(rule) => {
-            setDeleteError(null);
-            setConfirmDeleteRule(rule);
-          }}
+          createBatch={m.createBatch}
+          updateRule={m.updateRule}
+          onRequestDelete={requestDelete}
           onEdit={setEditing}
         />
       ) : (
         <FlatTable
           rules={rules}
           cats={cats}
-          updateRule={updateRule}
-          onRequestDelete={(rule) => {
-            setDeleteError(null);
-            setConfirmDeleteRule(rule);
-          }}
+          updateRule={m.updateRule}
+          onRequestDelete={requestDelete}
         />
       )}
 
@@ -241,15 +176,12 @@ export function Rules() {
           categories={cats}
           onClose={() => setEditing(null)}
           onSave={(patch) => {
-            updateRule.mutate(
+            m.updateRule.mutate(
               { id: editing.id, patch },
               { onSuccess: () => setEditing(null) },
             );
           }}
-          onDelete={() => {
-            setDeleteError(null);
-            setConfirmDeleteRule(editing);
-          }}
+          onDelete={() => requestDelete(editing)}
         />
       )}
 
@@ -259,12 +191,18 @@ export function Rules() {
         description={t('deleteRuleDialog.description')}
         confirmLabel={t('deleteRuleDialog.confirmLabel')}
         destructive
-        busy={del.isPending}
-        error={deleteError}
-        onConfirm={() => confirmDeleteRule && del.mutate(confirmDeleteRule.id)}
+        busy={m.del.isPending}
+        error={m.deleteError}
+        onConfirm={() => confirmDeleteRule && m.del.mutate(confirmDeleteRule.id, {
+          onSuccess: () => {
+            setConfirmDeleteRule(null);
+            // If the deleted rule was open in the advanced editor, close it.
+            if (editing && editing.id === confirmDeleteRule.id) setEditing(null);
+          },
+        })}
         onCancel={() => {
           setConfirmDeleteRule(null);
-          setDeleteError(null);
+          m.setDeleteError(null);
         }}
       />
 
@@ -278,13 +216,12 @@ export function Rules() {
           </Trans>
         }
         confirmLabel={t('recategorize.dialog.confirmLabel')}
-        busy={recategorize.isPending}
+        busy={m.recategorize.isPending}
         onConfirm={() =>
-          recategorize.mutate(undefined, { onSuccess: () => setConfirmRecat(false) })
+          m.recategorize.mutate(undefined, { onSuccess: () => setConfirmRecat(false) })
         }
         onCancel={() => setConfirmRecat(false)}
       />
     </div>
   );
 }
-
