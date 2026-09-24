@@ -167,5 +167,6 @@ test('disable 2FA with password + fresh TOTP code', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Désactiver' }).click();
 
   // Card flips back to the disabled state, offering "Activer" again.
-  await expect(page.getByRole('button', { name: 'Activer' })).toBeVisible();
+  // Exact match — "Désactiver" would otherwise substring-match.
+  await expect(page.getByRole('button', { name: 'Activer', exact: true })).toBeVisible();
 });
