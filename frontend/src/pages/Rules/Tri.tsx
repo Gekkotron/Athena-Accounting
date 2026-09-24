@@ -4,12 +4,12 @@ import { Trans, useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { TriGroup } from '../../api/types';
 import { useCategories, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
-import { formatAmount, formatDate, amountSignClass } from '../../lib/format';
-import { formatCategoryPath } from '../../lib/categories';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
+import { TriGroupRow } from './TriGroupRow';
+import { TriBulkBar } from './TriBulkBar';
 
 export function Tri() {
   const { t } = useTranslation(['rules', 'common']);
@@ -62,6 +62,13 @@ export function Tri() {
     setPerGroupCategory((m) => {
       const next = new Map(m);
       next.set(label, categoryId);
+      return next;
+    });
+
+  const clearGroupCat = (label: string) =>
+    setPerGroupCategory((m) => {
+      const next = new Map(m);
+      next.delete(label);
       return next;
     });
 
@@ -158,52 +165,20 @@ export function Tri() {
         </div>
       )}
 
-      <div className="surface p-4 md:p-5 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <label className="label mb-1.5 block">{t('tri.bulk.categoryLabel')}</label>
-          <select
-            className="input"
-            value={bulkCategoryId}
-            onChange={(e) => setBulkCategoryId(e.target.value ? Number(e.target.value) : '')}
-          >
-            <option value="">—</option>
-            {[...categories]
-              .sort((a, b) => {
-                const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
-                const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
-                return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-              })
-              .map((c) => (
-                <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
-              ))}
-          </select>
-        </div>
-        <label className="flex items-center gap-2 text-sm text-ink-300 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={createRules}
-            onChange={(e) => setCreateRules(e.target.checked)}
-            className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
-          />
-          {t('tri.actions.createRule')}
-        </label>
-        <button
-          className="btn-primary"
-          onClick={assignBulk}
-          disabled={!bulkCategoryId || selected.size === 0 || assign.isPending}
-        >
-          {t('tri.actions.applyToSelection')} <span className="font-mono">{selected.size}</span>{' '}
-          {t('tri.actions.groupSuffix', { count: selected.size })}
-        </button>
-        <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
-          <button className="btn-ghost" onClick={selectAll} disabled={groups.length === 0}>
-            {t('tri.actions.selectAll')}
-          </button>
-          <button className="btn-ghost" onClick={clearSel} disabled={selected.size === 0}>
-            {t('tri.actions.clearSelection')}
-          </button>
-        </div>
-      </div>
+      <TriBulkBar
+        categories={categories}
+        byId={byId}
+        bulkCategoryId={bulkCategoryId}
+        setBulkCategoryId={setBulkCategoryId}
+        createRules={createRules}
+        setCreateRules={setCreateRules}
+        selectedCount={selected.size}
+        totalGroups={groups.length}
+        assignPending={assign.isPending}
+        onAssignBulk={assignBulk}
+        onSelectAll={selectAll}
+        onClearSelection={clearSel}
+      />
 
       <div ref={rulesListAnchor} className="surface overflow-hidden">
         <div className="table-scroll">
@@ -230,73 +205,21 @@ export function Tri() {
                   </td>
                 </tr>
               ) : (
-                groups.map((g) => {
-                  const selectedG = selected.has(g.normalized_label);
-                  const localCat = perGroupCategory.get(g.normalized_label);
-                  return (
-                    <tr
-                      key={g.normalized_label}
-                      className={`border-b border-ink-800/40 last:border-0 transition ${
-                        selectedG ? 'bg-sage-900/15' : 'hover:bg-ink-850/40'
-                      }`}
-                    >
-                      <td className="px-4 py-2.5" data-hide-mobile>
-                        <input
-                          type="checkbox"
-                          checked={selectedG}
-                          onChange={() => toggle(g.normalized_label)}
-                          className="h-4 w-4 rounded border-ink-700 bg-ink-900 accent-sage-300"
-                        />
-                      </td>
-                      <td className="px-4 py-2.5 text-ink-100 font-mono text-xs max-w-[200px] truncate">{g.normalized_label}</td>
-                      <td className="px-4 py-2.5 text-ink-400 text-xs truncate max-w-xs hidden lg:table-cell" title={g.example_raw_label}>
-                        {g.example_raw_label}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-ink-200 font-mono hidden sm:table-cell">{g.transaction_count}</td>
-                      <td className={`px-4 py-2.5 text-right font-mono tabular-nums ${amountSignClass(g.total_amount)}`}>
-                        {formatAmount(g.total_amount, 'EUR')}
-                      </td>
-                      <td className="px-4 py-2.5 text-ink-500 text-[11px] font-mono whitespace-nowrap hidden md:table-cell">
-                        {formatDate(g.min_date)} → {formatDate(g.max_date)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <select
-                          className="input-sm"
-                          value={localCat ?? ''}
-                          onChange={(e) =>
-                            e.target.value
-                              ? setGroupCat(g.normalized_label, Number(e.target.value))
-                              : setPerGroupCategory((m) => {
-                                  const next = new Map(m);
-                                  next.delete(g.normalized_label);
-                                  return next;
-                                })
-                          }
-                        >
-                          <option value="">—</option>
-                          {[...categories]
-                            .sort((a, b) => {
-                              const pa = a.parentId != null ? byId.get(a.parentId)?.name ?? '' : a.name;
-                              const pb = b.parentId != null ? byId.get(b.parentId)?.name ?? '' : b.name;
-                              return pa.localeCompare(pb) || a.name.localeCompare(b.name);
-                            })
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>{formatCategoryPath(c, byId)}</option>
-                            ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <button
-                          className="text-xs text-sage-300 hover:text-sage-200 disabled:opacity-40 disabled:hover:text-sage-300 transition"
-                          disabled={!localCat || assign.isPending}
-                          onClick={() => assignSingle(g.normalized_label)}
-                        >
-                          {t('tri.actions.applyRow')}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                groups.map((g) => (
+                  <TriGroupRow
+                    key={g.normalized_label}
+                    g={g}
+                    selected={selected.has(g.normalized_label)}
+                    localCategoryId={perGroupCategory.get(g.normalized_label)}
+                    categories={categories}
+                    byId={byId}
+                    onToggleSelect={() => toggle(g.normalized_label)}
+                    onSetGroupCategory={(id) => setGroupCat(g.normalized_label, id)}
+                    onClearGroupCategory={() => clearGroupCat(g.normalized_label)}
+                    onAssignRow={() => assignSingle(g.normalized_label)}
+                    assignPending={assign.isPending}
+                  />
+                ))
               )}
             </tbody>
           </table>
