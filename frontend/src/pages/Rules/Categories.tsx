@@ -1,25 +1,22 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, type FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
-import { api, ApiError } from '../../api/client';
+import { api } from '../../api/client';
 import type { Category, CategoryKind, CategoryReportRow } from '../../api/types';
 import { useCategories, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
 import { kindLabel, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { CategoryColorPicker } from './CategoryColorPicker';
-import { CategoryTableRow } from './CategoryTableRow';
-import { DragGhost } from './DragGhost';
-import { buildOwnTotalsByCat, rolledUpTotal } from './categoriesTotals';
-import { useCategoriesDrag } from './useCategoriesDrag';
+import { buildOwnTotalsByCat } from './categoriesTotals';
+import { CategoriesTable } from './CategoriesTable';
+import { useCategoriesMutations } from './useCategoriesMutations';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
 
 export function Categories() {
   const { t } = useTranslation(['rules', 'common']);
-  const qc = useQueryClient();
   const catQ = useCategories();
   const reportQ = useQuery({
     queryKey: ['reports', 'categories'],
@@ -29,99 +26,44 @@ export function Categories() {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<CategoryKind>('expense');
   const [color, setColor] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
-  const create = useMutation({
-    mutationFn: (input: {
-      name: string;
-      kind: CategoryKind;
-      color: string | null;
-      parentId: number | null;
-    }) => api<{ category: Category }>('/api/categories', { method: 'POST', json: input }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['categories'] });
-      setName('');
-      setColor('');
-    },
-    onError: (err: ApiError) => setError(err.message),
-  });
-  const updateCategory = useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: Partial<Category> }) =>
-      api(`/api/categories/${id}`, { method: 'PUT', json: patch }),
-    onMutate: async ({ id, patch }) => {
-      // Only take a snapshot when the mutation touches parentId — that's the
-      // path drag-and-drop uses; other patches are covered by the standard
-      // invalidate-on-success and don't need optimistic rewriting.
-      if (!Object.prototype.hasOwnProperty.call(patch, 'parentId')) return;
-      await qc.cancelQueries({ queryKey: ['categories'] });
-      const previous = qc.getQueryData<{ categories: Category[] }>(['categories']);
-      if (previous) {
-        const next = {
-          categories: previous.categories.map((c) =>
-            c.id === id ? { ...c, parentId: patch.parentId ?? null } : c,
-          ),
-        };
-        qc.setQueryData(['categories'], next);
-      }
-      return { previous } as const;
-    },
-    onError: (err: ApiError, _vars, context) => {
-      if (context?.previous) qc.setQueryData(['categories'], context.previous);
-      setError(err.message);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['categories'] });
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-    },
-  });
-
-  const tableRef = useRef<HTMLTableElement>(null);
+  const m = useCategoriesMutations();
   const [colorPickerFor, setColorPickerFor] = useState<Category | null>(null);
-
-  const cats = catQ.data ?? EMPTY_CATEGORIES;
-  const { activeDragId, sensors, onDragStart, onDragEnd, onDragCancel } = useCategoriesDrag({
-    cats,
-    tableRef,
-    onReparent: (id, parentId) => updateCategory.mutate({ id, patch: { parentId } }),
-  });
-
   const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const del = useMutation({
-    mutationFn: (id: number) => api(`/api/categories/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['categories'] });
-      qc.invalidateQueries({ queryKey: ['rules'] });
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      setConfirmDelete(null);
-      setDeleteError(null);
-    },
-    onError: (err: ApiError) => setDeleteError(err.message),
-  });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    create.mutate({
-      name: name.trim(),
-      kind,
-      color: color || null,
-      parentId: null,
-    });
+    m.setError(null);
+    m.create.mutate(
+      {
+        name: name.trim(),
+        kind,
+        color: color || null,
+        parentId: null,
+      },
+      {
+        onSuccess: () => {
+          setName('');
+          setColor('');
+        },
+      },
+    );
   };
 
+  const cats = catQ.data ?? EMPTY_CATEGORIES;
   const report = useMemo(() => reportQ.data?.rows ?? [], [reportQ.data]);
   const { roots, childrenByParent } = useMemo(() => groupCategories(cats), [cats]);
   const byId = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
-
   const ownTotalsByCat = useMemo(() => buildOwnTotalsByCat(report), [report]);
 
   useAutoStartTour('rules-categories');
   const listAnchor = useTourAnchor('rules-categories:list');
   const createAnchor = useTourAnchor('rules-categories:create');
+
+  const requestDelete = (c: Category) => {
+    m.setDeleteError(null);
+    setConfirmDelete(c);
+  };
 
   return (
     <div className="relative flex flex-col gap-8">
@@ -178,93 +120,29 @@ export function Categories() {
             onChange={(e) => setColor(e.target.value)}
           />
         </div>
-        <button className="btn-primary" disabled={create.isPending}>{t('categories.createForm.submit')}</button>
-        {error && <div className="text-sm text-clay-300 w-full">{error}</div>}
+        <button className="btn-primary" disabled={m.create.isPending}>{t('categories.createForm.submit')}</button>
+        {m.error && <div className="text-sm text-clay-300 w-full">{m.error}</div>}
       </form>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        onDragCancel={onDragCancel}
-      >
-        <div className="surface overflow-hidden">
-          <div className="table-scroll">
-            <table ref={tableRef} className="w-full text-sm stack-md">
-              <thead className="text-left">
-                <tr className="border-b border-ink-800/70">
-                  <th className="px-2 py-3 w-8" aria-hidden />
-                  <th className="px-4 py-3 label font-normal">{t('categories.table.columns.name')}</th>
-                  <th className="px-4 py-3 label font-normal">{t('categories.table.columns.type')}</th>
-                  <th
-                    className="px-4 py-3 label font-normal hidden md:table-cell text-center"
-                    title={t('categories.table.columns.internalTitle')}
-                  >
-                    {t('categories.table.columns.internal')}
-                  </th>
-                  <th className="px-4 py-3 label font-normal hidden sm:table-cell">{t('categories.table.columns.color')}</th>
-                  <th className="px-4 py-3 label font-normal text-right">{t('categories.table.columns.total')}</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {roots.flatMap((r) => {
-                  const children = childrenByParent.get(r.id) ?? [];
-                  const rows: JSX.Element[] = [
-                    <CategoryTableRow
-                      key={`root-${r.id}`}
-                      c={r}
-                      depth={0}
-                      total={rolledUpTotal(r, ownTotalsByCat, childrenByParent)}
-                      hasChildren={children.length > 0}
-                      parent={null}
-                      childrenByParent={childrenByParent}
-                      updateCategory={updateCategory}
-                      onDelete={() => { setDeleteError(null); setConfirmDelete(r); }}
-                      onOpenColorPicker={() => setColorPickerFor(r)}
-                    />,
-                    ...children.map((ch) => (
-                      <CategoryTableRow
-                        key={`child-${ch.id}`}
-                        c={ch}
-                        depth={1}
-                        total={ownTotalsByCat.get(ch.id) ?? 0}
-                        hasChildren={false}
-                        parent={r}
-                        childrenByParent={childrenByParent}
-                        updateCategory={updateCategory}
-                        onDelete={() => { setDeleteError(null); setConfirmDelete(ch); }}
-                        onOpenColorPicker={() => setColorPickerFor(ch)}
-                      />
-                    )),
-                    <tr
-                      key={`spacer-${r.id}`}
-                      data-spacer="true"
-                      aria-hidden="true"
-                    >
-                      <td colSpan={7} className="h-3" />
-                    </tr>,
-                  ];
-                  return rows;
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <DragOverlay dropAnimation={null}>
-          {activeDragId != null ? <DragGhost id={activeDragId} byId={byId} /> : null}
-        </DragOverlay>
-      </DndContext>
+      <CategoriesTable
+        cats={cats}
+        roots={roots}
+        childrenByParent={childrenByParent}
+        byId={byId}
+        ownTotalsByCat={ownTotalsByCat}
+        updateCategory={m.updateCategory}
+        onOpenColorPicker={setColorPickerFor}
+        onRequestDelete={requestDelete}
+      />
 
       <CategoryColorPicker
         open={colorPickerFor !== null}
         categoryName={colorPickerFor?.name ?? ''}
         current={colorPickerFor?.color ?? null}
         defaultColor={colorPickerFor ? resolveCategoryColor(colorPickerFor) : '#7dd3c0'}
-        onApply={(color) => {
+        onApply={(picked) => {
           if (colorPickerFor) {
-            updateCategory.mutate({ id: colorPickerFor.id, patch: { color } });
+            m.updateCategory.mutate({ id: colorPickerFor.id, patch: { color: picked } });
           }
           setColorPickerFor(null);
         }}
@@ -290,12 +168,14 @@ export function Categories() {
         }
         confirmLabel={t('categories.deleteDialog.confirmLabel')}
         destructive
-        busy={del.isPending}
-        error={deleteError}
-        onConfirm={() => confirmDelete && del.mutate(confirmDelete.id)}
+        busy={m.del.isPending}
+        error={m.deleteError}
+        onConfirm={() => confirmDelete && m.del.mutate(confirmDelete.id, {
+          onSuccess: () => setConfirmDelete(null),
+        })}
         onCancel={() => {
           setConfirmDelete(null);
-          setDeleteError(null);
+          m.setDeleteError(null);
         }}
       />
     </div>
