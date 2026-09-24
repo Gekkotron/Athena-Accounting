@@ -124,7 +124,14 @@ test('login with a recovery code, then that code no longer works', async ({ page
   await expect(recoveryInput).toBeVisible();
   const usedCode = sharedRecoveryCodes[0]!;
   await recoveryInput.fill(usedCode);
-  await page.getByRole('button', { name: 'Vérifier' }).click();
+  // Wait explicitly for the verify response so the Set-Cookie for the
+  // regenerated session is applied to the browser context before the
+  // next page.goto — Playwright's `.click()` alone doesn't guarantee it.
+  const [verifyResp] = await Promise.all([
+    page.waitForResponse((r) => r.url().includes('/api/auth/2fa/verify')),
+    page.getByRole('button', { name: 'Vérifier' }).click(),
+  ]);
+  expect(verifyResp.ok(), `2fa verify status=${verifyResp.status()}`).toBeTruthy();
   await expect(page).toHaveURL(/\/$/);
 
   // Card now shows 9 codes left — the burnt one cannot be replayed.
