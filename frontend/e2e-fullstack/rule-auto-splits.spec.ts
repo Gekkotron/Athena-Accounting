@@ -93,13 +93,17 @@ test('import a CSV, open the matching transaction, confirm auto-splits render wi
   await dialog.getByRole('button', { name: 'Importer' }).click();
   await expect(dialog).toBeHidden();
 
-  // Jump to Transactions, open the row.
+  // Jump to Transactions, open the row via its "Modifier" button — the
+  // row's label text isn't itself a click target; the edit modal is
+  // opened by the pencil button in the last cell.
   await page.goto('/transactions');
-  const row = page.getByText('AMAZON-SPLITS-E2E FR').first();
+  const row = page.getByRole('row', { name: /AMAZON-SPLITS-E2E FR/ });
   await expect(row).toBeVisible();
-  await row.click();
+  await row.getByRole('button', { name: 'Modifier' }).click();
 
-  const modal = page.getByRole('dialog').last();
+  // Tour dialogs on this page also carry role=dialog — pick the edit
+  // modal by its unique heading text so `.last()` doesn't grab the tour.
+  const modal = page.getByRole('dialog').filter({ hasText: 'Modifier la transaction' });
   await expect(modal.getByText('Ventilation par catégorie')).toBeVisible();
   // Auto tag renders next to the section title.
   await expect(modal.getByText('Automatique').first()).toBeVisible();
@@ -115,8 +119,8 @@ test('import a CSV, open the matching transaction, confirm auto-splits render wi
 test('editing one split flips splits_source to manual and preserves on re-categorize', async ({ page }) => {
   await login(page);
   await page.goto('/transactions');
-  await page.getByText('AMAZON-SPLITS-E2E FR').first().click();
-  const modal = page.getByRole('dialog').last();
+  await page.getByRole('row', { name: /AMAZON-SPLITS-E2E FR/ }).getByRole('button', { name: 'Modifier' }).click();
+  const modal = page.getByRole('dialog').filter({ hasText: 'Modifier la transaction' });
 
   // Type a new amount on the first row and let the sibling rebalance.
   const splitAmountInputs = modal.locator('input.font-mono.w-28');
@@ -136,8 +140,8 @@ test('editing one split flips splits_source to manual and preserves on re-catego
 
   // Reopen the transaction; the user's 30/70 split must survive.
   await page.goto('/transactions');
-  await page.getByText('AMAZON-SPLITS-E2E FR').first().click();
-  const modal2 = page.getByRole('dialog').last();
+  await page.getByRole('row', { name: /AMAZON-SPLITS-E2E FR/ }).getByRole('button', { name: 'Modifier' }).click();
+  const modal2 = page.getByRole('dialog').filter({ hasText: 'Modifier la transaction' });
   const preservedAmounts = modal2.locator('input.font-mono.w-28');
   await expect(preservedAmounts).toHaveCount(2);
   const first = Number(await preservedAmounts.nth(0).inputValue());

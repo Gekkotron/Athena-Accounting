@@ -27,8 +27,17 @@ async function loginPasswordStep(page: Page): Promise<void> {
 }
 
 // Waits for a fresh TOTP window before returning the current code so a
-// verify attempt at a boundary won't race the server across it.
-function currentTotp(secret: string): string {
+// verify attempt at a boundary won't race the server across it. The
+// server accepts ±1 window (±30s) of slop, so we ONLY need to avoid the
+// last few seconds of the current window — the fill + click + verify
+// round-trip fits well inside 25s.
+async function currentTotp(secret: string): Promise<string> {
+  const posInWindow = Math.floor(Date.now() / 1000) % 30;
+  const safeCutoff = 25;
+  if (posInWindow >= safeCutoff) {
+    const waitMs = (30 - posInWindow + 1) * 1000;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
   return generateTotpCode(secret);
 }
 
@@ -56,7 +65,7 @@ test('enrol: password → QR + secret → verify code → save recovery codes', 
   expect(secret).toMatch(/^[A-Z2-7]{16,}$/);
   sharedSecret = secret;
 
-  await page.getByLabel('Code à 6 chiffres').fill(currentTotp(secret));
+  await page.getByLabel('Code à 6 chiffres').fill(await currentTotp(secret));
   await page.getByRole('button', { name: 'Vérifier' }).click();
 
   // Step 3 — recovery codes revealed once.
@@ -84,7 +93,7 @@ test('login with TOTP code after logout', async ({ page }) => {
   await loginPasswordStep(page);
   // Second step now shows up instead of landing on /.
   await expect(page.getByLabel('Code à 6 chiffres')).toBeVisible();
-  await page.getByLabel('Code à 6 chiffres').fill(currentTotp(sharedSecret!));
+  await page.getByLabel('Code à 6 chiffres').fill(await currentTotp(sharedSecret!));
   await page.getByRole('button', { name: 'Vérifier' }).click();
   await expect(page).toHaveURL(/\/$/);
 });
@@ -124,7 +133,7 @@ test('disable 2FA with password + fresh TOTP code', async ({ page }) => {
   // fresh TOTP code so we get back to the dashboard.
   await page.getByLabel('Code de récupération').clear();
   await page.getByRole('button', { name: /Utiliser un code totp/i }).click();
-  await page.getByLabel('Code à 6 chiffres').fill(currentTotp(sharedSecret!));
+  await page.getByLabel('Code à 6 chiffres').fill(await currentTotp(sharedSecret!));
   await page.getByRole('button', { name: 'Vérifier' }).click();
   await expect(page).toHaveURL(/\/$/);
 
@@ -133,7 +142,7 @@ test('disable 2FA with password + fresh TOTP code', async ({ page }) => {
 
   const dialog = page.getByRole('dialog', { name: /Désactiver la 2FA/i });
   await dialog.getByLabel('Mot de passe').fill(PASSWORD);
-  await dialog.getByLabel(/Code TOTP/).fill(currentTotp(sharedSecret!));
+  await dialog.getByLabel(/Code TOTP/).fill(await currentTotp(sharedSecret!));
   await dialog.getByRole('button', { name: 'Désactiver' }).click();
 
   // Card flips back to the disabled state, offering "Activer" again.
