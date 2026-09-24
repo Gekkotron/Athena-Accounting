@@ -67,8 +67,14 @@ test('near-duplicate is flagged as "Probable" and skippable at preview time', as
   await dialog.getByRole('button', { name: 'Importer' }).click();
   await expect(dialog).toBeHidden();
 
-  // Both rows are on the transactions page.
-  await page.goto('/transactions');
+  // Both rows are on the transactions page. `/transactions` defaults to
+  // the first-checking account (settings preference), which is the account
+  // fullstack.spec.ts seeded, not the one we just filled — scope the URL
+  // to this test's account so the two labels are actually rendered.
+  const accountsRes = await page.request.get('/api/accounts');
+  const acc = accountsRes.json().accounts.find((a: { name: string }) => a.name === ACCOUNT_NAME);
+  expect(acc, `account ${ACCOUNT_NAME} in /api/accounts`).toBeDefined();
+  await page.goto(`/transactions?accountId=${acc.id}`);
   await expect(page.getByText('CB CARREFOUR MARKET')).toBeVisible();
   await expect(page.getByText('PAIEMENT CARREFOUR MARKET REF98')).toBeVisible();
 });

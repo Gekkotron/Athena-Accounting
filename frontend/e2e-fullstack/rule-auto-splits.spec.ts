@@ -35,7 +35,12 @@ async function createCategory(page: Page, name: string): Promise<void> {
   const res = await page.request.post('/api/categories', {
     data: { name, kind: 'expense' },
   });
-  expect(res.ok(), `create category ${name} status=${res.status()}`).toBeTruthy();
+  // 409 is fine on a Playwright retry — the suite shares one DB and the
+  // first attempt may have already inserted the row before failing later.
+  expect(
+    res.ok() || res.status() === 409,
+    `create category ${name} status=${res.status()}`,
+  ).toBeTruthy();
 }
 
 test('create a split-mode rule via the Rules page UI', async ({ page }) => {
@@ -49,7 +54,7 @@ test('create a split-mode rule via the Rules page UI', async ({ page }) => {
   // and mode are selects; priority is inputMode="numeric".
   await page.getByLabel(/Mot-clé/).fill('amazon-splits-e2e');
   // "Catégorie" select picks the primary display category.
-  await page.getByLabel('Catégorie').first().selectOption({ label: /Retail e2e/ });
+  await page.getByLabel('Catégorie').first().selectOption({ label: 'Retail e2e' });
   // Toggle split mode on — the toggle checkbox has the "Ventilation
   // multi-catégories" label text.
   await page.getByRole('checkbox', { name: /ventilation multi-catégories/i }).check();
@@ -60,8 +65,8 @@ test('create a split-mode rule via the Rules page UI', async ({ page }) => {
   // the last two.)
   const total = await categoryDropdowns.count();
   expect(total).toBeGreaterThanOrEqual(3);
-  await categoryDropdowns.nth(total - 2).selectOption({ label: /Livres e2e/ });
-  await categoryDropdowns.nth(total - 1).selectOption({ label: /Electro e2e/ });
+  await categoryDropdowns.nth(total - 2).selectOption({ label: 'Livres e2e' });
+  await categoryDropdowns.nth(total - 1).selectOption({ label: 'Electro e2e' });
   const percentInputs = page.getByRole('spinbutton', { name: /^%$/ });
   await percentInputs.nth(0).fill('60');
   await percentInputs.nth(1).fill('40');
