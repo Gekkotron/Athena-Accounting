@@ -81,7 +81,7 @@ describe.skipIf(!RUN)('GET /api/transactions/duplicates (fuzzy)', () => {
         userId, accountId, date: '2026-06-15', amount: '-25.30',
         rawLabel: 'CARREFOUR', normalizedLabel: 'carrefour',
         dedupKey: 'hash:xfer-1', memo: null, fitid: null,
-        transferGroupId: 'legacy-group',
+        transferGroupId: '00000000-0000-4000-8000-000000000001',
       },
       {
         userId, accountId, date: '2026-06-15', amount: '-25.30',

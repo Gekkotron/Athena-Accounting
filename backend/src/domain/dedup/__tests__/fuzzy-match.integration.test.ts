@@ -87,7 +87,7 @@ describe.skipIf(!RUN)('findFuzzyMatches', () => {
       date: '2026-06-15', amount: '-25.30',
       rawLabel: 'CB CARREFOUR', normalizedLabel: 'carrefour',
       dedupKey: 'hash:seed-3', memo: null, fitid: null,
-      transferGroupId: 'legacy-group',
+      transferGroupId: '00000000-0000-4000-8000-000000000001',
     });
     const { findFuzzyMatches } = await import('../fuzzy-match.js');
     const result = await findFuzzyMatches({

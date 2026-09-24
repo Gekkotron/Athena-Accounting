@@ -777,9 +777,11 @@ describe.skipIf(!RUN)('/api/transactions', () => {
   describe('GET /api/transactions/duplicates', () => {
     it('surfaces a group when the same (account, date, amount) has different dedup_keys', async () => {
       // Two rows: same account/date/amount, different labels → different
-      // normalized_label → different dedup_key.
-      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-42.30', rawLabel: 'CB CARREFOUR' });
-      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-42.30', rawLabel: 'PAIEMENT MONOPRIX' });
+      // normalized_label → different dedup_key. Labels also share 2 of 3
+      // tokens so they pass the Jaccard ≥ 0.5 filter the duplicates panel
+      // now applies on top of (account, date, amount).
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-42.30', rawLabel: 'CB CARREFOUR MARKET NORD' });
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-42.30', rawLabel: 'CB CARREFOUR MARKET SUD' });
 
       const res = await app.inject({
         method: 'GET', url: '/api/transactions/duplicates',
@@ -809,11 +811,12 @@ describe.skipIf(!RUN)('/api/transactions', () => {
       // Labels must normalize to different values so the dedup constraint
       // doesn't reject the second insert on each account. "onA-1" and
       // "onA-2" both normalize to "ona-" (the trailing digit is stripped),
-      // so use fully distinct words.
-      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT ALPHA' });
-      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT BETA' });
-      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT GAMMA' });
-      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT DELTA' });
+      // so use fully distinct words. Each pair also shares 2 of 3 tokens
+      // so they clear the duplicates panel's Jaccard ≥ 0.5 filter.
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT ALPHA STORE' });
+      await makeTx({ accountId: accountAId, date: '2026-06-15', amount: '-1.00', rawLabel: 'MERCHANT BETA STORE' });
+      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'VENDOR GAMMA SHOP' });
+      await makeTx({ accountId: accountBId, date: '2026-06-15', amount: '-1.00', rawLabel: 'VENDOR DELTA SHOP' });
 
       const res = await app.inject({
         method: 'GET', url: `/api/transactions/duplicates?accountId=${accountAId}`,

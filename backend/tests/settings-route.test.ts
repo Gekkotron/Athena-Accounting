@@ -1,8 +1,10 @@
 // requires Postgres + onboarding setup — run with RUN_DB_TESTS=1
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { DEFAULTS } from '../src/domain/settings/defaults.js';
 
 const RUN = !!process.env.RUN_DB_TESTS;
+const DEFAULT_NOTIFICATIONS = DEFAULTS.notifications;
 
 let app: FastifyInstance;
 let cookie: string;
@@ -47,6 +49,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       bankSyncHour: 2,
       backupHour: 3,
       displayCurrency: null,
+      notifications: DEFAULT_NOTIFICATIONS,
     });
   });
 
@@ -66,6 +69,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       bankSyncHour: 2,
       backupHour: 3,
       displayCurrency: null,
+      notifications: DEFAULT_NOTIFICATIONS,
     });
   });
 
