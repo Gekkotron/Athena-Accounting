@@ -134,10 +134,14 @@ test('editing one split flips splits_source to manual and preserves on re-catego
   // Run recategorize with the safe default (preserveManual=true, which
   // matters here only for the non-splits branch — splits_source='manual'
   // is preserved unconditionally).
+  //
+  // The rules-list page auto-starts a floating-ui tour whose bubble
+  // intercepts pointer events on the Recatégoriser button. The bubble's
+  // Escape handler only fires when it has focus, so a page-level
+  // keyboard.press('Escape') doesn't reach it — dismiss the tip
+  // server-side via /api/tips/dismiss so the tour never opens.
+  await page.request.post('/api/tips/dismiss', { data: { id: 'tour:rules-list' } });
   await page.goto('/rules/list');
-  // The rules-list page auto-starts a tour whose floating dialog sits
-  // over the Recatégoriser button — Escape closes it.
-  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /Recatégoriser l'historique/i }).click();
   const confirm = page.getByRole('dialog', { name: /Recatégoriser tout/i });
   await expect(confirm).toBeVisible();

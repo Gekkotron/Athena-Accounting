@@ -66,12 +66,19 @@ async function matchRecoveryCodeConstantTime(
 }
 // The 10/min bucket is the security guard on brute-force verify /
 // wrong-password enroll; in tests the many calls exhaust it and the
-// suite goes red for the wrong reason. @fastify/rate-limit has its
-// own upstream coverage, so we scale the ceiling up in test mode
-// rather than duplicate that testing here.
-const RATE = process.env.NODE_ENV === 'test'
-  ? { max: 10000, timeWindow: '1 minute' as const }
-  : { max: 10, timeWindow: '1 minute' as const };
+// suite goes red for the wrong reason. `AUTH_RATE_LIMIT_MAX` bumps
+// the ceiling for the fullstack Playwright harness (production mode
+// but many verify calls across specs). @fastify/rate-limit has its
+// own upstream coverage.
+const TOTP_RATE_OVERRIDE = Number(process.env.AUTH_RATE_LIMIT_MAX ?? 0);
+const RATE = {
+  max: TOTP_RATE_OVERRIDE > 0
+    ? TOTP_RATE_OVERRIDE
+    : process.env.NODE_ENV === 'test'
+      ? 10000
+      : 10,
+  timeWindow: '1 minute' as const,
+};
 
 export async function totpRoutes(app: FastifyInstance): Promise<void> {
   // Guard: this whole surface exists only in session mode. In `none`

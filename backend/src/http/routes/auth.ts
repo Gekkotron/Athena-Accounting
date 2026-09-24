@@ -17,11 +17,19 @@ const ARGON2_OPTS = {
 // Auth-route rate-limit bucket. Production keeps the tight 10/min per-IP
 // brute-force guard; test mode raises the ceiling so a many-login suite
 // (auth-totp-route.test.ts hits /login ~15 times) doesn't go red on
-// 429s. @fastify/rate-limit has its own upstream coverage of the
-// bucketing behaviour.
-const AUTH_RATE_LIMIT = process.env.NODE_ENV === 'test'
-  ? { max: 10000, timeWindow: '1 minute' as const }
-  : { max: 10, timeWindow: '1 minute' as const };
+// 429s. `AUTH_RATE_LIMIT_MAX` also raises it — used by the fullstack
+// Playwright harness, which runs the backend in production mode but
+// still hits /login enough times across specs to blow the 10/min cap.
+// @fastify/rate-limit has its own upstream coverage of the bucketing.
+const AUTH_RATE_OVERRIDE = Number(process.env.AUTH_RATE_LIMIT_MAX ?? 0);
+const AUTH_RATE_LIMIT = {
+  max: AUTH_RATE_OVERRIDE > 0
+    ? AUTH_RATE_OVERRIDE
+    : process.env.NODE_ENV === 'test'
+      ? 10000
+      : 10,
+  timeWindow: '1 minute' as const,
+};
 
 const LoginBody = z.object({
   username: z.string().trim().min(1),

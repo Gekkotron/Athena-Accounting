@@ -56,6 +56,10 @@ export default defineConfig({
       AUTH_MODE: 'session',
       // Only ever protects a disposable test database — not a secret.
       SESSION_SECRET: 'athena-fullstack-e2e-session-secret-0123456789',
+      // Backend runs in NODE_ENV=production, but the many-spec suite still
+      // hits /login and /2fa/verify enough times to exceed the 10/min
+      // brute-force cap — raise it just for this harness.
+      AUTH_RATE_LIMIT_MAX: '10000',
       SERVE_STATIC: 'true',
       STATIC_ROOT: path.resolve(HERE, 'dist'),
       DATA_DIR: path.resolve(HERE, 'test-results', 'e2e-data'),
