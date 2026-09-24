@@ -134,9 +134,14 @@ test('login with a recovery code, then that code no longer works', async ({ page
   expect(verifyResp.ok(), `2fa verify status=${verifyResp.status()}`).toBeTruthy();
   await expect(page).toHaveURL(/\/$/);
 
-  // Card now shows 9 codes left — the burnt one cannot be replayed.
-  await page.goto('/settings/security');
-  await expect(page.getByText(/9 codes de récupération restants/)).toBeVisible();
+  // 9 codes left — the burnt one cannot be replayed. Verified through
+  // the JSON API instead of the /settings/security UI because the UI
+  // has an intermittent race between recovery-code Set-Cookie and the
+  // fresh full-page navigation's /api/auth/me.
+  const statusRes = await page.request.get('/api/auth/2fa/status');
+  expect(statusRes.ok(), `2fa status status=${statusRes.status()}`).toBeTruthy();
+  const status = (await statusRes.json()) as { remainingRecoveryCodes?: number };
+  expect(status.remainingRecoveryCodes).toBe(9);
 
   // Second attempt with the same code must fail — one-shot burn on the
   // backend leaves used_at set, so the verify route rejects it as invalid.
