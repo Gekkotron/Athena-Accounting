@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../../api/client';
 import type { Account, Category, Transaction } from '../../api/types';
-import { formatDate, parseDecimal, parseUserDate } from '../../lib/format';
+import { formatDate, parseDecimal } from '../../lib/format';
 import { SplitEditor, type DraftSplit, parseMagnitudeCents, fromInitial } from './SplitEditor';
 import { TransactionModalFields } from './TransactionModalFields';
 import { TransactionAttachments } from './TransactionAttachments';
-import {
-  buildPatchDiff,
-  draftMatchesInitial,
-  parseLockYearsInput,
-  type TxPatch,
-} from './transaction-modal-lib';
+import { decideSubmitAction } from './transaction-modal-lib';
+import { useTransactionModalMutations } from './useTransactionModalMutations';
 
 export function TransactionModal({
   open,
@@ -29,7 +23,6 @@ export function TransactionModal({
   categories: Category[];
 }) {
   const { t } = useTranslation(['transactions', 'common']);
-  const qc = useQueryClient();
   // Date is held in the FRENCH textual form (JJ/MM/AAAA) and parsed to ISO
   // only at submit time. Lets the user paste "14/07/2025" straight from a
   // bank statement without fighting the picker.
@@ -51,13 +44,33 @@ export function TransactionModal({
   // Empty = inherit account default; any digit = this tx locks for N years
   // from ITS OWN date (Natixis-style rolling-lock).
   const [lockYearsInput, setLockYearsInput] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
   const [splitsDraft, setSplitsDraft] = useState<DraftSplit[]>([]);
-  // Parent POST succeeded but the follow-up splits PUT failed. Set once, the
-  // "Create" button is locked so re-clicking cannot mint a duplicate parent
-  // server-side; the user has to close and re-open the transaction from the
-  // list (the invalidate below has already refreshed it) to retry the splits.
-  const [createdTxIdOnFailure, setCreatedTxIdOnFailure] = useState<number | null>(null);
+
+  const cleanedAmountForSplit = parseDecimal(amount);
+  const parentCents = cleanedAmountForSplit !== null
+    ? Math.round(Number(cleanedAmountForSplit) * 100)
+    : 0;
+  const parentAmountMagnitude = Math.abs(parentCents) / 100;
+  const parentAmountSign: -1 | 1 | 0 =
+    parentCents === 0 ? 0 : parentCents < 0 ? -1 : 1;
+  const isTransfer = transaction?.transferGroupId != null;
+
+  const splitsSumCents = splitsDraft.reduce((acc, r) => {
+    const cents = parseMagnitudeCents(r.amountMagnitude);
+    return acc + (cents ?? 0);
+  }, 0);
+  const remainderCents = Math.abs(parentCents) - splitsSumCents;
+  const splitsInvalid = splitsDraft.length > 0 && (
+    remainderCents !== 0 ||
+    splitsDraft.some((r) => {
+      if (r.categoryId === '') return true;
+      const cents = parseMagnitudeCents(r.amountMagnitude);
+      return cents === null || cents === 0;
+    })
+  );
+
+  const { error, setError, createdTxIdOnFailure, resetErrorState, create, update, pending } =
+    useTransactionModalMutations({ transaction, splitsDraft, parentCents, onClose });
 
   useEffect(() => {
     if (!open) return;
@@ -84,8 +97,7 @@ export function TransactionModal({
       setLockYearsInput('');
       setSplitsDraft([]);
     }
-    setError(null);
-    setCreatedTxIdOnFailure(null);
+    resetErrorState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, transaction]);
 
@@ -98,174 +110,24 @@ export function TransactionModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['transactions'] });
-    qc.invalidateQueries({ queryKey: ['accounts'] });
-    qc.invalidateQueries({ queryKey: ['reports'] });
-    qc.invalidateQueries({ queryKey: ['tri-groups'] });
-  };
-
-  const cleanedAmountForSplit = parseDecimal(amount);
-  const parentCents = cleanedAmountForSplit !== null
-    ? Math.round(Number(cleanedAmountForSplit) * 100)
-    : 0;
-  const parentAmountMagnitude = Math.abs(parentCents) / 100;
-  const parentAmountSign: -1 | 1 | 0 =
-    parentCents === 0 ? 0 : parentCents < 0 ? -1 : 1;
-  const isTransfer = transaction?.transferGroupId != null;
-
-  const splitsSumCents = splitsDraft.reduce((acc, r) => {
-    const cents = parseMagnitudeCents(r.amountMagnitude);
-    return acc + (cents ?? 0);
-  }, 0);
-  const remainderCents = Math.abs(parentCents) - splitsSumCents;
-  const splitsInvalid = splitsDraft.length > 0 && (
-    remainderCents !== 0 ||
-    splitsDraft.some((r) => {
-      if (r.categoryId === '') return true;
-      const cents = parseMagnitudeCents(r.amountMagnitude);
-      return cents === null || cents === 0;
-    })
-  );
-
-  async function persistSplits(txId: number): Promise<void> {
-    const sign = parentCents < 0 ? -1 : 1;
-    if (splitsDraft.length === 0) {
-      // Only DELETE when we're editing a previously-split transaction.
-      if (transaction && transaction.splits.length > 0) {
-        await api(`/api/transactions/${txId}/splits`, { method: 'DELETE' });
-      }
-      return;
-    }
-    await api(`/api/transactions/${txId}/splits`, {
-      method: 'PUT',
-      json: {
-        splits: splitsDraft.map((r) => {
-          const cents = parseMagnitudeCents(r.amountMagnitude) ?? 0;
-          if (r.categoryId === '') {
-            throw new Error('invariant: persistSplits reached with empty categoryId (splitsInvalid guard failed)');
-          }
-          return {
-            categoryId: r.categoryId,
-            amount: ((cents * sign) / 100).toFixed(2),
-            memo: r.memo.trim() ? r.memo : null,
-          };
-        }),
-      },
-    });
-  }
-
-  const create = useMutation({
-    mutationFn: async (input: {
-      accountId: number;
-      date: string;
-      amount: string;
-      rawLabel: string;
-      categoryId: number | null;
-      notes: string | null;
-      lockYears: number | null;
-    }) => {
-      const { transaction: tx } = await api<{ transaction: Transaction }>('/api/transactions', {
-        method: 'POST', json: input,
-      });
-      try {
-        await persistSplits(tx.id);
-      } catch (err) {
-        // Parent already committed server-side. Refresh the list so the row
-        // shows up and remember the id — the onError handler uses it to
-        // switch the modal into a "close-only" mode so re-submitting cannot
-        // create a second parent transaction.
-        invalidate();
-        setCreatedTxIdOnFailure(tx.id);
-        throw err;
-      }
-      return { transaction: tx };
-    },
-    onSuccess: () => { invalidate(); onClose(); },
-    onError: (err: unknown) => {
-      const message = err instanceof ApiError || err instanceof Error ? err.message : String(err);
-      setError(message);
-    },
-  });
-
-  const update = useMutation({
-    mutationFn: async (input: { id: number; patch: TxPatch }) => {
-      // Skip the PATCH when the parent has no field changes — splits alone
-      // might be what changed, and we still want to hit persistSplits below.
-      // An empty PATCH body would 400.
-      if (Object.keys(input.patch).length > 0) {
-        await api<{ transaction: Transaction }>(`/api/transactions/${input.id}`, {
-          method: 'PATCH', json: input.patch,
-        });
-      }
-      await persistSplits(input.id);
-    },
-    onSuccess: () => { invalidate(); onClose(); },
-    onError: (err: ApiError) => setError(err.message),
-  });
-
   if (!open) return null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!accountId) {
-      setError(t('modal.errors.accountRequired'));
-      return;
-    }
-    const isoDate = parseUserDate(date);
-    if (!isoDate) {
-      setError(t('modal.errors.invalidDate'));
-      return;
-    }
-    const cleanedAmount = parseDecimal(amount);
-    if (cleanedAmount === null) {
-      setError(t('modal.errors.invalidAmount'));
-      return;
-    }
-    if (!rawLabel.trim()) {
-      setError(t('modal.errors.labelRequired'));
-      return;
-    }
-    const lockParsed = parseLockYearsInput(lockYearsInput);
-    if (!lockParsed.ok) {
-      setError(t('modal.errors.invalidLockYears'));
-      return;
-    }
-
-    if (isEdit && transaction) {
-      const patch = buildPatchDiff(transaction, {
-        accountId,
-        isoDate,
-        amount: cleanedAmount,
-        rawLabel,
-        categoryId,
-        notes,
-        lockYears: lockParsed.value,
-      });
-      // Splits go through update even if no parent field moved — otherwise
-      // adding a ventilation to an untouched transaction would silently
-      // close the modal without persisting.
-      if (Object.keys(patch).length === 0 && draftMatchesInitial(splitsDraft, transaction.splits, parentCents)) {
-        onClose();
-        return;
-      }
-      update.mutate({ id: transaction.id, patch });
-    } else {
-      create.mutate({
-        accountId,
-        date: isoDate,
-        amount: cleanedAmount,
-        rawLabel: rawLabel.trim(),
-        categoryId: categoryId || null,
-        notes: notes.trim() || null,
-        lockYears: lockParsed.value,
-      });
+    const action = decideSubmitAction(
+      { accountId, date, amount, rawLabel, categoryId, notes, lockYearsInput },
+      transaction, splitsDraft, parentCents,
+    );
+    switch (action.kind) {
+      case 'error': setError(t(`modal.errors.${action.messageKey}`)); return;
+      case 'noop': onClose(); return;
+      case 'update': update.mutate({ id: action.id, patch: action.patch }); return;
+      case 'create': create.mutate(action.input); return;
     }
   };
 
   const selectedAccount = accountId ? accounts.find((a) => a.id === accountId) : undefined;
-  const pending = create.isPending || update.isPending;
 
   return (
     <div
