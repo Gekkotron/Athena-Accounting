@@ -7,8 +7,8 @@ const privacyOff = { hideAmount: false, hideMerchant: false };
 describe('render', () => {
   it('big_transaction summary hides amount', () => {
     const p = { kind: 'big_transaction' as const, summary: { accountId: 1, count: 4, total: 1200 } };
-    expect(renderBody(p, privacyOn)).not.toMatch(/1[\s, ]200|1200/);
-    expect(renderBody(p, privacyOff)).toMatch(/1[\s, ]200|1200/);
+    expect(renderBody(p, privacyOn)).not.toMatch(/1[\s,]200|1200/);
+    expect(renderBody(p, privacyOff)).toMatch(/1[\s,]200|1200/);
   });
 
   it('big_transaction single hides merchant', () => {
