@@ -71,7 +71,7 @@ test('create a split-mode rule via the Rules page UI', async ({ page }) => {
   await percentInputs.nth(0).fill('60');
   await percentInputs.nth(1).fill('40');
   // Sum indicator flips to sage — submit enables.
-  await page.getByRole('button', { name: 'Créer la règle' }).click();
+  await page.getByRole('button', { name: 'Ajouter la règle' }).click();
   // Chip lands in the grouped view under "Retail e2e" (default view).
   await expect(page.getByText('amazon-splits-e2e').first()).toBeVisible();
 });
