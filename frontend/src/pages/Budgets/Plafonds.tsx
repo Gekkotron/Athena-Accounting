@@ -14,8 +14,7 @@ import { TourReplayIcon } from '../../components/TourReplayIcon';
 import { PeriodSelector } from './PeriodSelector';
 import { AccountFilter } from './AccountFilter';
 import { SummaryCard } from './SummaryCard';
-import { BudgetRow } from './BudgetRow';
-import { SuggestionCard } from './SuggestionCard';
+import { BudgetRowsList } from './BudgetRowsList';
 import { UnbudgetedSection } from './UnbudgetedSection';
 import { AddBudgetForm } from './AddBudgetForm';
 import { topLevelRows } from './budget-math';
@@ -126,22 +125,6 @@ export function Plafonds(): JSX.Element {
     onError: (err) => setMutationError(mutationErrorMessage(err, t)),
   });
 
-  // The row list below is built from several push sites (root row, slim
-  // parent header, child rows, orphaned rows) rather than a single flat
-  // `.map`, so there's no single index to test against. `firstRowRef()`
-  // tracks a running "have we anchored yet" flag across the whole render
-  // and hands the real `catRowAnchor` callback to only the very first
-  // row-like node it's asked about — whichever branch that turns out to
-  // be — so every other row gets `undefined` and no extra DOM wrapper is
-  // introduced (BudgetRow forwards its ref straight to the rendered <li>,
-  // and existing tests rely on rows being direct, adjacent <li> siblings).
-  let firstCategoryRowAssigned = false;
-  const firstRowRef = (): typeof catRowAnchor | undefined => {
-    if (firstCategoryRowAssigned) return undefined;
-    firstCategoryRowAssigned = true;
-    return catRowAnchor;
-  };
-
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       {/* Header — stacks on mobile so the title, period picker, and
@@ -205,105 +188,17 @@ export function Plafonds(): JSX.Element {
           <p className="text-sm text-ink-500">{t('emptyState.hint')}</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {visibleRoots.flatMap((r) => {
-            const rootRow = rowsByCategory.get(r.id);
-            const nodes: JSX.Element[] = [];
-            if (rootRow) {
-              // The row now carries its own budget id directly (rootRow.id) —
-              // a categoryId-only lookup into `budgets` is ambiguous once a
-              // category can have multiple budget rows (monthly + yearly,
-              // global + per-account) and can silently mutate the wrong one.
-              const budgetId = rootRow.id;
-              nodes.push(
-                <BudgetRow
-                  key={`root-${r.id}-${rootRow.id}`}
-                  ref={firstRowRef()}
-                  row={rootRow}
-                  depth={0}
-                  budgetId={budgetId}
-                  onSave={handleSave}
-                  onDelete={handleDelete}
-                />,
-              );
-              if (rootRow.suggestedLimit != null && budgetId !== undefined) {
-                nodes.push(
-                  <SuggestionCard
-                    key={`suggest-${r.id}-${rootRow.id}`}
-                    row={rootRow}
-                    budgetId={budgetId}
-                    periodKey={monthOrYear}
-                    onApply={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
-                  />,
-                );
-              }
-            } else {
-              // Parent has no budget of its own but has budgeted children — slim header.
-              nodes.push(
-                <li key={`header-${r.id}`} ref={firstRowRef()} data-role="budget-row" data-depth={0} className="px-4 py-2 text-sm text-ink-500">
-                  {r.name}
-                </li>,
-              );
-            }
-            for (const c of childrenByParent.get(r.id) ?? []) {
-              const row = rowsByCategory.get(c.id);
-              if (!row) continue;
-              const budgetId = row.id;
-              nodes.push(
-                <BudgetRow
-                  key={`child-${c.id}-${row.id}`}
-                  ref={firstRowRef()}
-                  row={row}
-                  depth={1}
-                  budgetId={budgetId}
-                  onSave={handleSave}
-                  onDelete={handleDelete}
-                />,
-              );
-              if (row.suggestedLimit != null && budgetId !== undefined) {
-                nodes.push(
-                  <SuggestionCard
-                    key={`suggest-${c.id}-${row.id}`}
-                    row={row}
-                    budgetId={budgetId}
-                    periodKey={monthOrYear}
-                    onApply={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
-                  />,
-                );
-              }
-            }
-            return nodes;
-          })}
-          {/* Also render any budgeted category whose parent isn't visible (orphaned leaf edge case). */}
-          {rows
-            .filter((r) => !visibleRoots.some((vr) => vr.id === r.categoryId || (childrenByParent.get(vr.id) ?? []).some((c) => c.id === r.categoryId)))
-            .flatMap((r) => {
-              const budgetId = r.id;
-              const nodes = [
-                <BudgetRow
-                  key={`orphan-${r.categoryId}-${r.id}`}
-                  ref={firstRowRef()}
-                  row={r}
-                  depth={0}
-                  budgetId={budgetId}
-                  onSave={handleSave}
-                  onDelete={handleDelete}
-                />,
-              ];
-              if (r.suggestedLimit != null && budgetId !== undefined) {
-                nodes.push(
-                  <SuggestionCard
-                    key={`suggest-orphan-${r.categoryId}-${r.id}`}
-                    row={r}
-                    budgetId={budgetId}
-                    periodKey={monthOrYear}
-                    onApply={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
-                  />,
-                );
-              }
-              return nodes;
-            })}
-        </ul>
+        <BudgetRowsList
+          rows={rows}
+          visibleRoots={visibleRoots}
+          rowsByCategory={rowsByCategory}
+          childrenByParent={childrenByParent}
+          monthOrYear={monthOrYear}
+          catRowAnchor={catRowAnchor}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          onApplySuggestion={(id, newLimit) => update.mutate({ id, monthlyLimit: newLimit })}
+        />
       )}
 
       {report.data && (
