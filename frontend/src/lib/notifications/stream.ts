@@ -4,6 +4,9 @@ export function startNotificationsStream(onEvent: (n: Notification) => void): ()
   // jsdom (frontend unit tests) has no EventSource global — fail closed
   // instead of throwing out of the mount effect.
   if (typeof EventSource === 'undefined') return () => {};
+  // Browser-only demo has no backend; opening the SSE would fail the
+  // "no /api/* leaks" e2e assertion. Skip cleanly.
+  if (import.meta.env.VITE_DEMO) return () => {};
   const es = new EventSource('/api/notifications/stream', { withCredentials: true });
   es.onmessage = (ev) => {
     try { onEvent(JSON.parse(ev.data)); } catch { /* ignore malformed frame */ }
