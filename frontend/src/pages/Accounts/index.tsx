@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAccounts } from '../../lib/useReferenceData';
 import { useTour } from '../../contexts/TourContext';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
-import { api, ApiError } from '../../api/client';
 import type { Account } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useAutoStartTour } from '../../hooks/useAutoStartTour';
 import { useTourAnchor } from '../../hooks/useTourAnchor';
 import { TourReplayIcon } from '../../components/TourReplayIcon';
 import { AccountCard } from './AccountCard';
-import { AccountForm, type AccountFormValues } from './AccountForm';
+import { AccountForm } from './AccountForm';
 import { AccountPatternsPanel } from './AccountPatternsPanel';
 import { MergeModal } from './MergeModal';
 import { useAccountsReorder } from './useAccountsReorder';
+import { useAccountsMutations } from './useAccountsMutations';
+import { useAccountEdit } from './useAccountEdit';
 import type { MergeResult } from '../../api/accounts';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
@@ -24,7 +25,6 @@ export function Accounts() {
   const qc = useQueryClient();
   const accountsQ = useAccounts();
   const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useAutoStartTour('accounts'); // no requireData — page exists to create data
   const addBtnAnchor = useTourAnchor('accounts:add-button');
@@ -39,27 +39,8 @@ export function Accounts() {
     if (activePageId === 'accounts' && stepIdx === 1) setShowForm(true);
   }, [activePageId, stepIdx]);
 
-  const create = useMutation({
-    mutationFn: (input: AccountFormValues) =>
-      api<{ account: Account }>('/api/accounts', { method: 'POST', json: input }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      setShowForm(false);
-    },
-    onError: (err: ApiError) => setError(err.message),
-  });
-
-  const updateAccount = useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: Partial<Account> }) =>
-      api<{ account: Account }>(`/api/accounts/${id}`, { method: 'PUT', json: patch }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      setEditingId(null);
-    },
-    onError: (err: ApiError) => setEditError(err.message),
-  });
+  const m = useAccountsMutations();
+  const edit = useAccountEdit(m.updateAccount, () => m.setEditError(null));
 
   const { sensors, onDragEnd } = useAccountsReorder(accountsQ.data ?? []);
 
@@ -74,78 +55,7 @@ export function Accounts() {
     });
 
   const [confirmDelete, setConfirmDelete] = useState<Account | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [mergeSource, setMergeSource] = useState<Account | null>(null);
-
-  const del = useMutation({
-    mutationFn: (id: number) => api(`/api/accounts/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['accounts'] });
-      qc.invalidateQueries({ queryKey: ['reports'] });
-      qc.invalidateQueries({ queryKey: ['transactions'] });
-      setConfirmDelete(null);
-      setDeleteError(null);
-      cancelEdit();
-    },
-    onError: (err: ApiError) => {
-      // Backend returns 409 with a clear message when the account has
-      // transactions; surface that text inside the dialog instead of letting
-      // the dialog close silently.
-      setDeleteError(err.message);
-    },
-  });
-
-  // Per-card edit state. Only one account can be in edit mode at a time; the
-  // draft is local so cancelling discards the in-flight changes cleanly.
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editDraft, setEditDraft] = useState<{
-    name: string;
-    type: string;
-    currency: string;
-    openingBalance: string;
-    openingDate: string;
-    lockYears: number | null;
-  } | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
-
-  const startEdit = (a: Account) => {
-    setEditError(null);
-    setEditingId(a.id);
-    setEditDraft({
-      name: a.name,
-      type: a.type,
-      currency: a.currency,
-      openingBalance: a.openingBalance,
-      openingDate: a.openingDate,
-      lockYears: a.lockYears ?? null,
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditDraft(null);
-    setEditError(null);
-  };
-
-  // `draft` is passed explicitly (not read from editDraft state) because
-  // setEditDraft(values) hasn't re-rendered yet when saveEdit runs in the
-  // same event handler tick. Characterization test #3 is the safety net.
-  const saveEdit = (a: Account, draft: typeof editDraft) => {
-    if (!draft) return;
-    const patch: Partial<Account> = {};
-    if (draft.name !== a.name) patch.name = draft.name.trim();
-    if (draft.type !== a.type) patch.type = draft.type;
-    if (draft.currency !== a.currency) patch.currency = draft.currency.toUpperCase();
-    if (draft.openingBalance !== a.openingBalance) patch.openingBalance = draft.openingBalance;
-    if (draft.openingDate !== a.openingDate) patch.openingDate = draft.openingDate;
-    if ((draft.lockYears ?? null) !== (a.lockYears ?? null)) patch.lockYears = draft.lockYears;
-    if (Object.keys(patch).length === 0) {
-      cancelEdit();
-      return;
-    }
-    setEditError(null);
-    updateAccount.mutate({ id: a.id, patch });
-  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -170,11 +80,11 @@ export function Accounts() {
         <div ref={startingBalAnchor}>
           <AccountForm
             mode="create"
-            error={error}
-            submitting={create.isPending}
+            error={m.error}
+            submitting={m.create.isPending}
             onSubmit={(values) => {
-              setError(null);
-              create.mutate(values);
+              m.setError(null);
+              m.create.mutate(values, { onSuccess: () => setShowForm(false) });
             }}
           />
         </div>
@@ -199,22 +109,22 @@ export function Accounts() {
             <SortableContext items={(accountsQ.data ?? []).map((a) => a.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {(accountsQ.data ?? []).map((a) => {
-                  if (editingId === a.id && editDraft) {
+                  if (edit.editingId === a.id && edit.editDraft) {
                     return (
                       <div key={a.id} className="surface p-5 relative">
                         <div className="label mb-3">{t('editHeading')}</div>
                         <AccountForm
                           mode="edit"
-                          initial={editDraft}
-                          error={editError}
-                          submitting={updateAccount.isPending}
+                          initial={edit.editDraft}
+                          error={m.editError}
+                          submitting={m.updateAccount.isPending}
                           onSubmit={(values) => {
-                            setEditDraft(values);
-                            saveEdit(a, values);
+                            edit.setEditDraft(values);
+                            edit.saveEdit(a, values);
                           }}
-                          onCancel={cancelEdit}
+                          onCancel={edit.cancelEdit}
                           onDelete={() => {
-                            setDeleteError(null);
+                            m.setDeleteError(null);
                             setConfirmDelete(a);
                           }}
                         />
@@ -227,7 +137,7 @@ export function Accounts() {
                     <AccountCard
                       key={a.id}
                       account={a}
-                      onEdit={(acc) => startEdit(acc)}
+                      onEdit={(acc) => edit.startEdit(acc)}
                       onMerge={setMergeSource}
                       onExpand={(id) => toggleCheckpoints(id)}
                       expanded={checkpointsOpen.has(a.id)}
@@ -256,14 +166,19 @@ export function Accounts() {
         }
         confirmLabel={t('deleteAccountDialog.confirmLabel')}
         destructive
-        busy={del.isPending}
-        error={deleteError}
+        busy={m.del.isPending}
+        error={m.deleteError}
         onConfirm={() => {
-          if (confirmDelete) del.mutate(confirmDelete.id);
+          if (confirmDelete) m.del.mutate(confirmDelete.id, {
+            onSuccess: () => {
+              setConfirmDelete(null);
+              edit.cancelEdit();
+            },
+          });
         }}
         onCancel={() => {
           setConfirmDelete(null);
-          setDeleteError(null);
+          m.setDeleteError(null);
         }}
       />
 
