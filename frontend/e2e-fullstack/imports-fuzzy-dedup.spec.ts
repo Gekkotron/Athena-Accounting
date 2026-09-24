@@ -57,7 +57,7 @@ test('near-duplicate is flagged as "Probable" and skippable at preview time', as
 
   // Second preview: the row is flagged "Probable" with a pre-ticked skip box.
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText('Probable')).toBeVisible();
+  await expect(dialog.getByText('Probable', { exact: true })).toBeVisible();
   const skipBox = dialog.getByRole('checkbox').first();
   await expect(skipBox).toBeChecked();
 

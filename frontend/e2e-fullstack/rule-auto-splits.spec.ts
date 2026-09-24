@@ -47,7 +47,7 @@ test('create a split-mode rule via the Rules page UI', async ({ page }) => {
   await page.goto('/rules/list');
   // Fill the quick-add form. The keyword field is text; category, sign,
   // and mode are selects; priority is inputMode="numeric".
-  await page.getByLabel('Mot-clé').fill('amazon-splits-e2e');
+  await page.getByLabel(/Mot-clé/).fill('amazon-splits-e2e');
   // "Catégorie" select picks the primary display category.
   await page.getByLabel('Catégorie').first().selectOption({ label: /Retail e2e/ });
   // Toggle split mode on — the toggle checkbox has the "Ventilation
