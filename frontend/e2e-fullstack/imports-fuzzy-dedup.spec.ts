@@ -23,7 +23,7 @@ test('near-duplicate is flagged as "Probable" and skippable at preview time', as
   await login(page);
   await createAccount(page, ACCOUNT_NAME);
 
-  await page.goto('/imports');
+  await page.goto('/data/imports');
 
   // Upload seed CSV: one CB CARREFOUR row on 2026-06-15 for -25,30 €.
   const seed = Buffer.from(

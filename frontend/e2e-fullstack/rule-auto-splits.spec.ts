@@ -44,7 +44,7 @@ test('create a split-mode rule via the Rules page UI', async ({ page }) => {
   await createCategory(page, 'Electro e2e');
   await createCategory(page, 'Retail e2e');
 
-  await page.goto('/rules');
+  await page.goto('/rules/list');
   // Fill the quick-add form. The keyword field is text; category, sign,
   // and mode are selects; priority is inputMode="numeric".
   await page.getByLabel('Mot-clé').fill('amazon-splits-e2e');
@@ -122,7 +122,7 @@ test('editing one split flips splits_source to manual and preserves on re-catego
   // Run recategorize with the safe default (preserveManual=true, which
   // matters here only for the non-splits branch — splits_source='manual'
   // is preserved unconditionally).
-  await page.goto('/rules');
+  await page.goto('/rules/list');
   await page.getByRole('button', { name: /Recatégoriser l'historique/i }).click();
   const confirm = page.getByRole('dialog', { name: /Recatégoriser tout/i });
   await expect(confirm).toBeVisible();
