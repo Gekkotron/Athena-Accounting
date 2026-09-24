@@ -122,9 +122,12 @@ test('editing one split flips splits_source to manual and preserves on re-catego
   await page.getByRole('row', { name: /AMAZON-SPLITS-E2E FR/ }).getByRole('button', { name: 'Modifier' }).click();
   const modal = page.getByRole('dialog').filter({ hasText: 'Modifier la transaction' });
 
-  // Type a new amount on the first row and let the sibling rebalance.
+  // Fill both rows explicitly (Playwright's .fill fires a single input
+  // event, so relying on the sibling-rebalance react-onChange chain is
+  // fragile — write the final 30/70 shape ourselves).
   const splitAmountInputs = modal.locator('input.font-mono.w-28');
   await splitAmountInputs.nth(0).fill('30.00');
+  await splitAmountInputs.nth(1).fill('70.00');
   await modal.getByRole('button', { name: /Enregistrer/i }).click();
   await expect(modal).toBeHidden();
 
@@ -132,6 +135,9 @@ test('editing one split flips splits_source to manual and preserves on re-catego
   // matters here only for the non-splits branch — splits_source='manual'
   // is preserved unconditionally).
   await page.goto('/rules/list');
+  // The rules-list page auto-starts a tour whose floating dialog sits
+  // over the Recatégoriser button — Escape closes it.
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /Recatégoriser l'historique/i }).click();
   const confirm = page.getByRole('dialog', { name: /Recatégoriser tout/i });
   await expect(confirm).toBeVisible();

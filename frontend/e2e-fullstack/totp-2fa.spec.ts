@@ -26,19 +26,29 @@ async function loginPasswordStep(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Se connecter' }).click();
 }
 
-// Waits for a fresh TOTP window before returning the current code so a
-// verify attempt at a boundary won't race the server across it. The
-// server accepts ±1 window (±30s) of slop, so we ONLY need to avoid the
-// last few seconds of the current window — the fill + click + verify
-// round-trip fits well inside 25s.
+// Yields a fresh TOTP code that satisfies BOTH:
+//   1. server-side replay guard (last_used_counter must strictly
+//      advance — see backend/src/http/routes/auth/totp.ts) — so each
+//      call must land in a strictly newer 30 s window than the previous
+//      one, otherwise the verify endpoint 401s with "Code invalide".
+//   2. window-boundary safety — the fill + click + verify round-trip
+//      must fit inside the ±1 window slop, so we only hand out a code
+//      when we're at least a few seconds inside its window.
+let lastUsedCounter = 0;
 async function currentTotp(secret: string): Promise<string> {
-  const posInWindow = Math.floor(Date.now() / 1000) % 30;
   const safeCutoff = 25;
-  if (posInWindow >= safeCutoff) {
+  for (;;) {
+    const now = Math.floor(Date.now() / 1000);
+    const counter = Math.floor(now / 30);
+    const posInWindow = now % 30;
+    if (counter > lastUsedCounter && posInWindow < safeCutoff) {
+      lastUsedCounter = counter;
+      return generateTotpCode(secret);
+    }
+    // Sleep to the top of the next window plus a small buffer.
     const waitMs = (30 - posInWindow + 1) * 1000;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
-  return generateTotpCode(secret);
 }
 
 // Cached across the serial suite. Populated during the enrol test; used
@@ -85,6 +95,10 @@ test('enrol: password → QR + secret → verify code → save recovery codes', 
 });
 
 test('login with TOTP code after logout', async ({ page }) => {
+  // May sleep up to ~30 s waiting for a fresh TOTP window after the
+  // enrol step — the server's replay guard rejects a code re-used in
+  // the same 30 s counter.
+  test.setTimeout(90_000);
   expect(sharedSecret).not.toBeNull();
   // Log out via the profile menu route. /api/auth/logout is unauthenticated
   // and safe to POST directly through the request context.
@@ -128,6 +142,9 @@ test('login with a recovery code, then that code no longer works', async ({ page
 });
 
 test('disable 2FA with password + fresh TOTP code', async ({ page }) => {
+  // Two TOTP verifications back-to-back may require a fresh window
+  // wait between them (replay guard).
+  test.setTimeout(120_000);
   expect(sharedSecret).not.toBeNull();
   // Complete the login started in the previous test — recover with a
   // fresh TOTP code so we get back to the dashboard.
