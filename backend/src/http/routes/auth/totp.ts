@@ -241,15 +241,13 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
 
     if (!matched) return reply.code(401).send({ error: 'invalid code' });
 
-    // Rotate the session id on second-factor completion — fixation
-    // defence. Explicit save() closes a race on the recovery path
-    // (implicit onSend save trailed the response).
+    // Rotate the session id on second-factor completion (fixation
+    // defence).
     const username = req.session.username;
     await req.session.regenerate();
     req.session.userId = uid;
     req.session.username = username;
     req.session.totpPending = false;
-    await req.session.save();
     return { user: { id: uid, username } };
   });
 
