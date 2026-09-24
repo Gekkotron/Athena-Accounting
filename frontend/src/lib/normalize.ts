@@ -5,7 +5,7 @@
 const PREFIX_RE =
   /^(cb|carte|paiement|paiment|achat|vir(ement)?|prlv|prelvt|prelevement|cheque|chq|tip|retrait|dab)\s+/i;
 
-const DATE_RE = /\b\d{1,2}([\/.\-]\d{1,2}([\/.\-]\d{2,4})?)?\b/g;
+const DATE_RE = /\b\d{1,2}([/.-]\d{1,2}([/.-]\d{2,4})?)?\b/g;
 const LONG_DIGITS_RE = /\b\d{6,}\b/g;
 const ORPHAN_NUM_RE = /\s\d{3,5}\s/g;
 

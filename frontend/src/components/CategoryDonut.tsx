@@ -152,7 +152,7 @@ export function CategoryDonut({ data, currency = 'EUR', centerLabel }: Props) {
             >
               {hovered !== null
                 ? `${Math.round(segments[hovered]!.fraction * 100)}%`
-                : formatAmount(total, currency).replace(/ /g, ' ')}
+                : formatAmount(total, currency).replace(/\u00A0/g, ' ')}
             </text>
             {hovered !== null && (
               <text
