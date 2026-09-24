@@ -143,7 +143,9 @@ test('editing one split flips splits_source to manual and preserves on re-catego
   await page.request.post('/api/tips/dismiss', { data: { id: 'tour:rules-list' } });
   await page.goto('/rules/list');
   await page.getByRole('button', { name: /Recatégoriser l'historique/i }).click();
-  const confirm = page.getByRole('dialog', { name: /Recatégoriser tout/i });
+  // ConfirmDialog exposes role=dialog with no accessible name — match
+  // via inner text instead.
+  const confirm = page.getByRole('dialog').filter({ hasText: /Recatégoriser tout/i });
   await expect(confirm).toBeVisible();
   await confirm.getByRole('button', { name: /Recatégoriser/i }).click();
   await expect(confirm).toBeHidden();

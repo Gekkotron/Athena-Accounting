@@ -142,14 +142,16 @@ test('login with a recovery code, then that code no longer works', async ({ page
 });
 
 test('disable 2FA with password + fresh TOTP code', async ({ page }) => {
-  // Two TOTP verifications back-to-back may require a fresh window
-  // wait between them (replay guard).
+  // Two TOTP verifications back-to-back require a fresh window between
+  // them (replay guard) — that plus the fresh-page login can easily
+  // land in a 90+ s test.
   test.setTimeout(120_000);
   expect(sharedSecret).not.toBeNull();
-  // Complete the login started in the previous test — recover with a
-  // fresh TOTP code so we get back to the dashboard.
-  await page.getByLabel('Code de récupération').clear();
-  await page.getByRole('button', { name: /Utiliser un code totp/i }).click();
+
+  // Playwright gives each test a fresh page, so re-do the full login
+  // rather than continuing from where the recovery-code test left off.
+  await loginPasswordStep(page);
+  await expect(page.getByLabel('Code à 6 chiffres')).toBeVisible();
   await page.getByLabel('Code à 6 chiffres').fill(await currentTotp(sharedSecret!));
   await page.getByRole('button', { name: 'Vérifier' }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -157,7 +159,9 @@ test('disable 2FA with password + fresh TOTP code', async ({ page }) => {
   await page.goto('/settings/security');
   await page.getByRole('button', { name: 'Désactiver' }).click();
 
-  const dialog = page.getByRole('dialog', { name: /Désactiver la 2FA/i });
+  // The Désactiver ConfirmDialog has no accessible name — filter on
+  // its inner text (Désactiver ... 2FA prompt copy).
+  const dialog = page.getByRole('dialog').filter({ hasText: /Désactiver/i });
   await dialog.getByLabel('Mot de passe').fill(PASSWORD);
   await dialog.getByLabel(/Code TOTP/).fill(await currentTotp(sharedSecret!));
   await dialog.getByRole('button', { name: 'Désactiver' }).click();
