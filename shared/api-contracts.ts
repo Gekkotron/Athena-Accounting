@@ -94,6 +94,7 @@ export interface Account {
   createdAt?: string;
   lockYears?: number | null;
   availableBalance?: string;
+  closedAt?: string | null;       // YYYY-MM-DD; non-null = account is closed
 }
 
 export interface BalanceCheckpoint {

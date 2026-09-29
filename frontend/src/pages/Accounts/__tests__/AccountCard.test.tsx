@@ -110,4 +110,14 @@ describe('AccountCard', () => {
     const link = screen.getByRole('link', { name: /transactions/i });
     expect(link).toHaveAttribute('href', '/transactions?accountId=1');
   });
+
+  it('shows a "Fermé" badge when closedAt is set', () => {
+    renderCard({ account: { ...acc, closedAt: '2026-06-30' } });
+    expect(screen.getByText('Fermé')).toBeInTheDocument();
+  });
+
+  it('omits the "Fermé" badge when closedAt is null', () => {
+    renderCard({ account: { ...acc, closedAt: null } });
+    expect(screen.queryByText('Fermé')).not.toBeInTheDocument();
+  });
 });

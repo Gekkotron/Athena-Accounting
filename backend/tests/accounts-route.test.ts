@@ -132,6 +132,44 @@ describe.skipIf(!RUN)('/api/accounts', () => {
     expect(put.json().account.lockYears).toBe(5);
   });
 
+  it('PUT sets and clears closedAt', async () => {
+    const created = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: { name: 'Closable', type: 'checking', openingDate: '2025-01-01' },
+    });
+    const id = created.json().account.id;
+    expect(created.json().account.closedAt).toBeNull();
+
+    const set = await app.inject({
+      method: 'PUT', url: `/api/accounts/${id}`,
+      headers: { cookie }, payload: { closedAt: '2026-06-30' },
+    });
+    expect(set.statusCode).toBe(200);
+    expect(set.json().account.closedAt).toBe('2026-06-30');
+
+    const clear = await app.inject({
+      method: 'PUT', url: `/api/accounts/${id}`,
+      headers: { cookie }, payload: { closedAt: null },
+    });
+    expect(clear.statusCode).toBe(200);
+    expect(clear.json().account.closedAt).toBeNull();
+  });
+
+  it('PUT rejects a malformed closedAt with 400', async () => {
+    const created = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: { name: 'BadClose', type: 'checking', openingDate: '2025-01-01' },
+    });
+    const id = created.json().account.id;
+    const bad = await app.inject({
+      method: 'PUT', url: `/api/accounts/${id}`,
+      headers: { cookie }, payload: { closedAt: '30-06-2026' },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it("PUT switches type to 'investment'", async () => {
     const created = await app.inject({
       method: 'POST', url: '/api/accounts',

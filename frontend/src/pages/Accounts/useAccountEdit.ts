@@ -8,6 +8,7 @@ export type EditDraft = {
   openingBalance: string;
   openingDate: string;
   lockYears: number | null;
+  closedAt: string | null;
 };
 
 // Per-card edit state: only one account can be in edit mode at a time,
@@ -38,6 +39,7 @@ export function useAccountEdit(
       openingBalance: a.openingBalance,
       openingDate: a.openingDate,
       lockYears: a.lockYears ?? null,
+      closedAt: a.closedAt ?? null,
     });
   };
 
@@ -59,6 +61,7 @@ export function useAccountEdit(
     if (draft.openingBalance !== a.openingBalance) patch.openingBalance = draft.openingBalance;
     if (draft.openingDate !== a.openingDate) patch.openingDate = draft.openingDate;
     if ((draft.lockYears ?? null) !== (a.lockYears ?? null)) patch.lockYears = draft.lockYears;
+    if ((draft.closedAt ?? null) !== (a.closedAt ?? null)) patch.closedAt = draft.closedAt;
     if (Object.keys(patch).length === 0) {
       cancelEdit();
       return;

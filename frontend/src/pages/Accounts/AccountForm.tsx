@@ -13,6 +13,9 @@ export interface AccountFormValues {
   // Default lock period in years. null / '' input = no lock. Applies to the
   // opening balance and any transaction without its own override.
   lockYears: number | null;
+  // Closing date. Non-null = account is displayed as closed. Only editable
+  // in edit mode (a freshly-created account is not closed).
+  closedAt: string | null;
 }
 
 export function AccountForm({
@@ -43,6 +46,7 @@ export function AccountForm({
   const [lockYearsInput, setLockYearsInput] = useState(
     initial?.lockYears == null ? '' : String(initial.lockYears),
   );
+  const [closedAt, setClosedAt] = useState<string>(initial?.closedAt ?? '');
 
   const parsedLockYears = ((): number | null => {
     const raw = lockYearsInput.trim();
@@ -67,6 +71,7 @@ export function AccountForm({
       openingBalance: parsedOpeningBalance,
       openingDate,
       lockYears: parsedLockYears,
+      closedAt: closedAt.trim() === '' ? null : closedAt,
     };
   };
 
@@ -84,6 +89,8 @@ export function AccountForm({
       setOpeningDate={setOpeningDate}
       lockYearsInput={lockYearsInput}
       setLockYearsInput={setLockYearsInput}
+      closedAt={closedAt}
+      setClosedAt={setClosedAt}
       mode={mode}
     />
   );

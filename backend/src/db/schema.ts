@@ -143,6 +143,9 @@ export const accounts = pgTable(
     // opening_date + lock_years — Dashboard uses this to split "available"
     // vs "blocked" totals. Purely a reporting hint; no hard constraint.
     lockYears: integer('lock_years'),
+    // Nullable closing date. Non-null = account displayed with a "closed"
+    // badge; balance math and bank sync are unaffected (see migration 0044).
+    closedAt: date('closed_at'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

@@ -43,6 +43,14 @@ export function AccountCard({
       <div className="flex items-baseline gap-2 pr-36">
         <div className="text-sm font-medium text-ink-100 truncate min-w-0">{a.name}</div>
         <span className="badge shrink-0">{a.currency}</span>
+        {a.closedAt && (
+          <span
+            className="badge shrink-0 border-clay-800/60 bg-clay-900/30 text-clay-200"
+            title={t('card.closedTitle', { date: formatDate(a.closedAt) })}
+          >
+            {t('card.closedBadge')}
+          </span>
+        )}
       </div>
       <div className="label mt-0.5">{t(`form.typeOptions.${a.type}`, { defaultValue: a.type })}</div>
       <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>

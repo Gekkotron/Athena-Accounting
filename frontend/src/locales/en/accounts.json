@@ -25,7 +25,9 @@
     "lockYears_one": "{{count}} year",
     "lockYears_other": "{{count}} years",
     "invested": "invested",
-    "opened": "opened {{date}} ·"
+    "opened": "opened {{date}} ·",
+    "closedBadge": "Closed",
+    "closedTitle": "Closed on {{date}}"
   },
   "form": {
     "labels": {
@@ -34,7 +36,8 @@
       "currency": "Currency",
       "openingBalance": "Opening balance",
       "openingDate": "Opening date",
-      "lockYears": "Lock (years)"
+      "lockYears": "Lock (years)",
+      "closingDate": "Closing date"
     },
     "typeOptions": {
       "checking": "Checking",
@@ -54,6 +57,7 @@
     },
     "openingBalanceEditHint": "Changing this amount will automatically adjust the current balance.",
     "lockYearsTitle": "Number of years this account is locked starting from its opening date (PEA, term deposit, etc.). Leave empty if there is no lock.",
+    "closingDateTitle": "Date this account was closed. Leave empty if the account is still open. The account stays visible and functional — the date only powers the \"Closed\" label.",
     "creating": "Creating…",
     "createSubmit": "Create account",
     "deleteButton": "delete",

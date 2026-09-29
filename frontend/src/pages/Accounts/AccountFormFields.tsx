@@ -27,6 +27,8 @@ export function AccountFormFields({
   setOpeningDate,
   lockYearsInput,
   setLockYearsInput,
+  closedAt,
+  setClosedAt,
   mode,
 }: {
   name: string;
@@ -41,6 +43,8 @@ export function AccountFormFields({
   setOpeningDate: (v: string) => void;
   lockYearsInput: string;
   setLockYearsInput: (v: string) => void;
+  closedAt: string;
+  setClosedAt: (v: string) => void;
   mode: 'create' | 'edit';
 }): JSX.Element {
   const { t, i18n } = useTranslation('accounts');
@@ -140,6 +144,19 @@ export function AccountFormFields({
           onChange={(e) => setLockYearsInput(e.target.value)}
         />
       </div>
+      {mode === 'edit' && (
+        <div>
+          <label className="label mb-1.5 block" title={t('form.closingDateTitle')}>
+            {t('form.labels.closingDate')}
+          </label>
+          <input
+            type="date"
+            className="input"
+            value={closedAt}
+            onChange={(e) => setClosedAt(e.target.value)}
+          />
+        </div>
+      )}
     </>
   );
 }

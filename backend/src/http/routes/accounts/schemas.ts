@@ -23,6 +23,7 @@ export const CreateBody = z.object({
   openingBalance: decimal.default('0'),
   openingDate: isoDate,
   lockYears: lockYears.optional(),
+  closedAt: isoDate.nullable().optional(),
 });
 
 export const UpdateBody = z
@@ -33,6 +34,7 @@ export const UpdateBody = z
     openingBalance: decimal,
     openingDate: isoDate,
     lockYears: lockYears,
+    closedAt: isoDate.nullable(),
   })
   .partial();
 
