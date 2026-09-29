@@ -148,6 +148,17 @@ describe.skipIf(!RUN)('/api/accounts', () => {
     expect(set.statusCode).toBe(200);
     expect(set.json().account.closedAt).toBe('2026-06-30');
 
+    // Regression: the list endpoint must surface closedAt too. The PUT
+    // persists it fine, but if GET /api/accounts drops the column, the
+    // UI never sees the update — no badge, and re-opening the edit form
+    // shows an empty date.
+    const list = await app.inject({
+      method: 'GET', url: '/api/accounts', headers: { cookie },
+    });
+    expect(list.statusCode).toBe(200);
+    const listed = list.json().accounts.find((a: { id: number }) => a.id === id);
+    expect(listed.closedAt).toBe('2026-06-30');
+
     const clear = await app.inject({
       method: 'PUT', url: `/api/accounts/${id}`,
       headers: { cookie }, payload: { closedAt: null },

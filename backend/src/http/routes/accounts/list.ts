@@ -30,6 +30,7 @@ export function registerList(app: FastifyInstance): void {
       display_order: number;
       created_at: Date;
       lock_years: number | null;
+      closed_at: string | null;
       current_balance: string;
       available_balance: string;
       transaction_count: number;
@@ -45,6 +46,7 @@ export function registerList(app: FastifyInstance): void {
         a.display_order,
         a.created_at,
         a.lock_years                                           AS lock_years,
+        to_char(a.closed_at, 'YYYY-MM-DD')                     AS closed_at,
         (
           a.opening_balance + COALESCE(
             (SELECT SUM(t.amount) FROM transactions t
@@ -93,6 +95,7 @@ export function registerList(app: FastifyInstance): void {
       displayOrder: r.display_order,
       createdAt: r.created_at,
       lockYears: r.lock_years,
+      closedAt: r.closed_at,
       currentBalance: r.current_balance,
       availableBalance: r.available_balance,
       transactionCount: r.transaction_count,
