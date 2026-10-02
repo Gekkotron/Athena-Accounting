@@ -254,8 +254,12 @@ export function layoutSankey(model: SankeyModel, opts: LayoutOpts = {}): SankeyL
     return out;
   };
 
-  const left = stack(leftNodes, leftHeights, 0, 'left', leftGapBudget);
-  const right = stack(rightNodes, rightHeights, width - nodeWidth, 'right', rightGapBudget);
+  // Horizontal breathing room so the colored node stubs don't kiss the
+  // surface card's inner edge — without this, the end-column rectangles
+  // sit flush at x=0 / x=width and read as clipped by the panel border.
+  const HPAD = 8;
+  const left = stack(leftNodes, leftHeights, HPAD, 'left', leftGapBudget);
+  const right = stack(rightNodes, rightHeights, width - nodeWidth - HPAD, 'right', rightGapBudget);
 
   // Ribbons pack contiguously on the pool (no per-node gaps on that face),
   // so each side has its own flow-face height. Center each side's ribbon
