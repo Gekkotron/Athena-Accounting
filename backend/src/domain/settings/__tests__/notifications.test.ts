@@ -10,7 +10,7 @@ describe('settings.notifications', () => {
     expect(s.notifications.channels.toast).toBe(true);
     expect(s.notifications.channels.osNative).toBe(false);
     expect(s.notifications.channels.webPush).toBe(false);
-    expect(s.notifications.channels.callmebot).toEqual({ enabled: false, phone: '', apiKey: '', minIntervalMinutes: 0 });
+    expect(s.notifications.channels.callmebot).toEqual({ enabled: false, phone: '', apiKey: '', maxPerMinute: 0 });
   });
 
   it('deep-merges callmebot credentials so a partial patch keeps siblings', () => {
@@ -20,7 +20,7 @@ describe('settings.notifications', () => {
       },
     });
     expect(after1.notifications.channels.callmebot).toEqual({
-      enabled: true, phone: '+33612345678', apiKey: 'abc123', minIntervalMinutes: 0,
+      enabled: true, phone: '+33612345678', apiKey: 'abc123', maxPerMinute: 0,
     });
 
     // Second patch toggles just `enabled` — phone/apiKey must survive.
@@ -33,7 +33,7 @@ describe('settings.notifications', () => {
       { notifications: { channels: { callmebot: { enabled: false } } } },
     );
     expect(after2.notifications.channels.callmebot).toEqual({
-      enabled: false, phone: '+33612345678', apiKey: 'abc123', minIntervalMinutes: 0,
+      enabled: false, phone: '+33612345678', apiKey: 'abc123', maxPerMinute: 0,
     });
   });
 

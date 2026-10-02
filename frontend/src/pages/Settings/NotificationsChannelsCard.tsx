@@ -30,22 +30,20 @@ export function NotificationsChannelsCard({
   const callmebot = prefs.channels.callmebot;
   const [cmbPhone, setCmbPhone] = useState(callmebot.phone);
   const [cmbApiKey, setCmbApiKey] = useState(callmebot.apiKey);
-  const [cmbMinInterval, setCmbMinInterval] = useState(String(callmebot.minIntervalMinutes));
-  const cmbIntervalParsed = Number.parseInt(cmbMinInterval, 10);
-  const cmbIntervalValue = Number.isFinite(cmbIntervalParsed) && cmbIntervalParsed >= 0
-    ? cmbIntervalParsed
-    : 0;
+  const [cmbMaxPerMinute, setCmbMaxPerMinute] = useState(String(callmebot.maxPerMinute));
+  const cmbMaxParsed = Number.parseInt(cmbMaxPerMinute, 10);
+  const cmbMaxValue = Number.isFinite(cmbMaxParsed) && cmbMaxParsed >= 0 ? cmbMaxParsed : 0;
   const cmbDirty =
     cmbPhone !== callmebot.phone
     || cmbApiKey !== callmebot.apiKey
-    || cmbIntervalValue !== callmebot.minIntervalMinutes;
+    || cmbMaxValue !== callmebot.maxPerMinute;
   const saveCallMeBot = () => {
     onPatch({
       channels: {
         callmebot: {
           phone: cmbPhone.trim(),
           apiKey: cmbApiKey.trim(),
-          minIntervalMinutes: cmbIntervalValue,
+          maxPerMinute: cmbMaxValue,
         },
       },
     });
@@ -139,19 +137,19 @@ export function NotificationsChannelsCard({
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-ink-300">
-                {t('settings.notifications.channels.callmebot.minIntervalLabel')}
+                {t('settings.notifications.channels.callmebot.maxPerMinuteLabel')}
               </span>
               <input
                 type="text"
                 inputMode="numeric"
                 autoComplete="off"
-                value={cmbMinInterval}
-                onChange={(e) => setCmbMinInterval(e.target.value.replace(/[^0-9]/g, ''))}
+                value={cmbMaxPerMinute}
+                onChange={(e) => setCmbMaxPerMinute(e.target.value.replace(/[^0-9]/g, ''))}
                 className="input"
                 placeholder="0"
               />
               <span className="text-xs text-ink-400">
-                {t('settings.notifications.channels.callmebot.minIntervalHelp')}
+                {t('settings.notifications.channels.callmebot.maxPerMinuteHelp')}
               </span>
             </label>
             <button

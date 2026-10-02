@@ -251,8 +251,8 @@
           "phonePlaceholder": "+33612345678",
           "apiKeyLabel": "Clé API",
           "apiKeyPlaceholder": "Clé à 7 chiffres envoyée par CallMeBot",
-          "minIntervalLabel": "Délai minimum entre notifications (minutes)",
-          "minIntervalHelp": "0 = sans limite. Les notifications déclenchées pendant ce délai ne sont pas envoyées sur WhatsApp (l'inbox et la notification du navigateur restent, elles).",
+          "maxPerMinuteLabel": "Nombre max de notifications par minute",
+          "maxPerMinuteHelp": "0 = sans limite. Au-delà de ce quota sur une minute glissante, les notifications ne sont pas envoyées sur WhatsApp (l'inbox et la notification du navigateur restent, elles).",
           "save": "Enregistrer les paramètres CallMeBot",
           "help": "Activez-le une fois depuis votre téléphone — voir <1>la configuration CallMeBot WhatsApp</1>. Votre numéro et votre clé restent sur votre serveur et ne sont envoyés à callmebot.com qu'à l'envoi d'une notification."
         },

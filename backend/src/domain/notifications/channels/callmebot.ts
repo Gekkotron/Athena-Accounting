@@ -13,10 +13,11 @@ export type CallMeBotPrefs = {
   enabled: boolean;
   phone: string;
   apiKey: string;
-  minIntervalMinutes: number;
+  maxPerMinute: number;
 };
 
 const ENDPOINT = 'https://api.callmebot.com/whatsapp.php';
+const WINDOW_MS = 60_000;
 
 type FetchLike = typeof globalThis.fetch;
 let fetchImpl: FetchLike = (...args) => globalThis.fetch(...args);
@@ -30,14 +31,15 @@ export function __setCallMeBotFetchForTests(impl: FetchLike): FetchLike {
   return prev;
 }
 
-// Per-phone last-successful-send timestamps. In-memory only — a restart
-// resets the rate-limit window, which is acceptable (restarts are rare and
-// a few extra WhatsApp messages after one are harmless). Keyed by phone so
-// two users with different numbers are rate-limited independently.
-const lastSendByPhone = new Map<string, number>();
+// Per-phone successful-send timestamps inside the current rolling window.
+// In-memory only — a restart resets the window, which is acceptable
+// (restarts are rare and a few extra WhatsApp messages after one are
+// harmless). Keyed by phone so two users with different numbers are
+// rate-limited independently.
+const sendTimestampsByPhone = new Map<string, number[]>();
 
 export function __resetCallMeBotRateLimitForTests(): void {
-  lastSendByPhone.clear();
+  sendTimestampsByPhone.clear();
 }
 
 function isConfigured(p: CallMeBotPrefs): boolean {
@@ -53,10 +55,13 @@ export async function sendCallMeBot(
 ): Promise<void> {
   if (!isConfigured(prefs)) return;
   const phone = prefs.phone.trim();
-  if (!opts.skipRateLimit && prefs.minIntervalMinutes > 0) {
-    const last = lastSendByPhone.get(phone);
-    if (last !== undefined && Date.now() - last < prefs.minIntervalMinutes * 60_000) {
-      log?.warn({ minIntervalMinutes: prefs.minIntervalMinutes }, 'callmebot_rate_limited');
+  if (!opts.skipRateLimit && prefs.maxPerMinute > 0) {
+    const now = Date.now();
+    const cutoff = now - WINDOW_MS;
+    const kept = (sendTimestampsByPhone.get(phone) ?? []).filter((t) => t > cutoff);
+    sendTimestampsByPhone.set(phone, kept);
+    if (kept.length >= prefs.maxPerMinute) {
+      log?.warn({ maxPerMinute: prefs.maxPerMinute }, 'callmebot_rate_limited');
       return;
     }
   }
@@ -68,7 +73,9 @@ export async function sendCallMeBot(
       log?.warn({ status: res.status }, 'callmebot_send_failed');
       return;
     }
-    lastSendByPhone.set(phone, Date.now());
+    const bucket = sendTimestampsByPhone.get(phone) ?? [];
+    bucket.push(Date.now());
+    sendTimestampsByPhone.set(phone, bucket);
   } catch (err) {
     log?.warn({ err: String(err) }, 'callmebot_send_errored');
   }

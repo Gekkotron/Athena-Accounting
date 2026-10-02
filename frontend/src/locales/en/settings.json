@@ -251,8 +251,8 @@
           "phonePlaceholder": "+33612345678",
           "apiKeyLabel": "API key",
           "apiKeyPlaceholder": "7-digit key sent by CallMeBot",
-          "minIntervalLabel": "Minimum delay between notifications (minutes)",
-          "minIntervalHelp": "0 = no limit. Notifications fired during the delay are not sent to WhatsApp (the inbox and browser notification are kept).",
+          "maxPerMinuteLabel": "Max notifications per minute",
+          "maxPerMinuteHelp": "0 = no limit. Past this cap on a rolling minute, notifications are not sent to WhatsApp (the inbox and browser notification are kept).",
           "save": "Save CallMeBot settings",
           "help": "Activate it once from your phone — see <1>CallMeBot WhatsApp setup</1>. Your phone number and key stay on your server and are only sent to callmebot.com when a notification fires."
         },
