@@ -13,16 +13,18 @@ function EyeClosedIcon() {
   );
 }
 
-function GearIcon() {
+function SlidersIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2" />
       <path
-        d="M7 1v1.5M7 11.5V13M13 7h-1.5M2.5 7H1M11.24 2.76l-1.06 1.06M3.82 10.18l-1.06 1.06M11.24 11.24l-1.06-1.06M3.82 3.82L2.76 2.76"
+        d="M1.5 3.5h7M11 3.5h1.5M1.5 7h2.5M6.5 7h6M1.5 10.5h7M11 10.5h1.5"
         stroke="currentColor"
-        strokeWidth="1.2"
+        strokeWidth="1.3"
         strokeLinecap="round"
       />
+      <circle cx="9.75" cy="3.5" r="1.1" stroke="currentColor" strokeWidth="1.2" fill="none" />
+      <circle cx="5.25" cy="7" r="1.1" stroke="currentColor" strokeWidth="1.2" fill="none" />
+      <circle cx="9.75" cy="10.5" r="1.1" stroke="currentColor" strokeWidth="1.2" fill="none" />
     </svg>
   );
 }
@@ -58,7 +60,7 @@ export function UserCard({ user, onLogout }: { user: User; onLogout: () => void 
             }`
           }
         >
-          <GearIcon />
+          <SlidersIcon />
         </NavLink>
       </div>
       {lock.lockAvailable && (

@@ -251,18 +251,20 @@
           "phonePlaceholder": "+33612345678",
           "apiKeyLabel": "Clé API",
           "apiKeyPlaceholder": "Clé à 7 chiffres envoyée par CallMeBot",
+          "minIntervalLabel": "Délai minimum entre notifications (minutes)",
+          "minIntervalHelp": "0 = sans limite. Les notifications déclenchées pendant ce délai ne sont pas envoyées sur WhatsApp (l'inbox et la notification du navigateur restent, elles).",
           "save": "Enregistrer les paramètres CallMeBot",
           "help": "Activez-le une fois depuis votre téléphone — voir <1>la configuration CallMeBot WhatsApp</1>. Votre numéro et votre clé restent sur votre serveur et ne sont envoyés à callmebot.com qu'à l'envoi d'une notification."
         },
-        "chromeInsecureTip": {
-          "title": "Astuce : autoriser les notifications sur un serveur local (HTTP)",
-          "intro": "Sur un réseau local sans HTTPS, Chrome refuse les notifications. Pour contourner cela et forcer Chrome à traiter votre IP comme sécurisée :",
-          "step1_pre": "Ouvrez Chrome et accédez à l'adresse suivante :",
-          "step1_url": "chrome://flags/#unsafely-treat-insecure-origin-as-secure",
-          "step2": "Activez l'option (Enabled).",
-          "step3_pre": "Dans la zone de texte, saisissez l'adresse de votre serveur local, par exemple",
-          "step3_example": "http://<ip-lan>:<port>",
-          "step3_post": ", puis relancez Chrome."
+        "browserNotificationsTip": {
+          "title": "Astuce : autoriser les notifications dans votre navigateur",
+          "intro": "Les notifications du navigateur nécessitent votre autorisation. Si elles sont bloquées :",
+          "step1": "Cliquez sur l'icône à gauche de l'adresse (cadenas, info ou réglages) pour ouvrir les permissions du site.",
+          "step2": "Autorisez les notifications pour ce site.",
+          "step3": "Rechargez la page, puis réactivez la case ci-dessus.",
+          "httpNote_pre": "Sur un réseau local sans HTTPS, Chrome bloque les notifications par défaut. Si besoin, activez le flag",
+          "httpNote_flag": "chrome://flags/#unsafely-treat-insecure-origin-as-secure",
+          "httpNote_post": "en y ajoutant votre adresse LAN, puis relancez Chrome."
         }
       },
       "privacy": {

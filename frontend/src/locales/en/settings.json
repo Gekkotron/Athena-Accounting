@@ -251,18 +251,20 @@
           "phonePlaceholder": "+33612345678",
           "apiKeyLabel": "API key",
           "apiKeyPlaceholder": "7-digit key sent by CallMeBot",
+          "minIntervalLabel": "Minimum delay between notifications (minutes)",
+          "minIntervalHelp": "0 = no limit. Notifications fired during the delay are not sent to WhatsApp (the inbox and browser notification are kept).",
           "save": "Save CallMeBot settings",
           "help": "Activate it once from your phone — see <1>CallMeBot WhatsApp setup</1>. Your phone number and key stay on your server and are only sent to callmebot.com when a notification fires."
         },
-        "chromeInsecureTip": {
-          "title": "Tip: allow notifications on a local (HTTP) server",
-          "intro": "On a LAN without HTTPS, Chrome refuses notifications. To work around it and force Chrome to treat your IP as secure:",
-          "step1_pre": "Open Chrome and go to the following address:",
-          "step1_url": "chrome://flags/#unsafely-treat-insecure-origin-as-secure",
-          "step2": "Set the flag to Enabled.",
-          "step3_pre": "In the text box, enter your local server's address, for example",
-          "step3_example": "http://<lan-ip>:<port>",
-          "step3_post": ", then relaunch Chrome."
+        "browserNotificationsTip": {
+          "title": "Tip: allow notifications in your browser",
+          "intro": "Browser notifications require your permission. If they are blocked:",
+          "step1": "Click the icon on the left of the address bar (lock, info, or settings) to open the site permissions.",
+          "step2": "Allow notifications for this site.",
+          "step3": "Reload the page, then re-tick the checkbox above.",
+          "httpNote_pre": "On a LAN without HTTPS, Chrome blocks notifications by default. If needed, enable the flag",
+          "httpNote_flag": "chrome://flags/#unsafely-treat-insecure-origin-as-secure",
+          "httpNote_post": "with your LAN address added to it, then relaunch Chrome."
         }
       },
       "privacy": {

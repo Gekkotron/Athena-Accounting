@@ -1,7 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { __setCallMeBotFetchForTests, sendCallMeBot } from '../callmebot.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  __resetCallMeBotRateLimitForTests,
+  __setCallMeBotFetchForTests,
+  sendCallMeBot,
+} from '../callmebot.js';
 
 const okResponse = () => new Response('OK', { status: 200 });
+
+beforeEach(() => {
+  __resetCallMeBotRateLimitForTests();
+});
 
 afterEach(() => {
   __setCallMeBotFetchForTests(((..._args) => Promise.resolve(okResponse())) as typeof fetch);
@@ -13,7 +21,7 @@ describe('sendCallMeBot', () => {
     __setCallMeBotFetchForTests(fetchSpy as unknown as typeof fetch);
 
     await sendCallMeBot(
-      { enabled: true, phone: '+33 612 34 56 78', apiKey: 'abc 123' },
+      { enabled: true, phone: '+33 612 34 56 78', apiKey: 'abc 123', minIntervalMinutes: 0 },
       'Big transaction',
       'EUR 249.99 at Amazon',
     );
@@ -32,10 +40,10 @@ describe('sendCallMeBot', () => {
     const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(okResponse());
     __setCallMeBotFetchForTests(fetchSpy as unknown as typeof fetch);
 
-    await sendCallMeBot({ enabled: false, phone: '+33612345678', apiKey: 'k' }, 't', 'b');
-    await sendCallMeBot({ enabled: true, phone: '', apiKey: 'k' }, 't', 'b');
-    await sendCallMeBot({ enabled: true, phone: '+33612345678', apiKey: '' }, 't', 'b');
-    await sendCallMeBot({ enabled: true, phone: '   ', apiKey: 'k' }, 't', 'b');
+    await sendCallMeBot({ enabled: false, phone: '+33612345678', apiKey: 'k', minIntervalMinutes: 0 }, 't', 'b');
+    await sendCallMeBot({ enabled: true, phone: '', apiKey: 'k', minIntervalMinutes: 0 }, 't', 'b');
+    await sendCallMeBot({ enabled: true, phone: '+33612345678', apiKey: '', minIntervalMinutes: 0 }, 't', 'b');
+    await sendCallMeBot({ enabled: true, phone: '   ', apiKey: 'k', minIntervalMinutes: 0 }, 't', 'b');
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -45,7 +53,7 @@ describe('sendCallMeBot', () => {
     const warn = vi.fn();
 
     await expect(
-      sendCallMeBot({ enabled: true, phone: '+33612', apiKey: 'k' }, 't', 'b', { warn }),
+      sendCallMeBot({ enabled: true, phone: '+33612', apiKey: 'k', minIntervalMinutes: 0 }, 't', 'b', { warn }),
     ).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledWith({ err: 'Error: boom' }, 'callmebot_send_errored');
   });
@@ -54,7 +62,44 @@ describe('sendCallMeBot', () => {
     __setCallMeBotFetchForTests((() => Promise.resolve(new Response('nope', { status: 403 }))) as unknown as typeof fetch);
     const warn = vi.fn();
 
-    await sendCallMeBot({ enabled: true, phone: '+33612', apiKey: 'k' }, 't', 'b', { warn });
+    await sendCallMeBot({ enabled: true, phone: '+33612', apiKey: 'k', minIntervalMinutes: 0 }, 't', 'b', { warn });
     expect(warn).toHaveBeenCalledWith({ status: 403 }, 'callmebot_send_failed');
+  });
+
+  it('rate-limits a second send fired inside minIntervalMinutes', async () => {
+    const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(okResponse());
+    __setCallMeBotFetchForTests(fetchSpy as unknown as typeof fetch);
+    const warn = vi.fn();
+    const prefs = { enabled: true, phone: '+33612', apiKey: 'k', minIntervalMinutes: 30 };
+
+    await sendCallMeBot(prefs, 't1', 'b1');
+    await sendCallMeBot(prefs, 't2', 'b2', { warn });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith({ minIntervalMinutes: 30 }, 'callmebot_rate_limited');
+  });
+
+  it('does not record a failed send against the rate-limit window', async () => {
+    const fetchSpy = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('nope', { status: 500 }))
+      .mockResolvedValueOnce(okResponse());
+    __setCallMeBotFetchForTests(fetchSpy as unknown as typeof fetch);
+    const prefs = { enabled: true, phone: '+33612', apiKey: 'k', minIntervalMinutes: 30 };
+
+    await sendCallMeBot(prefs, 't1', 'b1');
+    await sendCallMeBot(prefs, 't2', 'b2');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('skipRateLimit bypasses the interval gate', async () => {
+    const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(okResponse());
+    __setCallMeBotFetchForTests(fetchSpy as unknown as typeof fetch);
+    const prefs = { enabled: true, phone: '+33612', apiKey: 'k', minIntervalMinutes: 30 };
+
+    await sendCallMeBot(prefs, 't1', 'b1');
+    await sendCallMeBot(prefs, 't2', 'b2', undefined, { skipRateLimit: true });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

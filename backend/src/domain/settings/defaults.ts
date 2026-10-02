@@ -34,7 +34,7 @@ export const DEFAULTS = {
       toast: true,
       osNative: false,
       webPush: false,
-      callmebot: { enabled: false, phone: '', apiKey: '' },
+      callmebot: { enabled: false, phone: '', apiKey: '', minIntervalMinutes: 0 },
     },
     privacy: { hideAmount: true, hideMerchant: true },
     triggers: {

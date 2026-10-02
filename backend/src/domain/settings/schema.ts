@@ -19,6 +19,10 @@ const CallMeBotSchema = z
     enabled: z.boolean().optional(),
     phone: z.string().max(32).optional(),
     apiKey: z.string().max(128).optional(),
+    // Minimum minutes between two CallMeBot sends; 0 = no limit.
+    // 10080 = 1 week caps obviously-bogus values without rejecting the
+    // whole patch (any larger stored value falls back to the default).
+    minIntervalMinutes: z.number().int().min(0).max(10080).optional(),
   })
   .strict()
   .optional();
@@ -111,7 +115,7 @@ export type FullSettings = {
       toast: boolean;
       osNative: boolean;
       webPush: boolean;
-      callmebot: { enabled: boolean; phone: string; apiKey: string };
+      callmebot: { enabled: boolean; phone: string; apiKey: string; minIntervalMinutes: number };
     };
     privacy: { hideAmount: boolean; hideMerchant: boolean };
     triggers: {
@@ -146,6 +150,8 @@ export function mergeNotifications(
     enabled: patch?.channels?.callmebot?.enabled ?? base.channels.callmebot.enabled,
     phone: patch?.channels?.callmebot?.phone ?? base.channels.callmebot.phone,
     apiKey: patch?.channels?.callmebot?.apiKey ?? base.channels.callmebot.apiKey,
+    minIntervalMinutes:
+      patch?.channels?.callmebot?.minIntervalMinutes ?? base.channels.callmebot.minIntervalMinutes,
   };
   return {
     enabled: patch?.enabled ?? base.enabled,

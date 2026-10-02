@@ -30,9 +30,25 @@ export function NotificationsChannelsCard({
   const callmebot = prefs.channels.callmebot;
   const [cmbPhone, setCmbPhone] = useState(callmebot.phone);
   const [cmbApiKey, setCmbApiKey] = useState(callmebot.apiKey);
-  const cmbDirty = cmbPhone !== callmebot.phone || cmbApiKey !== callmebot.apiKey;
+  const [cmbMinInterval, setCmbMinInterval] = useState(String(callmebot.minIntervalMinutes));
+  const cmbIntervalParsed = Number.parseInt(cmbMinInterval, 10);
+  const cmbIntervalValue = Number.isFinite(cmbIntervalParsed) && cmbIntervalParsed >= 0
+    ? cmbIntervalParsed
+    : 0;
+  const cmbDirty =
+    cmbPhone !== callmebot.phone
+    || cmbApiKey !== callmebot.apiKey
+    || cmbIntervalValue !== callmebot.minIntervalMinutes;
   const saveCallMeBot = () => {
-    onPatch({ channels: { callmebot: { phone: cmbPhone.trim(), apiKey: cmbApiKey.trim() } } });
+    onPatch({
+      channels: {
+        callmebot: {
+          phone: cmbPhone.trim(),
+          apiKey: cmbApiKey.trim(),
+          minIntervalMinutes: cmbIntervalValue,
+        },
+      },
+    });
   };
 
   return (
@@ -60,6 +76,27 @@ export function NotificationsChannelsCard({
           </span>
         )}
       </label>
+
+      <details className="text-xs text-ink-400 pl-6">
+        <summary className="cursor-pointer text-ink-300 hover:text-ink-100">
+          {t('settings.notifications.channels.browserNotificationsTip.title')}
+        </summary>
+        <div className="mt-2 flex flex-col gap-2 pl-2">
+          <p>{t('settings.notifications.channels.browserNotificationsTip.intro')}</p>
+          <ol className="list-decimal list-inside flex flex-col gap-1">
+            <li>{t('settings.notifications.channels.browserNotificationsTip.step1')}</li>
+            <li>{t('settings.notifications.channels.browserNotificationsTip.step2')}</li>
+            <li>{t('settings.notifications.channels.browserNotificationsTip.step3')}</li>
+          </ol>
+          <p>
+            {t('settings.notifications.channels.browserNotificationsTip.httpNote_pre')}{' '}
+            <code className="rounded bg-ink-900/50 px-1 py-0.5 text-ink-100">
+              {t('settings.notifications.channels.browserNotificationsTip.httpNote_flag')}
+            </code>{' '}
+            {t('settings.notifications.channels.browserNotificationsTip.httpNote_post')}
+          </p>
+        </div>
+      </details>
 
       <div className="mt-2 flex flex-col gap-2 border-t border-ink-800/60 pt-3">
         <label className="flex items-center gap-2 text-sm text-ink-200">
@@ -100,6 +137,23 @@ export function NotificationsChannelsCard({
                 className="input"
               />
             </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-ink-300">
+                {t('settings.notifications.channels.callmebot.minIntervalLabel')}
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={cmbMinInterval}
+                onChange={(e) => setCmbMinInterval(e.target.value.replace(/[^0-9]/g, ''))}
+                className="input"
+                placeholder="0"
+              />
+              <span className="text-xs text-ink-400">
+                {t('settings.notifications.channels.callmebot.minIntervalHelp')}
+              </span>
+            </label>
             <button
               type="button"
               className="btn-secondary w-fit"
@@ -126,30 +180,6 @@ export function NotificationsChannelsCard({
         )}
       </div>
 
-      <details className="mt-1 text-xs text-ink-400">
-        <summary className="cursor-pointer text-ink-300 hover:text-ink-100">
-          {t('settings.notifications.channels.chromeInsecureTip.title')}
-        </summary>
-        <div className="mt-2 flex flex-col gap-2 pl-2">
-          <p>{t('settings.notifications.channels.chromeInsecureTip.intro')}</p>
-          <ol className="list-decimal list-inside flex flex-col gap-1">
-            <li>
-              {t('settings.notifications.channels.chromeInsecureTip.step1_pre')}{' '}
-              <code className="rounded bg-ink-900/50 px-1 py-0.5 text-ink-100">
-                {t('settings.notifications.channels.chromeInsecureTip.step1_url')}
-              </code>
-            </li>
-            <li>{t('settings.notifications.channels.chromeInsecureTip.step2')}</li>
-            <li>
-              {t('settings.notifications.channels.chromeInsecureTip.step3_pre')}{' '}
-              <code className="rounded bg-ink-900/50 px-1 py-0.5 text-ink-100">
-                {t('settings.notifications.channels.chromeInsecureTip.step3_example')}
-              </code>
-              {t('settings.notifications.channels.chromeInsecureTip.step3_post')}
-            </li>
-          </ol>
-        </div>
-      </details>
     </div>
   );
 }

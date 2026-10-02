@@ -108,7 +108,11 @@ export async function emitNotification(
   if (prefs.channels.callmebot?.enabled) {
     const privateTitle = renderTitle(enriched, prefs.privacy);
     const privateBody = renderBody(enriched, prefs.privacy);
-    void sendCallMeBot(prefs.channels.callmebot, privateTitle, privateBody);
+    // Manual "Send a test" always delivers; the min-interval rate limit
+    // only applies to automatic emissions.
+    void sendCallMeBot(prefs.channels.callmebot, privateTitle, privateBody, undefined, {
+      skipRateLimit: kind === 'test',
+    });
   }
 
   return out;

@@ -9,7 +9,12 @@
 // are logged and swallowed: a failed WhatsApp send must never break the main
 // SSE/toast fan-out or the DB insert that already succeeded upstream.
 
-export type CallMeBotPrefs = { enabled: boolean; phone: string; apiKey: string };
+export type CallMeBotPrefs = {
+  enabled: boolean;
+  phone: string;
+  apiKey: string;
+  minIntervalMinutes: number;
+};
 
 const ENDPOINT = 'https://api.callmebot.com/whatsapp.php';
 
@@ -25,6 +30,16 @@ export function __setCallMeBotFetchForTests(impl: FetchLike): FetchLike {
   return prev;
 }
 
+// Per-phone last-successful-send timestamps. In-memory only — a restart
+// resets the rate-limit window, which is acceptable (restarts are rare and
+// a few extra WhatsApp messages after one are harmless). Keyed by phone so
+// two users with different numbers are rate-limited independently.
+const lastSendByPhone = new Map<string, number>();
+
+export function __resetCallMeBotRateLimitForTests(): void {
+  lastSendByPhone.clear();
+}
+
 function isConfigured(p: CallMeBotPrefs): boolean {
   return p.enabled && p.phone.trim().length > 0 && p.apiKey.trim().length > 0;
 }
@@ -34,15 +49,26 @@ export async function sendCallMeBot(
   title: string,
   body: string,
   log?: { warn: (o: unknown, msg?: string) => void },
+  opts: { skipRateLimit?: boolean } = {},
 ): Promise<void> {
   if (!isConfigured(prefs)) return;
+  const phone = prefs.phone.trim();
+  if (!opts.skipRateLimit && prefs.minIntervalMinutes > 0) {
+    const last = lastSendByPhone.get(phone);
+    if (last !== undefined && Date.now() - last < prefs.minIntervalMinutes * 60_000) {
+      log?.warn({ minIntervalMinutes: prefs.minIntervalMinutes }, 'callmebot_rate_limited');
+      return;
+    }
+  }
   const text = [title, body].filter(Boolean).join('\n');
-  const url = `${ENDPOINT}?phone=${encodeURIComponent(prefs.phone.trim())}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(prefs.apiKey.trim())}`;
+  const url = `${ENDPOINT}?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(prefs.apiKey.trim())}`;
   try {
     const res = await fetchImpl(url, { method: 'GET' });
     if (!res.ok) {
       log?.warn({ status: res.status }, 'callmebot_send_failed');
+      return;
     }
+    lastSendByPhone.set(phone, Date.now());
   } catch (err) {
     log?.warn({ err: String(err) }, 'callmebot_send_errored');
   }

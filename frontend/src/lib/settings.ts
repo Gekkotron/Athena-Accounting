@@ -13,6 +13,10 @@ export interface CallMeBotPrefs {
   enabled: boolean;
   phone: string;
   apiKey: string;
+  // Minimum minutes between two CallMeBot sends; 0 = no limit. Only
+  // automatic emissions are gated — a manual "Send a test" always goes
+  // through.
+  minIntervalMinutes: number;
 }
 
 export interface NotificationChannels {
@@ -112,6 +116,8 @@ export function mergeNotifications(
     enabled: patch.channels?.callmebot?.enabled ?? base.channels.callmebot.enabled,
     phone: patch.channels?.callmebot?.phone ?? base.channels.callmebot.phone,
     apiKey: patch.channels?.callmebot?.apiKey ?? base.channels.callmebot.apiKey,
+    minIntervalMinutes:
+      patch.channels?.callmebot?.minIntervalMinutes ?? base.channels.callmebot.minIntervalMinutes,
   };
   return {
     enabled: patch.enabled ?? base.enabled,
@@ -142,7 +148,7 @@ export const DEFAULTS: Settings = {
       toast: true,
       osNative: false,
       webPush: false,
-      callmebot: { enabled: false, phone: '', apiKey: '' },
+      callmebot: { enabled: false, phone: '', apiKey: '', minIntervalMinutes: 0 },
     },
     privacy: { hideAmount: true, hideMerchant: true },
     triggers: {
