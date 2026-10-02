@@ -7,10 +7,11 @@ export function UnbudgetedSection(props: {
   candidates: BudgetReport['unbudgetedCandidates'];
   period: BudgetPeriod;
   onDefineBudget: (categoryId: number, suggestedLimit: string) => void;
+  defaultOpen?: boolean;
 }): JSX.Element | null {
   const { t } = useTranslation('budgets');
-  const { candidates, period, onDefineBudget } = props;
-  const [open, setOpen] = useState(false);
+  const { candidates, period, onDefineBudget, defaultOpen = false } = props;
+  const [open, setOpen] = useState(defaultOpen);
   if (candidates.length === 0) return null;
   const suffix = period === 'monthly' ? t('period.perMonth') : t('period.perYear');
   return (

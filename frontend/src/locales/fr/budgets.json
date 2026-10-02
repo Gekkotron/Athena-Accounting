@@ -1,4 +1,18 @@
 {
+  "landing": {
+    "title": "Budgets",
+    "subtitle": "Deux approches, deux philosophies. Choisissez celle qui vous correspond — vous pouvez changer d'avis à tout moment.",
+    "plafonds": {
+      "title": "Plafonds",
+      "pitch": "Fixez une limite par catégorie et laissez l'app vous prévenir quand vous approchez du dépassement. Approche souple, surveillance a posteriori.",
+      "cta": "Commencer avec Plafonds"
+    },
+    "envelopes": {
+      "title": "Enveloppes",
+      "pitch": "Allouez chaque euro de revenu à une catégorie avant de le dépenser. Approche stricte à la YNAB, pour un contrôle total.",
+      "cta": "Commencer avec Enveloppes"
+    }
+  },
   "header": {
     "title": "Budgets",
     "subtitle": "Fixez une limite mensuelle par catégorie et voyez en un coup d'œil si vous êtes dans les clous. Pour une allocation stricte « chaque euro a une mission », voir Enveloppes."
@@ -87,8 +101,8 @@
     "sectionLabel": "Enveloppes",
     "errorTitle": "Impossible de charger les enveloppes",
     "emptyState": {
-      "title": "Aucune enveloppe pour ce mois",
-      "hint": "Créez votre première enveloppe pour commencer."
+      "title": "Rien à budgétiser pour l'instant",
+      "hint": "Les enveloppes se matérialisent dès que des transactions arrivent dans vos catégories de dépense. Importez vos relevés ou catégorisez des transactions pour commencer."
     },
     "amountLabel": "Montant",
     "pool": {

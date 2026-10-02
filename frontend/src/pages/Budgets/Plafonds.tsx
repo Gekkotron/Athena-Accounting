@@ -205,6 +205,7 @@ export function Plafonds(): JSX.Element {
         <UnbudgetedSection
           candidates={report.data.unbudgetedCandidates ?? []}
           period={period}
+          defaultOpen={(budgets?.length ?? 0) === 0}
           onDefineBudget={(categoryId, suggested) => {
             setPrefill({ categoryId, suggested });
             document.getElementById('budgets-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });

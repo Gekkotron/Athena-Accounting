@@ -73,7 +73,6 @@ const cases: Array<[string, string, string]> = [
   ['/rules', '/rules/sort', 'tri-page'],
   ['/accounts/', '/accounts', 'accounts-page'],
   ['/data', '/data/imports', 'imports-page'],
-  ['/budgets', '/budgets/caps', 'plafonds-page'],
 ];
 
 describe.each(cases)('redirect %s → %s', (from, to, marker) => {

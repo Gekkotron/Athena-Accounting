@@ -31,6 +31,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default:
 const Transactions = lazy(() => import('./pages/Transactions').then((m) => ({ default: m.Transactions })));
 const Tri = lazy(() => import('./pages/Rules/Tri').then((m) => ({ default: m.Tri })));
 const Categories = lazy(() => import('./pages/Rules/Categories').then((m) => ({ default: m.Categories })));
+const BudgetsLanding = lazy(() => import('./pages/Budgets/BudgetsLanding').then((m) => ({ default: m.BudgetsLanding })));
 const Plafonds = lazy(() => import('./pages/Budgets/Plafonds').then((m) => ({ default: m.Plafonds })));
 const Enveloppes = lazy(() => import('./pages/Budgets/Enveloppes/Enveloppes').then((m) => ({ default: m.Enveloppes })));
 const Rules = lazy(() => import('./pages/Rules').then((m) => ({ default: m.Rules })));
@@ -200,7 +201,7 @@ export default function App() {
           <Route element={<Layout user={user} />}>
             <Route index element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
-            <Route path="/budgets" element={<Navigate to="/budgets/caps" replace />} />
+            <Route path="/budgets" element={<BudgetsLanding />} />
             <Route path="/budgets/caps" element={<Plafonds />} />
             <Route path="/budgets/envelopes" element={<Enveloppes />} />
 

@@ -1,4 +1,18 @@
 {
+  "landing": {
+    "title": "Budgets",
+    "subtitle": "Two approaches, two philosophies. Pick the one that fits — you can switch at any time.",
+    "plafonds": {
+      "title": "Caps",
+      "pitch": "Set a limit per category and let the app warn you when you're close to crossing it. Loose, after-the-fact tracking.",
+      "cta": "Get started with Caps"
+    },
+    "envelopes": {
+      "title": "Envelopes",
+      "pitch": "Assign every euro of income to a category before spending it. Strict YNAB-style approach, full control.",
+      "cta": "Get started with Envelopes"
+    }
+  },
   "header": {
     "title": "Budgets",
     "subtitle": "Set a monthly limit per category and see at a glance whether you're on track. For strict \"every euro has a job\" allocation, see Envelopes."
@@ -87,8 +101,8 @@
     "sectionLabel": "Envelopes",
     "errorTitle": "Couldn't load envelopes",
     "emptyState": {
-      "title": "No envelope for this month",
-      "hint": "Create your first envelope to get started."
+      "title": "Nothing to budget yet",
+      "hint": "Envelopes materialize as soon as transactions land in your expense categories. Import your statements or categorize transactions to get started."
     },
     "amountLabel": "Amount",
     "pool": {

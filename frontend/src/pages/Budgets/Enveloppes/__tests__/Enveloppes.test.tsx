@@ -72,7 +72,7 @@ describe('Enveloppes page', () => {
       return Promise.resolve({});
     });
     render(wrap(<Enveloppes />));
-    expect(await screen.findByText(/Aucune enveloppe/i)).toBeInTheDocument();
+    expect(await screen.findByText(/rien à budgétiser/i)).toBeInTheDocument();
   });
 
   it('shows negative-pool banner when available < 0', async () => {
