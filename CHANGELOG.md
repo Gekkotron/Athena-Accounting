@@ -12,15 +12,130 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.5] - 2026-10-02
+
 ### Added
+- **TOTP 2FA**: optional second factor on sign-in using any RFC 6238
+  authenticator app (Google Authenticator, Aegis, 1Password, …). Enroll
+  from *Paramètres → Sécurité* with a QR code and a one-time verification;
+  recovery codes are generated once at setup for lost-device access. The
+  login flow steps up to a code prompt only when 2FA is active for the
+  account. User documentation in EN + FR.
+- **Rule-driven auto-splits**: a categorization rule can now split a
+  matched transaction into N parts (percent or fixed amount per leg) and
+  emit them atomically on import, cutting the manual split-editor dance
+  for recurring multi-category spends (groceries + household, …). New
+  *Split editor* in the rule form, with validation that legs sum to the
+  original amount. User documentation in EN + FR.
 - **Notifications**: alerts for big transactions, low balances, envelope
   overspend, and bank-sync failures. Configurable per account with a
-  privacy toggle. See [docs/users/notifications.md](docs/users/notifications.md).
+  privacy toggle. Alerts can also be routed to **WhatsApp via CallMeBot**
+  as a server-side side-channel (fire-and-forget request, same privacy
+  masks as the toast and browser channels), with a rolling one-minute
+  rate limit (`Max notifications per minute`, `0` = no limit) that
+  applies to the WhatsApp channel only. The *Notification du navigateur*
+  tip is reframed as a generic browser-permission guide (Chrome HTTP flag
+  kept as a side note). See [docs/users/notifications.md](docs/users/notifications.md).
+- **Budgets paradigm picker**: `/budgets` now lands on a two-tile picker
+  (*Caps* vs *Envelopes*) that explains each approach instead of silently
+  redirecting. Sub-routes still deep-link straight to a view. Caps auto-
+  expands the "unbudgeted categories" suggestions on a first visit, and
+  the Envelopes empty state now describes how envelopes materialize
+  (from categorized transactions) instead of a mysterious CTA.
+- **Dashboard — "All available accounts" scope**: new scope on the
+  balance chart that includes every open account and *steps up* as
+  blocked-money lock periods expire (so the curve reflects usable
+  liquidity over time). Excludes investment accounts.
+- **Accounts — closing date + "Fermé" badge**: a *Date de fermeture*
+  field in the edit form flags an account as closed; the card shows a
+  small *Closed* badge next to the currency. Purely visual — balance
+  math, bank sync, and lists are unaffected.
+
+### Changed
+- **Forecast — Recurrent tab** unified on the average-based projection,
+  dropping the old recurring-detector output path for a single
+  explainable model. The Recurrent and Averages tabs now share display
+  currency and midnight-boundary refresh behaviour.
+- **Réglages icon** in the sidebar swapped from a gear SVG to a sliders
+  icon, matching the "settings as adjustments" metaphor used throughout
+  the app.
 
 ### Fixed
-- **Sankey**: the breakdown tooltip now flips above the pointer when the
-  hovered node sits near the bottom of the chart, so it can no longer be
-  clipped by the wrapper's implicit vertical overflow.
+- **Dashboard chart**: the "All available accounts" curve correctly
+  excludes investment accounts from the usable-liquidity line.
+- **Insights / Forecast**: the Insights and Forecast cards now refresh
+  across the midnight boundary and re-key on `displayCurrency` so a
+  currency switch in Settings propagates without a manual reload.
+- **Dates across the app**: UTC-based "today" defaults replaced with
+  local-calendar helpers (dashboard windows, duplicates cutoff,
+  notifications opening-date auto-heal, transaction-modal parse). A
+  late-evening entry in a positive-UTC-offset timezone no longer slips
+  into "tomorrow" on the chart.
+- **Rules**: labels on `RuleCreateForm` wired up via `htmlFor`/`id` so
+  screen readers announce the matching field.
+
+### Security
+- **Session secret**: every desktop install now generates a cryptographic
+  random `SESSION_SECRET` at first launch (with a one-shot migration for
+  pre-existing installs), replacing the hardcoded default. Prevents
+  cross-install session forgery.
+- **TOTP replay guard**: a verified code is marked used for its ±1
+  acceptance window so a replay inside the 90 s overlap is rejected.
+- **Login timing**: the user and TOTP SELECTs now run in parallel so the
+  response time no longer leaks whether 2FA is enabled on an account.
+- **Recovery codes**: verification uses constant-time comparison to
+  close a theoretical timing side-channel on the lookup path.
+- **Debug routes**: the `/__debug/current-code` test helper is now dual-
+  gated on `NODE_ENV=test` **and** `ATHENA_TEST_ROUTES=1`, so a
+  misconfigured prod deploy can't accidentally expose it.
+
+### Performance
+- **Frontend startup**: route-level `React.lazy` split brings the entry
+  bundle from **477 kB → 58 kB** — first paint on cold caches is
+  measurably snappier, and heavy routes (Imports, Rules, Settings)
+  stream in on demand.
+- **Reference-data queries**: `staleTime` + `select` sweep across the
+  reference-data hooks removes the thrash on every route change (same
+  data was being refetched + rerendered dozens of times per minute).
+- **Transactions list**: row-level `useMemo` on derived deps + wrapping
+  `TransactionRow` in `React.memo` cuts recompute on large pages.
+- **Server compression**: `@fastify/compress` now serves brotli + gzip
+  responses — API payloads are 60–80% smaller over the wire.
+- **Attachments**: upload path streams the request body straight to disk
+  instead of the previous "insert row, then UPDATE with the file"
+  dance — one round-trip, half the DB churn.
+- **Imports — list endpoint**: cursor pagination on `GET /api/imports`
+  with a *Load more* UI, and a collapsed N+1 that was issuing one query
+  per returned row.
+- **Imports — post-commit**: envelope and preference fan-out batched;
+  bulk `INSERT` sweep for restore + import write paths; categorization
+  UPDATE collapsed into a single statement per batch.
+- **Duplicates detection**: clustering pushed into SQL with a bounded
+  time window — on large ledgers the panel loads in a second instead of
+  stalling on a client-side pass.
+- **Tri assignments**: `/api/tri/assign` wrapped in a single transaction
+  and batched instead of one write per row.
+- **Recurring detection**: `runRecurringDetection` batches its writes.
+- **Recategorize**: split-emit fan-out collapsed into 3 bulk statements.
+
+### Internal
+- Frontend split sweep against the ESLint `max-lines 300` cap:
+  `Accounts`, `Rules`, `AccountForm`, `Categories`, `RemoteBackupCard`,
+  `Tri`, `Plafonds`, `SettingsBankSync`, `TransactionModal` all broken
+  into focused submodules without behaviour changes.
+- `runImport` split into five focused modules; `err: unknown` + narrowing
+  helpers in the three `catch` blocks.
+- Full-stack Playwright suite re-aligned after the hub reshuffle
+  (`/imports → /data/imports`, `/rules → /rules/list`) and the TOTP /
+  rate-limit changes.
+- Backend/frontend DB-integration suites caught up to prod schema
+  shape; backend ESLint back to zero warnings, frontend swept of nine
+  stale warnings.
+- `AUTH_RATE_LIMIT_MAX` override exposed for e2e; demo mode gates
+  `/api/notifications/stream` behind `VITE_DEMO`.
+- User docs: Rules → auto-splits (EN + FR), Auth → TOTP 2FA (EN + FR),
+  Budgets walkthrough updated for the paradigm picker, Accounts for the
+  Closed badge, Notifications for CallMeBot.
 
 ## [1.0.0-rc.4] - 2026-08-12
 
