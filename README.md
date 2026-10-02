@@ -48,6 +48,7 @@ how you want to use Athena:
 [![Docker install](https://img.shields.io/badge/Install-Docker%20%28family%20server%29-2496ed?logo=docker&logoColor=white)](docs/users/getting-started.md)
 [![Desktop install](https://img.shields.io/badge/Install-Desktop%20app%20%28solo%20user%29-4b8bbe?logo=tauri&logoColor=white)](docs/users/desktop-install.md)
 [![Latest release](https://img.shields.io/github/v/release/Gekkotron/Athena-Accounting?label=Latest%20release&color=brightgreen)](https://github.com/Gekkotron/Athena-Accounting/releases/latest)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Gekkotron)
 
 - **Family server (Docker).** Runs the full stack (Postgres + Fastify +
   nginx) on a machine you leave on. Multi-user, LAN-wide, everyone in
@@ -60,6 +61,13 @@ how you want to use Athena:
 
 Both paths ship the same features, the same UI, and the same backup
 format. You can move a backup export between them freely.
+
+Athena is MIT-licensed and solo-maintained on sponsor time. If it
+replaces a subscription for you, consider
+[sponsoring on GitHub](https://github.com/sponsors/Gekkotron) — or via
+[Patreon](https://www.patreon.com/Gekkotron) or
+[Buy Me a Coffee](https://www.buymeacoffee.com/Gekkotron) if those fit
+better. Any amount keeps the next release coming.
 
 ## How the pieces fit
 
