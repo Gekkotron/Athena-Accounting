@@ -12,7 +12,7 @@ actually read. Your ledger, your box, your rules.
 
 <p align="center">
   <img src="website/static/img/walkthroughs/en/reports-01-dashboard.png" alt="Athena dashboard — balance curve, account cards, budgets strip" width="32%" />
-  <img src="website/static/img/walkthroughs/en/reports-02-dashboard-mid.png" alt="Sankey cash-flow diagram from income to expense categories" width="32%" />
+  <img src="website/static/img/walkthroughs/en/reports-03-dashboard-bottom.png" alt="Sankey cash-flow diagram from income to expense categories" width="32%" />
   <img src="website/static/img/walkthroughs/en/budget-02-enveloppes.png" alt="Envelopes view — zero-based allocation with rollover and holds" width="32%" />
 </p>
 
