@@ -88,5 +88,12 @@
   "wrongPassword": "Mot de passe incorrect.",
   "rateLimited": "Trop de tentatives — réessayez dans une minute.",
   "forgotHint": "Mot de passe oublié ? Consultez la documentation « Sécurité et confidentialité » pour la procédure de réinitialisation."
+ },
+ "demoBanner": {
+  "aria": "Bandeau démo",
+  "prefix": "Démo —",
+  "message": "vos actions sont enregistrées uniquement dans votre navigateur.",
+  "reset": "Réinitialiser la démo",
+  "resetDone": "Démo réinitialisée."
  }
 }

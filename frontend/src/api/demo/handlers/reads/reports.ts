@@ -4,6 +4,7 @@ import { registerHandler, type DemoRequest } from '../../index';
 import { ApiError } from '../../../apiError';
 import { aggregateTimeseriesByBucket, consolidate, resolveRate } from '../../../../lib/fx';
 import { bucketFor, categoryById, money, monthOf, resolveDisplayCurrency, settingsDisplayCurrency, txs } from './lib';
+import { localizeCategoryName } from '../../i18n-categories';
 
 function handleReportsTimeseries(req: DemoRequest) {
   const state = getState();
@@ -65,7 +66,7 @@ function handleReportsCategories(req: DemoRequest) {
     const key = `${catId ?? 'null'}|${month}`;
     const row = perKey.get(key)?.row ?? {
       category_id: catId,
-      category_name: cat?.name ?? null,
+      category_name: localizeCategoryName(cat?.name) ?? null,
       category_kind: cat?.kind ?? null,
       category_is_internal_transfer: cat
         ? cat.isInternalTransfer || (parent?.isInternalTransfer ?? false)
@@ -179,7 +180,7 @@ function handleReportsBudget(req: DemoRequest): BudgetReport & { consolidated: R
     rows.push({
       id: b.id,
       categoryId: b.categoryId,
-      name: cat?.name ?? '',
+      name: localizeCategoryName(cat?.name) ?? '',
       color: cat?.color ?? null,
       parentId: cat?.parentId ?? null,
       accountId: b.accountId,

@@ -88,5 +88,12 @@
   "wrongPassword": "Incorrect password.",
   "rateLimited": "Too many attempts — try again in a minute.",
   "forgotHint": "Forgot your password? See the “Security & privacy” docs for the reset procedure."
+ },
+ "demoBanner": {
+  "aria": "Demo banner",
+  "prefix": "Demo —",
+  "message": "your actions are stored only in your browser.",
+  "reset": "Reset the demo",
+  "resetDone": "Demo reset."
  }
 }

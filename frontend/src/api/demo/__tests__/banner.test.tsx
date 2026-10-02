@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { __resetForTest } from '../store';
 import { registerSeedProvider } from '../index';
 import { buildSeedState } from '../seed';
+import { pinLocale } from '../../../test/i18n';
+
+pinLocale('layout');
 
 function withQC(node: React.ReactNode) {
   const qc = new QueryClient();

@@ -2,6 +2,7 @@ import type { Budget, Category, Rule } from '../../../types';
 import { DEFAULTS } from '../../../../lib/settings';
 import { getState } from '../../store';
 import { registerHandler } from '../../index';
+import { localizeCategoryName } from '../../i18n-categories';
 
 export function registerSimpleHandlers(): void {
   registerHandler('GET', '/api/auth/me', () => ({ user: { id: 1, username: 'Démo' } }));
@@ -11,7 +12,12 @@ export function registerSimpleHandlers(): void {
   registerHandler('GET', '/api/auth/lock-status', () => ({ mode: 'session', lockConfigured: false }));
   registerHandler('GET', '/api/onboarding/status', () => ({ needsOnboarding: false }));
   registerHandler('GET', '/health', () => ({ ok: true, mode: 'demo' as const }));
-  registerHandler('GET', '/api/categories', () => ({ categories: getState().categories as Category[] }));
+  registerHandler('GET', '/api/categories', () => ({
+    categories: getState().categories.map((c) => ({
+      ...c,
+      name: localizeCategoryName(c.name) ?? c.name,
+    })) as Category[],
+  }));
   registerHandler('GET', '/api/rules', () => ({ rules: getState().rules as Rule[] }));
   registerHandler('GET', '/api/budgets', () => ({ budgets: getState().budgets as Budget[] }));
   // Mirrors the backend settings route: stored values over defaults, so a
