@@ -3,8 +3,32 @@
 [![CI](https://github.com/Gekkotron/Athena-Accounting/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gekkotron/Athena-Accounting/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Gekkotron/Athena-Accounting/graph/badge.svg?token=Im41zFoBmH)](https://codecov.io/gh/Gekkotron/Athena-Accounting)
 
-Self-hosted personal accounting. Local-only, no cloud dependencies, your
-bank data never leaves your network.
+**Self-hosted personal finance for people who want YNAB-style budgeting
+without a cloud account.** Imports every statement format your bank
+spits out (OFX, CSV, PDF, scanned PDF), gives you two budgeting
+paradigms side-by-side (loose per-category *Caps* and strict zero-based
+*Envelopes*), and renders your money as a Sankey diagram you can
+actually read. Your ledger, your box, your rules.
+
+<p align="center">
+  <img src="website/static/img/walkthroughs/en/reports-01-dashboard.png" alt="Athena dashboard — balance curve, account cards, budgets strip" width="32%" />
+  <img src="website/static/img/walkthroughs/en/reports-02-dashboard-mid.png" alt="Sankey cash-flow diagram from income to expense categories" width="32%" />
+  <img src="website/static/img/walkthroughs/en/budget-02-enveloppes.png" alt="Envelopes view — zero-based allocation with rollover and holds" width="32%" />
+</p>
+
+### At a glance
+
+- **Private by design.** No cloud, no telemetry, no SaaS backend.
+  Backend binds to `127.0.0.1`, bank sync (optional) is a BYO-credentials
+  pass-through, secrets are AES-256-GCM at rest. One Docker Compose or
+  one `.dmg`/`.exe`/`.AppImage` — your pick, same features.
+- **Budgets, two ways.** *Caps* (a soft per-category limit the app warns
+  you about) and *Envelopes* (strict YNAB-style allocation of every
+  euro). Pick either at `/budgets`, switch any time, same data.
+- **Imports that don't fight you.** OFX, French CSV, PDF statements with
+  per-bank templates painted once, scanned PDFs through local OCR
+  (`tesseract.js`, LAN-only), and optional read-only bank sync via
+  Enable Banking's PSD2 bridge.
 
 ## Try the demo
 
