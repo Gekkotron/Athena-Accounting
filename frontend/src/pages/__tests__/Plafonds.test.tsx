@@ -67,7 +67,7 @@ describe('Budgets page', () => {
       return Promise.resolve({});
     });
     renderPage();
-    expect(await screen.findByText(/aucun budget/i)).toBeInTheDocument();
+    expect(await screen.findByText(/pas encore de plafond/i)).toBeInTheDocument();
   });
 
   it('shows an inline error banner when deleting a budget fails', async () => {

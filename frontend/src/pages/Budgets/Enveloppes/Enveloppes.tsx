@@ -72,13 +72,21 @@ export function Enveloppes(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="display text-2xl text-ink-50">{t('envelopes.header.title')}</h1>
+          <TourReplayIcon pageId="budgets-envelopes" />
+        </div>
+        <p className="text-sm text-ink-400 mt-1">
+          {t('envelopes.header.subtitle')}
+        </p>
+      </div>
       <header className="relative flex items-center gap-4">
         <span ref={overviewAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
         <span ref={holdAnchor} aria-hidden className="pointer-events-none absolute right-16 top-4 h-1 w-1" />
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, -1))} aria-label={t('envelopes.prevMonth')}>‹</button>
         <div className="flex items-center justify-center gap-2 w-64">
-          <h1 className="display text-2xl">{formatMonthLabel(month, i18n.language)}</h1>
-          <TourReplayIcon pageId="budgets-envelopes" />
+          <h2 className="display text-xl">{formatMonthLabel(month, i18n.language)}</h2>
         </div>
         <button className="btn-ghost !py-1 !px-2" onClick={() => setMonth(stepMonth(month, +1))} aria-label={t('envelopes.nextMonth')}>›</button>
       </header>

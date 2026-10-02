@@ -1,15 +1,15 @@
 {
   "header": {
     "title": "Budgets",
-    "subtitle": "Cap by expense category."
+    "subtitle": "Set a monthly limit per category and see at a glance whether you're on track. For strict \"every euro has a job\" allocation, see Envelopes."
   },
   "mutationError": {
     "fallback": "Could not save the budget."
   },
   "reportErrorTitle": "Couldn't load budgets",
   "emptyState": {
-    "title": "No budget defined yet.",
-    "hint": "Add a cap to an expense category below."
+    "title": "No cap set yet",
+    "hint": "Pick a category where you tend to overspend, give it a monthly limit, and you'll see live how much headroom is left before you cross it."
   },
   "period": {
     "monthTab": "Month",
@@ -80,6 +80,10 @@
   "envelopes": {
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
+    "header": {
+      "title": "Envelopes",
+      "subtitle": "Assign every euro of income to a category before you spend it. Strict YNAB-style approach. For looser after-the-fact tracking, see Caps."
+    },
     "sectionLabel": "Envelopes",
     "errorTitle": "Couldn't load envelopes",
     "emptyState": {

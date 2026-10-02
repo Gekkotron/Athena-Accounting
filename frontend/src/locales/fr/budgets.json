@@ -1,15 +1,15 @@
 {
   "header": {
     "title": "Budgets",
-    "subtitle": "Plafond par catégorie de dépense."
+    "subtitle": "Fixez une limite mensuelle par catégorie et voyez en un coup d'œil si vous êtes dans les clous. Pour une allocation stricte « chaque euro a une mission », voir Enveloppes."
   },
   "mutationError": {
     "fallback": "Impossible d'enregistrer le budget."
   },
   "reportErrorTitle": "Impossible de charger les plafonds",
   "emptyState": {
-    "title": "Aucun budget défini.",
-    "hint": "Ajoutez un plafond à une catégorie de dépense ci-dessous."
+    "title": "Pas encore de plafond défini",
+    "hint": "Choisissez une catégorie où vous dépensez trop, fixez-lui une limite mensuelle, et vous saurez en temps réel combien il reste avant le dépassement."
   },
   "period": {
     "monthTab": "Mois",
@@ -80,6 +80,10 @@
   "envelopes": {
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
+    "header": {
+      "title": "Enveloppes",
+      "subtitle": "Allouez chaque euro de revenu à une catégorie avant de le dépenser. Approche stricte à la YNAB. Pour une surveillance plus souple après-coup, voir Plafonds."
+    },
     "sectionLabel": "Enveloppes",
     "errorTitle": "Impossible de charger les enveloppes",
     "emptyState": {
