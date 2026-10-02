@@ -8,6 +8,21 @@ import type {
 
 const AccountIdKeyed = z.record(z.string().regex(/^\d+$/), z.number().nonnegative());
 
+// CallMeBot WhatsApp relay: user activates it by messaging the bot once from
+// their phone, pastes the returned apikey here, and every notification is
+// forwarded as a WhatsApp text. The apikey is a bearer token for *this user's*
+// line only (worst case: someone with the key can send WhatsApp messages to
+// you — annoying, not catastrophic), kept in the user's settings JSONB and
+// never exposed outside the authenticated GET /api/settings response.
+const CallMeBotSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    phone: z.string().max(32).optional(),
+    apiKey: z.string().max(128).optional(),
+  })
+  .strict()
+  .optional();
+
 const NotificationsSchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -16,6 +31,7 @@ const NotificationsSchema = z
         toast: z.boolean().optional(),
         osNative: z.boolean().optional(),
         webPush: z.boolean().optional(),
+        callmebot: CallMeBotSchema,
       })
       .partial()
       .optional(),
@@ -91,7 +107,12 @@ export type FullSettings = {
   displayCurrency: string | null;
   notifications: {
     enabled: boolean;
-    channels: { toast: boolean; osNative: boolean; webPush: boolean };
+    channels: {
+      toast: boolean;
+      osNative: boolean;
+      webPush: boolean;
+      callmebot: { enabled: boolean; phone: string; apiKey: string };
+    };
     privacy: { hideAmount: boolean; hideMerchant: boolean };
     triggers: {
       bigTransaction: { enabled: boolean; thresholds: Record<string, number> };
@@ -116,9 +137,19 @@ export function mergeNotifications(
   base: FullSettings['notifications'],
   patch: NotificationsPatch | undefined,
 ): FullSettings['notifications'] {
+  // `channels.callmebot` is the only nested object inside `channels`; the
+  // other channels (`toast`, `osNative`, `webPush`) are booleans and merge
+  // field-wise via the spread. For callmebot, do a per-field merge so a patch
+  // that only toggles `enabled` doesn't wipe `phone`/`apiKey` (and vice versa).
+  const basePatchChannels = { ...base.channels, ...patch?.channels };
+  const patchedCallmebot = {
+    enabled: patch?.channels?.callmebot?.enabled ?? base.channels.callmebot.enabled,
+    phone: patch?.channels?.callmebot?.phone ?? base.channels.callmebot.phone,
+    apiKey: patch?.channels?.callmebot?.apiKey ?? base.channels.callmebot.apiKey,
+  };
   return {
     enabled: patch?.enabled ?? base.enabled,
-    channels: { ...base.channels, ...patch?.channels },
+    channels: { ...basePatchChannels, callmebot: patchedCallmebot },
     privacy: { ...base.privacy, ...patch?.privacy },
     triggers: {
       bigTransaction: {

@@ -9,10 +9,17 @@ export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | 'available' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 
+export interface CallMeBotPrefs {
+  enabled: boolean;
+  phone: string;
+  apiKey: string;
+}
+
 export interface NotificationChannels {
   toast: boolean;
   osNative: boolean;
   webPush: boolean;
+  callmebot: CallMeBotPrefs;
 }
 
 export interface NotificationPrivacy {
@@ -40,7 +47,12 @@ export interface NotificationPrefs {
 // replacing whole sub-objects.
 export interface NotificationPrefsPatch {
   enabled?: boolean;
-  channels?: Partial<NotificationChannels>;
+  channels?: {
+    toast?: boolean;
+    osNative?: boolean;
+    webPush?: boolean;
+    callmebot?: Partial<CallMeBotPrefs>;
+  };
   privacy?: Partial<NotificationPrivacy>;
   triggers?: {
     bigTransaction?: Partial<NotificationTriggers['bigTransaction']>;
@@ -93,9 +105,17 @@ export function mergeNotifications(
 ): NotificationPrefs {
   if (!patch) return base;
   const t = patch.triggers;
+  // Deep-merge callmebot so a one-field patch (e.g. toggling `enabled`) keeps
+  // `phone`/`apiKey`. The other channels are plain booleans and merge fine
+  // with the spread.
+  const callmebot: CallMeBotPrefs = {
+    enabled: patch.channels?.callmebot?.enabled ?? base.channels.callmebot.enabled,
+    phone: patch.channels?.callmebot?.phone ?? base.channels.callmebot.phone,
+    apiKey: patch.channels?.callmebot?.apiKey ?? base.channels.callmebot.apiKey,
+  };
   return {
     enabled: patch.enabled ?? base.enabled,
-    channels: { ...base.channels, ...patch.channels },
+    channels: { ...base.channels, ...patch.channels, callmebot },
     privacy: { ...base.privacy, ...patch.privacy },
     triggers: {
       bigTransaction: { ...base.triggers.bigTransaction, ...t?.bigTransaction },
@@ -118,7 +138,12 @@ export const DEFAULTS: Settings = {
   displayCurrency: null,
   notifications: {
     enabled: true,
-    channels: { toast: true, osNative: false, webPush: false },
+    channels: {
+      toast: true,
+      osNative: false,
+      webPush: false,
+      callmebot: { enabled: false, phone: '', apiKey: '' },
+    },
     privacy: { hideAmount: true, hideMerchant: true },
     triggers: {
       bigTransaction: { enabled: true, thresholds: {} },

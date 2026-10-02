@@ -245,6 +245,15 @@
         "toast": "Notification dans l'application",
         "webPush": "Notification du navigateur",
         "webPushBlocked": "Bloquée par le navigateur — autorisez-la dans les paramètres du navigateur.",
+        "callmebot": {
+          "label": "WhatsApp (CallMeBot)",
+          "phoneLabel": "Numéro de téléphone (format international)",
+          "phonePlaceholder": "+33612345678",
+          "apiKeyLabel": "Clé API",
+          "apiKeyPlaceholder": "Clé à 7 chiffres envoyée par CallMeBot",
+          "save": "Enregistrer les paramètres CallMeBot",
+          "help": "Activez-le une fois depuis votre téléphone — voir <1>la configuration CallMeBot WhatsApp</1>. Votre numéro et votre clé restent sur votre serveur et ne sont envoyés à callmebot.com qu'à l'envoi d'une notification."
+        },
         "chromeInsecureTip": {
           "title": "Astuce : autoriser les notifications sur un serveur local (HTTP)",
           "intro": "Sur un réseau local sans HTTPS, Chrome refuse les notifications. Pour contourner cela et forcer Chrome à traiter votre IP comme sécurisée :",

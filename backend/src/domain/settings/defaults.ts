@@ -30,7 +30,12 @@ export const DEFAULTS = {
   // native and web push are opt-in since they require extra permissions.
   notifications: {
     enabled: true,
-    channels: { toast: true, osNative: false, webPush: false },
+    channels: {
+      toast: true,
+      osNative: false,
+      webPush: false,
+      callmebot: { enabled: false, phone: '', apiKey: '' },
+    },
     privacy: { hideAmount: true, hideMerchant: true },
     triggers: {
       bigTransaction: { enabled: true, thresholds: {} as Record<string, number> },

@@ -1,4 +1,5 @@
-import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import type { NotificationPrefs, NotificationPrefsPatch } from '../../lib/settings';
 import { requestWebPushPermission } from '../../lib/notifications/channels/webPush';
 
@@ -26,6 +27,14 @@ export function NotificationsChannelsCard({
     onPatch({ channels: { webPush: result === 'granted' } });
   };
 
+  const callmebot = prefs.channels.callmebot;
+  const [cmbPhone, setCmbPhone] = useState(callmebot.phone);
+  const [cmbApiKey, setCmbApiKey] = useState(callmebot.apiKey);
+  const cmbDirty = cmbPhone !== callmebot.phone || cmbApiKey !== callmebot.apiKey;
+  const saveCallMeBot = () => {
+    onPatch({ channels: { callmebot: { phone: cmbPhone.trim(), apiKey: cmbApiKey.trim() } } });
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <label className="flex items-center gap-2 text-sm text-ink-200">
@@ -51,6 +60,71 @@ export function NotificationsChannelsCard({
           </span>
         )}
       </label>
+
+      <div className="mt-2 flex flex-col gap-2 border-t border-ink-800/60 pt-3">
+        <label className="flex items-center gap-2 text-sm text-ink-200">
+          <input
+            type="checkbox"
+            checked={callmebot.enabled}
+            onChange={(e) => onPatch({ channels: { callmebot: { enabled: e.target.checked } } })}
+          />
+          {t('settings.notifications.channels.callmebot.label')}
+        </label>
+
+        {callmebot.enabled && (
+          <div className="flex flex-col gap-2 pl-6 text-sm">
+            <label className="flex flex-col gap-1">
+              <span className="text-ink-300">
+                {t('settings.notifications.channels.callmebot.phoneLabel')}
+              </span>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="off"
+                placeholder={t('settings.notifications.channels.callmebot.phonePlaceholder')}
+                value={cmbPhone}
+                onChange={(e) => setCmbPhone(e.target.value)}
+                className="input"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-ink-300">
+                {t('settings.notifications.channels.callmebot.apiKeyLabel')}
+              </span>
+              <input
+                type="password"
+                autoComplete="off"
+                placeholder={t('settings.notifications.channels.callmebot.apiKeyPlaceholder')}
+                value={cmbApiKey}
+                onChange={(e) => setCmbApiKey(e.target.value)}
+                className="input"
+              />
+            </label>
+            <button
+              type="button"
+              className="btn-secondary w-fit"
+              onClick={saveCallMeBot}
+              disabled={!cmbDirty}
+            >
+              {t('settings.notifications.channels.callmebot.save')}
+            </button>
+            <p className="text-xs text-ink-400">
+              <Trans i18nKey="settings.notifications.channels.callmebot.help" t={t}>
+                Activate it once from your phone — see
+                <a
+                  className="underline hover:text-ink-100"
+                  href="https://www.callmebot.com/blog/free-api-whatsapp-messages/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  CallMeBot WhatsApp setup
+                </a>
+                .
+              </Trans>
+            </p>
+          </div>
+        )}
+      </div>
 
       <details className="mt-1 text-xs text-ink-400">
         <summary className="cursor-pointer text-ink-300 hover:text-ink-100">
