@@ -37,6 +37,18 @@ The inline editor also holds the **Delete** button. Deletion is
 refused by the server if the account has any transactions — move or
 delete those first, or use the merge flow below.
 
+## Marking an account as closed
+
+If you'd rather keep the history of a now-dormant account than delete it,
+set a **Closing date** in the inline editor (next to the lock-years
+field). The card then shows a small *"Closed"* badge next to the currency,
+and the editor keeps the date for later reference.
+
+Closing is purely visual: balance math, bank sync, transaction lists, and
+import flows are all unaffected. The account stays visible and functional
+— the date only powers the label. Leave the field empty for an open
+account.
+
 ## Currency
 
 Each account is single-currency by design — the running-balance math

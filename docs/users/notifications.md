@@ -15,7 +15,8 @@ Configure alerts in *Paramètres → Notifications*. A master toggle turns the
 whole feature on or off; the settings underneath are split across three
 tabs so each concern stays out of the others' way:
 
-- **Canaux** — where alerts appear (in-app toast, browser notification).
+- **Canaux** — where alerts appear (in-app toast, browser notification,
+  and optionally WhatsApp via CallMeBot).
 - **Confidentialité** — what a notification is allowed to show on your
   screen.
 - **Alertes** — which triggers are on and what their thresholds are.
@@ -60,6 +61,32 @@ supported long-term fix on any browser is to put Athena behind HTTPS
 (a local CA, Tailscale, or a reverse proxy with a real certificate).
 
 :::
+
+## WhatsApp via CallMeBot
+
+Alerts can also land on your phone as WhatsApp messages, routed through
+[CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/) — a
+free third-party relay. Nothing is sent to CallMeBot until you fill in the
+channel and enable it:
+
+1. Follow CallMeBot's one-time activation from your phone to get a 7-digit
+   API key tied to your number.
+2. In *Paramètres → Notifications → Canaux*, open the **WhatsApp
+   (CallMeBot)** card, enter the phone number (international format) and
+   the API key, then save.
+
+Once configured, every notification that fires server-side also triggers a
+fire-and-forget request to `api.callmebot.com/whatsapp.php` with the
+title and body — rendered through the same **Confidentialité** masks as
+the toast and browser channels, so the phone number and API key are the
+only things leaving your server. If CallMeBot is unreachable, the in-app
+inbox and browser notification are unaffected.
+
+**Rate limit** — the card exposes a *Max notifications per minute* slider
+(`0` = no limit). Past the cap on a rolling one-minute window, extra
+alerts are dropped from the WhatsApp channel only; the inbox and browser
+notification still receive them. Failed sends don't consume a slot, and
+the manual *Send a test* button bypasses the limit entirely.
 
 ## Big transaction
 
