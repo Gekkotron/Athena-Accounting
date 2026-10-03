@@ -43,6 +43,10 @@ export default defineConfig({
         },
       }),
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Pin locale to fr-FR so the demo's i18next picks French (the suite's
+    // assertions use French copy). Without this, CI runners default to
+    // en-US → navigator-based detection flips the banner/buttons/toasts
+    // to English and the specs stop finding them.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], locale: 'fr-FR' } },
   ],
 });
