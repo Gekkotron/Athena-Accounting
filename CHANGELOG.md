@@ -12,6 +12,27 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.8] - 2026-10-04
+
+Re-cut of rc.7 — same product; the rc.7 Release workflow got past the
+smoke step but then failed again on the Linux desktop job because
+Tauri's AppImage bundler exits opaquely on `ubuntu-24.04` runners
+(`APPIMAGE_EXTRACT_AND_RUN=1` applied, same `failed to run linuxdeploy`
+with linuxdeploy's own stderr swallowed). rc.8 structurally removes
+the problem by shipping Linux as `.deb` instead of `.AppImage`.
+
+### Changed
+- **Linux desktop bundle format: `.deb` (was `.AppImage`).** `.deb`
+  installs via `dpkg -i`, has no equivalent to the linuxdeploy chain,
+  and is the right primary format for the self-host audience
+  (Debian / Ubuntu / most LAN appliances). AppImage can be
+  reintroduced as a secondary bundle once the linuxdeploy story is
+  sorted upstream.
+- **Installed-app smoke (Linux)** updated to install the `.deb` via
+  `dpkg -i` (with `apt-get install -f` fallback for runtime deps)
+  and resolve the launched binary via `dpkg -L` — no AppImage extract
+  needed, and `$APP_PID` is now the real app process directly.
+
 ## [1.0.0-rc.7] - 2026-10-04
 
 Re-cut of rc.6 — same product; the rc.6 Release workflow got past the
