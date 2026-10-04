@@ -126,17 +126,31 @@ function extractNode(archivePath) {
 extractNode(downloadNode());
 
 // --- 3. Install runtime deps into desktop/sidecar/node_modules ----------
+// Install from BACKEND's committed package.json + package-lock.json via
+// `npm ci --omit=dev` so transitive versions are deterministic across
+// builds. The previous `npm install --no-package-lock` re-resolved the
+// full tree on every build, which turned any upstream major-bump into a
+// silent release-blocker (e.g. content-disposition 2.0.1 → 3.0.0 ESM-only
+// broke @fastify/static's CJS require path).
+//
+// After npm ci completes, the sidecar's package.json is overwritten with a
+// small shim that sets { type: "module" } (so entry.js loads as ESM) and
+// stamps the DESKTOP app version — entry/tauri.ts reads this at boot and
+// publishes it on /health so release smoke tests can assert the running
+// artifact matches the tag.
 
 const backendPkg = JSON.parse(readFileSync(path.join(BACKEND, 'package.json'), 'utf8'));
 const runtimeDeps = backendPkg.dependencies;
 
-// The sidecar package.json carries the DESKTOP app version (not the backend
-// package version): entry/tauri.ts reads it at boot and stamps it into
-// /health, so release smoke tests can assert the running artifact matches
-// the tag.
 const tauriConf = JSON.parse(
   readFileSync(path.join(REPO, 'desktop', 'src-tauri', 'tauri.conf.json'), 'utf8'),
 );
+
+cpSync(path.join(BACKEND, 'package.json'), path.join(SIDECAR, 'package.json'));
+cpSync(path.join(BACKEND, 'package-lock.json'), path.join(SIDECAR, 'package-lock.json'));
+
+log('installing runtime deps (npm ci --omit=dev, from backend lockfile) …');
+run('npm', ['ci', '--omit=dev', '--no-audit', '--no-fund'], { cwd: SIDECAR });
 
 const sidecarPkg = {
   name: 'athena-sidecar',
@@ -146,11 +160,6 @@ const sidecarPkg = {
   dependencies: runtimeDeps,
 };
 writeFileSync(path.join(SIDECAR, 'package.json'), JSON.stringify(sidecarPkg, null, 2));
-
-log('installing runtime deps (npm install --omit=dev, no lockfile) …');
-run('npm', ['install', '--omit=dev', '--no-audit', '--no-fund', '--no-package-lock'], {
-  cwd: SIDECAR,
-});
 
 // --- 4. esbuild the entry ----------------------------------------------
 
