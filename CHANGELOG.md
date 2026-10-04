@@ -12,6 +12,38 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.6] - 2026-10-04
+
+Re-cut of rc.5 — the rc.5 release workflow failed on every desktop OS
+at the new "Smoke-test bundled sidecar" step and never published a
+GitHub release. rc.6 ships the same product plus the release-pipeline
+fix below and the post-tag polish listed under *Fixed*.
+
+### Fixed
+- **Release pipeline — deterministic sidecar deps.** `build-sidecar.mjs`
+  now installs the sidecar from `backend/package-lock.json` via `npm ci`
+  instead of lockfile-less `npm install`, so a transitive major-bump can
+  no longer silently brick a release build. `content-disposition` is
+  pinned to `^2.0.1` in `backend/package.json` as an explicit sentinel
+  against the 3.x ESM-only flip that broke rc.5 (`@fastify/static@10.x`
+  still CJS-requires it).
+- **Release pipeline — smoke diagnostics.** `smoke-encryption.sh` now
+  dumps the sidecar's log on the early-exit path too, so a CJS/ESM
+  module-load crash is visible in CI directly instead of surfacing as
+  a blank "sidecar exited before printing ATHENA_PORT".
+- **Browser-only demo — mixed locale.** Category names and the demo
+  banner were hard-coded in French and leaked into the English demo;
+  both now key off `useLang()` with a shared `i18n-categories.ts` map.
+  Playwright locale pinned to `fr-FR` so the French assertion set
+  stays stable across runners.
+- **Dashboard — Sankey panel edge.** Added an 8-px horizontal inset
+  so end stubs no longer kiss the panel border on narrow widths.
+
+### Changed
+- **README above-the-fold** — tightened the first screen for the
+  r/selfhosted announcement (full-Sankey hero, Sponsor badge next to
+  the install trio, concise value prop).
+
 ## [1.0.0-rc.5] - 2026-10-02
 
 ### Added
