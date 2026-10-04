@@ -256,6 +256,14 @@ jobs:
         # Users still see the softer "unidentified developer" dialog on first
         # launch — bypass via right-click → Open (docs/standalone-app-distribution.md).
         # APPLE_* env vars stay unset (they trigger `security import`).
+        #
+        # APPIMAGE_EXTRACT_AND_RUN=1 lets linuxdeploy (shipped as an AppImage
+        # itself) run on Ubuntu 24.04 runners, which ship libfuse3 and no
+        # libfuse2 — without this, the AppImage bundler exits silently and
+        # tauri reports only "failed to run linuxdeploy". Harmless on macOS
+        # and Windows (no AppImage is invoked there).
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
         run: tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.tauri_bundles }}
 
       - name: Collect installer artifact
