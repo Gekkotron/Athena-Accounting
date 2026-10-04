@@ -196,7 +196,7 @@ wait_for_port() {
       return 0
     fi
     if ! kill -0 "$CUR_PID" 2>/dev/null; then
-      log "sidecar exited before printing ATHENA_PORT"
+      log "sidecar exited before printing ATHENA_PORT (log so far: $(cat "$CUR_LOG"))"
       return 1
     fi
     sleep 0.25
