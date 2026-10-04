@@ -12,6 +12,23 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.0.0-rc.7] - 2026-10-04
+
+Re-cut of rc.6 — same product; the rc.6 Release workflow got past the
+sidecar smoke step but then failed on the Linux desktop job when
+`linuxdeploy` (shipped as an AppImage) couldn't run on the `ubuntu-24.04`
+runner because Noble ships libfuse3 and no libfuse2. rc.7 ships the
+same product plus the AppImage-bundler fix.
+
+### Fixed
+- **Release pipeline — Linux AppImage on Ubuntu 24.04.** The "Build
+  Tauri app" step now exports `APPIMAGE_EXTRACT_AND_RUN=1`, which
+  tells `linuxdeploy` to extract itself to a tmpdir and execute
+  without needing FUSE. Harmless on macOS / Windows (no AppImage
+  invoked there). The symptom this cures is the opaque
+  `failed to run linuxdeploy` message Tauri emits when linuxdeploy
+  crashes at AppImage mount time.
+
 ## [1.0.0-rc.6] - 2026-10-04
 
 Re-cut of rc.5 — the rc.5 release workflow failed on every desktop OS
