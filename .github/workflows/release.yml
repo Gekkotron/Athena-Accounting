@@ -137,8 +137,15 @@ jobs:
           - os: ubuntu-latest
             label: Linux (x64)
             tauri_target: x86_64-unknown-linux-gnu
-            tauri_bundles: appimage
-            artifact_glob: 'desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage'
+            # .deb (not AppImage) — Tauri's AppImage bundler shells out to
+            # linuxdeploy, which has been failing opaquely on ubuntu-24.04
+            # runners (rc.5/6/7). .deb is produced via dpkg, has no equivalent
+            # time-bomb, and is the right primary format for the self-host
+            # audience (Debian / Ubuntu / most LAN appliances). AppImage can
+            # be reintroduced as a secondary bundle once the linuxdeploy
+            # story is sorted upstream.
+            tauri_bundles: deb
+            artifact_glob: 'desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb'
           - os: windows-latest
             label: Windows (x64)
             tauri_target: x86_64-pc-windows-msvc
@@ -256,14 +263,6 @@ jobs:
         # Users still see the softer "unidentified developer" dialog on first
         # launch — bypass via right-click → Open (docs/standalone-app-distribution.md).
         # APPLE_* env vars stay unset (they trigger `security import`).
-        #
-        # APPIMAGE_EXTRACT_AND_RUN=1 lets linuxdeploy (shipped as an AppImage
-        # itself) run on Ubuntu 24.04 runners, which ship libfuse3 and no
-        # libfuse2 — without this, the AppImage bundler exits silently and
-        # tauri reports only "failed to run linuxdeploy". Harmless on macOS
-        # and Windows (no AppImage is invoked there).
-        env:
-          APPIMAGE_EXTRACT_AND_RUN: '1'
         run: tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.tauri_bundles }}
 
       - name: Collect installer artifact

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Layer 2 installed-app smoke (macOS + Linux; Windows lives in
 # smoke-installed.ps1): launch the packaged app the way a user would — the
-# .app copied out of the mounted .dmg on macOS, the extracted .AppImage on
-# Linux — wait for the sidecar to publish its bound port at
+# .app copied out of the mounted .dmg on macOS, the binary dpkg installs
+# from the .deb on Linux — wait for the sidecar to publish its bound port at
 # <app-data-dir>/.mcp-port, assert /health, then run the Playwright suite in
 # frontend/e2e-installed/ against the live app.
 #
@@ -13,12 +13,15 @@
 # Usage:
 #   [EXPECTED_VERSION=1.2.3] bash desktop/scripts/smoke-installed.sh <artifact>
 #
+# On Linux the <artifact> is a .deb; install needs sudo (dpkg -i, plus
+# `apt-get install -f` for any missing runtime deps).
+#
 # Requirements: node on PATH, frontend deps installed (npm ci) and a
 # Playwright chromium (npx playwright install chromium). The Tauri WebView
 # needs a display — wrap with `xvfb-run -a` on headless Linux runners.
 set -euo pipefail
 
-ARTIFACT="${1:?usage: smoke-installed.sh <path to .dmg or .AppImage>}"
+ARTIFACT="${1:?usage: smoke-installed.sh <path to .dmg or .deb>}"
 # Absolute path — the Linux branch runs it from a different cwd.
 ARTIFACT="$(cd "$(dirname "$ARTIFACT")" && pwd)/$(basename "$ARTIFACT")"
 IDENTIFIER="com.athena.accounting.desktop"
@@ -66,12 +69,21 @@ case "$(uname)" in
     ;;
   Linux)
     DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/$IDENTIFIER"
-    chmod +x "$ARTIFACT"
-    # Extract instead of executing the AppImage directly: no libfuse
-    # dependency on the runner, and $APP_PID is the real app process rather
-    # than the AppImage runtime wrapper.
-    (cd "$WORK" && "$ARTIFACT" --appimage-extract >/dev/null)
-    APP_BIN="$WORK/squashfs-root/AppRun"
+    # dpkg first; if it exits non-zero because of missing runtime deps
+    # (common on a fresh runner before webkit/gtk libs are pulled in),
+    # `apt-get install -f` resolves the dep graph and retries the install.
+    if ! sudo dpkg -i "$ARTIFACT"; then
+      sudo apt-get install -y -f
+    fi
+    # Package name = the Debian "Package" control field. Resolve the
+    # installed binary via `dpkg -L` so the smoke script doesn't have to
+    # hard-code the productName-derived name.
+    PKG_NAME="$(dpkg-deb -f "$ARTIFACT" Package)"
+    APP_BIN="$(dpkg -L "$PKG_NAME" | awk '/^\/usr\/bin\// {print; exit}')"
+    if [ -z "$APP_BIN" ] || [ ! -x "$APP_BIN" ]; then
+      echo "could not locate a /usr/bin/ entry for $PKG_NAME" >&2
+      exit 1
+    fi
     ;;
   *)
     echo "unsupported platform $(uname) — Windows uses smoke-installed.ps1" >&2
