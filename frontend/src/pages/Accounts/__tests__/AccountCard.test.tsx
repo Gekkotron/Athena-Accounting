@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
@@ -119,5 +119,30 @@ describe('AccountCard', () => {
   it('omits the "Fermé" badge when closedAt is null', () => {
     renderCard({ account: { ...acc, closedAt: null } });
     expect(screen.queryByText('Fermé')).not.toBeInTheDocument();
+  });
+
+  it('renders the IBAN in 4-char groups when the account has one', () => {
+    renderCard({ account: { ...acc, iban: 'FR7612345678901234567890123' } });
+    expect(screen.getByText('IBAN')).toBeInTheDocument();
+    expect(screen.getByText(/FR76 1234 5678 9012 3456 7890 123/)).toBeInTheDocument();
+  });
+
+  it('omits the IBAN block when iban is null', () => {
+    renderCard({ account: { ...acc, iban: null } });
+    expect(screen.queryByText('IBAN')).not.toBeInTheDocument();
+  });
+
+  it('copies the compact uppercase IBAN when the copy button is clicked', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    // jsdom's `navigator.clipboard` is a read-only getter → defineProperty.
+    // fireEvent (not userEvent.click) because the sibling DnD sensor on the
+    // SortableContext swallows the pointer sequence userEvent synthesises.
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    renderCard({ account: { ...acc, iban: 'fr76 1234 5678 9012' } });
+    fireEvent.click(screen.getByRole('button', { name: /copier l'iban/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('FR76123456789012'));
   });
 });

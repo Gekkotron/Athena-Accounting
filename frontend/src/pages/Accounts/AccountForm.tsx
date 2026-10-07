@@ -16,11 +16,16 @@ export interface AccountFormValues {
   // Closing date. Non-null = account is displayed as closed. Only editable
   // in edit mode (a freshly-created account is not closed).
   closedAt: string | null;
+  // Optional manual IBAN. Backend normalizes it (strips spaces, uppercases)
+  // and refuses the update when the account is synced; the form passes
+  // ibanLocked separately so the input can render read-only in edit mode.
+  iban: string | null;
 }
 
 export function AccountForm({
   mode,
   initial,
+  ibanLocked,
   onSubmit,
   onCancel,
   onDelete,
@@ -29,6 +34,9 @@ export function AccountForm({
 }: {
   mode: 'create' | 'edit';
   initial?: Partial<AccountFormValues>;
+  // Edit mode only — when true, the IBAN input renders read-only because
+  // the authoritative value lives on a mapped bank_connection_accounts row.
+  ibanLocked?: boolean;
   onSubmit: (values: AccountFormValues) => void;
   onCancel?: () => void;
   onDelete?: () => void;
@@ -47,6 +55,7 @@ export function AccountForm({
     initial?.lockYears == null ? '' : String(initial.lockYears),
   );
   const [closedAt, setClosedAt] = useState<string>(initial?.closedAt ?? '');
+  const [iban, setIban] = useState<string>(initial?.iban ?? '');
 
   const parsedLockYears = ((): number | null => {
     const raw = lockYearsInput.trim();
@@ -72,6 +81,7 @@ export function AccountForm({
       openingDate,
       lockYears: parsedLockYears,
       closedAt: closedAt.trim() === '' ? null : closedAt,
+      iban: iban.trim() === '' ? null : iban.replace(/\s+/g, '').toUpperCase(),
     };
   };
 
@@ -91,6 +101,9 @@ export function AccountForm({
       setLockYearsInput={setLockYearsInput}
       closedAt={closedAt}
       setClosedAt={setClosedAt}
+      iban={iban}
+      setIban={setIban}
+      ibanLocked={ibanLocked === true}
       mode={mode}
     />
   );

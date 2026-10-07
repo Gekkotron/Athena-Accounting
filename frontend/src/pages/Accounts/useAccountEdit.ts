@@ -9,6 +9,8 @@ export type EditDraft = {
   openingDate: string;
   lockYears: number | null;
   closedAt: string | null;
+  iban: string | null;
+  ibanLocked: boolean;
 };
 
 // Per-card edit state: only one account can be in edit mode at a time,
@@ -40,6 +42,8 @@ export function useAccountEdit(
       openingDate: a.openingDate,
       lockYears: a.lockYears ?? null,
       closedAt: a.closedAt ?? null,
+      iban: a.iban ?? null,
+      ibanLocked: a.ibanLocked === true,
     });
   };
 
@@ -62,6 +66,12 @@ export function useAccountEdit(
     if (draft.openingDate !== a.openingDate) patch.openingDate = draft.openingDate;
     if ((draft.lockYears ?? null) !== (a.lockYears ?? null)) patch.lockYears = draft.lockYears;
     if ((draft.closedAt ?? null) !== (a.closedAt ?? null)) patch.closedAt = draft.closedAt;
+    // Only patch iban when the account's IBAN is user-managed. A locked
+    // field is held read-only in the UI, so this branch is defensive — a
+    // tampered draft still can't sneak an edit past the backend 409.
+    if (!draft.ibanLocked && (draft.iban ?? null) !== (a.iban ?? null)) {
+      patch.iban = draft.iban;
+    }
     if (Object.keys(patch).length === 0) {
       cancelEdit();
       return;

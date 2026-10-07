@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link } from 'react-router-dom';
@@ -6,6 +7,13 @@ import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
 import { AccountCardGoals } from './AccountCardGoals';
+
+// IBAN rendered with 4-char groups (what printed statements look like) so the
+// user can scan it; copy writes the compact form the bank actually stores.
+function formatIban(iban: string): string {
+  const compact = iban.replace(/\s+/g, '').toUpperCase();
+  return compact.replace(/(.{4})/g, '$1 ').trim();
+}
 
 export function AccountCard({
   account: a,
@@ -22,6 +30,17 @@ export function AccountCard({
 }) {
   const { t } = useTranslation(['accounts', 'common']);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: a.id });
+  const [ibanCopied, setIbanCopied] = useState(false);
+  const copyIban = async () => {
+    if (!a.iban) return;
+    try {
+      await navigator.clipboard.writeText(a.iban.replace(/\s+/g, '').toUpperCase());
+      setIbanCopied(true);
+      setTimeout(() => setIbanCopied(false), 1500);
+    } catch {
+      // Clipboard denied — bail silently; the IBAN is still visible for manual copy.
+    }
+  };
   const current = Number(a.currentBalance ?? '0');
   const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
   const blocked = current - available;
@@ -73,6 +92,32 @@ export function AccountCard({
         {t('card.opened', { date: formatDate(a.openingDate) })}{' '}
         <span className="private">{formatAmount(a.openingBalance, a.currency)}</span>
       </div>
+      {a.iban && (
+        <div className="text-[11px] text-ink-500 mt-1 font-mono leading-relaxed flex items-center gap-2">
+          <span className="text-ink-600 uppercase tracking-[0.14em] text-[10px]">IBAN</span>
+          <span className="private text-ink-300 truncate" title={formatIban(a.iban)}>
+            {formatIban(a.iban)}
+          </span>
+          <button
+            type="button"
+            onClick={copyIban}
+            className="text-ink-500 hover:text-ink-100 transition shrink-0"
+            title={ibanCopied ? t('card.ibanCopied') : t('card.copyIban')}
+            aria-label={ibanCopied ? t('card.ibanCopied') : t('card.copyIban')}
+          >
+            {ibanCopied ? (
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+                <path d="M2 6l2.5 2.5L9 3.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+                <rect x="3.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="0.8" />
+                <path d="M2 7.5V2.5a1 1 0 0 1 1-1h5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
       {/* Top-right cluster: drag handle + modify */}
       <div className="absolute top-3 right-3 flex items-center gap-1">
         <button

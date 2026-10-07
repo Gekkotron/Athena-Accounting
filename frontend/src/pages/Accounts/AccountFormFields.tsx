@@ -29,6 +29,9 @@ export function AccountFormFields({
   setLockYearsInput,
   closedAt,
   setClosedAt,
+  iban,
+  setIban,
+  ibanLocked,
   mode,
 }: {
   name: string;
@@ -45,6 +48,9 @@ export function AccountFormFields({
   setLockYearsInput: (v: string) => void;
   closedAt: string;
   setClosedAt: (v: string) => void;
+  iban: string;
+  setIban: (v: string) => void;
+  ibanLocked: boolean;
   mode: 'create' | 'edit';
 }): JSX.Element {
   const { t, i18n } = useTranslation('accounts');
@@ -157,6 +163,23 @@ export function AccountFormFields({
           />
         </div>
       )}
+      <div className={mode === 'create' ? 'lg:col-span-3' : 'col-span-2'}>
+        <label className="label mb-1.5 block" title={t('form.ibanTitle')}>
+          {t('form.labels.iban')}
+        </label>
+        <input
+          className="input font-mono"
+          value={iban}
+          placeholder="FR76 1234 …"
+          onChange={(e) => setIban(e.target.value)}
+          readOnly={ibanLocked}
+          aria-readonly={ibanLocked}
+          title={ibanLocked ? t('form.ibanLockedHint') : undefined}
+        />
+        {ibanLocked && (
+          <div className="text-[11px] text-ink-500 mt-1">{t('form.ibanLockedHint')}</div>
+        )}
+      </div>
     </>
   );
 }

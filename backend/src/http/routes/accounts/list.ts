@@ -35,6 +35,8 @@ export function registerList(app: FastifyInstance): void {
       available_balance: string;
       transaction_count: number;
       counted_transaction_count: number;
+      iban: string | null;
+      iban_locked: boolean;
     }>(sql`
       SELECT
         a.id,
@@ -79,7 +81,24 @@ export function registerList(app: FastifyInstance): void {
           WHERE t.account_id = a.id)                           AS transaction_count,
         (SELECT COUNT(*)::int FROM transactions t
           WHERE t.account_id = a.id AND t.date >= a.opening_date)
-                                                               AS counted_transaction_count
+                                                               AS counted_transaction_count,
+        -- IBAN: synced value wins over the manual accounts.iban. The schema
+        -- allows several bca rows per account (no uniqueness on account_id),
+        -- so MAX() + NULLIF keep this deterministic. iban_locked tracks
+        -- whether a synced IBAN exists at all — the frontend uses it to
+        -- disable manual editing (and the PUT route refuses the update).
+        COALESCE(
+          (SELECT MAX(NULLIF(bca.iban, ''))
+             FROM bank_connection_accounts bca
+            WHERE bca.account_id = a.id),
+          a.iban
+        )                                                      AS iban,
+        EXISTS (
+          SELECT 1 FROM bank_connection_accounts bca
+          WHERE bca.account_id = a.id
+            AND bca.iban IS NOT NULL
+            AND bca.iban <> ''
+        )                                                      AS iban_locked
       FROM accounts a
       WHERE a.user_id = ${uid}
       ORDER BY a.display_order ASC, a.name ASC
@@ -100,6 +119,8 @@ export function registerList(app: FastifyInstance): void {
       availableBalance: r.available_balance,
       transactionCount: r.transaction_count,
       countedTransactionCount: r.counted_transaction_count,
+      iban: r.iban,
+      ibanLocked: r.iban_locked,
     }));
 
     return { accounts };

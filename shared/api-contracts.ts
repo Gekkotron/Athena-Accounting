@@ -95,6 +95,16 @@ export interface Account {
   lockYears?: number | null;
   availableBalance?: string;
   closedAt?: string | null;       // YYYY-MM-DD; non-null = account is closed
+  // IBAN of the account. Backend returns COALESCE(synced bca.iban,
+  // accounts.iban): the sync-populated value wins over the user-entered
+  // one. Null when neither source has an IBAN. If several
+  // bank_connection_accounts rows point here, backend returns one
+  // deterministically (MAX).
+  iban?: string | null;
+  // True when the IBAN above comes from a bank_connection_accounts row —
+  // i.e. the manual field is locked and the backend will refuse PUTs that
+  // try to overwrite it. False/undefined = user may freely edit.
+  ibanLocked?: boolean;
 }
 
 export interface BalanceCheckpoint {

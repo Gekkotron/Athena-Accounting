@@ -27,7 +27,9 @@
     "invested": "invested",
     "opened": "opened {{date}} ·",
     "closedBadge": "Closed",
-    "closedTitle": "Closed on {{date}}"
+    "closedTitle": "Closed on {{date}}",
+    "copyIban": "Copy IBAN",
+    "ibanCopied": "IBAN copied"
   },
   "form": {
     "labels": {
@@ -36,6 +38,7 @@
       "currency": "Currency",
       "openingBalance": "Opening balance",
       "openingDate": "Opening date",
+      "iban": "IBAN",
       "lockYears": "Lock (years)",
       "closingDate": "Closing date"
     },
@@ -58,6 +61,8 @@
     "openingBalanceEditHint": "Changing this amount will automatically adjust the current balance.",
     "lockYearsTitle": "Number of years this account is locked starting from its opening date (PEA, term deposit, etc.). Leave empty if there is no lock.",
     "closingDateTitle": "Date this account was closed. Leave empty if the account is still open. The account stays visible and functional — the date only powers the \"Closed\" label.",
+    "ibanTitle": "Account IBAN. Spaces and case are normalized when saved.",
+    "ibanLockedHint": "Managed by bank sync — not editable.",
     "creating": "Creating…",
     "createSubmit": "Create account",
     "deleteButton": "delete",

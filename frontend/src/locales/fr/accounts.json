@@ -27,7 +27,9 @@
     "invested": "placé",
     "opened": "ouvert {{date}} ·",
     "closedBadge": "Fermé",
-    "closedTitle": "Fermé le {{date}}"
+    "closedTitle": "Fermé le {{date}}",
+    "copyIban": "Copier l'IBAN",
+    "ibanCopied": "IBAN copié"
   },
   "form": {
     "labels": {
@@ -37,7 +39,8 @@
       "openingBalance": "Solde d'ouverture",
       "openingDate": "Date d'ouverture",
       "lockYears": "Blocage (ans)",
-      "closingDate": "Date de fermeture"
+      "closingDate": "Date de fermeture",
+      "iban": "IBAN"
     },
     "typeOptions": {
       "checking": "Courant",
@@ -58,6 +61,8 @@
     "openingBalanceEditHint": "Modifier ce montant ajustera automatiquement le solde courant.",
     "lockYearsTitle": "Nombre d'années pendant lesquelles ce compte est bloqué à partir de sa date d'ouverture (PEA, dépôt à terme, etc.). Laissez vide si aucun blocage.",
     "closingDateTitle": "Date de fermeture du compte. Laissez vide si le compte est encore ouvert. Le compte reste visible et fonctionnel — la date sert uniquement d'étiquette « Fermé ».",
+    "ibanTitle": "IBAN du compte. Les espaces et la casse sont normalisés à l'enregistrement.",
+    "ibanLockedHint": "Géré par la synchronisation bancaire — non modifiable.",
     "creating": "Création…",
     "createSubmit": "Créer le compte",
     "deleteButton": "supprimer",

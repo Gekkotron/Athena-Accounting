@@ -117,11 +117,12 @@ export function Accounts() {
                         <AccountForm
                           mode="edit"
                           initial={edit.editDraft}
+                          ibanLocked={a.ibanLocked === true}
                           error={m.editError}
                           submitting={m.updateAccount.isPending}
                           onSubmit={(values) => {
-                            edit.setEditDraft(values);
-                            edit.saveEdit(a, values);
+                            edit.setEditDraft({ ...values, ibanLocked: a.ibanLocked === true });
+                            edit.saveEdit(a, { ...values, ibanLocked: a.ibanLocked === true });
                           }}
                           onCancel={edit.cancelEdit}
                           onDelete={() => {

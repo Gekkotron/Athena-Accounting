@@ -146,6 +146,11 @@ export const accounts = pgTable(
     // Nullable closing date. Non-null = account displayed with a "closed"
     // badge; balance math and bank sync are unaffected (see migration 0044).
     closedAt: date('closed_at'),
+    // Optional manual IBAN (migration 0045). The accounts list query
+    // returns COALESCE(synced bca.iban, this column); the backend refuses
+    // updates to this field whenever a synced IBAN exists on the mapped
+    // bank_connection_accounts row.
+    iban: text('iban'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

@@ -24,8 +24,12 @@ describe.skipIf(!RUN)('/api/accounts', () => {
 
   afterEach(async () => {
     const { db } = await import('../src/db/client.js');
-    const { accounts, transactions } = await import('../src/db/schema.js');
+    const { accounts, transactions, bankConnections } = await import('../src/db/schema.js');
     await db.delete(transactions);
+    // bank_connection_accounts cascades from bank_connections and
+    // ON DELETE SET NULL from accounts, so clearing bank_connections first
+    // frees the FK before we drop accounts.
+    await db.delete(bankConnections);
     await db.delete(accounts);
   });
 
@@ -308,5 +312,70 @@ describe.skipIf(!RUN)('/api/accounts', () => {
   it('rejects unauthenticated with 401', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/accounts' });
     expect(res.statusCode).toBe(401);
+  });
+
+  it('create accepts an IBAN and the list returns it with ibanLocked=false', async () => {
+    const created = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: {
+        name: 'ManualIban', type: 'checking', openingDate: '2025-01-01',
+        iban: 'fr76 1234 5678 9012 3456 7890 123',
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    // Create endpoint returns the raw row; the compact IBAN was persisted.
+    expect(created.json().account.iban).toBe('FR7612345678901234567890123');
+
+    const list = await app.inject({ method: 'GET', url: '/api/accounts', headers: { cookie } });
+    const row = list.json().accounts.find((a: { name: string }) => a.name === 'ManualIban');
+    expect(row.iban).toBe('FR7612345678901234567890123');
+    expect(row.ibanLocked).toBe(false);
+  });
+
+  it('PUT rejects an IBAN change when the account is synced (ibanLocked)', async () => {
+    const created = await app.inject({
+      method: 'POST', url: '/api/accounts',
+      headers: { cookie },
+      payload: { name: 'Synced', type: 'checking', openingDate: '2025-01-01' },
+    });
+    const acc = created.json().account;
+
+    // Simulate the bank-sync side: a connection + a mapped bca row with an
+    // IBAN. The crud guard checks EXISTS(bca WHERE account_id AND iban != '').
+    const { db } = await import('../src/db/client.js');
+    const { bankConnections, bankConnectionAccounts, users } = await import('../src/db/schema.js');
+    const [me] = await db.select().from(users).where(
+      (await import('drizzle-orm')).eq(users.username, 'ac-user'),
+    );
+    const [conn] = await db.insert(bankConnections).values({
+      userId: me.id,
+      sessionId: 'sess-1',
+      aspspName: 'TestBank',
+      aspspCountry: 'FR',
+      validUntil: '2030-01-01',
+    }).returning();
+    await db.insert(bankConnectionAccounts).values({
+      connectionId: conn.id,
+      bankAccountUid: 'uid-1',
+      iban: 'FR7612345678901234567890123',
+      accountId: acc.id,
+    });
+
+    const res = await app.inject({
+      method: 'PUT', url: `/api/accounts/${acc.id}`,
+      headers: { cookie },
+      payload: { iban: 'FR9900000000000000000000011' },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatch(/bank sync/i);
+
+    // Non-iban updates on the same account still succeed.
+    const nameRes = await app.inject({
+      method: 'PUT', url: `/api/accounts/${acc.id}`,
+      headers: { cookie },
+      payload: { name: 'Renamed' },
+    });
+    expect(nameRes.statusCode).toBe(200);
   });
 });

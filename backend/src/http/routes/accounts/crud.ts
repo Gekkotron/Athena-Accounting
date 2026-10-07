@@ -1,10 +1,25 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { accounts } from '../../../db/schema.js';
 import { userId } from '../../plugins/auth.js';
 import { CreateBody, UpdateBody } from './schemas.js';
 import { isPgError, parseId } from './helpers.js';
+
+// True iff the account has at least one mapped bank_connection_accounts
+// row with a non-empty IBAN — in that case the synced IBAN is the
+// authoritative value and the manual field is locked.
+async function hasSyncedIban(accountId: number): Promise<boolean> {
+  const result = await db.execute<{ exists: boolean }>(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM bank_connection_accounts
+      WHERE account_id = ${accountId}
+        AND iban IS NOT NULL
+        AND iban <> ''
+    ) AS exists
+  `);
+  return result.rows[0]?.exists === true;
+}
 
 // POST/GET-by-id/PUT/DELETE for /api/accounts/:id — the CRUD trio.
 // The list endpoint (with its computed balance SQL) lives in ./list.ts;
@@ -50,6 +65,12 @@ export function registerCrud(app: FastifyInstance): void {
     }
     if (Object.keys(parsed.data).length === 0) {
       return reply.code(400).send({ error: 'no fields to update' });
+    }
+    // Reject manual IBAN edits on an account whose synced IBAN is the
+    // authoritative value. We check only when the request actually touches
+    // iban so pure name/type/… updates on a synced account still succeed.
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'iban') && await hasSyncedIban(id)) {
+      return reply.code(409).send({ error: 'iban is managed by bank sync and cannot be edited' });
     }
     try {
       const [updated] = await db

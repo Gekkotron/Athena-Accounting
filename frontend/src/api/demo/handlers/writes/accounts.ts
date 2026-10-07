@@ -12,6 +12,7 @@ interface AccountCreateBody {
   openingDate?: string;
   displayOrder?: number;
   lockYears?: number | null;
+  iban?: string | null;
 }
 
 function handleAccountCreate(req: DemoRequest) {
@@ -25,6 +26,7 @@ function handleAccountCreate(req: DemoRequest) {
     openingDate: body.openingDate ?? todayLocalIso(),
     displayOrder: body.displayOrder ?? getState().accounts.length,
     lockYears: body.lockYears ?? null,
+    iban: body.iban ?? null,
     createdAt: new Date().toISOString(),
   };
   setState((s) => { s.accounts.push(acc); });

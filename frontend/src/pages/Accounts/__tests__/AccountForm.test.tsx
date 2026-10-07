@@ -93,6 +93,42 @@ describe('AccountForm', () => {
     expect(screen.getByText(/solde disponible/i)).toBeInTheDocument();
   });
 
+  it('submits the IBAN compacted and uppercased (strips spaces, uppercases)', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<AccountForm mode="create" onSubmit={onSubmit} />);
+    await user.type(fieldFor(/^nom$/i), 'Livret');
+    await user.type(fieldFor(/^iban$/i), 'fr76 1234 5678');
+    fireEvent.change(fieldFor(/date d.ouverture/i), { target: { value: '2026-05-01' } });
+    await user.click(screen.getByRole('button', { name: /créer le compte/i }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      iban: 'FR7612345678',
+    }));
+  });
+
+  it('submits iban: null when the field is left empty', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<AccountForm mode="create" onSubmit={onSubmit} />);
+    await user.type(fieldFor(/^nom$/i), 'Livret');
+    fireEvent.change(fieldFor(/date d.ouverture/i), { target: { value: '2026-05-01' } });
+    await user.click(screen.getByRole('button', { name: /créer le compte/i }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iban: null }));
+  });
+
+  it('edit mode: renders the IBAN input read-only when ibanLocked is true', () => {
+    render(<AccountForm
+      mode="edit"
+      ibanLocked
+      initial={{ name: 'Synced', type: 'checking', currency: 'EUR',
+        openingBalance: '0.00', openingDate: '2025-01-01', iban: 'FR7612345678' }}
+      onSubmit={() => {}}
+    />);
+    const ibanInput = fieldFor(/^iban$/i) as HTMLInputElement;
+    expect(ibanInput).toHaveAttribute('readonly');
+    expect(ibanInput.value).toBe('FR7612345678');
+  });
+
   it('blocks submit and surfaces an error when opening balance is unparseable', async () => {
     const onSubmit = vi.fn();
     const user = userEvent.setup();
