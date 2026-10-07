@@ -117,26 +117,23 @@ test('a keyword rule categorizes the matching imported transactions', async ({ p
 
   const catsRes = await page.request.get('/api/categories');
   expect(catsRes.ok(), `categories status=${catsRes.status()}`).toBeTruthy();
-  const catsJson = (await catsRes.json()) as
-    | { categories: Array<{ id: number; name: string }> }
-    | Array<{ id: number; name: string }>;
-  const cats = Array.isArray(catsJson) ? catsJson : catsJson.categories;
+  const { categories: cats } = (await catsRes.json()) as {
+    categories: Array<{ id: number; name: string }>;
+  };
   const category = cats.find((c) => c.name === CATEGORY_NAME);
   expect(category, `category ${CATEGORY_NAME} in /api/categories`).toBeDefined();
 
   const txRes = await page.request.get(`/api/transactions?accountId=${account!.id}&limit=50`);
   expect(txRes.ok(), `transactions status=${txRes.status()}`).toBeTruthy();
-  const txJson = (await txRes.json()) as
-    | { transactions: Array<{ label: string; categoryId: number | null }> }
-    | { items: Array<{ label: string; categoryId: number | null }> }
-    | Array<{ label: string; categoryId: number | null }>;
-  const txs = Array.isArray(txJson)
-    ? txJson
-    : 'transactions' in txJson
-      ? txJson.transactions
-      : txJson.items;
+  const { transactions } = (await txRes.json()) as {
+    transactions: Array<{ rawLabel: string; categoryId: number | null }>;
+  };
   const by = (needle: string) =>
-    txs.find((t) => (t.label ?? '').toUpperCase().includes(needle));
+    transactions.find((t) => (t.rawLabel ?? '').toUpperCase().includes(needle));
+  expect(
+    by('GOLDENMARKET PARIS'),
+    `transaction containing GOLDENMARKET PARIS (got ${transactions.length} rows)`,
+  ).toBeDefined();
   expect(by('GOLDENMARKET PARIS')?.categoryId).toBe(category!.id);
   expect(by('GOLDENMARKET LYON')?.categoryId).toBe(category!.id);
   expect(by('LOYER')?.categoryId ?? null).not.toBe(category!.id);
