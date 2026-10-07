@@ -125,7 +125,7 @@ describe('importPhoto', () => {
       kind: 'needs_template', draftId: 42, reason: 'no_text_layer',
       sourceKind: 'photo', ocrStatus: 'pending', ocrTotal: 1, suggestedZones: null,
     });
-    const page = (result as { pages: Array<Record<string, unknown>> }).pages[0]!;
+    const page = (result as unknown as { pages: Array<Record<string, unknown>> }).pages[0]!;
     expect(page).toMatchObject({ pageIndex: 0, widthPt: 8, heightPt: 6, pngBase64: row.pdfBytes });
   });
 

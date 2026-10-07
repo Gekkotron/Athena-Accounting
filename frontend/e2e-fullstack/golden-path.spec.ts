@@ -104,16 +104,42 @@ test('a keyword rule categorizes the matching imported transactions', async ({ p
   await confirm.getByRole('button', { name: /Recatégoriser/i }).click();
   await expect(confirm).toBeHidden();
 
-  const res = await page.request.get('/api/accounts');
-  const { accounts } = (await res.json()) as { accounts: Array<{ id: number; name: string }> };
+  // Assert categorization via the API — the transactions-row DOM renders a
+  // category <select> whose options list every category, so row-text matches
+  // would be false positives. The list endpoint returns categoryId only; we
+  // map it to the name through /api/categories.
+  const accountsRes = await page.request.get('/api/accounts');
+  const { accounts } = (await accountsRes.json()) as {
+    accounts: Array<{ id: number; name: string }>;
+  };
   const account = accounts.find((a) => a.name === ACCOUNT_NAME);
-  await page.goto(`/transactions?accountId=${account!.id}`);
-  for (const label of ['CB GOLDENMARKET PARIS', 'CB GOLDENMARKET LYON']) {
-    await expect(page.getByRole('row', { name: new RegExp(label) })).toContainText(CATEGORY_NAME);
-  }
-  await expect(page.getByRole('row', { name: /PRLV LOYER GOLDEN E2E/ })).not.toContainText(
-    CATEGORY_NAME,
-  );
+  expect(account, `account ${ACCOUNT_NAME} in /api/accounts`).toBeDefined();
+
+  const catsRes = await page.request.get('/api/categories');
+  expect(catsRes.ok(), `categories status=${catsRes.status()}`).toBeTruthy();
+  const catsJson = (await catsRes.json()) as
+    | { categories: Array<{ id: number; name: string }> }
+    | Array<{ id: number; name: string }>;
+  const cats = Array.isArray(catsJson) ? catsJson : catsJson.categories;
+  const category = cats.find((c) => c.name === CATEGORY_NAME);
+  expect(category, `category ${CATEGORY_NAME} in /api/categories`).toBeDefined();
+
+  const txRes = await page.request.get(`/api/transactions?accountId=${account!.id}&limit=50`);
+  expect(txRes.ok(), `transactions status=${txRes.status()}`).toBeTruthy();
+  const txJson = (await txRes.json()) as
+    | { transactions: Array<{ label: string; categoryId: number | null }> }
+    | { items: Array<{ label: string; categoryId: number | null }> }
+    | Array<{ label: string; categoryId: number | null }>;
+  const txs = Array.isArray(txJson)
+    ? txJson
+    : 'transactions' in txJson
+      ? txJson.transactions
+      : txJson.items;
+  const by = (needle: string) =>
+    txs.find((t) => (t.label ?? '').toUpperCase().includes(needle));
+  expect(by('GOLDENMARKET PARIS')?.categoryId).toBe(category!.id);
+  expect(by('GOLDENMARKET LYON')?.categoryId).toBe(category!.id);
+  expect(by('LOYER')?.categoryId ?? null).not.toBe(category!.id);
 });
 
 test('the dashboard shows a non-zero balance once data is imported', async ({ page }) => {
