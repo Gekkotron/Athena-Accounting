@@ -42,7 +42,16 @@ export function Accounts() {
   const m = useAccountsMutations();
   const edit = useAccountEdit(m.updateAccount, () => m.setEditError(null));
 
-  const { sensors, onDragEnd } = useAccountsReorder(accountsQ.data ?? []);
+  // Closed accounts sink to the bottom; this sort is re-applied on every
+  // refetch, so a cross-group drag visually snaps back after the mutation
+  // settles — that's intentional, the rule wins over the stored order.
+  const sortedAccounts = [...(accountsQ.data ?? [])].sort((x, y) => {
+    const xClosed = x.closedAt ? 1 : 0;
+    const yClosed = y.closedAt ? 1 : 0;
+    return xClosed - yClosed;
+  });
+
+  const { sensors, onDragEnd } = useAccountsReorder(sortedAccounts);
 
   // One Set for expanded-drawer account ids. Rendering many cards at once, so a
   // Set keeps toggling O(log n) and avoids per-card boolean state.
@@ -107,9 +116,9 @@ export function Accounts() {
           </div>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={(accountsQ.data ?? []).map((a) => a.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(accountsQ.data ?? []).map((a) => {
+            <SortableContext items={sortedAccounts.map((a) => a.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {sortedAccounts.map((a) => {
                   if (edit.editingId === a.id && edit.editDraft) {
                     return (
                       <div key={a.id} className="surface p-5 relative">
