@@ -287,20 +287,12 @@ and 6697 — Chrome blocks them as `ERR_UNSAFE_PORT`.
 If you actually want the app to stay loopback-only (single-machine access),
 prefix the port mappings in `docker-compose.yml` with `127.0.0.1:`.
 
-## Configuration env vars
+## Configuration
 
 `install.sh` writes random values for the secrets; you can edit `.env`
-freely if you want to customise.
-
-| Variable             | Default | Meaning                                                                 |
-|----------------------|---------|-------------------------------------------------------------------------|
-| `POSTGRES_USER`      | athena  | DB user.                                                                |
-| `POSTGRES_PASSWORD`  | random  | Generated.                                                              |
-| `POSTGRES_DB`        | athena  | DB name.                                                                |
-| `SESSION_SECRET`     | random  | ≥ 32 chars. Used to sign the session cookie.                            |
-| `COOKIE_SECURE`      | false   | Set to `true` only behind an HTTPS-terminating reverse proxy.           |
-| `FRONTEND_PORT`      | 8000    | Host port for the SPA.                                                  |
-| `BACKEND_PORT`       | 8001    | Host port for the Fastify API.                                          |
+freely if you want to customise. See
+[**docs/reference/configuration.md**](docs/reference/configuration.md)
+for the full table of environment variables, defaults, and meanings.
 
 ## Importing a statement
 
@@ -363,96 +355,19 @@ JSONB). Les changements faits en cours de session (clic sur une autre
 période, choix d'un autre compte) restent locaux ; pour changer la
 valeur *par défaut*, passez par Réglages.
 
-## Project layout
+## For contributors
 
-```
-.
-├── install.sh                          # secret generator (chmod 600 .env)
-├── docker-compose.yml
-├── .env.example
-├── backend/                            # Fastify 5 + Drizzle + Postgres / PGlite
-│   ├── src/
-│   │   ├── entry/                      # server.ts (Docker), tauri.ts (sidecar)
-│   │   ├── buildServer.ts              # route registration
-│   │   ├── env.ts
-│   │   ├── db/                         # Drizzle schema + hand-written SQL migrations
-│   │   ├── domain/                     # business logic
-│   │   │   ├── auth/                   # session cookie + argon2id + onboarding
-│   │   │   ├── imports/                # OFX / CSV / PDF parsers, dedup
-│   │   │   ├── rules/                  # matcher + retroactive recategorize
-│   │   │   ├── transfers/              # internal transfer detection
-│   │   │   ├── bank-sync/              # Enable Banking pull + scheduler
-│   │   │   ├── reconcile/              # balance checkpoints
-│   │   │   ├── backup/                 # export / import + optional AES-256-GCM
-│   │   │   ├── mcp/                    # MCP payload encryption
-│   │   │   └── settings/               # per-user JSONB defaults
-│   │   └── http/
-│   │       ├── plugins/                # auth cookie, rate limit, metrics
-│   │       └── routes/                 # one file per resource
-│   └── tests/                          # Vitest — RUN_DB_TESTS=1 gates integration
-├── frontend/                           # React 18 + Vite + Tailwind + TanStack Query
-│   ├── src/
-│   │   ├── main.tsx  App.tsx           # router + auth guard via /api/auth/me
-│   │   ├── api/                        # typed fetch client
-│   │   ├── components/                 # Sankey, BalanceChart, CategoryDonut, Layout
-│   │   ├── pages/                      # Login, Dashboard, Transactions, Comptes, …
-│   │   ├── lib/                        # format helpers, French decimal parser
-│   │   ├── contexts/  hooks/           # auth, privacy blur, settings
-│   │   └── i18n/  locales/             # EN + FR, 12 namespaces
-│   ├── nginx.conf                      # SPA fallback + /api proxy (Docker)
-│   ├── e2e/                            # Playwright — demo build
-│   ├── e2e-fullstack/                  # Playwright — full server + SPA
-│   └── e2e-installed/                  # Playwright — installed-app smoke
-├── shared/                             # api-contracts.ts — canonical entity shapes
-├── desktop/                            # Tauri 2 shell + bundled sidecar (Node + PGlite)
-├── mcp/                                # stdio MCP server — crypto-authed to backend
-├── website/                            # Docusaurus marketing + docs site
-└── docs/                               # users/ · contributors/ · reference/
-```
-
-## API surface (auth-protected unless noted)
-
-| Method | Path                                  | Notes                                  |
-|--------|---------------------------------------|----------------------------------------|
-| GET    | `/health`                             | Public. DB ping included.              |
-| GET    | `/api/onboarding/status`              | Public. Reports first-run state.       |
-| POST   | `/api/onboarding/create`              | Public. Creates the first user.        |
-| POST   | `/api/auth/login`                     | Public.                                |
-| POST   | `/api/auth/logout`                    |                                        |
-| GET    | `/api/auth/me`                        |                                        |
-| GET POST PUT DELETE | `/api/accounts[/…]`      |                                        |
-| GET POST PUT DELETE | `/api/account-filename-patterns[/…]` |                          |
-| GET POST PUT DELETE | `/api/categories[/…]`    |                                        |
-| GET POST PUT DELETE | `/api/rules[/…]`         |                                        |
-| GET POST PUT DELETE | `/api/transfer-rules[/…]` |                                       |
-| POST   | `/api/recategorize`                   | Bulk re-apply rules (preserves manual).|
-| GET    | `/api/transactions`                   | Paginated, filterable.                 |
-| GET    | `/api/transactions/:id`               |                                        |
-| PATCH  | `/api/transactions/:id`               | Inline category edit (→ manual).       |
-| POST   | `/api/imports`                        | Multipart file upload.                 |
-| GET    | `/api/imports[/:id]`                  | Import audit trail.                    |
-| GET    | `/api/tri/groups`                     | Bundle un-categorised by label.        |
-| POST   | `/api/tri/assign`                     | Bulk assign + optional rule creation.  |
-| GET POST PUT DELETE | `/api/budgets[/…]`      | Per-category monthly limits.           |
-| GET    | `/api/reports/balance`                | Totals per currency.                   |
-| GET    | `/api/reports/timeseries`             | Per-account running balance.           |
-| GET    | `/api/reports/categories`             | Per-category monthly aggregates.       |
-| GET    | `/api/reports/budget`                 | Planned vs actual for a month.         |
-| GET PATCH | `/api/settings`                    | Per-user defaults (JSONB blob).        |
-
-The table above is the historical core. The full current surface —
-splits, budgets & envelopes, recurring, bank sync, backup, CSV export,
-balance checkpoints, MCP, and more — is documented endpoint-by-endpoint
-in [docs/reference/api-endpoints.md](docs/reference/api-endpoints.md).
-
-## Migrations
-
-Hand-written SQL in `backend/src/db/migrations/*.sql`, applied in
-lexicographic order at server boot, tracked in a `schema_migrations`
-table. Each file runs in its own transaction; nothing skipped, nothing
-re-run. You can also use `drizzle-kit` (`cd backend && npm run db:generate`)
-to emit the next migration from `schema.ts`; the runner ignores the
-journal file Drizzle creates alongside.
+- **Project layout** — a top-to-bottom tour of `backend/`, `frontend/`,
+  `desktop/`, `mcp/`, `website/` and `docs/` lives in
+  [docs/contributors/code-map.md](docs/contributors/code-map.md).
+- **API surface** — every endpoint (splits, budgets & envelopes, recurring,
+  bank sync, backup, CSV export, balance checkpoints, MCP, …) is
+  documented in
+  [docs/reference/api-endpoints.md](docs/reference/api-endpoints.md).
+- **Database & migrations** — Drizzle schema plus hand-written SQL under
+  `backend/src/db/migrations/*.sql`, applied in lexicographic order at
+  boot, tracked in `schema_migrations`. See
+  [docs/contributors/database.md](docs/contributors/database.md).
 
 ## Metrics (Prometheus)
 
