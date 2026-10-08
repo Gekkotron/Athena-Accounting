@@ -45,9 +45,9 @@ plausible French bank data.
 
 ## Documentation
 
-Read the docs online at
-**<https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started>**
-— the same content also lives in [`docs/`](docs/README.md) in the repo,
+[![Read the docs](https://img.shields.io/badge/Read%20the%20docs-online-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started)
+
+The same content also lives in [`docs/`](docs/README.md) in the repo,
 split into a user track (install, importing, dashboard, security), a
 contributor track (architecture, code map, development, database), and
 a reference bucket (configuration, API, glossary).
