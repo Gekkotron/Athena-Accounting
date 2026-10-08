@@ -5,13 +5,14 @@ import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
 import { parseQif } from './qif-parser.js';
+import { parseBai2 } from './bai2-parser.js';
 import { parseMt940 } from './mt940-parser.js';
 import { parseXlsx } from './xlsx-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
 import { findFuzzyMatches, type FuzzyCandidate } from '../dedup/fuzzy-match.js';
 
-export type PreviewFormat = 'ofx' | 'csv' | 'camt' | 'qif' | 'mt940' | 'xlsx';
+export type PreviewFormat = 'ofx' | 'csv' | 'camt' | 'qif' | 'mt940' | 'xlsx' | 'bai2';
 
 export interface PreviewRow {
   date: string;
@@ -46,6 +47,7 @@ function parse(buf: Buffer, format: Exclude<PreviewFormat, 'xlsx'>): ParsedTrans
   if (format === 'csv') return parseFrenchCsv(buf);
   if (format === 'qif') return parseQif(buf);
   if (format === 'mt940') return parseMt940(buf);
+  if (format === 'bai2') return parseBai2(buf);
   return parseCamt(buf);
 }
 

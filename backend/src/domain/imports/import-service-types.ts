@@ -2,7 +2,7 @@
 // split submodules (run-import-transaction, post-commit-fan-out) don't
 // have to circularly import from import-service.ts.
 
-export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync' | 'camt' | 'qif' | 'mt940' | 'xlsx';
+export type ImportFormat = 'ofx' | 'csv' | 'pdf' | 'bank-sync' | 'camt' | 'qif' | 'mt940' | 'xlsx' | 'bai2';
 
 export interface ImportResult {
   fileImportId: number;
