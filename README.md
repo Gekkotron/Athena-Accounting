@@ -43,6 +43,15 @@ demo** button restores the seed. Open it to walk the dashboard,
 categorise transactions, and see budgets against six months of
 plausible French bank data.
 
+## Documentation
+
+Read the docs online at
+**<https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started>**
+— the same content also lives in [`docs/`](docs/README.md) in the repo,
+split into a user track (install, importing, dashboard, security), a
+contributor track (architecture, code map, development, database), and
+a reference bucket (configuration, API, glossary).
+
 ## Install
 
 Two supported paths from the same codebase — pick the one that matches
@@ -106,15 +115,6 @@ database driver, and the HTTP hop differ. See
 [**docs/contributors/architecture.md**](docs/contributors/architecture.md)
 for the deep read (component split, request flow of a real OFX import,
 libraries and why each one).
-
-## Documentation
-
-Read the docs online at
-**<https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started>**
-— the same content also lives in [`docs/`](docs/README.md) in the repo,
-split into a user track (install, importing, dashboard, security), a
-contributor track (architecture, code map, development, database), and
-a reference bucket (configuration, API, glossary).
 
 ## Features
 
