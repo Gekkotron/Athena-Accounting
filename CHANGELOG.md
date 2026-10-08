@@ -33,6 +33,23 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
   `.swift`, `.xlsx`, `.bai`, `.bai2` in addition to the previously
   supported extensions.
 
+### Documentation
+- README landing-page one-liners, the Supported Formats table in
+  `docs/users/importing.md` (also plugging the previously-undocumented
+  CAMT row), the walkthrough intro, and the dropzone label (EN + FR)
+  now list the four new formats. Roadmap trimmed — CAMT/MT940/QIF are
+  shipped; QBO and FinTS remain. (`c96a607`)
+- README `## Documentation` section repositioned just under
+  `## Try the demo`, so readers see where the full docs live before
+  scrolling through Install / Architecture / Features. (`e96f635`)
+- Added a shields.io button for the documentation link mirroring the
+  Try the demo badge — same `for-the-badge` style and `#8b5cf6`
+  accent so the two landing sections read as a visual family.
+  (`391c8cd`)
+- Release note `docs/RELEASES/v1.0.0-desktop-rc9.md` published,
+  covering the import-formats expansion with manual
+  cross-platform verification checklist. (`d7ae176`)
+
 ### Notes
 - Legacy binary `.xls` (BIFF) is deliberately **not** supported —
   `exceljs` only reads Open XML. Re-save as `.xlsx` in Excel or
