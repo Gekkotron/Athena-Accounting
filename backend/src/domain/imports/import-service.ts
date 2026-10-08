@@ -2,6 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accountFilenamePatterns } from '../../db/schema.js';
 import { parseQif } from './qif-parser.js';
+import { parseMt940 } from './mt940-parser.js';
 import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
@@ -36,6 +37,7 @@ export function inferFormat(filename: string): Exclude<ImportFormat, 'bank-sync'
   if (ext === 'pdf') return 'pdf';
   if (ext === 'xml') return 'camt';
   if (ext === 'qif') return 'qif';
+  if (ext === 'mt940' || ext === 'sta' || ext === 'swift') return 'mt940';
   return null;
 }
 
@@ -44,6 +46,7 @@ function parseFile(buf: Buffer, format: ImportFormat): ParsedTransaction[] {
   if (format === 'csv') return parseFrenchCsv(buf);
   if (format === 'camt') return parseCamt(buf);
   if (format === 'qif') return parseQif(buf);
+  if (format === 'mt940') return parseMt940(buf);
   throw new Error(`parseFile: format ${format} not handled here`);
 }
 
