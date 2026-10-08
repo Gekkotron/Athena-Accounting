@@ -38,10 +38,10 @@ export function UploadForm({
   const [batch, setBatch] = useState<BatchState | null>(null);
   const pending = batch?.phase === 'running';
 
-  // Bank statements ship as .ofx/.qfx/.csv/.pdf; scanned statements as JPEG/PNG/HEIC.
+  // Bank statements ship as .ofx/.qfx/.qif/.csv/.pdf; scanned statements as JPEG/PNG/HEIC.
   // Drop anything else so a stray Thumbs.db / .DS_Store from a directory pick
   // doesn't blow up the loop.
-  const acceptFile = (name: string) => /\.(ofx|qfx|csv|pdf|jpe?g|png|webp|heic)$/i.test(name);
+  const acceptFile = (name: string) => /\.(ofx|qfx|qif|csv|pdf|jpe?g|png|webp|heic)$/i.test(name);
 
   const pickFiles = (list: FileList | null) => {
     if (!list) { setFiles([]); return; }
@@ -190,7 +190,7 @@ export function UploadForm({
               ref={fileRef}
               type="file"
               multiple
-              accept=".ofx,.qfx,.csv,.pdf,.jpg,.jpeg,.png,.webp,.heic,image/jpeg,image/png,image/webp,image/heic"
+              accept=".ofx,.qfx,.csv,.pdf,.qif,.jpg,.jpeg,.png,.webp,.heic,image/jpeg,image/png,image/webp,image/heic"
               onChange={(e) => pickFiles(e.target.files)}
               disabled={pending}
               className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"

@@ -65,7 +65,7 @@ export async function importsRoutes(app: FastifyInstance): Promise<void> {
     const buffer = await data.toBuffer();
     const format = inferFormat(filename);
     if (!format) {
-      return reply.code(400).send({ error: 'unsupported file extension (expected .ofx, .qfx, .csv, .pdf, or .xml)' });
+      return reply.code(400).send({ error: 'unsupported file extension (expected .ofx, .qfx, .csv, .pdf, .xml, or .qif)' });
     }
 
     const q = req.query as { accountId?: string };
