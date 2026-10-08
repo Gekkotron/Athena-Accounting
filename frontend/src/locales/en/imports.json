@@ -17,7 +17,7 @@
   },
   "uploadForm": {
     "dropzone": {
-      "label": "File(s) — .ofx · .qfx · .csv · .pdf · .jpg · .png · .heic",
+      "label": "File(s) — .ofx · .qfx · .csv · .xlsx · .xml · .mt940 · .qif · .bai · .pdf · .jpg · .png · .heic",
       "hint": "Drop a file here or",
       "browse": "browse"
     },

@@ -5,10 +5,11 @@
 
 **Self-hosted personal finance for people who want YNAB-style budgeting
 without a cloud account.** Imports every statement format your bank
-spits out (OFX, CSV, PDF, scanned PDF), gives you two budgeting
-paradigms side-by-side (loose per-category *Caps* and strict zero-based
-*Envelopes*), and renders your money as a Sankey diagram you can
-actually read. Your ledger, your box, your rules.
+spits out (OFX, CSV, Excel, CAMT.053, MT940, QIF, BAI2, PDF, scanned
+PDF), gives you two budgeting paradigms side-by-side (loose
+per-category *Caps* and strict zero-based *Envelopes*), and renders
+your money as a Sankey diagram you can actually read. Your ledger,
+your box, your rules.
 
 <p align="center">
   <img src="website/static/img/walkthroughs/en/reports-01-dashboard.png" alt="Athena dashboard — balance curve, account cards, budgets strip" width="32%" />
@@ -25,8 +26,10 @@ actually read. Your ledger, your box, your rules.
 - **Budgets, two ways.** *Caps* (a soft per-category limit the app warns
   you about) and *Envelopes* (strict YNAB-style allocation of every
   euro). Pick either at `/budgets`, switch any time, same data.
-- **Imports that don't fight you.** OFX, French CSV, PDF statements with
-  per-bank templates painted once, scanned PDFs through local OCR
+- **Imports that don't fight you.** OFX, French CSV, Excel (`.xlsx`),
+  CAMT.053 (ISO 20022 XML), MT940 (SWIFT), QIF (Quicken / legacy
+  software), BAI2 (US cash management), PDF statements with per-bank
+  templates painted once, scanned PDFs through local OCR
   (`tesseract.js`, LAN-only), and optional read-only bank sync via
   Enable Banking's PSD2 bridge.
 
@@ -301,12 +304,14 @@ for the full table of environment variables, defaults, and meanings.
    `opening_balance + SUM(amount WHERE date >= opening_date)`).
 2. *(Optional)* add filename patterns in the same tab so the importer
    resolves the target account automatically.
-3. In **Imports**, upload your `.ofx` / `.qfx` / `.csv` / `.pdf` file. The
-   response surfaces inserted vs deduped counts — a "0 inserted" outcome
-   on a re-import means the dedup keys matched, not that anything went
-   wrong. For PDFs, the first import of a new bank format opens a small
-   wizard to define the table layout once; future imports of the same
-   format go through automatically.
+3. In **Imports**, upload your `.ofx` / `.qfx` / `.csv` / `.xlsx` /
+   `.xml` (CAMT) / `.mt940` / `.sta` / `.swift` / `.qif` / `.bai` /
+   `.bai2` / `.pdf` file. The response surfaces inserted vs deduped
+   counts — a "0 inserted" outcome on a re-import means the dedup keys
+   matched, not that anything went wrong. For PDFs, the first import
+   of a new bank format opens a small wizard to define the table
+   layout once; future imports of the same format go through
+   automatically.
 
 CSV format the parser expects:
 
@@ -477,9 +482,9 @@ full brainstorm with per-item context.
 
 **Import surface expansion**
 
-- CAMT.053 / CAMT.052 (ISO 20022 SEPA XML) — widely exported by EU banks
-- MT940 (SWIFT text)
-- QIF (legacy, useful for old-software migration)
+- QBO (QuickBooks Web Connect) — OFX variant with a QuickBooks product tag
+- FinTS / HBCI (German/Austrian online-banking protocol — bank-sync-shaped
+  work, not a parser)
 - Migration paths from YNAB, Firefly III, GnuCash
 
 **Budgeting depth**

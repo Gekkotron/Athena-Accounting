@@ -12,6 +12,37 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+- **Four new import formats land together.** Athena now reads **QIF**
+  (Quicken Interchange Format — Bank/CCard/Cash/Oth sections, FR+US
+  decimal/date variants), **MT940** (SWIFT pre-ISO20022 bank statements —
+  `:61:` + `:86:` with structured-subfield stripping, UTF-8 / Windows-1252
+  auto-decode, YY ≥ 80 → 19xx century rule, bank reference used as
+  dedup fingerprint), **Excel `.xlsx`** (via `exceljs` — Open XML only,
+  reuses the CSV header-detection heuristic for date/label/`Montant`
+  or `Débit`+`Crédit` columns, Excel serial dates and real Date cells
+  both recognised, header row scanned in the first 20 rows), and
+  **BAI2** (US cash-management — `01`/`02`/`03`/`16`/`88` records, type
+  codes `100–399` credits and `400–699` debits, cents→decimal, date
+  from `02` group header, bank-ref dedup fingerprint).
+- Migration `0046_import_format_qif_mt940_xlsx_bai2.sql` extends the
+  `import_format` Postgres enum with the four new values.
+
+### Changed
+- Upload form `accept` list now covers `.qif`, `.mt940`, `.sta`,
+  `.swift`, `.xlsx`, `.bai`, `.bai2` in addition to the previously
+  supported extensions.
+
+### Notes
+- Legacy binary `.xls` (BIFF) is deliberately **not** supported —
+  `exceljs` only reads Open XML. Re-save as `.xlsx` in Excel or
+  LibreOffice. Chosen over SheetJS to keep a single actively-maintained
+  spreadsheet dependency.
+- FinTS / HBCI (German/Austrian online banking) is a client-server
+  protocol with its own session, encryption, and TAN flow — closer in
+  shape to the Enable Banking bank-sync than to a file parser, so
+  deferred to a later release.
+
 ## [1.0.0-rc.8] - 2026-10-04
 
 Re-cut of rc.7 — same product; the rc.7 Release workflow got past the

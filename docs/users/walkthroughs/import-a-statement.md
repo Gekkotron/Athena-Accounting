@@ -5,11 +5,11 @@ sidebar_position: 1
 
 # Import a bank statement
 
-Athena accepts **OFX**, **QFX**, **CSV** (French format) and **PDF** bank statements. This guide walks you from dropping the file to verifying the balance.
+Athena accepts every format your bank is likely to emit — **OFX / QFX**, French **CSV**, **Excel** (`.xlsx`), **CAMT.053 / CAMT.052** (ISO 20022 SEPA XML), **MT940** (SWIFT), **QIF** (Quicken / legacy software), **BAI2** (US cash management), and **PDF** statements. This guide walks you from dropping the file to verifying the balance.
 
 ## 1. Open the Imports page
 
-From the sidebar, expand **Data** then click **Imports**. You land on the drop zone: the top banner recaps the accepted formats (OFX Latin‑1/UTF‑8, French CSV with `;` separator and comma decimal, `DD/MM/YYYY` dates, bank-statement PDFs).
+From the sidebar, expand **Data** then click **Imports**. You land on the drop zone: the top banner recaps the accepted extensions. The specifics (OFX Latin‑1/UTF‑8 auto-detect, French CSV with `;` separator and comma decimal, Excel sheets with a header row anywhere in the first 20 rows, bank-statement PDFs, …) are covered in the [full import guide](../importing.md).
 
 ![Imports page](/img/walkthroughs/en/import-01-imports-page.png)
 

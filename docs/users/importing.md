@@ -16,6 +16,11 @@ something doesn't import cleanly.
 |--------|---------------------|
 | **OFX / QFX** | Bank-standard exchange format. Athena parses SGML-style OFX in Latin-1 (Windows-1252) or UTF-8 — encoding is detected from the OFX header. Import is one drop-and-done step. |
 | **CSV (French banks)** | Auto-detected separator (`;` or `,`), French date format `JJ/MM/AAAA`, French decimal comma. Header names are matched accent- and case-insensitively. Athena expects a date column, a label column, and either a `Montant` column or a `Débit` + `Crédit` pair. |
+| **Excel (`.xlsx`)** | Open XML spreadsheets. Same header-detection rules as CSV (date / label / `Montant` or `Débit`+`Crédit`). Real Excel date cells, Excel serial dates, and string dates are all recognised. The header row doesn't have to be the first row — the first 20 rows are scanned. Legacy binary `.xls` isn't supported; re-save as `.xlsx` in Excel or LibreOffice. |
+| **CAMT.053 / CAMT.052** | ISO 20022 SEPA XML statements. Widely emitted by EU banks alongside PDF. One drop-and-done step. |
+| **MT940 / `.sta` / `.swift`** | SWIFT pre-ISO 20022 bank-statement format. UTF-8 or Windows-1252, 2-digit years treated as 19xx when ≥ 80 else 20xx, bank reference from `:61:` used as the dedup fingerprint when present. |
+| **QIF** | Quicken Interchange Format — exported by Quicken, GnuCash, Moneydance, and most legacy accounting apps. Bank, credit-card, cash, and asset/liability sections are supported. Investment sections aren't. Dates default to `MM/DD/YYYY` and flip to `DD/MM/YYYY` when a day > 12 forces disambiguation. |
+| **BAI2** | US cash-management format (`.bai`, `.bai2`). Record types `01`/`02`/`03`/`16`/`88` are parsed; type codes `100–399` are credits and `400–699` are debits. The date comes from the `02` group header; amounts are read in cents. |
 | **PDF** | Bank statements as PDF. First statement from a new bank walks through the template wizard (below). Later statements in the same format import automatically. |
 
 You can drop a **single file**, **several files at once**, or **a
