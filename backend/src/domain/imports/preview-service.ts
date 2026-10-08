@@ -4,11 +4,12 @@ import { transactions } from '../../db/schema.js';
 import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
+import { parseQif } from './qif-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
 import { findFuzzyMatches, type FuzzyCandidate } from '../dedup/fuzzy-match.js';
 
-export type PreviewFormat = 'ofx' | 'csv' | 'camt';
+export type PreviewFormat = 'ofx' | 'csv' | 'camt' | 'qif';
 
 export interface PreviewRow {
   date: string;
@@ -41,6 +42,7 @@ export interface PreviewResult {
 function parse(buf: Buffer, format: PreviewFormat): ParsedTransaction[] {
   if (format === 'ofx') return parseOfx(buf);
   if (format === 'csv') return parseFrenchCsv(buf);
+  if (format === 'qif') return parseQif(buf);
   return parseCamt(buf);
 }
 
