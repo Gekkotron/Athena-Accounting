@@ -39,7 +39,7 @@ export function inferFormat(filename: string): Exclude<ImportFormat, 'bank-sync'
   if (ext === 'xml') return 'camt';
   if (ext === 'qif') return 'qif';
   if (ext === 'mt940' || ext === 'sta' || ext === 'swift') return 'mt940';
-  if (ext === 'xlsx' || ext === 'xls') return 'xlsx';
+  if (ext === 'xlsx') return 'xlsx';
   return null;
 }
 

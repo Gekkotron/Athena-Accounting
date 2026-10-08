@@ -14,7 +14,7 @@ export async function importsPreviewRoutes(app: FastifyInstance): Promise<void> 
     const buffer = await data.toBuffer();
     const format = inferFormat(filename);
     if (!format) {
-      return reply.code(400).send({ error: 'unsupported file extension (expected .ofx, .qfx, .csv, .pdf, .xml, .qif, .mt940, .sta, .swift, .xlsx, or .xls)' });
+      return reply.code(400).send({ error: 'unsupported file extension (expected .ofx, .qfx, .csv, .pdf, .xml, .qif, .mt940, .sta, .swift, or .xlsx)' });
     }
     if (format === 'pdf') {
       return reply.code(400).send({ error: 'preview not supported for PDF, use the template wizard' });

@@ -41,7 +41,7 @@ export function UploadForm({
   // Bank statements ship as .ofx/.qfx/.qif/.mt940/.csv/.pdf; scanned statements as JPEG/PNG/HEIC.
   // Drop anything else so a stray Thumbs.db / .DS_Store from a directory pick
   // doesn't blow up the loop.
-  const acceptFile = (name: string) => /\.(ofx|qfx|qif|mt940|sta|swift|csv|xlsx|xls|pdf|jpe?g|png|webp|heic)$/i.test(name);
+  const acceptFile = (name: string) => /\.(ofx|qfx|qif|mt940|sta|swift|csv|xlsx|pdf|jpe?g|png|webp|heic)$/i.test(name);
 
   const pickFiles = (list: FileList | null) => {
     if (!list) { setFiles([]); return; }
@@ -190,7 +190,7 @@ export function UploadForm({
               ref={fileRef}
               type="file"
               multiple
-              accept=".ofx,.qfx,.csv,.pdf,.qif,.mt940,.sta,.swift,.jpg,.jpeg,.png,.webp,.heic,.xlsx,.xls,image/jpeg,image/png,image/webp,image/heic,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              accept=".ofx,.qfx,.csv,.pdf,.qif,.mt940,.sta,.swift,.jpg,.jpeg,.png,.webp,.heic,.xlsx,image/jpeg,image/png,image/webp,image/heic,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onChange={(e) => pickFiles(e.target.files)}
               disabled={pending}
               className="block text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-300 file:text-ink-950 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-sage-200 file:transition file:cursor-pointer"
