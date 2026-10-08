@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# .githooks/pre-push — fast local gate before CI sees the push.
+#
+# Catches the two biggest sources of CI-failure emails:
+#   • TypeScript errors (tsc --noEmit)
+#   • unit-test regressions (vitest)
+#   • ESLint errors (max-lines cap is a CI error, trivial to miss locally)
+#
+# Playwright suites (demo + fullstack) are deliberately NOT run — they are
+# heavy (minutes), the fullstack one needs Docker, and most CI failures are
+# in the three suites above. Flaky e2e failures aren't worth gating pushes.
+#
+# Bypass for an emergency (hotfix, docs-only revert, etc.):
+#   git push --no-verify
+#
+# Activate once per clone:
+#   git config core.hooksPath .githooks
+
+set -u -o pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+# Colors — only if stderr is a terminal.
+if [ -t 2 ]; then
+  C_OK=$'\033[32m'; C_FAIL=$'\033[31m'; C_DIM=$'\033[2m'; C_RST=$'\033[0m'
+else
+  C_OK=''; C_FAIL=''; C_DIM=''; C_RST=''
+fi
+
+step() { printf '%s→%s %s\n' "$C_DIM" "$C_RST" "$1" >&2; }
+ok()   { printf '%s✓%s %s\n' "$C_OK"  "$C_RST" "$1" >&2; }
+fail() {
+  printf '%s✗%s %s\n' "$C_FAIL" "$C_RST" "$1" >&2
+  printf '\n%spre-push blocked.%s Fix locally or bypass with:\n  git push --no-verify\n' \
+    "$C_FAIL" "$C_RST" >&2
+  exit 1
+}
+
+run() {
+  local label="$1"; shift
+  step "$label"
+  local output
+  if ! output="$("$@" 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    fail "$label failed"
+  fi
+  ok "$label"
+}
+
+printf '%spre-push gate — tsc + lint + vitest (both sides).%s\n' "$C_DIM" "$C_RST" >&2
+printf '%sSkip in an emergency with: git push --no-verify%s\n\n' "$C_DIM" "$C_RST" >&2
+
+run "backend : tsc"    bash -c 'cd backend  && npx tsc --noEmit'
+run "backend : lint"   bash -c 'cd backend  && npx eslint .'
+run "backend : tests"  bash -c 'cd backend  && npx vitest run'
+run "frontend: tsc"    bash -c 'cd frontend && npx tsc --noEmit'
+run "frontend: lint"   bash -c 'cd frontend && npx eslint .'
+run "frontend: tests"  bash -c 'cd frontend && npx vitest run'
+
+printf '\n%sall green — pushing.%s\n' "$C_OK" "$C_RST" >&2

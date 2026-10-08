@@ -83,6 +83,26 @@ CI (`.github/workflows/ci.yml`) runs the full grid on every push — so if a
 suite is red locally, it will be red in CI too. Run at least the backend
 unit + frontend unit suites before pushing.
 
+### Pre-push hook (automate the local gate)
+
+A shared pre-push hook at `.githooks/pre-push` runs the fast gate for you
+— `tsc` + `eslint` + `vitest` on both backend and frontend (~90 s total,
+no Docker needed). Playwright suites are intentionally not included
+(they're heavy and the fullstack one requires Docker).
+
+Activate it **once per clone**:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+From then on, every `git push` is gated locally. In a true emergency —
+hotfix, docs-only revert, confirmed-flaky CI job — bypass with:
+
+```bash
+git push --no-verify
+```
+
 ## Maintainer bandwidth
 
 Athena Accounting is maintained by a single person in spare time. That means:
