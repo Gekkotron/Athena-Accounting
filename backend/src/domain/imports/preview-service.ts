@@ -6,11 +6,12 @@ import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
 import { parseQif } from './qif-parser.js';
 import { parseMt940 } from './mt940-parser.js';
+import { parseXlsx } from './xlsx-parser.js';
 import { normalizeLabel } from './normalize.js';
 import { computeDedupKey } from './dedup.js';
 import { findFuzzyMatches, type FuzzyCandidate } from '../dedup/fuzzy-match.js';
 
-export type PreviewFormat = 'ofx' | 'csv' | 'camt' | 'qif' | 'mt940';
+export type PreviewFormat = 'ofx' | 'csv' | 'camt' | 'qif' | 'mt940' | 'xlsx';
 
 export interface PreviewRow {
   date: string;
@@ -40,12 +41,18 @@ export interface PreviewResult {
   fuzzyDuplicateRows: FuzzyDuplicatePreviewRow[];
 }
 
-function parse(buf: Buffer, format: PreviewFormat): ParsedTransaction[] {
+function parse(buf: Buffer, format: Exclude<PreviewFormat, 'xlsx'>): ParsedTransaction[] {
   if (format === 'ofx') return parseOfx(buf);
   if (format === 'csv') return parseFrenchCsv(buf);
   if (format === 'qif') return parseQif(buf);
   if (format === 'mt940') return parseMt940(buf);
   return parseCamt(buf);
+}
+
+// ExcelJS is async-only, so xlsx is handled here and the sync parsers via parse().
+async function parseAsync(buf: Buffer, format: PreviewFormat): Promise<ParsedTransaction[]> {
+  if (format === 'xlsx') return parseXlsx(buf);
+  return parse(buf, format);
 }
 
 export async function previewImport(opts: {
@@ -55,7 +62,7 @@ export async function previewImport(opts: {
   format: PreviewFormat;
   buffer: Buffer;
 }): Promise<PreviewResult> {
-  const parsed = parse(opts.buffer, opts.format);
+  const parsed = await parseAsync(opts.buffer, opts.format);
   if (parsed.length === 0) {
     return {
       filename: opts.filename,

@@ -3,6 +3,7 @@ import { db } from '../../db/client.js';
 import { accountFilenamePatterns } from '../../db/schema.js';
 import { parseQif } from './qif-parser.js';
 import { parseMt940 } from './mt940-parser.js';
+import { parseXlsx } from './xlsx-parser.js';
 import { parseOfx, type ParsedTransaction } from './ofx-parser.js';
 import { parseFrenchCsv } from './csv-parser.js';
 import { parseCamt } from './camt-parser.js';
@@ -38,6 +39,7 @@ export function inferFormat(filename: string): Exclude<ImportFormat, 'bank-sync'
   if (ext === 'xml') return 'camt';
   if (ext === 'qif') return 'qif';
   if (ext === 'mt940' || ext === 'sta' || ext === 'swift') return 'mt940';
+  if (ext === 'xlsx' || ext === 'xls') return 'xlsx';
   return null;
 }
 
@@ -50,6 +52,13 @@ function parseFile(buf: Buffer, format: ImportFormat): ParsedTransaction[] {
   throw new Error(`parseFile: format ${format} not handled here`);
 }
 
+// parseFile stays sync for the other parsers; ExcelJS is async-only, so xlsx
+// goes through this wrapper to avoid making every parseFile caller async.
+async function parseFileAsync(buf: Buffer, format: ImportFormat): Promise<ParsedTransaction[]> {
+  if (format === 'xlsx') return parseXlsx(buf);
+  return parseFile(buf, format);
+}
+
 export async function runImport(opts: {
   filename: string;
   accountId: number;
@@ -60,7 +69,7 @@ export async function runImport(opts: {
   skipParsedIndices?: number[];
 }): Promise<ImportResult> {
   const tStart = Date.now();
-  const parsed = opts.prepared ?? parseFile(opts.buffer!, opts.format);
+  const parsed = opts.prepared ?? await parseFileAsync(opts.buffer!, opts.format);
   const tParsed = Date.now();
   trace(`start file=${opts.filename} parsed=${parsed.length} parse=${tParsed - tStart}ms`);
 

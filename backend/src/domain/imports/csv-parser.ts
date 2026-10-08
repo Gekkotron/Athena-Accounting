@@ -11,14 +11,14 @@ import { parseFrenchDate, parseFrenchAmount, parseAmountAuto } from './french-nu
 // at least: a date column, a label column, and either a signed Montant column
 // or a Débit + Crédit pair.
 
-const DATE_HEADERS = ['date', 'date operation', 'date opération', 'date comptable', 'date valeur', 'date de l\'operation', "date de l'opération"];
-const LABEL_HEADERS = ['libelle', 'libellé', 'libelle operation', 'libellé opération', 'description', 'details', 'détails', 'communication'];
-const AMOUNT_HEADERS = ['montant', 'amount', 'mouvement'];
-const DEBIT_HEADERS = ['debit', 'débit'];
-const CREDIT_HEADERS = ['credit', 'crédit'];
-const MEMO_HEADERS = ['notes', 'memo', 'commentaire', 'remarque'];
+export const DATE_HEADERS = ['date', 'date operation', 'date opération', 'date comptable', 'date valeur', 'date de l\'operation', "date de l'opération"];
+export const LABEL_HEADERS = ['libelle', 'libellé', 'libelle operation', 'libellé opération', 'description', 'details', 'détails', 'communication'];
+export const AMOUNT_HEADERS = ['montant', 'amount', 'mouvement'];
+export const DEBIT_HEADERS = ['debit', 'débit'];
+export const CREDIT_HEADERS = ['credit', 'crédit'];
+export const MEMO_HEADERS = ['notes', 'memo', 'commentaire', 'remarque'];
 
-function strip(s: string): string {
+export function strip(s: string): string {
   return s
     .toLowerCase()
     .normalize('NFD')
@@ -26,7 +26,7 @@ function strip(s: string): string {
     .trim();
 }
 
-function findHeader(headers: string[], candidates: string[]): string | null {
+export function findHeader(headers: string[], candidates: string[]): string | null {
   const stripped = headers.map((h) => ({ raw: h, norm: strip(h) }));
   for (const c of candidates) {
     const cn = strip(c);
