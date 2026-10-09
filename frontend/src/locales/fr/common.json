@@ -24,5 +24,22 @@
     "convertedFrom_other": "Convertie depuis {{count}} devises · Ajuster",
     "unmappedWarning": "Devises non converties — ajoutez un taux pour les inclure dans le total :",
     "addRate": "Ajouter un taux"
+  },
+  "shortcuts": {
+    "title": "Raccourcis clavier",
+    "groups": {
+      "transactions": "Transactions",
+      "global": "Global"
+    },
+    "items": {
+      "nextRow": "Descendre le curseur",
+      "prevRow": "Remonter le curseur",
+      "edit": "Modifier la ligne sélectionnée",
+      "delete": "Supprimer la ligne sélectionnée",
+      "focusSearch": "Focaliser la recherche",
+      "openSheet": "Afficher cet aide-mémoire",
+      "closeDialog": "Fermer la fenêtre"
+    },
+    "footerHint": "Les raccourcis sont inactifs pendant la saisie dans un champ."
   }
 }

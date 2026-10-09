@@ -1,6 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { docsUrlFor } from './docsUrl';
+import { useShortcuts } from '../ShortcutsCheatsheet';
+
+function KeyboardIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden>
+      <rect x="1.5" y="4" width="13" height="8" rx="1.5" />
+      <path d="M4 7h0M6 7h0M8 7h0M10 7h0M12 7h0M4.5 9.5h7" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function GitHubIcon() {
   return (
@@ -25,6 +35,7 @@ export function SiteFooter() {
   const { t } = useTranslation('layout');
   const { pathname } = useLocation();
   const docsHref = docsUrlFor(pathname);
+  const { open: openShortcuts } = useShortcuts();
   return (
     <footer className="mt-16 pt-6 border-t border-ink-800/60 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-ink-500">
       <div className="flex items-center gap-1.5">
@@ -40,15 +51,21 @@ export function SiteFooter() {
           {t('footer.githubLink')}
         </a>
       </div>
-      <a
-        href={docsHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-      >
-        <BookIcon />
-        {t('footer.docsLink')}
-      </a>
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={openShortcuts} className={linkClass}>
+          <KeyboardIcon />
+          {t('footer.shortcutsLink')}
+        </button>
+        <a
+          href={docsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+        >
+          <BookIcon />
+          {t('footer.docsLink')}
+        </a>
+      </div>
     </footer>
   );
 }

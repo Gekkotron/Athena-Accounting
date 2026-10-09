@@ -24,5 +24,22 @@
     "convertedFrom_other": "Converted from {{count}} currencies · Adjust",
     "unmappedWarning": "Currencies not converted — add a rate to include them in the total:",
     "addRate": "Add rate"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "groups": {
+      "transactions": "Transactions",
+      "global": "Global"
+    },
+    "items": {
+      "nextRow": "Move cursor down",
+      "prevRow": "Move cursor up",
+      "edit": "Edit selected row",
+      "delete": "Delete selected row",
+      "focusSearch": "Focus search",
+      "openSheet": "Open this cheat sheet",
+      "closeDialog": "Close dialog"
+    },
+    "footerHint": "Shortcuts are inert while typing in an input."
   }
 }

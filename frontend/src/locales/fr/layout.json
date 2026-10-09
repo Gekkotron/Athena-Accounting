@@ -64,7 +64,8 @@
  },
  "footer": {
   "githubLink": "Projet sur GitHub",
-  "docsLink": "Documentation"
+  "docsLink": "Documentation",
+  "shortcutsLink": "Raccourcis clavier"
  },
  "user": {
   "editProfile": "Modifier mon profil",

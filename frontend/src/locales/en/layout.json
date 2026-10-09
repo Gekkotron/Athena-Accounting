@@ -64,7 +64,8 @@
  },
  "footer": {
   "githubLink": "View on GitHub",
-  "docsLink": "Documentation"
+  "docsLink": "Documentation",
+  "shortcutsLink": "Keyboard shortcuts"
  },
  "user": {
   "editProfile": "Edit my profile",

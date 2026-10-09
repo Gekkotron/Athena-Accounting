@@ -19,6 +19,7 @@ import { TourBubble } from './components/TourBubble';
 import { LockScreen } from './components/LockScreen';
 import { Layout } from './components/Layout';
 import { HubLayout, type HubTab } from './components/HubLayout';
+import { ShortcutsProvider } from './components/ShortcutsCheatsheet';
 
 // Route-level code splitting (perf audit 2026-09-11). Each page component
 // lands in its own Vite chunk, fetched on demand when the route is first
@@ -194,6 +195,7 @@ export default function App() {
       <LockProvider>
       <TipsProvider>
         <TourProvider>
+          <ShortcutsProvider>
           <TourBubble />
           <LockScreen username={user.username} />
           <Routes>
@@ -255,6 +257,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
           </Routes>
+          </ShortcutsProvider>
         </TourProvider>
       </TipsProvider>
       </LockProvider>
