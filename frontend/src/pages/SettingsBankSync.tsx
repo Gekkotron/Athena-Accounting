@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import type { Account } from '../api/types';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorState, LoadingBlock } from '../components/StateBlocks';
+import { SectionRule } from '../components/SectionRule';
 import { SettingsBankSyncCredentials } from './SettingsBankSyncCredentials';
 import { BankConnectionCard } from './BankConnectionCard';
 import { BankSyncSchedule } from './BankSyncSchedule';
@@ -93,7 +94,7 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
           </div>
 
           <div className="flex flex-col gap-2">
-            <div className="label">{t('settings.bankSync.connect.label')}</div>
+            <SectionRule>{t('settings.bankSync.connect.label')}</SectionRule>
             <div className="flex items-center gap-2">
               <select
                 className="input flex-1"
@@ -169,7 +170,7 @@ export function SettingsBankSync({ accounts }: { accounts: Account[] }): JSX.Ele
           <BankSyncSchedule auto={statusQ.data?.autoSync} />
 
           <div className="flex flex-col gap-3">
-            <div className="label">{t('settings.bankSync.connections.label')}</div>
+            <SectionRule>{t('settings.bankSync.connections.label')}</SectionRule>
             {connections.length === 0 && (
               <p className="text-sm text-ink-400">{t('settings.bankSync.connections.empty')}</p>
             )}

@@ -5,6 +5,7 @@ import { DEFAULTS } from '../../lib/settings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTips } from '../../contexts/TipsContext';
 import { LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 
 export function SettingsGeneral(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -35,9 +36,9 @@ export function SettingsGeneral(): JSX.Element {
           </button>
         </section>
 
-        <section className="pt-4 border-t border-ink-800/60">
-          <div className="label">{t('settings.help.sectionLabel')}</div>
-          <p className="text-sm text-ink-400 mt-1 mb-3">
+        <section className="flex flex-col gap-3">
+          <SectionRule>{t('settings.help.sectionLabel')}</SectionRule>
+          <p className="text-sm text-ink-400">
             {t('settings.help.description')}
           </p>
           <button

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { SavedChip } from '../Settings-fields';
 import { useSettingsFlash } from './useSettingsFlash';
 import { useAccounts } from '../../lib/useReferenceData';
@@ -37,7 +38,7 @@ export function SettingsTransactions(): JSX.Element {
       )}
 
       <div className="surface p-6 flex flex-col gap-4">
-        <div className="label">{t('settings.transactionsSection.label')}</div>
+        <SectionRule>{t('settings.transactionsSection.label')}</SectionRule>
 
         <div>
           <label className="text-sm mb-2 block">

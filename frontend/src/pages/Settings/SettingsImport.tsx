@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { NumberField } from '../Settings-fields';
 import { useSettingsFlash } from './useSettingsFlash';
 
@@ -26,7 +27,7 @@ export function SettingsImport(): JSX.Element {
       )}
 
       <div className="surface p-6 flex flex-col gap-4">
-        <div className="label">{t('settings.importsSection.label')}</div>
+        <SectionRule>{t('settings.importsSection.label')}</SectionRule>
         <NumberField
           label={t('settings.importsSection.duplicateThreshold.label')}
           help={t('settings.importsSection.duplicateThreshold.help')}

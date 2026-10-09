@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../../../api/client';
+import { SectionRule } from '../../../components/SectionRule';
 import { getTotpStatus } from '../../../api/totp';
 import { TotpEnrollModal } from './TotpEnrollModal';
 import { TotpDisableModal } from './TotpDisableModal';
@@ -50,23 +51,21 @@ export function TotpSection(): JSX.Element | null {
   return (
     <section
       data-testid="totp-section"
-      className="flex flex-col gap-4 pt-4 border-t border-ink-800/60"
+      className="flex flex-col gap-4"
     >
-      <div>
-        <div className="label">{t('settings.twoFactor.sectionTitle')}</div>
-        <p className="text-sm text-ink-400 mt-1">
-          <Trans i18nKey="settings:settings.twoFactor.description">
-            Ajoute un second facteur au login : un code à 6 chiffres généré par une
-            application authentificateur (Google Authenticator, Aegis, 1Password…).{' '}
-            <a
-              className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
-              href="https://gekkotron.github.io/Athena-Accounting/docs/users/two-factor-auth"
-              target="_blank"
-              rel="noopener noreferrer"
-            >Guide complet</a>.
-          </Trans>
-        </p>
-      </div>
+      <SectionRule>{t('settings.twoFactor.sectionTitle')}</SectionRule>
+      <p className="text-sm text-ink-400">
+        <Trans i18nKey="settings:settings.twoFactor.description">
+          Ajoute un second facteur au login : un code à 6 chiffres généré par une
+          application authentificateur (Google Authenticator, Aegis, 1Password…).{' '}
+          <a
+            className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
+            href="https://gekkotron.github.io/Athena-Accounting/docs/users/two-factor-auth"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Guide complet</a>.
+        </Trans>
+      </p>
 
       {!enabled && (
         <div className="flex items-center justify-between gap-3">

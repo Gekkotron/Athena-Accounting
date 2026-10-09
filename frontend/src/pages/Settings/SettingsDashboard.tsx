@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { RangePicker, type RangeKey } from '../../components/RangePicker';
 import { LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { NumberField, SavedChip } from '../Settings-fields';
 import { useSettingsFlash } from './useSettingsFlash';
 import { useAccounts } from '../../lib/useReferenceData';
@@ -31,7 +32,7 @@ export function SettingsDashboard(): JSX.Element {
       )}
 
       <div className="surface p-6 flex flex-col gap-4">
-        <div className="label">{t('settings.dashboardSection.label')}</div>
+        <SectionRule>{t('settings.dashboardSection.label')}</SectionRule>
 
         <div>
           <div className="text-sm mb-2 flex items-center gap-2">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation, Trans } from 'react-i18next';
 import { getMcpSettings, setMcpEnabled, generateMcpToken, revokeMcpToken } from '../../api/mcp';
+import { SectionRule } from '../../components/SectionRule';
 import { SettingsSecurity } from '../SettingsSecurity';
 import { SettingsLock } from '../SettingsLock';
 import { TotpSection } from './totp/TotpSection';
@@ -32,13 +33,11 @@ function McpAccessSection(): JSX.Element {
   };
 
   return (
-    <section data-testid="mcp-section" className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
-      <div>
-        <div className="label">{t('settings.mcp.sectionLabel')}</div>
-        <p className="text-sm text-ink-400 mt-1">
-          {t('settings.mcp.description')}
-        </p>
-      </div>
+    <section data-testid="mcp-section" className="flex flex-col gap-4">
+      <SectionRule>{t('settings.mcp.sectionLabel')}</SectionRule>
+      <p className="text-sm text-ink-400">
+        {t('settings.mcp.description')}
+      </p>
       <label className="flex items-center gap-2 text-sm text-ink-200">
         <input
           data-testid="mcp-enable"

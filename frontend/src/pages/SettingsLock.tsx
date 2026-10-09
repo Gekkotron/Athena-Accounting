@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../api/client';
+import { SectionRule } from '../components/SectionRule';
 import type { LockStatus } from '../contexts/LockContext';
 
 // Desktop-only (AUTH_MODE=none) lock password management. On the LAN build
@@ -50,11 +51,9 @@ export function SettingsLock() {
   }
 
   return (
-    <section className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
-      <div>
-        <div className="label">{t('lock.title')}</div>
-        <p className="text-sm text-ink-400 mt-1">{t('lock.description')}</p>
-      </div>
+    <section className="flex flex-col gap-4">
+      <SectionRule>{t('lock.title')}</SectionRule>
+      <p className="text-sm text-ink-400">{t('lock.description')}</p>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
         {configured && (

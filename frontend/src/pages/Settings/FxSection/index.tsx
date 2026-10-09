@@ -5,6 +5,7 @@ import { api, ApiError } from '../../../api/client';
 import type { Account } from '../../../api/types';
 import { useSettings } from '../../../lib/useSettings';
 import { useAccounts, EMPTY_ACCOUNTS } from '../../../lib/useReferenceData';
+import { SectionRule } from '../../../components/SectionRule';
 import { DisplayCurrencyPicker } from './DisplayCurrencyPicker';
 import { RatesTable, type FxRateWire } from './RatesTable';
 import { AddRateForm, type AddRateFormValues } from './AddRateForm';
@@ -74,11 +75,9 @@ export function FxSection(): JSX.Element {
   );
 
   return (
-    <section className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
-      <div>
-        <div className="label">{t('settings.fx.title')}</div>
-        <p className="text-sm text-ink-400 mt-1">{t('settings.fx.description')}</p>
-      </div>
+    <section className="flex flex-col gap-4">
+      <SectionRule>{t('settings.fx.title')}</SectionRule>
+      <p className="text-sm text-ink-400">{t('settings.fx.description')}</p>
 
       <DisplayCurrencyPicker
         currencies={currencies}
@@ -96,7 +95,7 @@ export function FxSection(): JSX.Element {
       )}
 
       <div>
-        <div className="label mb-2">{t('settings.fx.rates.title')}</div>
+        <SectionRule className="mb-2">{t('settings.fx.rates.title')}</SectionRule>
         <RatesTable
           rates={rates}
           onDelete={(id) => deleteMut.mutate(id)}

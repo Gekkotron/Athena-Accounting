@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../api/client';
+import { SectionRule } from '../components/SectionRule';
 
 interface SecurityStatus {
   driver: 'pglite' | 'postgres';
@@ -104,8 +105,8 @@ export function SettingsSecurity(): JSX.Element | null {
   }
 
   return (
-    <section className="flex flex-col gap-4 pt-4 border-t border-ink-800/60">
-      <div className="label">{t('settings.security.sectionTitle')}</div>
+    <section className="flex flex-col gap-4">
+      <SectionRule>{t('settings.security.sectionTitle')}</SectionRule>
 
       {driver === 'postgres' && (
         <p className="text-sm text-ink-400">{t('settings.security.postgresPointer')}</p>
