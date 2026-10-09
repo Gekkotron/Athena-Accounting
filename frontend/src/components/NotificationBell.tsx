@@ -7,6 +7,7 @@ import {
 } from '@floating-ui/react';
 import type { Notification, NotificationKind } from '../../../shared/api-contracts.js';
 import { useUnreadCount, useNotificationInbox, useMarkRead } from '../lib/notifications/hooks';
+import { IconButton } from './IconButton';
 
 // Deep-link target per notification kind. There is no per-transaction detail
 // page in this scope, so the transaction-shaped kinds all land on the list.
@@ -91,11 +92,10 @@ export function NotificationBell(): JSX.Element {
 
   return (
     <div className="relative">
-      <button
+      <IconButton
         ref={refs.setReference}
-        type="button"
         aria-label={t('header.notifications.bell')}
-        className="btn-ghost !min-h-0 !py-1.5 !px-2 relative"
+        className="relative"
         {...getReferenceProps()}
       >
         <BellIcon />
@@ -108,7 +108,7 @@ export function NotificationBell(): JSX.Element {
             {displayCount}
           </span>
         )}
-      </button>
+      </IconButton>
       {open && (
         <FloatingPortal>
           <div

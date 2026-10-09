@@ -7,6 +7,7 @@ import type { User } from '../../api/types';
 import { DemoBanner } from '../DemoBanner';
 import { DemoUnavailableModal } from '../DemoUnavailableModal';
 import { OfflineBanner } from '../OfflineBanner';
+import { IconButton } from '../IconButton';
 import { nav } from './nav-config';
 import { NavTree } from './NavTree';
 import { Brand } from './Brand';
@@ -38,15 +39,15 @@ export function Layout({ user }: { user: User }) {
           <Brand />
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <button
+            <IconButton
               aria-label={t('header.menu', { ns: 'layout' })}
               onClick={() => setDrawerOpen(true)}
-              className="btn-secondary !min-h-0 !py-1.5 !px-2"
+              variant="secondary"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
-            </button>
+            </IconButton>
           </div>
         </header>
 
@@ -62,15 +63,14 @@ export function Layout({ user }: { user: User }) {
             >
               <div className="flex items-center justify-between mb-8">
                 <Brand onNavigate={() => setDrawerOpen(false)} />
-                <button
+                <IconButton
                   aria-label={t('close', { ns: 'common' })}
                   onClick={() => setDrawerOpen(false)}
-                  className="btn-ghost !min-h-0 !py-1.5 !px-2"
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
-                </button>
+                </IconButton>
               </div>
               <nav>
                 <NavTree sections={nav} onNavigate={() => setDrawerOpen(false)} />

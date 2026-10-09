@@ -127,6 +127,13 @@ html.privacy-on .private {
   .btn-ghost {
     @apply btn text-ink-300 hover:bg-ink-900 hover:text-ink-100;
   }
+  /* Square icon-button base. Variant + size utilities come from the IconButton
+     React wrapper (components/IconButton.tsx). */
+  .btn-icon {
+    @apply inline-flex items-center justify-center rounded-lg
+           transition select-none active:scale-[0.98]
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
 
   .badge {
     @apply inline-flex items-center rounded-md border border-ink-800 bg-ink-900/70 px-2 py-0.5
