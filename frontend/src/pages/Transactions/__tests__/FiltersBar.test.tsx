@@ -82,6 +82,36 @@ describe('FiltersBar', () => {
     expect(onSearchInputChange).toHaveBeenCalledWith('x');
   });
 
+  it('fires onFilterChange when the type select is changed', async () => {
+    const onFilterChange = vi.fn();
+    const user = userEvent.setup();
+    renderBar({ onFilterChange });
+
+    await user.selectOptions(fieldFor('Type'), 'expense');
+
+    expect(onFilterChange).toHaveBeenCalledWith({ type: 'expense' });
+  });
+
+  it('toggling "Non catégorisées" sets the flag and clears any picked category', async () => {
+    const onFilterChange = vi.fn();
+    const user = userEvent.setup();
+    renderBar({ filters: { ...defaultFilters, categoryId: 10 }, onFilterChange });
+
+    await user.click(screen.getByRole('button', { name: 'Non catégorisées' }));
+
+    expect(onFilterChange).toHaveBeenCalledWith({ uncategorized: true, categoryId: undefined });
+  });
+
+  it('picking a category clears the uncategorized toggle (same-axis exclusion)', async () => {
+    const onFilterChange = vi.fn();
+    const user = userEvent.setup();
+    renderBar({ filters: { ...defaultFilters, uncategorized: true }, onFilterChange });
+
+    await user.selectOptions(fieldFor('Catégorie'), '10');
+
+    expect(onFilterChange).toHaveBeenCalledWith({ categoryId: 10, uncategorized: undefined });
+  });
+
   it('applies the hidden md:block classes when showAdvanced is false', () => {
     renderBar({ showAdvanced: false });
     const container = screen.getByText('Recherche').closest('.surface');

@@ -1,4 +1,4 @@
-import { and, gte, isNull, lte, or, sql, eq, type SQL } from 'drizzle-orm';
+import { and, gte, isNotNull, isNull, lte, or, sql, eq, type SQL } from 'drizzle-orm';
 import type { z } from 'zod';
 import { transactions, transactionSplits } from '../../../db/schema.js';
 import type { ListQuery } from './schemas.js';
@@ -43,7 +43,22 @@ export function buildListWhere(uid: number, q: z.infer<typeof ListQuery>): SQL[]
     );
     if (cond) where.push(cond);
   }
-  if (!q.includeTransfers) where.push(isNull(transactions.transferGroupId));
+  // Sign axis: 'transfer' owns the transfer-visibility decision (shows legs);
+  // 'income'/'expense' hide them regardless of includeTransfers. Without a
+  // type filter, fall back to the includeTransfers boolean.
+  if (q.type === 'transfer') {
+    where.push(isNotNull(transactions.transferGroupId));
+  } else if (q.type === 'income') {
+    where.push(gte(transactions.amount, '0'));
+    where.push(isNull(transactions.transferGroupId));
+  } else if (q.type === 'expense') {
+    where.push(lte(transactions.amount, '-0.01'));
+    where.push(isNull(transactions.transferGroupId));
+  } else if (!q.includeTransfers) {
+    where.push(isNull(transactions.transferGroupId));
+  }
+
+  if (q.uncategorized) where.push(isNull(transactions.categoryId));
 
   if (q.search) {
     // Substring match across every user-facing text field, accent- and

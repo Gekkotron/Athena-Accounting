@@ -88,7 +88,12 @@ export function FiltersBar({
             className="input"
             value={filters.categoryId ?? ''}
             onChange={(e) =>
-              onFilterChange({ categoryId: e.target.value ? Number(e.target.value) : undefined })
+              // Picking a category drops the uncategorized toggle — they're
+              // mutually exclusive filters on the same axis.
+              onFilterChange({
+                categoryId: e.target.value ? Number(e.target.value) : undefined,
+                uncategorized: e.target.value ? undefined : filters.uncategorized,
+              })
             }
           >
             <option value="">{t('filters.options.allCategories')}</option>
@@ -103,6 +108,22 @@ export function FiltersBar({
                   {formatCategoryPath(c, byId)}
                 </option>
               ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5 w-full sm:w-36">
+          <label className="label">{t('filters.labels.type')}</label>
+          <select
+            className="input"
+            value={filters.type ?? ''}
+            onChange={(e) => {
+              const v = e.target.value as Filters['type'] | '';
+              onFilterChange({ type: v || undefined });
+            }}
+          >
+            <option value="">{t('filters.options.allTypes')}</option>
+            <option value="income">{t('filters.options.typeIncome')}</option>
+            <option value="expense">{t('filters.options.typeExpense')}</option>
+            <option value="transfer">{t('filters.options.typeTransfer')}</option>
           </select>
         </div>
         <div className="flex flex-col gap-1.5 w-[48%] sm:w-36">
@@ -124,6 +145,26 @@ export function FiltersBar({
           />
         </div>
         <button
+          type="button"
+          aria-pressed={filters.uncategorized ? true : false}
+          className={
+            filters.uncategorized
+              ? 'px-3 py-1.5 rounded-md border border-sage-700 bg-sage-700/40 text-sage-100 text-sm'
+              : 'px-3 py-1.5 rounded-md border border-sage-800/60 bg-sage-900/30 text-sage-200 text-sm hover:bg-sage-800/40'
+          }
+          onClick={() => {
+            // Toggle on → drop the categoryId filter (mutually exclusive, same
+            // axis). Toggle off → leave the rest alone.
+            const next = !filters.uncategorized;
+            onFilterChange({
+              uncategorized: next ? true : undefined,
+              categoryId: next ? undefined : filters.categoryId,
+            });
+          }}
+        >
+          {t('filters.actions.uncategorized')}
+        </button>
+        <button
           className="btn-ghost"
           onClick={() => {
             onFilterChange({
@@ -134,6 +175,8 @@ export function FiltersBar({
               toDate: undefined,
               search: undefined,
               amount: undefined,
+              type: undefined,
+              uncategorized: undefined,
               sort: 'date',
               order: 'desc',
             });

@@ -94,6 +94,7 @@
       "search": "Recherche",
       "account": "Compte",
       "category": "Catégorie",
+      "type": "Type",
       "fromDate": "Du",
       "toDate": "Au"
     },
@@ -107,10 +108,15 @@
     },
     "options": {
       "allAccounts": "Tous",
-      "allCategories": "Toutes"
+      "allCategories": "Toutes",
+      "allTypes": "Tous",
+      "typeIncome": "Entrées",
+      "typeExpense": "Sorties",
+      "typeTransfer": "Virements"
     },
     "actions": {
-      "clear": "Effacer"
+      "clear": "Effacer",
+      "uncategorized": "Non catégorisées"
     }
   },
   "modal": {

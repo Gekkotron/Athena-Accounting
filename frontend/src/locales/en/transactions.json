@@ -94,6 +94,7 @@
       "search": "Search",
       "account": "Account",
       "category": "Category",
+      "type": "Type",
       "fromDate": "From",
       "toDate": "To"
     },
@@ -107,10 +108,15 @@
     },
     "options": {
       "allAccounts": "All",
-      "allCategories": "All"
+      "allCategories": "All",
+      "allTypes": "All",
+      "typeIncome": "Income",
+      "typeExpense": "Expense",
+      "typeTransfer": "Transfer"
     },
     "actions": {
-      "clear": "Clear"
+      "clear": "Clear",
+      "uncategorized": "Uncategorized"
     }
   },
   "modal": {

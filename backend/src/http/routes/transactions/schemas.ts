@@ -20,6 +20,16 @@ export const ListQuery = z.object({
     .union([z.boolean(), z.enum(['true', 'false'])])
     .transform((v) => v === true || v === 'true')
     .default(false),
+  // Sign-based filter — the single axis users think in. When set, this also
+  // drives transfer visibility, overriding `includeTransfers`: 'transfer'
+  // shows only transfer legs, 'income'/'expense' hides them.
+  type: z.enum(['income', 'expense', 'transfer']).optional(),
+  // "Only transactions with no own category" — splits are ignored on purpose,
+  // mirroring the demo-mode filter and the UI's own uncategorized surfacing.
+  uncategorized: z
+    .union([z.boolean(), z.enum(['true', 'false'])])
+    .transform((v) => v === true || v === 'true')
+    .optional(),
   sort: z.enum(['date', 'amount', 'label']).default('date'),
   order: z.enum(['asc', 'desc']).default('desc'),
   limit: z.coerce.number().int().min(1).max(500).default(50),
