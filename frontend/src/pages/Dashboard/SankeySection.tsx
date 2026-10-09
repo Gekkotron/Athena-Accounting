@@ -12,7 +12,7 @@ import {
 } from '../../components/RangePicker';
 import { buildSankeyModel } from './sankey';
 import { Sankey } from '../../components/Sankey';
-import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { ErrorState, ChartSkeleton } from '../../components/StateBlocks';
 
 interface Props {
   range: RangeKey;
@@ -99,7 +99,7 @@ export function SankeySection({
       </div>
 
       {isLoading ? (
-        <LoadingBlock variant="inline" height="min-h-40" />
+        <ChartSkeleton />
       ) : isError ? (
         <ErrorState
           variant="inline"

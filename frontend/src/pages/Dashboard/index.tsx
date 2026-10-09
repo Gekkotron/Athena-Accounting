@@ -20,7 +20,7 @@ import { SavingsGoalsSection } from './SavingsGoalsSection';
 import { ChartScopeBar } from './ChartScopeBar';
 import { DashboardSectionNav } from './DashboardSectionNav';
 import { useDashboardScope } from './useDashboardScope';
-import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { EmptyState, ErrorState, ChartSkeleton } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
 
 export function Dashboard(): JSX.Element {
@@ -189,7 +189,7 @@ export function Dashboard(): JSX.Element {
               alignEndTo={chartUsesConsolidated ? undefined : forecastProjection?.anchor}
             />
           ) : (
-            <LoadingBlock variant="inline" height="min-h-40" />
+            <ChartSkeleton />
           )}
         </section>
       )}

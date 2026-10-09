@@ -9,7 +9,7 @@ import { useToday } from '../../lib/useToday';
 import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { buildInsights, monthLabel, priceCreepInsight, type InsightTone } from './insights';
-import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { ErrorState, ListSkeleton } from '../../components/StateBlocks';
 
 const TONE_CLASS: Record<InsightTone, string> = {
   sage: 'text-sage-300',
@@ -84,7 +84,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
     return (
       <section>
         <div className="section-rule mb-4">{t('insights.title')}</div>
-        <LoadingBlock variant="inline" height="min-h-32" />
+        <ListSkeleton rows={4} />
       </section>
     );
   }

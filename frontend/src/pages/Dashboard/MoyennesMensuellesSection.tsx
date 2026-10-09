@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import type { CategoryReportRow } from '../../api/types';
 import { StatWidget } from '../../components/StatWidget';
+import { StatGridSkeleton } from '../../components/StateBlocks';
 import { computeMonthlyStats } from './monthly-stats';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 
@@ -25,8 +26,19 @@ export function MoyennesMensuellesSection({ currency }: Props): JSX.Element | nu
 
   const monthlyStats = useMemo(() => computeMonthlyStats(statsQ.data?.rows ?? []), [statsQ.data]);
 
-  if (statsQ.isLoading) return null;
   const hasHistory = monthlyStats.monthCount > 0;
+
+  // Content-shaped skeleton while the categories report arrives — matches
+  // the eventual 3-tile StatWidget grid so there's no layout shift. The
+  // previous `return null` left a gap in the page's flex-col gap-10 stack.
+  if (statsQ.isLoading) {
+    return (
+      <section>
+        <div className="section-rule mb-4">{t('moyennes.title')}</div>
+        <StatGridSkeleton n={3} />
+      </section>
+    );
+  }
 
   return (
     <section>
