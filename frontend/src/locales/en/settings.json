@@ -10,6 +10,7 @@
     "savedChip": "Saved",
     "dashboardSection": {
       "label": "Dashboard",
+      "subtitle": "Range shown on open, default chart account, and the break threshold for the curve.",
       "defaultRangeLabel": "Default period",
       "defaultChartScopeLabel": "Default chart account",
       "allAccountsOption": "All accounts",
@@ -20,12 +21,14 @@
     },
     "transactionsSection": {
       "label": "Transactions",
+      "subtitle": "Account pre-selected when you open the Transactions page.",
       "defaultAccountLabel": "Default account on the Transactions page",
       "firstCheckingOption": "First checking account",
       "allAccountsOption": "All accounts"
     },
     "importsSection": {
       "label": "Imports",
+      "subtitle": "Behaviour of the \"possible duplicates\" panel after each import.",
       "duplicateThreshold": {
         "label": "Default similarity threshold (possible duplicates)",
         "help": "Filters out duplicate groups whose label similarity is below the threshold."
@@ -39,6 +42,9 @@
       "regenerateButton": "Regenerate token",
       "revokeButton": "Revoke",
       "tokenWarning": "This token will not be shown again — copy it now.",
+      "tokenCopy": "Copy",
+      "tokenCopied": "Copied",
+      "tokenCopyAria": "Copy MCP token to clipboard",
       "tokenConfigHint": "Configure the MCP client with <1>ATHENA_MCP_USER</1> (your username) and<3> ATHENA_MCP_TOKEN</3>."
     },
     "bankSync": {
@@ -156,6 +162,7 @@
     },
     "security": {
       "sectionTitle": "Security",
+      "subtitle": "Account password, lock screen, two-factor authentication, and MCP access.",
       "postgresPointer": "Encryption at rest protects the local database file (PGlite). This installation uses PostgreSQL, so protecting the data volume is up to your server infrastructure — see the documentation (https://gekkotron.github.io/Athena-Accounting/docs/users/encryption-at-rest) for the recommended setup (disk encryption, encrypted backups).",
       "noRecoveryWarning": "Warning: if you forget this password, your data will be permanently unrecoverable — unless you have a backup exported beforehand. There is no way to reset this password.",
       "disablePending": "Disabling encryption is scheduled: it will take effect the next time the application starts.",

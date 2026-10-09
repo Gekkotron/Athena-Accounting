@@ -14,6 +14,7 @@ function McpAccessSection(): JSX.Element {
   const { t } = useTranslation('settings');
   const qc = useQueryClient();
   const [freshToken, setFreshToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const mcpQ = useQuery({ queryKey: ['mcp-settings'], queryFn: getMcpSettings });
   const mcp = mcpQ.data ?? { enabled: false, hasToken: false };
 
@@ -24,12 +25,24 @@ function McpAccessSection(): JSX.Element {
   const genToken = async () => {
     const { token } = await generateMcpToken();
     setFreshToken(token);
+    setCopied(false);
     qc.invalidateQueries({ queryKey: ['mcp-settings'] });
   };
   const revokeToken = async () => {
     await revokeMcpToken();
     setFreshToken(null);
+    setCopied(false);
     qc.invalidateQueries({ queryKey: ['mcp-settings'] });
+  };
+  const copyToken = async () => {
+    if (!freshToken) return;
+    try {
+      await navigator.clipboard.writeText(freshToken);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Silent — the token is still visible on screen.
+    }
   };
 
   return (
@@ -65,7 +78,22 @@ function McpAccessSection(): JSX.Element {
       {freshToken && (
         <div className="rounded-md bg-ink-900 p-3 text-sm">
           <p className="text-amber-400 mb-1">{t('settings.mcp.tokenWarning')}</p>
-          <code data-testid="mcp-token" className="break-all text-ink-100">{freshToken}</code>
+          <div className="flex items-start gap-2">
+            <code
+              data-testid="mcp-token"
+              className="break-all text-ink-100 flex-1 min-w-0"
+            >
+              {freshToken}
+            </code>
+            <button
+              type="button"
+              className="btn-ghost shrink-0"
+              aria-label={t('settings.mcp.tokenCopyAria')}
+              onClick={() => void copyToken()}
+            >
+              {copied ? t('settings.mcp.tokenCopied') : t('settings.mcp.tokenCopy')}
+            </button>
+          </div>
           <p className="text-ink-400 mt-2">
             <Trans i18nKey="settings:settings.mcp.tokenConfigHint">
               Configurez le client MCP avec <code>ATHENA_MCP_USER</code> (votre identifiant) et
@@ -79,8 +107,10 @@ function McpAccessSection(): JSX.Element {
 }
 
 export function SettingsSecurityPage(): JSX.Element {
+  const { t } = useTranslation('settings');
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl flex flex-col gap-6">
+      <p className="text-sm text-ink-400">{t('settings.security.subtitle')}</p>
       <div className="surface p-6 flex flex-col gap-6">
         <SettingsSecurity />
         <SettingsLock />

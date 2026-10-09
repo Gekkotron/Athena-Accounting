@@ -30,6 +30,8 @@ export function SettingsTransactions(): JSX.Element {
 
   return (
     <div className="max-w-xl flex flex-col gap-6">
+      <p className="text-sm text-ink-400">{t('settings.transactionsSection.subtitle')}</p>
+
       {mutation.isError && <SaveErrorBanner message={t('settings.errors.saveFailed')} />}
 
       <div className="surface p-6 flex flex-col gap-4">

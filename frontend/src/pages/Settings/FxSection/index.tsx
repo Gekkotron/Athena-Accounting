@@ -77,7 +77,6 @@ export function FxSection(): JSX.Element {
   return (
     <section className="flex flex-col gap-4">
       <SectionRule>{t('settings.fx.title')}</SectionRule>
-      <p className="text-sm text-ink-400">{t('settings.fx.description')}</p>
 
       <DisplayCurrencyPicker
         currencies={currencies}
