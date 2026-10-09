@@ -4,8 +4,8 @@ import { useSettings } from '../../lib/useSettings';
 import { DEFAULTS } from '../../lib/settings';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useTips } from '../../contexts/TipsContext';
-import { LoadingBlock } from '../../components/StateBlocks';
 import { SectionRule } from '../../components/SectionRule';
+import { SettingsSkeleton } from './_shared';
 
 export function SettingsGeneral(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -13,15 +13,7 @@ export function SettingsGeneral(): JSX.Element {
   const { reset: resetTips } = useTips();
   const [confirmReset, setConfirmReset] = useState(false);
 
-  if (!isReady) {
-    return (
-      <div className="max-w-xl">
-        <div data-testid="settings-skeleton">
-          <LoadingBlock height="min-h-64" />
-        </div>
-      </div>
-    );
-  }
+  if (!isReady) return <SettingsSkeleton />;
 
   return (
     <div className="max-w-xl flex flex-col gap-6">

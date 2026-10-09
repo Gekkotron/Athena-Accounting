@@ -6,6 +6,7 @@ import { NotificationsChannelsCard } from './NotificationsChannelsCard';
 import { NotificationsPrivacyCard } from './NotificationsPrivacyCard';
 import { NotificationsTriggersCard } from './NotificationsTriggersCard';
 import { NotificationsTestButton, type SettingsNotificationsTab } from './NotificationsTestButton';
+import { SaveErrorBanner } from './_shared';
 
 type TabId = SettingsNotificationsTab;
 
@@ -28,11 +29,7 @@ export function SettingsNotifications(): JSX.Element {
       <p className="text-sm text-ink-400">{t('settings.notifications.description')}</p>
 
       <section className="surface p-6 flex flex-col gap-4">
-        {mutation.isError && (
-          <p role="alert" className="rounded-lg border border-clay-800/60 bg-clay-900/30 px-3 py-2 text-sm text-clay-200">
-            {t('settings.notifications.patch_error')}
-          </p>
-        )}
+        {mutation.isError && <SaveErrorBanner message={t('settings.notifications.patch_error')} />}
 
         <label className="flex items-center gap-2 text-sm text-ink-200">
           <input
