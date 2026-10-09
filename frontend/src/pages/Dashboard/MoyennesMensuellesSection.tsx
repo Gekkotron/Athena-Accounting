@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import type { CategoryReportRow } from '../../api/types';
 import { StatWidget } from '../../components/StatWidget';
 import { StatGridSkeleton } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { computeMonthlyStats } from './monthly-stats';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 
@@ -34,7 +35,7 @@ export function MoyennesMensuellesSection({ currency }: Props): JSX.Element | nu
   if (statsQ.isLoading) {
     return (
       <section>
-        <div className="section-rule mb-4">{t('moyennes.title')}</div>
+        <SectionRule className="mb-4">{t('moyennes.title')}</SectionRule>
         <StatGridSkeleton n={3} />
       </section>
     );
@@ -42,14 +43,14 @@ export function MoyennesMensuellesSection({ currency }: Props): JSX.Element | nu
 
   return (
     <section>
-      <div className="section-rule mb-4">
+      <SectionRule className="mb-4">
         {t('moyennes.title')}{' '}
         <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
           {hasHistory
             ? t('moyennes.window', { count: monthlyStats.monthCount })
             : t('moyennes.noHistory')}
         </span>
-      </div>
+      </SectionRule>
       {hasHistory ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <StatWidget

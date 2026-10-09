@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Account, FileImport } from '../../api/types';
 import { formatDateTime } from '../../lib/format';
 import { getAccountName } from '../../lib/accounts';
+import { SectionRule } from '../../components/SectionRule';
 
 export function FileImportsList({
   imports, accounts, onRequestDelete,
@@ -14,7 +15,7 @@ export function FileImportsList({
   const { t } = useTranslation('imports');
   return (
     <section>
-      <div className="section-rule mb-4">{t('fileImports.sectionTitle')}</div>
+      <SectionRule className="mb-4">{t('fileImports.sectionTitle')}</SectionRule>
       <div className="surface overflow-hidden">
         <div className="table-scroll">
           <table className="w-full text-sm stack-md">

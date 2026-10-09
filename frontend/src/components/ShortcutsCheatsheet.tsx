@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SectionRule } from './SectionRule';
 
 interface ShortcutsCtx {
   open: () => void;
@@ -114,7 +115,7 @@ function Group({
 }) {
   return (
     <div>
-      <div className="section-rule mb-2">{title}</div>
+      <SectionRule className="mb-2">{title}</SectionRule>
       <ul className="space-y-1.5">
         {rows.map((r) => (
           <li

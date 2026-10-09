@@ -10,6 +10,7 @@ import { Sparkline } from '../../components/Sparkline';
 import { AVG_WINDOW_MONTHS, monthAgoISODate, lastDayOfPrevMonthISODate } from './helpers';
 import { buildInsights, monthLabel, priceCreepInsight, type InsightTone } from './insights';
 import { ErrorState, ListSkeleton } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 
 const TONE_CLASS: Record<InsightTone, string> = {
   sage: 'text-sage-300',
@@ -83,7 +84,7 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
   if (catQ.isLoading) {
     return (
       <section>
-        <div className="section-rule mb-4">{t('insights.title')}</div>
+        <SectionRule className="mb-4">{t('insights.title')}</SectionRule>
         <ListSkeleton rows={4} />
       </section>
     );
@@ -92,12 +93,12 @@ export function InsightsSection({ currency }: Props): JSX.Element | null {
   return (
     <section>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="section-rule">
+        <SectionRule>
           {t('insights.title')}{' '}
           <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
             — {monthLabel(referenceMonth, lang)} {referenceMonth.slice(0, 4)}
           </span>
-        </div>
+        </SectionRule>
         <div className="inline-flex rounded-lg border border-ink-800 bg-ink-900/60 p-0.5 text-xs">
           <button
             onClick={() => setMonthOffset((o) => Math.min(o + 1, maxOffset))}

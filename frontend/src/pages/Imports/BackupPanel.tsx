@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../api/client';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SectionRule } from '../../components/SectionRule';
 import { todayLocalIso } from '../../lib/dates';
 
 interface BackupResult {
@@ -113,7 +114,7 @@ export function BackupPanel(): JSX.Element {
     <>
       {/* Backup section — export everything as JSON, or restore from one. */}
       <section>
-        <div className="section-rule mb-4">{t('backup.sectionTitle')}</div>
+        <SectionRule className="mb-4">{t('backup.sectionTitle')}</SectionRule>
         <div className="surface p-5 md:p-6 flex flex-col gap-4">
           <p className="text-sm text-ink-400 max-w-2xl">
             <span className="display-italic">{t('backup.description.exportWord')}</span>{' '}

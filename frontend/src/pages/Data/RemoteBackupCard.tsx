@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { formatDateTime } from '../../lib/format';
 import { useSettings } from '../../lib/useSettings';
 import { RemoteBackupFields } from './RemoteBackupFields';
@@ -24,7 +25,7 @@ export function RemoteBackupCard(): JSX.Element {
   if (s.status.isLoading) {
     return (
       <section className="mt-8">
-        <div className="section-rule mb-4">{t('backup.remote.sectionTitle')}</div>
+        <SectionRule className="mb-4">{t('backup.remote.sectionTitle')}</SectionRule>
         <LoadingBlock height="min-h-40" />
       </section>
     );
@@ -32,7 +33,7 @@ export function RemoteBackupCard(): JSX.Element {
   if (s.status.isError) {
     return (
       <section className="mt-8">
-        <div className="section-rule mb-4">{t('backup.remote.sectionTitle')}</div>
+        <SectionRule className="mb-4">{t('backup.remote.sectionTitle')}</SectionRule>
         <ErrorState
           title={t('backup.remote.errorTitle')}
           error={s.status.error}
@@ -44,7 +45,7 @@ export function RemoteBackupCard(): JSX.Element {
 
   return (
     <section className="mt-8">
-      <div className="section-rule mb-4">{t('backup.remote.sectionTitle')}</div>
+      <SectionRule className="mb-4">{t('backup.remote.sectionTitle')}</SectionRule>
       <div className="surface p-5 md:p-6 flex flex-col gap-4">
         <p className="text-sm text-ink-400 max-w-2xl">{t('backup.remote.description')}</p>
 

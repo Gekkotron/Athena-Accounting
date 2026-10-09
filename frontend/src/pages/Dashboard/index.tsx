@@ -21,6 +21,7 @@ import { ChartScopeBar } from './ChartScopeBar';
 import { DashboardSectionNav } from './DashboardSectionNav';
 import { useDashboardScope } from './useDashboardScope';
 import { EmptyState, ErrorState, ChartSkeleton } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { Link } from 'react-router-dom';
 
 export function Dashboard(): JSX.Element {
@@ -170,7 +171,7 @@ export function Dashboard(): JSX.Element {
         <section id="dash-evolution" className="surface p-5 md:p-6 relative scroll-mt-24">
           <span ref={curveAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <div className="section-rule flex-1">{t('sections.evolution', { currency: chartCurrency })}</div>
+            <SectionRule className="flex-1">{t('sections.evolution', { currency: chartCurrency })}</SectionRule>
             <label className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none" title={t('forecast.tooltip')}>
               <input type="checkbox" checked={settings.showForecast} onChange={(e) => patchSettings({ showForecast: e.target.checked })} className="accent-sage-500" />
               {t('forecast.label')}
@@ -198,7 +199,7 @@ export function Dashboard(): JSX.Element {
       {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6 relative">
           <span ref={donutAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
-          <div className="section-rule mb-4">{t('sections.categoryBreakdown')}</div>
+          <SectionRule className="mb-4">{t('sections.categoryBreakdown')}</SectionRule>
           <CategoryBreakdown
             range={range}
             onRangeChange={setRange}

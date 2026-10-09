@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { listGoals } from '../../api/goals';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { GoalCard } from '../Goals/GoalCard';
 import { sortBySoonest } from '../Goals/goal-math';
 
@@ -20,7 +21,7 @@ export function SavingsGoalsSection() {
   if (q.isError) {
     return (
       <section>
-        <div className="section-rule mb-3">{t('dashboard.sectionTitle')}</div>
+        <SectionRule className="mb-3">{t('dashboard.sectionTitle')}</SectionRule>
         <ErrorState error={q.error} onRetry={() => void q.refetch()} variant="inline" />
       </section>
     );
@@ -32,12 +33,12 @@ export function SavingsGoalsSection() {
 
   return (
     <section>
-      <div className="section-rule mb-3 flex items-baseline justify-between">
+      <SectionRule className="mb-3 flex items-baseline justify-between">
         <span>{t('dashboard.sectionTitle')}</span>
         <Link to="/goals" className="text-[11px] text-ink-500 hover:text-ink-100">
           {t('dashboard.viewAll', { count: all.length })}
         </Link>
-      </div>
+      </SectionRule>
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {top.map((g) => (
           <Link key={g.id} to={`/goals?highlight=${g.id}`} className="block">

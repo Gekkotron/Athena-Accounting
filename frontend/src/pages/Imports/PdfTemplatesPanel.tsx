@@ -10,6 +10,7 @@ import {
 import { getAccountName } from '../../lib/accounts';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { useAccounts } from '../../lib/useReferenceData';
 
 // Reads YYYY-MM-DD from an ISO timestamp and formats it as a short
@@ -72,7 +73,7 @@ export function PdfTemplatesPanel(): JSX.Element {
   if (templatesQ.isError) {
     return (
       <section>
-        <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
+        <SectionRule className="mb-4">{t('templates.sectionTitle')}</SectionRule>
         <ErrorState
           title={t('templates.errorTitle')}
           error={templatesQ.error}
@@ -85,7 +86,7 @@ export function PdfTemplatesPanel(): JSX.Element {
   if (templatesQ.isLoading) {
     return (
       <section>
-        <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
+        <SectionRule className="mb-4">{t('templates.sectionTitle')}</SectionRule>
         <LoadingBlock height="min-h-24" />
       </section>
     );
@@ -94,7 +95,7 @@ export function PdfTemplatesPanel(): JSX.Element {
   if (templates.length === 0) {
     return (
       <section>
-        <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
+        <SectionRule className="mb-4">{t('templates.sectionTitle')}</SectionRule>
         <div className="surface p-5 text-sm text-ink-400 display-italic">
           {t('templates.emptyState')}
         </div>
@@ -106,7 +107,7 @@ export function PdfTemplatesPanel(): JSX.Element {
 
   return (
     <section>
-      <div className="section-rule mb-4">{t('templates.sectionTitle')}</div>
+      <SectionRule className="mb-4">{t('templates.sectionTitle')}</SectionRule>
       <div className="surface p-5">
         <p className="text-sm text-ink-300 mb-3">
           {t('templates.description')}

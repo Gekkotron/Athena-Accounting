@@ -12,6 +12,7 @@ import {
 } from '../../components/RangePicker';
 import { buildSankeyModel } from './sankey';
 import { Sankey } from '../../components/Sankey';
+import { SectionRule } from '../../components/SectionRule';
 import { ErrorState, ChartSkeleton } from '../../components/StateBlocks';
 
 interface Props {
@@ -91,12 +92,12 @@ export function SankeySection({
 
   return (
     <section className="surface p-5 md:p-6">
-      <div className="section-rule mb-4">
+      <SectionRule className="mb-4">
         {t('sankey.title', { currency })}{' '}
         <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
           — {rangeSuffixLabel(range, tCharts)}
         </span>
-      </div>
+      </SectionRule>
 
       {isLoading ? (
         <ChartSkeleton />

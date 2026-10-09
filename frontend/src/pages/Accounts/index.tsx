@@ -19,6 +19,7 @@ import { useAccountsMutations } from './useAccountsMutations';
 import { useAccountEdit } from './useAccountEdit';
 import type { MergeResult } from '../../api/accounts';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 
 export function Accounts() {
   const { t } = useTranslation(['accounts', 'common']);
@@ -101,7 +102,7 @@ export function Accounts() {
       )}
 
       <section>
-        <div className="section-rule mb-4">{t('myAccounts')}</div>
+        <SectionRule className="mb-4">{t('myAccounts')}</SectionRule>
         {accountsQ.isError ? (
           <ErrorState
             title={t('listErrorTitle')}

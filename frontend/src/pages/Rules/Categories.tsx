@@ -7,6 +7,7 @@ import { useCategories, EMPTY_CATEGORIES } from '../../lib/useReferenceData';
 import { kindLabel, groupCategories, resolveCategoryColor } from '../../lib/categories';
 import { CategoryBreakdown } from '../../components/CategoryBreakdown';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SectionRule } from '../../components/SectionRule';
 import { CategoryColorPicker } from './CategoryColorPicker';
 import { buildOwnTotalsByCat } from './categoriesTotals';
 import { CategoriesTable } from './CategoriesTable';
@@ -82,7 +83,7 @@ export function Categories() {
       </div>
 
       <section className="surface p-5 md:p-6">
-        <div className="section-rule mb-4">{t('categories.breakdownTitle')}</div>
+        <SectionRule className="mb-4">{t('categories.breakdownTitle')}</SectionRule>
         <CategoryBreakdown defaultRange="3m" />
       </section>
 

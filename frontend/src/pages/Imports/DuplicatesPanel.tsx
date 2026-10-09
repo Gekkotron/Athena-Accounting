@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { groupMinPairwiseSimilarity } from '../../lib/label-similarity';
 import { useSettings } from '../../lib/useSettings';
 import { DemoUnavailableState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
+import { SectionRule } from '../../components/SectionRule';
 import { isDemoStubError } from '../../api/errorMessage';
 import { useDuplicatesMutations } from './useDuplicatesMutations';
 import { useAccounts } from '../../lib/useReferenceData';
@@ -109,7 +110,7 @@ export function DuplicatesPanel(): JSX.Element {
     return (
       <section>
         <div className="flex items-center justify-between mb-4">
-          <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
+          <SectionRule className="flex-1">{t('duplicates.sectionTitle')}</SectionRule>
           {!demo && refreshButton}
         </div>
         {demo ? (
@@ -129,7 +130,7 @@ export function DuplicatesPanel(): JSX.Element {
     return (
       <section>
         <div className="flex items-center justify-between mb-4">
-          <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
+          <SectionRule className="flex-1">{t('duplicates.sectionTitle')}</SectionRule>
           {refreshButton}
         </div>
         <LoadingBlock height="min-h-32" />
@@ -141,7 +142,7 @@ export function DuplicatesPanel(): JSX.Element {
     return (
       <section>
         <div className="flex items-center justify-between mb-4">
-          <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
+          <SectionRule className="flex-1">{t('duplicates.sectionTitle')}</SectionRule>
           {refreshButton}
         </div>
         <div className="surface p-5 text-sm text-ink-500 display-italic">
@@ -154,7 +155,7 @@ export function DuplicatesPanel(): JSX.Element {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <div className="section-rule flex-1">{t('duplicates.sectionTitle')}</div>
+        <SectionRule className="flex-1">{t('duplicates.sectionTitle')}</SectionRule>
         {refreshButton}
       </div>
       <div className="surface p-5">
