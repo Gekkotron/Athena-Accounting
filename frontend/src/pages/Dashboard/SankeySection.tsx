@@ -2,10 +2,9 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
-import type { Account, CategoryReportRow } from '../../api/types';
+import type { CategoryReportRow } from '../../api/types';
 import { useCategories } from '../../lib/useReferenceData';
 import {
-  RangePicker,
   fromDateFor,
   toDateFor,
   rangeSuffixLabel,
@@ -13,12 +12,10 @@ import {
 } from '../../components/RangePicker';
 import { buildSankeyModel } from './sankey';
 import { Sankey } from '../../components/Sankey';
-import { AccountSelect } from './AccountSelect';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 
 interface Props {
   range: RangeKey;
-  onRangeChange: (r: RangeKey) => void;
   currency: string;
   /** When set to a specific account id, the report is filtered server-side
       to that account only. 'all' or undefined aggregates across every
@@ -28,23 +25,17 @@ interface Props {
       `accountIds` server param — used by the Dashboard's "All available
       accounts" scope. */
   accountIds?: number[];
-  /** Accounts and setter for the header's compact scope dropdown. */
-  accounts: Account[];
-  onAccountChange: (v: 'all' | 'available' | number) => void;
-  primaryCurrency?: string;
-  hideAvailableInSelect?: boolean;
 }
 
+// The account dropdown and range picker live in the Dashboard's shared
+// ChartScopeBar above this section, so this component only renders a label
+// (with the range suffix) + the Sankey itself. The caller feeds `range` /
+// `accountId` / `accountIds` down from the shared scope state.
 export function SankeySection({
   range,
-  onRangeChange,
   currency,
   accountId,
   accountIds,
-  accounts,
-  onAccountChange,
-  primaryCurrency,
-  hideAvailableInSelect,
 }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
   const { t: tCharts } = useTranslation('charts');
@@ -100,24 +91,11 @@ export function SankeySection({
 
   return (
     <section className="surface p-5 md:p-6">
-      <div className="mb-4 flex items-center gap-3 flex-wrap">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">
-          {t('sankey.title', { currency })}{' '}
-          <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
-            — {rangeSuffixLabel(range, tCharts)}
-          </span>
+      <div className="section-rule mb-4">
+        {t('sankey.title', { currency })}{' '}
+        <span className="text-ink-500 font-normal text-xs normal-case tracking-normal">
+          — {rangeSuffixLabel(range, tCharts)}
         </span>
-        <div className="flex-1 h-px bg-ink-800" />
-        <div className="flex items-center gap-2 flex-wrap">
-          <AccountSelect
-            value={accountId ?? 'all'}
-            onChange={onAccountChange}
-            accounts={accounts}
-            primaryCurrency={primaryCurrency}
-            hideAvailable={hideAvailableInSelect}
-          />
-          <RangePicker value={range} onChange={onRangeChange} />
-        </div>
       </div>
 
       {isLoading ? (

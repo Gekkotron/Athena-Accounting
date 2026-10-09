@@ -1,6 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fromDateFor, toDateFor, type RangeKey } from '../../../components/RangePicker';
 import { SankeySection } from '../SankeySection';
@@ -15,27 +14,18 @@ const apiMock = vi.mocked(api);
 
 function renderSection(opts: {
   range?: RangeKey;
-  onRangeChange?: (r: RangeKey) => void;
   accountId?: number | 'all' | 'available';
-  onAccountChange?: (v: 'all' | 'available' | number) => void;
 } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const onRangeChange = opts.onRangeChange ?? vi.fn();
-  const onAccountChange = opts.onAccountChange ?? vi.fn();
-  const utils = render(
+  return render(
     <QueryClientProvider client={client}>
       <SankeySection
         range={opts.range ?? '12m'}
-        onRangeChange={onRangeChange}
         currency="EUR"
         accountId={opts.accountId}
-        accounts={[]}
-        onAccountChange={onAccountChange}
-        primaryCurrency="EUR"
       />
     </QueryClientProvider>,
   );
-  return { ...utils, onRangeChange, onAccountChange };
 }
 
 // SankeySection renders French strings by default (the app's current UI
@@ -86,29 +76,6 @@ it('renders the header suffix based on the range prop', async () => {
   expect(await screen.findByText(/le mois dernier/i)).toBeInTheDocument();
 });
 
-it('clicking a range button in the header picker calls onRangeChange with that range', async () => {
-  apiMock.mockImplementation(async (path: string) => {
-    if (path === '/api/categories') return { categories: [] } as any;
-    return { rows: [] } as any;
-  });
-  const { onRangeChange } = renderSection({ range: '6m' });
-  const u = userEvent.setup();
-  // The RangePicker is a role="group" of buttons labelled with the range
-  // label ("30 j", "3 m", …). Click "12 m" to move to a longer range.
-  await u.click(await screen.findByRole('button', { name: /^12 m$/ }));
-  expect(onRangeChange).toHaveBeenCalledWith('12m');
-});
-
-it('marks the active range button with aria-pressed', async () => {
-  apiMock.mockImplementation(async (path: string) => {
-    if (path === '/api/categories') return { categories: [] } as any;
-    return { rows: [] } as any;
-  });
-  renderSection({ range: 'all' });
-  const active = await screen.findByRole('button', { name: /^Tout$/ });
-  expect(active).toHaveAttribute('aria-pressed', 'true');
-});
-
 it('forwards accountId to /api/reports/categories when a specific account is scoped', async () => {
   apiMock.mockImplementation(async (path: string) => {
     if (path === '/api/categories') return { categories: [] } as any;
@@ -151,11 +118,15 @@ it('bounds the report window with both fromDate and toDate for month ranges', as
   });
 });
 
-it('exposes the account selector in the header', async () => {
+it('does not render its own account picker or range picker — those live in the shared ChartScopeBar', async () => {
   apiMock.mockImplementation(async (path: string) => {
     if (path === '/api/categories') return { categories: [] } as any;
     return { rows: [] } as any;
   });
   renderSection();
-  expect(await screen.findByLabelText(/compte affiché/i)).toBeInTheDocument();
+  // The account dropdown's accessible name was 'compte affiché'; the range
+  // picker group's accessible name is the chart-range aria label. Neither
+  // should appear inside the Sankey section.
+  expect(screen.queryByLabelText(/compte affiché/i)).toBeNull();
+  expect(screen.queryByRole('group', { name: /période|range/i })).toBeNull();
 });

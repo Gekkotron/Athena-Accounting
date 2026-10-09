@@ -99,6 +99,9 @@
     "availableAccounts": "Tous les comptes disponibles",
     "ariaLabel": "Compte affiché"
   },
+  "scope": {
+    "ariaLabel": "Portée des graphiques — compte et période"
+  },
   "envelopeTile": {
     "header": "Enveloppes",
     "actions": {

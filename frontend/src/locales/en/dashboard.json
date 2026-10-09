@@ -99,6 +99,9 @@
     "availableAccounts": "All available accounts",
     "ariaLabel": "Displayed account"
   },
+  "scope": {
+    "ariaLabel": "Charts scope — account and period"
+  },
   "envelopeTile": {
     "header": "Envelopes",
     "actions": {

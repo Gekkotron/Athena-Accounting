@@ -17,7 +17,7 @@ import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
-import { ScopeControls } from './ScopeControls';
+import { ChartScopeBar } from './ChartScopeBar';
 import { useDashboardScope } from './useDashboardScope';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
@@ -139,27 +139,30 @@ export function Dashboard(): JSX.Element {
       {!rootErr && !rootEmpty && <BudgetEnvelopeSection />}
       {!rootErr && !rootEmpty && <SavingsGoalsSection />}
 
-      {/* Time series — the account scope and period picker sit in the card
-          header (right-aligned). Both drive the donut and the Sankey below
-          via the shared `range` / `chartScope` state. */}
+      {/* Single page-wide scope bar for the three chart surfaces below
+          (Evolution, Category donut, Sankey). All three mutate the same
+          range + chartScope state, so a per-section picker just repeated
+          the same control three times. */}
+      {!rootErr && !rootEmpty && currencies.length > 0 && (
+        <ChartScopeBar
+          value={effectiveScope} onValueChange={setChartScope}
+          accounts={accounts} primaryCurrency={primary?.currency}
+          hideAvailable={!hasAnyLocked && !hasAnyInvestment}
+          range={range} onRangeChange={setRange}
+        />
+      )}
+
+      {/* Time series — forecast toggle only affects this chart, so it stays
+          in the section header rather than moving to the shared scope bar. */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6 relative">
           <span ref={curveAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.evolution', { currency: chartCurrency })}</span>
-            <div className="flex-1 h-px bg-ink-800" />
-            <div className="flex items-center gap-2 flex-wrap">
-              <label className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none" title={t('forecast.tooltip')}>
-                <input type="checkbox" checked={settings.showForecast} onChange={(e) => patchSettings({ showForecast: e.target.checked })} className="accent-sage-500" />
-                {t('forecast.label')}
-              </label>
-              <ScopeControls
-                value={effectiveScope} onValueChange={setChartScope}
-                accounts={accounts} primaryCurrency={primary?.currency}
-                hideAvailable={!hasAnyLocked && !hasAnyInvestment}
-                range={range} onRangeChange={setRange}
-              />
-            </div>
+            <div className="section-rule flex-1">{t('sections.evolution', { currency: chartCurrency })}</div>
+            <label className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none" title={t('forecast.tooltip')}>
+              <input type="checkbox" checked={settings.showForecast} onChange={(e) => patchSettings({ showForecast: e.target.checked })} className="accent-sage-500" />
+              {t('forecast.label')}
+            </label>
           </div>
           {seriesQ.isError ? (
             <ErrorState variant="inline" error={seriesQ.error} onRetry={() => void seriesQ.refetch()} />
@@ -183,18 +186,7 @@ export function Dashboard(): JSX.Element {
       {!rootErr && !rootEmpty && currencies.length > 0 && (
         <section className="surface p-5 md:p-6 relative">
           <span ref={donutAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
-          <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-500">{t('sections.categoryBreakdown')}</span>
-            <div className="flex-1 h-px bg-ink-800" />
-            <div className="flex items-center gap-2 flex-wrap">
-              <ScopeControls
-                value={effectiveScope} onValueChange={setChartScope}
-                accounts={accounts} primaryCurrency={primary?.currency}
-                hideAvailable={!hasAnyLocked && !hasAnyInvestment}
-                range={range} onRangeChange={setRange}
-              />
-            </div>
-          </div>
+          <div className="section-rule mb-4">{t('sections.categoryBreakdown')}</div>
           <CategoryBreakdown
             range={range}
             onRangeChange={setRange}
@@ -211,14 +203,9 @@ export function Dashboard(): JSX.Element {
           <span ref={sankeyAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <SankeySection
             range={range}
-            onRangeChange={setRange}
             currency={chartCurrency}
             accountId={effectiveScope}
             accountIds={effectiveScope === 'available' ? availableAccountIds : undefined}
-            accounts={accounts}
-            onAccountChange={setChartScope}
-            primaryCurrency={primary?.currency}
-            hideAvailableInSelect={!hasAnyLocked && !hasAnyInvestment}
           />
         </div>
       )}
