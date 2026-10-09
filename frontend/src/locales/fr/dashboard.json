@@ -108,6 +108,16 @@
   "scope": {
     "ariaLabel": "Portée des graphiques — compte et période"
   },
+  "sectionNav": {
+    "ariaLabel": "Aller à une section du tableau de bord",
+    "items": {
+      "balance": "Solde",
+      "insights": "Insights",
+      "budget": "Budget",
+      "evolution": "Évolution",
+      "sankey": "Flux"
+    }
+  },
   "envelopeTile": {
     "header": "Enveloppes",
     "actions": {

@@ -18,6 +18,7 @@ import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
 import { ChartScopeBar } from './ChartScopeBar';
+import { DashboardSectionNav } from './DashboardSectionNav';
 import { useDashboardScope } from './useDashboardScope';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { Link } from 'react-router-dom';
@@ -122,21 +123,32 @@ export function Dashboard(): JSX.Element {
         </div>
       )}
 
+      {/* Section nav — sticky on desktop so the user can jump across the
+          nine stacked sections without scrolling the whole way. Each pill
+          targets one of the id="dash-…" wrappers below. */}
+      {!rootErr && !rootEmpty && <DashboardSectionNav />}
+
       {/* Sections below are hidden while the root queries are erroring or
           empty — no point showing a wall of skeletons behind a top-level
           error. */}
       {!rootErr && !rootEmpty && (
-        <BalanceCardBlock currencies={currencies} consolidated={balanceQ.data?.consolidated ?? null} />
+        <div id="dash-balance" className="scroll-mt-24">
+          <BalanceCardBlock currencies={currencies} consolidated={balanceQ.data?.consolidated ?? null} />
+        </div>
       )}
 
       {!rootErr && !rootEmpty && primary && <MoyennesMensuellesSection currency={primary.currency} />}
       {!rootErr && !rootEmpty && primary && (
-        <div className="relative">
+        <div id="dash-insights" className="relative scroll-mt-24">
           <span ref={insightsAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <InsightsSection currency={primary.currency} />
         </div>
       )}
-      {!rootErr && !rootEmpty && <BudgetEnvelopeSection />}
+      {!rootErr && !rootEmpty && (
+        <div id="dash-budget" className="scroll-mt-24">
+          <BudgetEnvelopeSection />
+        </div>
+      )}
       {!rootErr && !rootEmpty && <SavingsGoalsSection />}
 
       {/* Single page-wide scope bar for the three chart surfaces below
@@ -155,7 +167,7 @@ export function Dashboard(): JSX.Element {
       {/* Time series — forecast toggle only affects this chart, so it stays
           in the section header rather than moving to the shared scope bar. */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <section className="surface p-5 md:p-6 relative">
+        <section id="dash-evolution" className="surface p-5 md:p-6 relative scroll-mt-24">
           <span ref={curveAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <div className="section-rule flex-1">{t('sections.evolution', { currency: chartCurrency })}</div>
@@ -199,7 +211,7 @@ export function Dashboard(): JSX.Element {
 
       {/* Cash-flow Sankey — follows the page range and account scope */}
       {!rootErr && !rootEmpty && currencies.length > 0 && (
-        <div className="relative">
+        <div id="dash-sankey" className="relative scroll-mt-24">
           <span ref={sankeyAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <SankeySection
             range={range}

@@ -108,6 +108,16 @@
   "scope": {
     "ariaLabel": "Charts scope — account and period"
   },
+  "sectionNav": {
+    "ariaLabel": "Jump to a dashboard section",
+    "items": {
+      "balance": "Balance",
+      "insights": "Insights",
+      "budget": "Budget",
+      "evolution": "Trend",
+      "sankey": "Flow"
+    }
+  },
   "envelopeTile": {
     "header": "Envelopes",
     "actions": {
