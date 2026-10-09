@@ -9,6 +9,22 @@ export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | 'available' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 
+// Toggleable Dashboard sections — mirrors backend/src/domain/settings/
+// defaults.ts. Order below matches the on-page layout top-to-bottom; the
+// Settings UI reuses it to list the checkboxes. The hero is intentionally
+// not in this list — it stays always visible.
+export const DASHBOARD_SECTION_IDS = [
+  'balance',
+  'averages',
+  'insights',
+  'budget',
+  'savings',
+  'evolution',
+  'categories',
+  'sankey',
+] as const;
+export type DashboardSectionId = (typeof DASHBOARD_SECTION_IDS)[number];
+
 export interface CallMeBotPrefs {
   enabled: boolean;
   phone: string;
@@ -86,6 +102,8 @@ export interface Settings {
   // 3-letter uppercase ISO currency code multi-currency totals are
   // consolidated into, or null to keep reports split per-currency.
   displayCurrency: string | null;
+  // Dashboard sections the user has hidden. Empty = every section visible.
+  dashboardHiddenSections: DashboardSectionId[];
   notifications: NotificationPrefs;
 }
 
@@ -142,6 +160,7 @@ export const DEFAULTS: Settings = {
   bankSyncHour: 2,
   backupHour: 3,
   displayCurrency: null,
+  dashboardHiddenSections: [],
   notifications: {
     enabled: true,
     channels: {

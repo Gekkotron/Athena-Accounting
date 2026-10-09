@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { DEFAULTS } from './defaults.js';
+import { DEFAULTS, DASHBOARD_SECTION_IDS } from './defaults.js';
 import type {
   DashboardRange,
   DashboardChartScope,
+  DashboardSectionId,
   TransactionsDefaultAccount,
 } from './defaults.js';
 
@@ -93,6 +94,14 @@ export const SettingsSchema = z
     displayCurrency: z
       .union([z.string().regex(/^[A-Z]{3}$/), z.null()])
       .optional(),
+    // Dedup via the transform so a stored blob with repeats (never written
+    // by the UI, but cheap defense) can't produce an off-by-one checkbox
+    // state. Max cap matches the fixed enum length.
+    dashboardHiddenSections: z
+      .array(z.enum(DASHBOARD_SECTION_IDS as unknown as [DashboardSectionId, ...DashboardSectionId[]]))
+      .max(DASHBOARD_SECTION_IDS.length)
+      .transform((v) => Array.from(new Set(v)))
+      .optional(),
     notifications: NotificationsSchema.optional(),
   })
   .strict();
@@ -109,6 +118,7 @@ export type FullSettings = {
   bankSyncHour: number;
   backupHour: number;
   displayCurrency: string | null;
+  dashboardHiddenSections: DashboardSectionId[];
   notifications: {
     enabled: boolean;
     channels: {
@@ -182,7 +192,7 @@ export function mergeNotifications(
 // something outside PATCH wrote garbage into the JSONB, GET returns a
 // clean, complete shape.
 export function mergeSettings(stored: unknown, patch: Partial<Settings> = {}): FullSettings {
-  const safe: FullSettings = { ...DEFAULTS };
+  const safe: FullSettings = { ...DEFAULTS, dashboardHiddenSections: [...DEFAULTS.dashboardHiddenSections] };
   const src = (stored && typeof stored === 'object') ? (stored as Record<string, unknown>) : {};
   const parsed = SettingsSchema.safeParse(src);
   if (parsed.success) {

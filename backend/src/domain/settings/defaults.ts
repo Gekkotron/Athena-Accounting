@@ -25,6 +25,9 @@ export const DEFAULTS = {
   // fx_rates table. null = per-currency mode (no conversion, current
   // behavior).
   displayCurrency: null,
+  // IDs of Dashboard sections the user has hidden from the page. Empty =
+  // every section visible (new sections auto-appear on upgrade).
+  dashboardHiddenSections: [] as readonly DashboardSectionId[],
   // Notification prefs: enabled by default with privacy-safe display
   // (amount/merchant hidden) and only the in-app toast channel on. OS
   // native and web push are opt-in since they require extra permissions.
@@ -54,3 +57,18 @@ export type DashboardRange = '1m' | '3m' | '6m' | '12m' | 'all';
 export type DashboardChartScope = 'all' | 'available' | number;
 export type TransactionsDefaultAccount = 'all' | 'first-checking' | number;
 export type DisplayCurrency = string | null;
+
+// Toggleable Dashboard sections. The hero stays always visible on purpose
+// (it's the page's identity card). Order below matches the on-page layout
+// top-to-bottom — the Settings UI reuses it to list the checkboxes.
+export const DASHBOARD_SECTION_IDS = [
+  'balance',
+  'averages',
+  'insights',
+  'budget',
+  'savings',
+  'evolution',
+  'categories',
+  'sankey',
+] as const;
+export type DashboardSectionId = (typeof DASHBOARD_SECTION_IDS)[number];

@@ -6,6 +6,7 @@ import { NumberField, SelectField, SavedChip, type SelectOption } from '../Setti
 import { useSettingsFlash } from './useSettingsFlash';
 import { useAccounts, EMPTY_ACCOUNTS } from '../../lib/useReferenceData';
 import { SettingsSkeleton, SaveErrorBanner } from './_shared';
+import { DASHBOARD_SECTION_IDS, type DashboardSectionId } from '../../lib/settings';
 
 export function SettingsDashboard(): JSX.Element {
   const { t } = useTranslation('settings');
@@ -59,6 +60,39 @@ export function SettingsDashboard(): JSX.Element {
           onCommit={(v) => send('chartGapThresholdDays', v)}
           flashing={flashKey === 'chartGapThresholdDays'}
         />
+
+        <div>
+          <div className="text-sm mb-1 flex items-center gap-2">
+            {t('settings.dashboardSection.visibleSections.label')}
+            {flashKey === 'dashboardHiddenSections' && <SavedChip />}
+          </div>
+          <p className="text-xs text-ink-500 mb-2">
+            {t('settings.dashboardSection.visibleSections.help')}
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {DASHBOARD_SECTION_IDS.map((id) => {
+              const hidden = settings.dashboardHiddenSections.includes(id);
+              return (
+                <li key={id}>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="accent-sage-500"
+                      checked={!hidden}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? settings.dashboardHiddenSections.filter((s) => s !== id)
+                          : [...settings.dashboardHiddenSections, id as DashboardSectionId];
+                        send('dashboardHiddenSections', next);
+                      }}
+                    />
+                    {t(`settings.dashboardSection.visibleSections.items.${id}`)}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </div>
   );

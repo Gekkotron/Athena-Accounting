@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
@@ -73,6 +74,13 @@ export function Dashboard(): JSX.Element {
     primaryCurrency: primary?.currency,
   });
 
+  // Section visibility — the user can hide any of the 8 sections from
+  // Settings → Dashboard; empty list means every section is visible.
+  // Memoized by the array reference so DashboardSectionNav's observer
+  // effect doesn't re-register on every parent render.
+  const hidden = useMemo(() => new Set(settings.dashboardHiddenSections), [settings.dashboardHiddenSections]);
+  const chartsHidden = hidden.has('evolution') && hidden.has('categories') && hidden.has('sankey');
+
   // Average-based forecast overlay for the Trend chart — see
   // useForecastProjection for the rationale and the per-scope math. The
   // overlay is suppressed whenever the chart is showing the consolidated
@@ -126,37 +134,42 @@ export function Dashboard(): JSX.Element {
 
       {/* Section nav — sticky on desktop so the user can jump across the
           nine stacked sections without scrolling the whole way. Each pill
-          targets one of the id="dash-…" wrappers below. */}
-      {!rootErr && !rootEmpty && <DashboardSectionNav />}
+          targets one of the id="dash-…" wrappers below. Pills for hidden
+          sections are filtered out via the `hidden` prop. */}
+      {!rootErr && !rootEmpty && <DashboardSectionNav hidden={hidden} />}
 
       {/* Sections below are hidden while the root queries are erroring or
           empty — no point showing a wall of skeletons behind a top-level
-          error. */}
-      {!rootErr && !rootEmpty && (
+          error. Each `!hidden.has(...)` gate honors the user's
+          Settings → Dashboard checkboxes. */}
+      {!rootErr && !rootEmpty && !hidden.has('balance') && (
         <div id="dash-balance" className="scroll-mt-24">
           <BalanceCardBlock currencies={currencies} consolidated={balanceQ.data?.consolidated ?? null} />
         </div>
       )}
 
-      {!rootErr && !rootEmpty && primary && <MoyennesMensuellesSection currency={primary.currency} />}
-      {!rootErr && !rootEmpty && primary && (
+      {!rootErr && !rootEmpty && !hidden.has('averages') && primary && (
+        <MoyennesMensuellesSection currency={primary.currency} />
+      )}
+      {!rootErr && !rootEmpty && !hidden.has('insights') && primary && (
         <div id="dash-insights" className="relative scroll-mt-24">
           <span ref={insightsAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <InsightsSection currency={primary.currency} />
         </div>
       )}
-      {!rootErr && !rootEmpty && (
+      {!rootErr && !rootEmpty && !hidden.has('budget') && (
         <div id="dash-budget" className="scroll-mt-24">
           <BudgetEnvelopeSection />
         </div>
       )}
-      {!rootErr && !rootEmpty && <SavingsGoalsSection />}
+      {!rootErr && !rootEmpty && !hidden.has('savings') && <SavingsGoalsSection />}
 
       {/* Single page-wide scope bar for the three chart surfaces below
           (Evolution, Category donut, Sankey). All three mutate the same
           range + chartScope state, so a per-section picker just repeated
-          the same control three times. */}
-      {!rootErr && !rootEmpty && currencies.length > 0 && (
+          the same control three times. Suppressed when all three chart
+          sections are hidden — otherwise it would float alone. */}
+      {!rootErr && !rootEmpty && currencies.length > 0 && !chartsHidden && (
         <ChartScopeBar
           value={effectiveScope} onValueChange={setChartScope}
           accounts={accounts} primaryCurrency={primary?.currency}
@@ -167,7 +180,7 @@ export function Dashboard(): JSX.Element {
 
       {/* Time series — forecast toggle only affects this chart, so it stays
           in the section header rather than moving to the shared scope bar. */}
-      {!rootErr && !rootEmpty && currencies.length > 0 && (
+      {!rootErr && !rootEmpty && !hidden.has('evolution') && currencies.length > 0 && (
         <section id="dash-evolution" className="surface p-5 md:p-6 relative scroll-mt-24">
           <span ref={curveAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
@@ -196,7 +209,7 @@ export function Dashboard(): JSX.Element {
       )}
 
       {/* Category breakdown — donut */}
-      {!rootErr && !rootEmpty && currencies.length > 0 && (
+      {!rootErr && !rootEmpty && !hidden.has('categories') && currencies.length > 0 && (
         <section className="surface p-5 md:p-6 relative">
           <span ref={donutAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <SectionRule className="mb-4">{t('sections.categoryBreakdown')}</SectionRule>
@@ -211,7 +224,7 @@ export function Dashboard(): JSX.Element {
       )}
 
       {/* Cash-flow Sankey — follows the page range and account scope */}
-      {!rootErr && !rootEmpty && currencies.length > 0 && (
+      {!rootErr && !rootEmpty && !hidden.has('sankey') && currencies.length > 0 && (
         <div id="dash-sankey" className="relative scroll-mt-24">
           <span ref={sankeyAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <SankeySection

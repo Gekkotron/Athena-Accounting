@@ -17,6 +17,20 @@
       "gapThreshold": {
         "label": "Seuil de ligne pointillée (jours)",
         "help": "Un écart supérieur à X jours entre deux points est tracé en pointillés."
+      },
+      "visibleSections": {
+        "label": "Sections visibles",
+        "help": "Décochez une section pour la masquer du tableau de bord. L'en-tête reste toujours affiché.",
+        "items": {
+          "balance": "Solde par compte",
+          "averages": "Moyennes mensuelles",
+          "insights": "Insights",
+          "budget": "Enveloppes",
+          "savings": "Objectifs d'épargne",
+          "evolution": "Courbe d'évolution",
+          "categories": "Catégories (anneau)",
+          "sankey": "Flux de trésorerie (Sankey)"
+        }
       }
     },
     "transactionsSection": {

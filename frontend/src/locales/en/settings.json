@@ -17,6 +17,20 @@
       "gapThreshold": {
         "label": "Dashed-line threshold (days)",
         "help": "A gap of more than X days between two points is drawn as a dashed line."
+      },
+      "visibleSections": {
+        "label": "Visible sections",
+        "help": "Uncheck a section to hide it from the dashboard. The hero at the top stays visible.",
+        "items": {
+          "balance": "Balance by account",
+          "averages": "Monthly averages",
+          "insights": "Insights",
+          "budget": "Envelopes",
+          "savings": "Savings goals",
+          "evolution": "Trend chart",
+          "categories": "Categories (donut)",
+          "sankey": "Cash flow (Sankey)"
+        }
       }
     },
     "transactionsSection": {

@@ -62,6 +62,33 @@ describe('mergeSettings', () => {
   });
 });
 
+describe('dashboardHiddenSections', () => {
+  it('defaults to an empty list', () => {
+    expect(mergeSettings({}, {}).dashboardHiddenSections).toEqual([]);
+  });
+
+  it('accepts a list of known section ids', () => {
+    const out = mergeSettings({ dashboardHiddenSections: ['sankey', 'budget'] }, {});
+    expect(out.dashboardHiddenSections).toEqual(['sankey', 'budget']);
+  });
+
+  it('dedups repeats stored by a bad client', () => {
+    const out = mergeSettings({ dashboardHiddenSections: ['sankey', 'sankey', 'budget'] }, {});
+    expect(out.dashboardHiddenSections).toEqual(['sankey', 'budget']);
+  });
+
+  it('rejects unknown ids (whole blob falls back to defaults)', () => {
+    const out = mergeSettings({ dashboardHiddenSections: ['nope'] }, {});
+    expect(out.dashboardHiddenSections).toEqual([]);
+  });
+
+  it('does not share the array with DEFAULTS (callers can mutate safely)', () => {
+    const a = mergeSettings({}, {}).dashboardHiddenSections;
+    a.push('sankey');
+    expect(mergeSettings({}, {}).dashboardHiddenSections).toEqual([]);
+  });
+});
+
 describe('bankSyncHour', () => {
   it('defaults to 2', () => {
     expect(mergeSettings({}, {}).bankSyncHour).toBe(2);

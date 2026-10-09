@@ -52,3 +52,12 @@ it('scrolls to the matching section and updates aria-current when a pill is clic
   expect(screen.getByRole('button', { name: 'Insights' })).toHaveAttribute('aria-current', 'true');
   expect(screen.getByRole('button', { name: 'Solde' })).not.toHaveAttribute('aria-current');
 });
+
+it('filters pills using the `hidden` set', () => {
+  render(<DashboardSectionNav hidden={new Set(['sankey', 'budget'])} />);
+  expect(screen.getByRole('button', { name: 'Solde' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Insights' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Évolution' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Budget' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Flux' })).toBeNull();
+});
