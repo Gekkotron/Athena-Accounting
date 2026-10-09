@@ -61,3 +61,41 @@ export function NumberField(props: {
     </div>
   );
 }
+
+export type SelectOption = { value: string; label: string };
+
+// Sibling of NumberField for label+select pairs. Settings values that aren't
+// pure strings (numeric account ids, discriminated unions like 'all' /
+// 'first-checking' / <id>) serialize to string at the DOM boundary; callers
+// do their own parse on the way out so the primitive stays single-shape.
+export function SelectField(props: {
+  label: string;
+  help?: string;
+  value: string;
+  options: ReadonlyArray<SelectOption>;
+  flashing: boolean;
+  onChange: (v: string) => void;
+}) {
+  const { label, help, value, options, flashing, onChange } = props;
+  return (
+    <div>
+      <label className="text-sm mb-1 block">
+        {label}
+        {flashing && <SavedChip />}
+      </label>
+      <select
+        className="input"
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {help && <p className="text-xs text-ink-500 mt-1">{help}</p>}
+    </div>
+  );
+}

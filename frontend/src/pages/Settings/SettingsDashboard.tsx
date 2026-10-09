@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RangePicker, type RangeKey } from '../../components/RangePicker';
 import { SectionRule } from '../../components/SectionRule';
-import { NumberField, SavedChip } from '../Settings-fields';
+import { NumberField, SelectField, SavedChip, type SelectOption } from '../Settings-fields';
 import { useSettingsFlash } from './useSettingsFlash';
-import { useAccounts } from '../../lib/useReferenceData';
+import { useAccounts, EMPTY_ACCOUNTS } from '../../lib/useReferenceData';
 import { SettingsSkeleton, SaveErrorBanner } from './_shared';
 
 export function SettingsDashboard(): JSX.Element {
@@ -11,7 +12,12 @@ export function SettingsDashboard(): JSX.Element {
   const { settings, isReady, flashKey, send, mutation } = useSettingsFlash();
 
   const accountsQ = useAccounts();
-  const accounts = accountsQ.data ?? [];
+  const accounts = accountsQ.data ?? EMPTY_ACCOUNTS;
+
+  const chartScopeOptions = useMemo<SelectOption[]>(() => [
+    { value: 'all', label: t('settings.dashboardSection.allAccountsOption') },
+    ...accounts.map((a) => ({ value: String(a.id), label: `${a.name} (${a.currency})` })),
+  ], [accounts, t]);
 
   if (!isReady) return <SettingsSkeleton />;
 
@@ -34,26 +40,13 @@ export function SettingsDashboard(): JSX.Element {
           />
         </div>
 
-        <div>
-          <label className="text-sm mb-2 block">
-            {t('settings.dashboardSection.defaultChartScopeLabel')}
-            {flashKey === 'dashboardChartScope' && <SavedChip />}
-          </label>
-          <select
-            className="input"
-            value={settings.dashboardChartScope === 'all' ? 'all' : String(settings.dashboardChartScope)}
-            onChange={(e) =>
-              send('dashboardChartScope', e.target.value === 'all' ? 'all' : Number(e.target.value))
-            }
-          >
-            <option value="all">{t('settings.dashboardSection.allAccountsOption')}</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.currency})
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          label={t('settings.dashboardSection.defaultChartScopeLabel')}
+          value={settings.dashboardChartScope === 'all' ? 'all' : String(settings.dashboardChartScope)}
+          options={chartScopeOptions}
+          flashing={flashKey === 'dashboardChartScope'}
+          onChange={(v) => send('dashboardChartScope', v === 'all' ? 'all' : Number(v))}
+        />
 
         <NumberField
           label={t('settings.dashboardSection.gapThreshold.label')}

@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionRule } from '../../components/SectionRule';
-import { SavedChip } from '../Settings-fields';
+import { SelectField, type SelectOption } from '../Settings-fields';
 import { useSettingsFlash } from './useSettingsFlash';
-import { useAccounts } from '../../lib/useReferenceData';
+import { useAccounts, EMPTY_ACCOUNTS } from '../../lib/useReferenceData';
 import { SettingsSkeleton, SaveErrorBanner } from './_shared';
 
 export function SettingsTransactions(): JSX.Element {
@@ -10,7 +11,13 @@ export function SettingsTransactions(): JSX.Element {
   const { settings, isReady, flashKey, send, mutation } = useSettingsFlash();
 
   const accountsQ = useAccounts();
-  const accounts = accountsQ.data ?? [];
+  const accounts = accountsQ.data ?? EMPTY_ACCOUNTS;
+
+  const defaultAccountOptions = useMemo<SelectOption[]>(() => [
+    { value: 'first-checking', label: t('settings.transactionsSection.firstCheckingOption') },
+    { value: 'all', label: t('settings.transactionsSection.allAccountsOption') },
+    ...accounts.map((a) => ({ value: String(a.id), label: `${a.name} (${a.currency})` })),
+  ], [accounts, t]);
 
   if (!isReady) return <SettingsSkeleton />;
 
@@ -28,33 +35,19 @@ export function SettingsTransactions(): JSX.Element {
       <div className="surface p-6 flex flex-col gap-4">
         <SectionRule>{t('settings.transactionsSection.label')}</SectionRule>
 
-        <div>
-          <label className="text-sm mb-2 block">
-            {t('settings.transactionsSection.defaultAccountLabel')}
-            {flashKey === 'transactionsDefaultAccount' && <SavedChip />}
-          </label>
-          <select
-            className="input"
-            aria-label={t('settings.transactionsSection.defaultAccountLabel')}
-            value={rawValue}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === 'first-checking' || v === 'all') {
-                send('transactionsDefaultAccount', v);
-              } else {
-                send('transactionsDefaultAccount', Number(v));
-              }
-            }}
-          >
-            <option value="first-checking">{t('settings.transactionsSection.firstCheckingOption')}</option>
-            <option value="all">{t('settings.transactionsSection.allAccountsOption')}</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.currency})
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          label={t('settings.transactionsSection.defaultAccountLabel')}
+          value={rawValue}
+          options={defaultAccountOptions}
+          flashing={flashKey === 'transactionsDefaultAccount'}
+          onChange={(v) => {
+            if (v === 'first-checking' || v === 'all') {
+              send('transactionsDefaultAccount', v);
+            } else {
+              send('transactionsDefaultAccount', Number(v));
+            }
+          }}
+        />
       </div>
     </div>
   );
