@@ -180,6 +180,7 @@
       "action": "Action"
     },
     "similarityTitle": "Minimum label similarity of the group (Jaccard on tokens, excluding boilerplate words).",
+    "demoHint": "Duplicate detection cross-matches transactions on the database side. Install Athena locally to use it.",
     "selectTransactionAriaLabel": "Select transaction #{{id}}",
     "deleteTransactionTitle": "Delete transaction #{{id}}",
     "deleteTransactionAriaLabel": "Delete this transaction"

@@ -113,9 +113,7 @@ export function DuplicatesPanel(): JSX.Element {
           {!demo && refreshButton}
         </div>
         {demo ? (
-          <DemoUnavailableState
-            hint="La détection de doublons croise les transactions côté base de données. Installez Athena localement pour l'utiliser."
-          />
+          <DemoUnavailableState hint={t('duplicates.demoHint')} />
         ) : (
           <ErrorState
             title={t('duplicates.errorTitle')}

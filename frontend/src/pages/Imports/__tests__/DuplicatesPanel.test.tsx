@@ -89,6 +89,26 @@ describe('DuplicatesPanel', () => {
     expect(screen.getByText('2026-06-15')).toBeInTheDocument();
   });
 
+  it('renders the i18n-routed demo hint when the duplicates endpoint reports a demo stub', async () => {
+    apiMock.mockImplementation(async (path: string) => {
+      if (path === '/api/settings') return {
+        settings: {
+          dashboardRange: '3m', dashboardChartScope: 'all',
+          chartGapThresholdDays: 6, duplicateSimilarityThreshold: 0,
+        },
+      };
+      if (path === '/api/accounts') return { accounts: [] };
+      if (path === '/api/transactions/duplicates') {
+        throw Object.assign(new Error('demo'), { demoStub: true });
+      }
+      throw new Error(`unexpected: ${path}`);
+    });
+    renderPanel();
+    expect(
+      await screen.findByText(/La détection de doublons croise les transactions/i),
+    ).toBeInTheDocument();
+  });
+
   it('bulk-delete fires POST /api/transactions/delete-bulk with the selected ids', async () => {
     const postCalls: Array<{ path: string; init: any }> = [];
     apiMock.mockImplementation(async (path: string, init?: any) => {
