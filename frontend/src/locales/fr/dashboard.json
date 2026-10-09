@@ -15,7 +15,13 @@
     "accountsSuffix_one": "de {{count}} compte · {{currency}}",
     "accountsSuffix_other": "de {{count}} comptes · {{currency}}",
     "investedSuffix": "placés",
-    "blockedSuffix": "bloqués"
+    "blockedSuffix": "bloqués",
+    "labels": {
+      "total": "Total",
+      "invested": "Placé",
+      "blocked": "Bloqué",
+      "available": "Disponible"
+    }
   },
   "sections": {
     "evolution": "Évolution · {{currency}}",

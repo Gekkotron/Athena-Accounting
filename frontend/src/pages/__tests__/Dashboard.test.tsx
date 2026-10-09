@@ -108,9 +108,11 @@ describe('Dashboard', () => {
       throw new Error(`unexpected: ${path}`);
     });
     renderDashboard();
-    expect(await screen.findByText('Disponible')).toBeInTheDocument();
-    // The hero renders a "bloqués" tag when a lock is active.
-    expect(screen.getAllByText(/bloqués/i).length).toBeGreaterThan(0);
+    // Both the headline label and the mini-grid Disponible tile render the
+    // same string once a lock is active, hence findAllByText.
+    expect((await screen.findAllByText('Disponible')).length).toBeGreaterThan(0);
+    // The breakdown grid shows a "Bloqué" tile when a lock is active.
+    expect(screen.getByText('Bloqué')).toBeInTheDocument();
   });
 
   it('adds a "placés" tag and switches to "Disponible" when an investment account holds value', async () => {
@@ -130,9 +132,9 @@ describe('Dashboard', () => {
     });
     renderDashboard();
     // Hero label swaps to "Disponible" even without any lock, because
-    // invested > 0.
-    expect(await screen.findByText('Disponible')).toBeInTheDocument();
-    expect(screen.getAllByText(/placés/i).length).toBeGreaterThan(0);
+    // invested > 0. Headline + grid tile both render the same string.
+    expect((await screen.findAllByText('Disponible')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Placé')).toBeInTheDocument();
   });
 
   it('reads dashboardChartScope from /api/settings on mount', async () => {
