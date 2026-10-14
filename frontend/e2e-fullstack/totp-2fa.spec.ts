@@ -61,7 +61,7 @@ test('enrol: password → QR + secret → verify code → save recovery codes', 
   await expect(page).toHaveURL(/\/$/);
 
   await page.goto('/settings/security');
-  await page.getByRole('button', { name: 'Activer' }).click();
+  await page.getByTestId('totp-section').getByRole('button', { name: 'Activer' }).click();
 
   // Step 1 — confirm password.
   await page.getByLabel('Mot de passe actuel').fill(PASSWORD);
