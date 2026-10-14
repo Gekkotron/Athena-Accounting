@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -123,5 +124,32 @@ describe('<TourBubble />', () => {
     await screen.findByRole('dialog');
     // Step 0 renders (anchor resolved).
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  // Regression: the Dashboard tour can start before its first anchor (the
+  // balance hero) has rendered. The bubble then mounts later, and focusing
+  // it only on tour start left focus on <body> — so Esc (handled on the
+  // bubble) did nothing. Seen as a stuck tour in the full-stack e2e.
+  it('focuses the bubble when its anchor mounts after the tour started, so Esc works', async () => {
+    function LateAnchor() {
+      const [shown, setShown] = useState(false);
+      const a = useTourAnchor('dashboard:balance');
+      return (
+        <>
+          <button onClick={() => setShown(true)}>show</button>
+          {shown && <div ref={a} data-testid="anchor-balance" />}
+        </>
+      );
+    }
+    render(wrap(<><LateAnchor /><StartHarness pageId="dashboard" /><TourBubble /></>));
+    await userEvent.click(screen.getByText('start'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await userEvent.click(screen.getByText('show'));
+    const dialog = await screen.findByRole('dialog');
+    expect(document.activeElement).toBe(dialog);
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

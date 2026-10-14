@@ -106,11 +106,16 @@ export function TourBubble(): JSX.Element | null {
   const role = useRole(context, { role: 'dialog' });
   const { getFloatingProps } = useInteractions([role]);
 
-  // Focus the bubble on step change / open.
+  // Focus the bubble on step change / open — and when its anchor resolves.
+  // On desktop the bubble isn't mounted until the anchor exists (see the
+  // `!anchor` early return), and a tour can start before the page's first
+  // anchor renders (Dashboard data still loading). Without `anchor` in the
+  // deps, focus stayed on <body> and Esc — handled on the bubble — did
+  // nothing.
   const bubbleRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (activePageId != null && bubbleRef.current) bubbleRef.current.focus();
-  }, [activePageId, stepIdx]);
+  }, [activePageId, stepIdx, anchor]);
 
   const total = activePageId != null ? TOURS[activePageId].length : 0;
   const isLast = stepIdx >= total - 1;
