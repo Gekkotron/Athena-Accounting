@@ -20,16 +20,19 @@ export const CAT = {
   Impots: 9,
   Assurance: 10,
   Abonnements: 11,
+  Interets: 12,
 } as const;
 
 export const ACC = {
   Courant: 1,
   Livret: 2,
+  AssuranceVie: 3,
 } as const;
 
 export const accounts: Account[] = [
   { id: ACC.Courant, name: 'Compte courant', type: 'checking', currency: 'EUR', openingBalance: '2500.00', openingDate: '2026-01-15', displayOrder: 0, createdAt: '2026-01-15T09:00:00.000Z', lockYears: null },
   { id: ACC.Livret,  name: 'Livret A',       type: 'savings',  currency: 'EUR', openingBalance: '8000.00', openingDate: '2026-01-15', displayOrder: 1, createdAt: '2026-01-15T09:00:00.000Z', lockYears: null },
+  { id: ACC.AssuranceVie,     name: 'Assurance-vie', type: 'investment', currency: 'EUR', openingBalance: '4000.00', openingDate: '2026-01-15', displayOrder: 2, createdAt: '2026-01-15T09:00:00.000Z', lockYears: null },
 ];
 
 interface TxSpec {
@@ -175,6 +178,29 @@ export function buildTransactions(): Transaction[] {
     transferGroupId: null,
     sourceFileId: null,
     importedAt: '2026-06-22T10:00:00.000Z',
+    lockYears: null,
+    splits: [],
+    attachmentCount: 0,
+  });
+
+  // Livret A interest credited once a year — an income-kind transaction, so
+  // it counts as gain (not Versé) on the savings card.
+  list.push({
+    id: id++,
+    accountId: ACC.Livret,
+    date: '2026-06-30',
+    amount: '62.40',
+    rawLabel: 'Intérêts Livret A',
+    normalizedLabel: 'interets livret a',
+    memo: null,
+    notes: null,
+    fitid: null,
+    dedupKey: `${ACC.Livret}_2026-06-30_62.40_interets`,
+    categoryId: CAT.Interets,
+    categorySource: 'manual',
+    transferGroupId: null,
+    sourceFileId: null,
+    importedAt: '2026-06-30T10:00:00.000Z',
     lockYears: null,
     splits: [],
     attachmentCount: 0,

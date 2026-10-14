@@ -1,6 +1,7 @@
 import type { Account, Category, Transaction } from '../../../types';
 import { getState, type DemoState } from '../../store';
 import { todayLocalIso } from '../../../../lib/dates';
+import { valuationFields } from './valuation';
 
 // Amounts are stored as fixed-point strings; conversion to Number for
 // aggregation is safe within the demo's small dataset. When emitting a
@@ -121,6 +122,7 @@ export function enrichAccount(acc: Account, allTx: Transaction[]): Account {
     transactionCount: mine.length,
     countedTransactionCount: counted.length,
     availableBalance: money(availableBalance),
+    ...valuationFields(acc, currentBalance, counted, getState(), today),
   };
 }
 

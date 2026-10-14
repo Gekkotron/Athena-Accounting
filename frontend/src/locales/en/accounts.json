@@ -29,7 +29,11 @@
     "closedBadge": "Closed",
     "closedTitle": "Closed on {{date}}",
     "copyIban": "Copy IBAN",
-    "ibanCopied": "IBAN copied"
+    "ibanCopied": "IBAN copied",
+    "valueAsOf": "as of {{date}}",
+    "contributed": "Contributed",
+    "gain": "Gain",
+    "updateValue": "Update value"
   },
   "form": {
     "labels": {
@@ -122,5 +126,20 @@
     "priorityInline": "prio {{value}}",
     "addButton": "Add",
     "deleteButton": "delete"
+  },
+  "valuation": {
+    "title": "Value of “{{name}}”",
+    "subtitle": "Enter the current value of the holding. The gain is computed against the amount contributed.",
+    "dateLabel": "Date",
+    "valueLabel": "Value ({{currency}})",
+    "save": "Save",
+    "history": "Valuation history",
+    "empty": "No valuation recorded.",
+    "deleteAria": "Delete the valuation of {{date}}",
+    "errors": {
+      "generic": "Something went wrong.",
+      "invalidValue": "Invalid value (e.g. 1234.56).",
+      "invalidDate": "Invalid or future date."
+    }
   }
 }

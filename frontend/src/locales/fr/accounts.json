@@ -29,7 +29,11 @@
     "closedBadge": "Fermé",
     "closedTitle": "Fermé le {{date}}",
     "copyIban": "Copier l'IBAN",
-    "ibanCopied": "IBAN copié"
+    "ibanCopied": "IBAN copié",
+    "valueAsOf": "au {{date}}",
+    "contributed": "Versé",
+    "gain": "Plus-value",
+    "updateValue": "Mettre à jour la valeur"
   },
   "form": {
     "labels": {
@@ -122,5 +126,20 @@
     "priorityInline": "prio {{value}}",
     "addButton": "Ajouter",
     "deleteButton": "supprimer"
+  },
+  "valuation": {
+    "title": "Valeur de « {{name}} »",
+    "subtitle": "Saisissez la valeur actuelle du placement. La plus-value est calculée par rapport aux sommes versées.",
+    "dateLabel": "Date",
+    "valueLabel": "Valeur ({{currency}})",
+    "save": "Enregistrer",
+    "history": "Historique des valorisations",
+    "empty": "Aucune valorisation enregistrée.",
+    "deleteAria": "Supprimer la valorisation du {{date}}",
+    "errors": {
+      "generic": "Une erreur est survenue.",
+      "invalidValue": "Valeur invalide (ex. 1234,56).",
+      "invalidDate": "Date invalide ou dans le futur."
+    }
   }
 }

@@ -105,6 +105,23 @@ export interface Account {
   // i.e. the manual field is locked and the backend will refuse PUTs that
   // try to overwrite it. False/undefined = user may freely edit.
   ibanLocked?: boolean;
+  // Investment valuation fields (migration 0047). `contributed` (Versé) is
+  // null unless the account is investment|savings. `value` (Valeur) is the
+  // latest manual valuation for investment accounts, the book balance
+  // otherwise. `gainPct` is a RATIO (0.0523 = +5.23 %), not a percentage.
+  contributed?: string | null;
+  latestValue?: string | null;
+  latestValueDate?: string | null;  // YYYY-MM-DD
+  value?: string;
+  gain?: string | null;
+  gainPct?: number | null;
+}
+
+export interface AccountValuation {
+  id: number;
+  date: string;     // YYYY-MM-DD
+  value: string;    // fixed-point string
+  source: string;
 }
 
 export interface BalanceCheckpoint {

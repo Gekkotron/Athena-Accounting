@@ -145,4 +145,39 @@ describe('AccountCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /copier l'iban/i }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('FR76123456789012'));
   });
+
+  describe('investment valuation block', () => {
+    const inv: Account = {
+      id: 2, name: 'AV', type: 'investment', currency: 'EUR',
+      openingBalance: '1000.00', openingDate: '2025-01-01',
+      currentBalance: '1000.00', value: '1100.00', contributed: '1000.00',
+      latestValue: '1100.00', latestValueDate: '2020-01-01',
+      gain: '100.00', gainPct: 0.1, displayOrder: 0,
+    };
+
+    it('shows Valeur, Versé and a signed green gain with percentage', () => {
+      renderCard({ account: inv });
+      expect(screen.getByText(/1\s?100,00/)).toBeInTheDocument();
+      expect(screen.getByText('Versé')).toBeInTheDocument();
+      const gain = screen.getByTestId('gain');
+      expect(gain.textContent).toMatch(/^\+100,00/);
+      expect(gain.textContent).toMatch(/\+10,00 %/);
+      expect(gain.className).toContain('sage');
+    });
+
+    it('flags an old valuation date as stale and shows the update button', () => {
+      const onUpdateValue = vi.fn();
+      renderCard({ account: inv, onUpdateValue } as never);
+      expect(screen.getByTestId('valuation-date').dataset.stale).toBe('true');
+      fireEvent.click(screen.getByRole('button', { name: 'Mettre à jour la valeur' }));
+      expect(onUpdateValue).toHaveBeenCalledWith(inv);
+    });
+
+    it('shows a red gain for a loss and no update button on savings', () => {
+      renderCard({ account: { ...inv, type: 'savings', gain: '-50.00', gainPct: -0.05, latestValueDate: null } });
+      expect(screen.getByTestId('gain').className).toContain('clay');
+      expect(screen.queryByRole('button', { name: 'Mettre à jour la valeur' })).toBeNull();
+      expect(screen.queryByTestId('valuation-date')).toBeNull();
+    });
+  });
 });

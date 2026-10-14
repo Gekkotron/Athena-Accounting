@@ -3,11 +3,11 @@ import { registerHandler, type DemoRequest } from '../../index';
 import { ApiError } from '../../../apiError';
 import { consolidate } from '../../../../lib/fx';
 import type { DemoFxRate } from '../../store';
-import { enrichAccount, money, resolveDisplayCurrency, settingsDisplayCurrency, todayIso, txs } from './lib';
+import { addYearsIso, enrichAccount, money, resolveDisplayCurrency, settingsDisplayCurrency, todayIso, txs } from './lib';
 
-type PerCurrencyRow = { currency: string; total: string; available: string; invested: string; account_count: number };
+type PerCurrencyRow = { currency: string; total: string; available: string; invested: string; unrealized: string; account_count: number };
 
-const CONSOLIDATE_KEYS = ['total', 'available', 'invested'] as const;
+const CONSOLIDATE_KEYS = ['total', 'available', 'invested', 'unrealized'] as const;
 
 // Mirrors backend/src/http/routes/reports/balance.ts's buildConsolidatedBlock.
 function buildBalanceConsolidated(rows: PerCurrencyRow[], display: string, rates: DemoFxRate[], at: string) {
@@ -17,6 +17,7 @@ function buildBalanceConsolidated(rows: PerCurrencyRow[], display: string, rates
     total: out.totals.total,
     available: out.totals.available,
     invested: out.totals.invested,
+    unrealized: out.totals.unrealized,
     unmapped: out.unmapped as PerCurrencyRow[],
   };
 }
@@ -40,17 +41,25 @@ function handleReportsBalance(req: DemoRequest) {
   const state = getState();
   const allTx = txs();
   const enriched = state.accounts.map((a) => enrichAccount(a, allTx));
-  const byCurrency = new Map<string, { currency: string; total: number; available: number; invested: number; account_count: number }>();
+  const byCurrency = new Map<string, { currency: string; total: number; available: number; invested: number; unrealized: number; account_count: number }>();
+  const today = todayIso();
   for (const a of enriched) {
     const cur = a.currency;
-    const bucket = byCurrency.get(cur) ?? { currency: cur, total: 0, available: 0, invested: 0, account_count: 0 };
-    bucket.total += Number(a.currentBalance ?? 0);
-    bucket.available += Number(a.availableBalance ?? 0);
-    // Mirrors backend reports/balance.ts: invested is the available part of
-    // investment-type accounts only (their locked part counts as blocked).
+    const bucket = byCurrency.get(cur) ?? { currency: cur, total: 0, available: 0, invested: 0, unrealized: 0, account_count: 0 };
+    // Totals use Valeur; mirrors backend reports/balance.ts: the valuation
+    // adjustment (Valeur - book) lands in total only while the account lock
+    // is active (→ Bloqué), else in total, available and invested (→ Placé).
+    const adjustment = Number(a.value ?? a.currentBalance ?? 0) - Number(a.currentBalance ?? 0);
+    const locked = a.lockYears != null && addYearsIso(a.openingDate, a.lockYears) > today;
+    const freeAdj = locked ? 0 : adjustment;
+    bucket.total += Number(a.currentBalance ?? 0) + adjustment;
+    bucket.available += Number(a.availableBalance ?? 0) + freeAdj;
+    // Invested is the available part of investment-type accounts only
+    // (their locked part counts as blocked).
     if (a.type === 'investment') {
-      bucket.invested += Number(a.availableBalance ?? 0);
+      bucket.invested += Number(a.availableBalance ?? 0) + freeAdj;
     }
+    if (a.gain != null) bucket.unrealized += Number(a.gain);
     bucket.account_count += 1;
     byCurrency.set(cur, bucket);
   }
@@ -59,6 +68,7 @@ function handleReportsBalance(req: DemoRequest) {
     total: money(b.total),
     available: money(b.available),
     invested: money(b.invested),
+    unrealized: money(b.unrealized),
     account_count: b.account_count,
   }));
 

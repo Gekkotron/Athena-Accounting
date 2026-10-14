@@ -12,6 +12,7 @@ import { registerSettingsWriteHandlers } from './settings';
 import { registerRecurringWriteHandlers } from './recurring';
 import { registerGoalsHandlers } from '../goals';
 import { registerFxRatesWriteHandlers } from './fx-rates';
+import { registerValuationHandlers } from '../valuations';
 
 export function registerWriteHandlers(): void {
   registerAccountsWriteHandlers();
@@ -26,4 +27,5 @@ export function registerWriteHandlers(): void {
   // register from here since the composer already runs after seed setup.
   registerGoalsHandlers();
   registerFxRatesWriteHandlers();
+  registerValuationHandlers();
 }

@@ -21,7 +21,8 @@
       "invested": "Invested",
       "blocked": "Blocked",
       "available": "Available"
-    }
+    },
+    "gainSubline": "of which {{amount}} unrealized gain"
   },
   "sections": {
     "evolution": "Trend · {{currency}}",

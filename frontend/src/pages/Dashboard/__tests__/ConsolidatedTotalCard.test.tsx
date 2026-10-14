@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ConsolidatedTotalCard, type ConsolidatedBlock } from '../ConsolidatedTotalCard';
 import { pinLocale } from '../../../test/i18n';
 
-pinLocale();
+pinLocale('dashboard');
 
 function renderCard(consolidated: ConsolidatedBlock | null, currencyCount: number) {
   return render(
@@ -72,5 +72,14 @@ describe('ConsolidatedTotalCard', () => {
     renderCard(consolidated, 2);
     expect(screen.queryByText(/Convertie depuis/)).not.toBeInTheDocument();
     expect(screen.getByText('USD')).toBeInTheDocument();
+  });
+
+  it('shows the unrealized gain sub-line only when non-zero', () => {
+    const base: ConsolidatedBlock = { display: 'EUR', total: '190.00', available: '190.00', invested: '0.00', unmapped: [] };
+    const { unmount } = renderCard({ ...base, unrealized: '-12.00' }, 2);
+    expect(screen.getByTestId('consolidated-gain-sub').textContent).toMatch(/12,00.*plus-value/);
+    unmount();
+    renderCard({ ...base, unrealized: '0.00' }, 2);
+    expect(screen.queryByTestId('consolidated-gain-sub')).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { formatAmount, amountSignClass } from '../../lib/format';
+import { signedAmount } from '../Accounts/valuation-lib';
 import { FxUnmappedWarning } from '../../components/FxUnmappedWarning';
 
 export interface PerCurrencyRow {
@@ -8,6 +9,7 @@ export interface PerCurrencyRow {
   total: string;
   available: string;
   invested: string;
+  unrealized?: string;
   account_count: number;
 }
 
@@ -16,6 +18,7 @@ export interface ConsolidatedBlock {
   total: string;
   available: string;
   invested: string;
+  unrealized?: string;
   unmapped: PerCurrencyRow[];
 }
 
@@ -33,9 +36,10 @@ interface Props {
 // nothing is actually being consolidated, so the total would just repeat
 // the single-currency amount already shown in the DashboardHero above.
 export function ConsolidatedTotalCard({ consolidated, currencyCount }: Props): JSX.Element | null {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'dashboard']);
   if (!consolidated) return null;
   if (currencyCount <= 1) return null;
+  const unrealized = Number(consolidated.unrealized ?? 0);
   const mappedCount = Math.max(currencyCount - consolidated.unmapped.length, 0);
   return (
     <div className="surface p-5 md:p-6 min-w-[220px]">
@@ -43,6 +47,13 @@ export function ConsolidatedTotalCard({ consolidated, currencyCount }: Props): J
       <div className={`display text-4xl mt-1 tabular-nums ${amountSignClass(consolidated.total)}`}>
         {formatAmount(consolidated.total, consolidated.display)}
       </div>
+      {Math.abs(unrealized) >= 0.005 && (
+        <div className="text-[11px] text-ink-500 mt-1 private" data-testid="consolidated-gain-sub">
+          {t('dashboard:hero.gainSubline', {
+            amount: signedAmount(unrealized, (v) => formatAmount(v, consolidated.display)),
+          })}
+        </div>
+      )}
       {mappedCount > 1 && (
         <Link
           to="/settings#fx"

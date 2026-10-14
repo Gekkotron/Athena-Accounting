@@ -73,3 +73,21 @@ it('renders a placeholder dash when primary is undefined', () => {
   expect(screen.getByText('Solde net')).toBeInTheDocument();
   expect(screen.getByText('—')).toBeInTheDocument();
 });
+
+it('shows the unrealized gain sub-line under Placé when non-zero', () => {
+  render(
+    <DashboardHero
+      primary={{ currency: 'EUR', total: '1500', available: '1500', invested: '500', unrealized: '75.50', account_count: 2 }}
+    />,
+  );
+  expect(screen.getByTestId('hero-gain-sub').textContent).toMatch(/\+75,50.*plus-value/);
+});
+
+it('omits the gain sub-line when unrealized is zero', () => {
+  render(
+    <DashboardHero
+      primary={{ currency: 'EUR', total: '1500', available: '1500', invested: '500', unrealized: '0.00', account_count: 2 }}
+    />,
+  );
+  expect(screen.queryByTestId('hero-gain-sub')).toBeNull();
+});

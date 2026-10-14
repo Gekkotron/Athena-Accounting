@@ -9,14 +9,14 @@ import { ApiError } from '../../apiError';
 
 interface AuthMe { user: { id: number; username: string } }
 interface AccountsResp { accounts: Array<{
-  id: number; name: string; currency: string; currentBalance?: string;
+  id: number; name: string; type?: string; value?: string; contributed?: string | null; gain?: string | null; gainPct?: number | null; latestValueDate?: string | null; currency: string; currentBalance?: string;
   transactionCount?: number; countedTransactionCount?: number; availableBalance?: string;
 }> }
 interface TxResp { transactions: Array<{
   id: number; accountId: number; date: string; amount: string;
   categoryId: number | null; runningBalance?: string;
 }>; pagination: { total: number; limit: number; offset: number } }
-interface BalanceResp { perCurrency: Array<{ currency: string; total: string; available: string; invested: string; account_count: number }> }
+interface BalanceResp { perCurrency: Array<{ currency: string; total: string; available: string; invested: string; account_count: number; unrealized: string }> }
 interface TimeseriesResp { points: Array<{ account_id: number; currency: string; bucket: string; delta: string; cumulative: string }> }
 interface CategoriesReportResp { rows: Array<{ category_id: number | null; month: string; total: string; transaction_count: number }> }
 interface BudgetReportResp { rows: Array<{ id: number; categoryId: number; spent: string; remaining: string; over: boolean }>; totals: { limit: string; spent: string } }
@@ -53,7 +53,7 @@ describe('demo read handlers', () => {
 
   it('GET /api/accounts enriches with computed fields', async () => {
     const r = await api<AccountsResp>('/api/accounts');
-    expect(r.accounts).toHaveLength(2);
+    expect(r.accounts).toHaveLength(3);
     const courant = r.accounts.find((a) => a.id === SEED_META.accountIds.Courant)!;
     expect(courant.currentBalance).toMatch(/^-?\d+\.\d{2}$/);
     expect(courant.transactionCount).toBeGreaterThan(0);
@@ -62,7 +62,7 @@ describe('demo read handlers', () => {
 
   it('GET /api/categories', async () => {
     const r = await api<{ categories: unknown[] }>('/api/categories');
-    expect(r.categories).toHaveLength(11);
+    expect(r.categories).toHaveLength(12);
   });
 
   it('GET /api/rules', async () => {
@@ -102,7 +102,7 @@ describe('demo read handlers', () => {
     const r = await api<BalanceResp>('/api/reports/balance');
     expect(r.perCurrency).toHaveLength(1);
     expect(r.perCurrency[0].currency).toBe('EUR');
-    expect(r.perCurrency[0].account_count).toBe(2);
+    expect(r.perCurrency[0].account_count).toBe(3);
   });
 
   it('GET /api/accounts excludes an active lockYears lock from availableBalance', async () => {
@@ -143,7 +143,8 @@ describe('demo read handlers', () => {
     });
     const r = await api<BalanceResp>('/api/reports/balance');
     const eur = r.perCurrency[0];
-    expect(eur.invested).toBe('10000.00');
+    // 10000 LEP + the seeded Assurance-vie's latest valuation (4388.75).
+    expect(eur.invested).toBe('14388.75');
     // blocked (total - available) is exactly the locked PEA balance.
     expect(Number(eur.total) - Number(eur.available)).toBeCloseTo(5000, 2);
   });
@@ -316,5 +317,51 @@ describe('demo reports — consolidated block (manual FX table)', () => {
 
     const delta = Number(after.consolidated!.totals.spent) - Number(before.consolidated!.totals.spent);
     expect(delta).toBeCloseTo(100 * 0.9, 2);
+  });
+
+  it('GET /api/accounts exposes Valeur / Versé / gain for the seeded investment and savings accounts', async () => {
+    const r = await api<AccountsResp>('/api/accounts');
+    const av = r.accounts.find((a) => a.name === 'Assurance-vie')!;
+    expect(av.value).toBe('4388.75');
+    expect(av.contributed).toBe('4000.00');
+    expect(av.gain).toBe('388.75');
+    expect(av.gainPct).toBeCloseTo(0.0971875, 6);
+    expect(av.latestValueDate).toBe('2026-07-10');
+    // Savings: Valeur = book, interest (income kind) is gain, not Versé.
+    const livret = r.accounts.find((a) => a.id === SEED_META.accountIds.Livret)!;
+    expect(livret.value).toBe(livret.currentBalance);
+    expect(livret.gain).toBe('62.40');
+    expect(livret.contributed).toBe('8000.00');
+    const courant = r.accounts.find((a) => a.id === SEED_META.accountIds.Courant)!;
+    expect(courant.contributed).toBeNull();
+    expect(courant.gain).toBeNull();
+  });
+
+  it('GET /api/reports/balance sums unrealized gain over investment + savings', async () => {
+    const r = await api<BalanceResp>('/api/reports/balance');
+    expect(r.perCurrency[0].unrealized).toBe('451.15');
+  });
+
+  it('valuations: list newest first, upsert, reject non-investment + future, delete', async () => {
+    const av = SEED_META.accountIds.AssuranceVie;
+    const list = await api<Array<{ id: number; date: string }>>(`/api/accounts/${av}/valuations`);
+    expect(list.map((v) => v.date)).toEqual(['2026-07-10', '2026-05-29', '2026-03-31']);
+
+    const row = await api<{ id: number; value: string }>(`/api/accounts/${av}/valuations`, {
+      method: 'PUT', json: { date: '2026-07-10', value: '4500.00' },
+    });
+    expect(row.value).toBe('4500.00');
+    expect((await api<unknown[]>(`/api/accounts/${av}/valuations`))).toHaveLength(3);
+
+    await expect(api(`/api/accounts/${SEED_META.accountIds.Livret}/valuations`, {
+      method: 'PUT', json: { date: '2026-07-10', value: '1.00' },
+    })).rejects.toBeInstanceOf(ApiError);
+    await expect(api(`/api/accounts/${av}/valuations`, {
+      method: 'PUT', json: { date: '2999-01-01', value: '1.00' },
+    })).rejects.toBeInstanceOf(ApiError);
+
+    await api(`/api/accounts/${av}/valuations/${row.id}`, { method: 'DELETE' });
+    const after = await api<Array<{ id: number }>>(`/api/accounts/${av}/valuations`);
+    expect(after.some((v) => v.id === row.id)).toBe(false);
   });
 });

@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { formatAmount, amountSignClass } from '../../lib/format';
+import { signedAmount } from '../Accounts/valuation-lib';
 
 interface Currency {
   currency: string;
   total: string;
   available: string;
   invested?: string;
+  unrealized?: string;
   account_count: number;
 }
 
@@ -34,6 +36,8 @@ export function DashboardHero({ primary }: Props): JSX.Element {
   const invested = Number(primary.invested ?? 0);
   const blocked = total - available;
   const disponible = available - invested;
+  const unrealized = Number(primary.unrealized ?? 0);
+  const hasUnrealized = Math.abs(unrealized) >= 0.005;
   const hasBlocked = Math.abs(blocked) >= 0.005;
   const hasInvested = Math.abs(invested) >= 0.005;
   const showBreakdown = hasBlocked || hasInvested;
@@ -56,7 +60,8 @@ export function DashboardHero({ primary }: Props): JSX.Element {
         <dl className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl">
           <HeroStat label={t('hero.labels.total')} value={total} currency={primary.currency} tone="ink" />
           {hasInvested && (
-            <HeroStat label={t('hero.labels.invested')} value={invested} currency={primary.currency} tone="sky" />
+            <HeroStat label={t('hero.labels.invested')} value={invested} currency={primary.currency} tone="sky"
+              sub={hasUnrealized ? t('hero.gainSubline', { amount: signedAmount(unrealized, (v) => formatAmount(v, primary.currency)) }) : undefined} />
           )}
           {hasBlocked && (
             <HeroStat label={t('hero.labels.blocked')} value={blocked} currency={primary.currency} tone="amber" />
@@ -76,12 +81,13 @@ const TONE_CLASS = {
 } as const;
 
 function HeroStat({
-  label, value, currency, tone,
+  label, value, currency, tone, sub,
 }: {
   label: string;
   value: number;
   currency: string;
   tone: keyof typeof TONE_CLASS;
+  sub?: string;
 }): JSX.Element {
   return (
     <div>
@@ -89,6 +95,7 @@ function HeroStat({
       <dd className={`font-mono text-sm mt-0.5 tabular-nums private ${TONE_CLASS[tone]}`}>
         {formatAmount(value, currency)}
       </dd>
+      {sub && <dd className="text-[11px] text-ink-500 mt-0.5 private" data-testid="hero-gain-sub">{sub}</dd>}
     </div>
   );
 }

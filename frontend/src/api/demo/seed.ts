@@ -15,7 +15,7 @@ import type {
   SavingsGoalEvent,
 } from '../types';
 import type { DemoState } from './store';
-import { DEMO_SCHEMA_VERSION } from './store';
+import { DEMO_SCHEMA_VERSION, type DemoAccountValuation } from './store';
 import { clone } from './seed-utils';
 import {
   CAT,
@@ -39,6 +39,7 @@ const categories: Category[] = [
   { id: CAT.Impots,      name: 'Impôts',      kind: 'expense', color: '#94a3b8', parentId: null, isDefault: true, isInternalTransfer: false },
   { id: CAT.Assurance,   name: 'Assurance',   kind: 'expense', color: '#60a5fa', parentId: null, isDefault: true, isInternalTransfer: false },
   { id: CAT.Abonnements, name: 'Abonnements', kind: 'expense', color: '#f87171', parentId: null, isDefault: true, isInternalTransfer: false },
+  { id: CAT.Interets,    name: 'Intérêts',    kind: 'income',  color: '#34d399', parentId: null, isDefault: true, isInternalTransfer: false },
 ];
 
 const rules: Rule[] = [
@@ -87,6 +88,7 @@ export function buildSeedState(): DemoState {
     savingsGoals,
     savingsGoalEvents,
     fxRates: [],
+    accountValuations: buildValuations(),
     settings: {
       locale: 'fr',
       currency: 'EUR',
@@ -95,6 +97,16 @@ export function buildSeedState(): DemoState {
       displayCurrency: null,
     },
   };
+}
+
+// Manual valuations of the Assurance-vie (investment) account — 3 points, the last one
+// recent relative to SEED_TODAY.
+function buildValuations(): DemoAccountValuation[] {
+  return [
+    { id: 1, accountId: ACC.AssuranceVie, date: '2026-03-31', value: '4120.50', source: 'manual' },
+    { id: 2, accountId: ACC.AssuranceVie, date: '2026-05-29', value: '4290.00', source: 'manual' },
+    { id: 3, accountId: ACC.AssuranceVie, date: '2026-07-10', value: '4388.75', source: 'manual' },
+  ];
 }
 
 // Three savings goals from the spec's demo section:

@@ -7,6 +7,7 @@ import type { Account } from '../../api/types';
 import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
 import { AccountCardGoals } from './AccountCardGoals';
+import { AccountCardValue } from './AccountCardValue';
 
 // IBAN rendered with 4-char groups (what printed statements look like) so the
 // user can scan it; copy writes the compact form the bank actually stores.
@@ -20,12 +21,14 @@ export function AccountCard({
   onEdit,
   onMerge,
   onExpand,
+  onUpdateValue,
   expanded,
 }: {
   account: Account;
   onEdit: (account: Account) => void;
   onMerge?: (account: Account) => void;
   onExpand: (id: number) => void;
+  onUpdateValue?: (account: Account) => void;
   expanded: boolean;
 }) {
   const { t } = useTranslation(['accounts', 'common']);
@@ -41,7 +44,11 @@ export function AccountCard({
       // Clipboard denied — bail silently; the IBAN is still visible for manual copy.
     }
   };
-  const current = Number(a.currentBalance ?? '0');
+  const showsValue = a.type === 'investment' || a.type === 'savings';
+  // Valeur (== book balance unless an investment has a valuation); the
+  // locked-part maths mirrors the backend, where a valuation adjustment on a
+  // locked account lands in total only.
+  const current = Number(a.value ?? a.currentBalance ?? '0');
   const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
   const blocked = current - available;
   const hasBlocked = Math.abs(blocked) >= 0.005;
@@ -72,9 +79,13 @@ export function AccountCard({
         )}
       </div>
       <div className="label mt-0.5">{t(`form.typeOptions.${a.type}`, { defaultValue: a.type })}</div>
-      <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
-        {formatAmount(a.currentBalance ?? '0', a.currency)}
-      </div>
+      {showsValue ? (
+        <AccountCardValue account={a} onUpdateValue={onUpdateValue} />
+      ) : (
+        <div className={`display mt-4 text-3xl tabular-nums ${amountSignClass(a.currentBalance ?? '0')}`}>
+          {formatAmount(a.currentBalance ?? '0', a.currency)}
+        </div>
+      )}
       {hasBlocked && (
         <div className="text-[11px] text-amber-300/90 mt-1 font-mono">
           <Trans i18nKey="accounts:card.blocked">

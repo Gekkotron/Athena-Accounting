@@ -24,7 +24,7 @@ import type { FxRate } from '../../lib/fx';
 //   v=4 → v=5  savingsGoals + savingsGoalEvents seeded (migration 0037)
 //   v=5 → v=6  fxRates seeded (empty) + settings.displayCurrency (manual
 //              FX table, Task 7)
-export const DEMO_SCHEMA_VERSION = 7;
+export const DEMO_SCHEMA_VERSION = 8;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -49,6 +49,8 @@ export interface DemoState {
   // Manual FX table rows (v6). Optional so pre-v6 snapshots that survive
   // still hydrate; handlers default missing/undefined to [].
   fxRates?: DemoFxRate[];
+  // Investment valuations (v8). Optional like the other late additions.
+  accountValuations?: DemoAccountValuation[];
   settings: Record<string, unknown>;
   // Remote-backup destination (Sauvegarde distante card). Non-secret parts
   // only — the demo never stores passwords or passphrases. Optional so
@@ -60,6 +62,15 @@ export interface DemoState {
     lastRunAt: string | null;
     lastError: string | null;
   };
+}
+
+// Stored valuation row — the wire shape plus accountId for filtering.
+export interface DemoAccountValuation {
+  id: number;
+  accountId: number;
+  date: string;
+  value: string;
+  source: string;
 }
 
 // A stored FX rate row: the domain shape (fromCcy/toCcy) plus an

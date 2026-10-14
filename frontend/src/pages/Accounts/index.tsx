@@ -14,6 +14,7 @@ import { AccountCard } from './AccountCard';
 import { AccountForm } from './AccountForm';
 import { AccountPatternsPanel } from './AccountPatternsPanel';
 import { MergeModal } from './MergeModal';
+import { ValuationDialog } from './ValuationDialog';
 import { useAccountsReorder } from './useAccountsReorder';
 import { useAccountsMutations } from './useAccountsMutations';
 import { useAccountEdit } from './useAccountEdit';
@@ -67,6 +68,7 @@ export function Accounts() {
 
   const [confirmDelete, setConfirmDelete] = useState<Account | null>(null);
   const [mergeSource, setMergeSource] = useState<Account | null>(null);
+  const [valuationAccount, setValuationAccount] = useState<Account | null>(null);
 
   return (
     <div className="flex flex-col gap-8">
@@ -151,6 +153,7 @@ export function Accounts() {
                       account={a}
                       onEdit={(acc) => edit.startEdit(acc)}
                       onMerge={setMergeSource}
+                      onUpdateValue={setValuationAccount}
                       onExpand={(id) => toggleCheckpoints(id)}
                       expanded={checkpointsOpen.has(a.id)}
                     />
@@ -193,6 +196,8 @@ export function Accounts() {
           m.setDeleteError(null);
         }}
       />
+
+      <ValuationDialog account={valuationAccount} onClose={() => setValuationAccount(null)} />
 
       {mergeSource && (
         <MergeModal

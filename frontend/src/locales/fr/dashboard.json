@@ -21,7 +21,8 @@
       "invested": "Placé",
       "blocked": "Bloqué",
       "available": "Disponible"
-    }
+    },
+    "gainSubline": "dont {{amount}} de plus-value"
   },
   "sections": {
     "evolution": "Évolution · {{currency}}",
