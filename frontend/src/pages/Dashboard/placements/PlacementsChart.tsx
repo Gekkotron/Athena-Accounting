@@ -13,6 +13,7 @@ import type { PlacementPoint } from './series';
 interface Props {
   points: PlacementPoint[];
   currency: string;
+  granularity: 'day' | 'month';
   height?: number;
 }
 
@@ -21,7 +22,7 @@ const PAD = { top: 24, right: 24, bottom: 32, left: 64 };
 // Dots would crowd a dense daily series; they only help on sparse ones.
 const MAX_DOTS = 60;
 
-export function PlacementsChart({ points, currency, height = 240 }: Props): JSX.Element {
+export function PlacementsChart({ points, currency, granularity, height = 240 }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
   const [zoom, setZoom] = useState<ZoomState | null>(null);
   const innerW = W - PAD.left - PAD.right;
@@ -124,7 +125,7 @@ export function PlacementsChart({ points, currency, height = 240 }: Props): JSX.
       )}
 
       {hover !== null && drag === null && hovered && (
-        <PlacementsTooltip point={hovered} currency={currency} x={hover.x} y={hover.y} containerWidth={containerRef.current?.clientWidth ?? 1000} />
+        <PlacementsTooltip point={hovered} currency={currency} x={hover.x} y={hover.y} containerWidth={containerRef.current?.clientWidth ?? 1000} granularity={granularity} />
       )}
     </div>
   );

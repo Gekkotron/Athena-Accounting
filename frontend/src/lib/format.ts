@@ -86,6 +86,15 @@ export function formatDate(iso: string): string {
   }).format(date);
 }
 
+// "févr. 2026" / "Feb 2026" — label for month-bucketed chart points, whose
+// ISO date is the 1st of the month but whose values are end-of-month.
+export function formatMonth(iso: string): string {
+  if (!/^\d{4}-\d{2}/.test(iso)) return iso;
+  const [y, m] = iso.split('-');
+  const date = new Date(Number(y), Number(m) - 1, 15, 12, 0, 0);
+  return new Intl.DateTimeFormat(currentLocale(), { month: 'short', year: 'numeric' }).format(date);
+}
+
 export function formatDateShort(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
   const [y, m, d] = iso.split('T')[0]!.split('-');

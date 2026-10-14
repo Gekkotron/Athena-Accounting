@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { formatAmount, formatDate } from '../../../lib/format';
+import { formatAmount, formatDate, formatMonth } from '../../../lib/format';
 import type { PlacementPoint } from './series';
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   x: number;
   y: number;
   containerWidth: number;
+  granularity: 'day' | 'month';
 }
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -16,7 +17,7 @@ export function signedAmount(n: number, currency: string): string {
   return `${n > 0 ? '+' : ''}${formatAmount(n, currency)}`;
 }
 
-export function PlacementsTooltip({ point, currency, x, y, containerWidth }: Props): JSX.Element {
+export function PlacementsTooltip({ point, currency, x, y, containerWidth, granularity }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
   const gainClass = point.gain > 0 ? 'text-sage-300' : point.gain < 0 ? 'text-clay-300' : 'text-ink-300';
   return (
@@ -29,7 +30,7 @@ export function PlacementsTooltip({ point, currency, x, y, containerWidth }: Pro
       }}
     >
       <div className="font-mono text-[10px] text-ink-500 mb-1">
-        {formatDate(point.date)}
+        {granularity === 'month' ? formatMonth(point.date) : formatDate(point.date)}
         {point.estimated && <span className="ml-1.5 italic">· {t('placements.tooltip.estimated')}</span>}
       </div>
       <div className="font-mono text-xs tabular-nums flex flex-col gap-0.5">

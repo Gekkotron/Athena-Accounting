@@ -62,7 +62,7 @@ export function PlacementsSection({ accounts, displayCurrency, primaryCurrency, 
         <ErrorState variant="inline" error={q.error} onRetry={() => void q.refetch()} />
       ) : series ? (
         <>
-          <PlacementsChart points={series.points} currency={currency} />
+          <PlacementsChart points={series.points} currency={currency} granularity={granularity} />
           {summary && (
             <p data-testid="placements-summary" className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-ink-400">
               <span>{t('placements.summary.value')} <span className="text-ink-100 private">{formatAmount(summary.value, currency)}</span></span>

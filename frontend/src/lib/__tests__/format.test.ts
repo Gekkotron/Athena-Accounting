@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import i18n from '../../i18n';
-import { parseDecimal, parseUserDate, formatDate } from '../format';
+import { parseDecimal, parseUserDate, formatDate, formatMonth } from '../format';
 
 describe('parseDecimal', () => {
   it('accepts the French decimal comma', () => {
@@ -85,5 +85,23 @@ describe('parseUserDate — locale-aware day/month order', () => {
     expect(parseUserDate('13/25/2025')).toBeNull();
     await i18n.changeLanguage('fr');
     expect(parseUserDate('32/01/2025')).toBeNull();
+  });
+});
+
+describe('formatMonth', () => {
+  const originalLanguage = i18n.language;
+  afterEach(async () => {
+    await i18n.changeLanguage(originalLanguage);
+  });
+
+  it('renders a month-bucket ISO date as short month + year', async () => {
+    await i18n.changeLanguage('fr');
+    expect(formatMonth('2026-02-01')).toBe('févr. 2026');
+    await i18n.changeLanguage('en');
+    expect(formatMonth('2026-02-01')).toBe('Feb 2026');
+  });
+
+  it('passes through non-ISO input', () => {
+    expect(formatMonth('garbage')).toBe('garbage');
   });
 });
