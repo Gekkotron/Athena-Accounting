@@ -93,5 +93,8 @@ describe('client.ts in-memory PGlite handoff', () => {
 
     const { rows } = await pool.query<{ x: number }>('SELECT x FROM t');
     expect(rows).toEqual([{ x: 42 }]);
-  });
+    // Boots two PGlite instances (on-disk source + in-memory from the blob):
+    // ~2 s on an idle laptop, >5 s on CI under v8 coverage — past vitest's
+    // 5 s default, which made this fail on load alone.
+  }, 20_000);
 });
