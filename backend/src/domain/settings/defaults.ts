@@ -67,6 +67,7 @@ export const DASHBOARD_SECTION_IDS = [
   'insights',
   'budget',
   'savings',
+  'placements',
   'evolution',
   'categories',
   'sankey',

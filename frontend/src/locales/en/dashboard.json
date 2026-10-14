@@ -115,6 +115,7 @@
       "balance": "Balance",
       "insights": "Insights",
       "budget": "Budget",
+      "placements": "Investments",
       "evolution": "Trend",
       "sankey": "Flow"
     }
@@ -132,5 +133,29 @@
       "overBudgetCount_other": "{{count}} categories",
       "held": "Held"
     }
+  },
+  "placements": {
+    "title": "Investments · {{currency}}",
+    "empty": "Not enough data yet to draw the curve.",
+    "chartAria": "Investment value and contributions, {{count}} points from {{from}} to {{to}}, current value {{value}}, contributed {{contributed}}",
+    "scopeAria": "Investments account and period",
+    "legend": {
+      "value": "Value",
+      "contributed": "Contributed",
+      "estimated": "estimated"
+    },
+    "tooltip": {
+      "value": "Value",
+      "contributed": "Contributed",
+      "gain": "Gain",
+      "estimated": "estimated"
+    },
+    "summary": {
+      "value": "Value",
+      "contributed": "Contributed",
+      "gain": "Gain"
+    },
+    "zoomReset": "Reset zoom",
+    "error": "Could not load investments"
   }
 }

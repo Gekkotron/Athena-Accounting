@@ -115,6 +115,7 @@
       "balance": "Solde",
       "insights": "Insights",
       "budget": "Budget",
+      "placements": "Placements",
       "evolution": "Évolution",
       "sankey": "Flux"
     }
@@ -132,5 +133,29 @@
       "overBudgetCount_other": "{{count}} catégories",
       "held": "Retenu"
     }
+  },
+  "placements": {
+    "title": "Placements · {{currency}}",
+    "empty": "Pas encore assez de données pour tracer la courbe.",
+    "chartAria": "Valeur et versé des placements, {{count}} points du {{from}} au {{to}}, valeur actuelle {{value}}, versé {{contributed}}",
+    "scopeAria": "Compte et période des placements",
+    "legend": {
+      "value": "Valeur",
+      "contributed": "Versé",
+      "estimated": "estimé"
+    },
+    "tooltip": {
+      "value": "Valeur",
+      "contributed": "Versé",
+      "gain": "Plus-value",
+      "estimated": "estimé"
+    },
+    "summary": {
+      "value": "Valeur",
+      "contributed": "Versé",
+      "gain": "Plus-value"
+    },
+    "zoomReset": "Réinitialiser le zoom",
+    "error": "Impossible de charger les placements"
   }
 }

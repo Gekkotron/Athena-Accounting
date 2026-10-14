@@ -10,6 +10,7 @@ const ITEMS = [
   { id: 'dash-balance',   labelKey: 'balance',   sectionId: 'balance'   },
   { id: 'dash-insights',  labelKey: 'insights',  sectionId: 'insights'  },
   { id: 'dash-budget',    labelKey: 'budget',    sectionId: 'budget'    },
+  { id: 'dash-placements', labelKey: 'placements', sectionId: 'placements' },
   { id: 'dash-evolution', labelKey: 'evolution', sectionId: 'evolution' },
   { id: 'dash-sankey',    labelKey: 'sankey',    sectionId: 'sankey'    },
 ] as const;

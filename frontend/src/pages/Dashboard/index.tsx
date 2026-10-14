@@ -18,6 +18,7 @@ import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
+import { PlacementsSection, isPlacementAccount } from './PlacementsSection';
 import { ChartScopeBar } from './ChartScopeBar';
 import { DashboardSectionNav } from './DashboardSectionNav';
 import { useDashboardScope } from './useDashboardScope';
@@ -79,6 +80,13 @@ export function Dashboard(): JSX.Element {
   // Memoized by the array reference so DashboardSectionNav's observer
   // effect doesn't re-register on every parent render.
   const hidden = useMemo(() => new Set(settings.dashboardHiddenSections), [settings.dashboardHiddenSections]);
+  // The Placements pill/section only exist when an investment or savings
+  // account does; fold that into the set the nav filters on.
+  const hasPlacements = accounts.some(isPlacementAccount);
+  const navHidden = useMemo(
+    () => (hasPlacements ? hidden : new Set([...hidden, 'placements'])),
+    [hidden, hasPlacements],
+  );
   const chartsHidden = hidden.has('evolution') && hidden.has('categories') && hidden.has('sankey');
 
   // Average-based forecast overlay for the Trend chart — see
@@ -136,7 +144,7 @@ export function Dashboard(): JSX.Element {
           nine stacked sections without scrolling the whole way. Each pill
           targets one of the id="dash-…" wrappers below. Pills for hidden
           sections are filtered out via the `hidden` prop. */}
-      {!rootErr && !rootEmpty && <DashboardSectionNav hidden={hidden} />}
+      {!rootErr && !rootEmpty && <DashboardSectionNav hidden={navHidden} />}
 
       {/* Sections below are hidden while the root queries are erroring or
           empty — no point showing a wall of skeletons behind a top-level
@@ -163,6 +171,14 @@ export function Dashboard(): JSX.Element {
         </div>
       )}
       {!rootErr && !rootEmpty && !hidden.has('savings') && <SavingsGoalsSection />}
+      {!rootErr && !rootEmpty && !hidden.has('placements') && hasPlacements && (
+        <PlacementsSection
+          accounts={accounts}
+          displayCurrency={settings.displayCurrency}
+          primaryCurrency={primary?.currency}
+          defaultRange={settings.dashboardRange}
+        />
+      )}
 
       {/* Single page-wide scope bar for the three chart surfaces below
           (Evolution, Category donut, Sankey). All three mutate the same
