@@ -3,11 +3,10 @@ import type {
 } from 'fastify';
 import fp from 'fastify-plugin';
 import cookie from '@fastify/cookie';
-import session from '@fastify/session';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '../../env.js';
 import { LOCAL_USER_ID, LOCAL_USERNAME } from '../../domain/auth/localUser.js';
-import { createSessionStore } from './session-store.js';
+import { registerSession } from './session-store.js';
 
 declare module 'fastify' {
   interface Session { userId?: number; username?: string; totpPending?: boolean; }
@@ -38,20 +37,13 @@ export const authPlugin = fp(async function authPlugin(app: FastifyInstance) {
   // reaches the wire — the pre-request hook below stamps the session with the
   // local user before any handler runs.
   await app.register(cookie);
-  await app.register(session, {
+  // In-memory store with logout/rotation tombstones, rolling off, and the
+  // stale-cookie guard — see session-store.ts for the races these close.
+  await registerSession(app, {
     secret: env.SESSION_SECRET,
     cookieName: 'athena.sid',
-    saveUninitialized: false,
-    // Tombstoning store: stops `rolling` re-saves from in-flight requests
-    // resurrecting a session that logout / rotateSession() destroyed.
-    store: createSessionStore(),
-    cookie: {
-      secure: env.COOKIE_SECURE,
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: '/',
-    },
+    secure: env.COOKIE_SECURE,
+    maxAgeMs: 30 * 24 * 60 * 60 * 1000,
   });
 
   // Per-process secret that only the in-process /api/mcp/rpc handler knows.

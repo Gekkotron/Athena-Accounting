@@ -1,8 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
-import session from '@fastify/session';
-import { createSessionStore, rotateSession } from '../session-store.js';
+import { registerSession, rotateSession } from '../session-store.js';
 
 declare module 'fastify' {
   interface Session { userId?: number }
@@ -15,13 +14,7 @@ declare module 'fastify' {
 async function buildApp(gate: Promise<void>): Promise<FastifyInstance> {
   const app = Fastify();
   await app.register(cookie);
-  await app.register(session, {
-    secret: 'x'.repeat(32),
-    cookieName: 'sid',
-    saveUninitialized: false,
-    cookie: { secure: false, httpOnly: true, path: '/' },
-    store: createSessionStore(),
-  });
+  await registerSession(app, { secret: 'x'.repeat(32), cookieName: 'sid', secure: false });
   app.post('/login', async (req) => { req.session.userId = 1; return { ok: true }; });
   app.get('/slow', async () => { await gate; return { ok: true }; });
   app.post('/logout', async (req) => { await req.session.destroy(); return { ok: true }; });
@@ -82,5 +75,50 @@ describe('session store', () => {
     await app.inject({ method: 'GET', url: '/slow', headers: { cookie: cookieHeader } });
     const me = await app.inject({ method: 'GET', url: '/me', headers: { cookie: cookieHeader } });
     expect(me.json().userId).toBe(1);
+  });
+
+  // The browser-side half of the same race: a request still carrying the
+  // pre-rotation cookie must not send back a Set-Cookie that overwrites
+  // (or clears) the freshly rotated one.
+  it('a stale in-flight request does not re-send the rotated-away cookie', async () => {
+    let release!: () => void;
+    app = await buildApp(new Promise<void>((r) => { release = r; }));
+    const oldCookie = sidCookie(await app.inject({ method: 'POST', url: '/login' }));
+
+    const slow = app.inject({ method: 'GET', url: '/slow', headers: { cookie: oldCookie } });
+    await new Promise((r) => setTimeout(r, 20));
+    await app.inject({ method: 'POST', url: '/rotate', headers: { cookie: oldCookie } });
+    release();
+    const res = await slow;
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('a request with an unknown session cookie does not clear the cookie', async () => {
+    app = await buildApp(Promise.resolve());
+    const oldCookie = sidCookie(await app.inject({ method: 'POST', url: '/login' }));
+    await app.inject({ method: 'POST', url: '/rotate', headers: { cookie: oldCookie } });
+
+    const res = await app.inject({ method: 'GET', url: '/me', headers: { cookie: oldCookie } });
+    expect(res.json().userId).toBeNull();
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('still sets the cookie on login and rotation', async () => {
+    app = await buildApp(Promise.resolve());
+    const login = await app.inject({ method: 'POST', url: '/login' });
+    expect(String(login.headers['set-cookie'])).toMatch(/^sid=[^;]+;/);
+    const rotated = await app.inject({ method: 'POST', url: '/rotate', headers: { cookie: sidCookie(login) } });
+    expect(String(rotated.headers['set-cookie'])).toMatch(/^sid=[^;]+;/);
+    expect(sidCookie(rotated)).not.toBe(sidCookie(login));
+  });
+
+  // rolling=false: an ordinary request must not re-send the cookie, or a
+  // pre-rotation response landing late in the browser restores the old one.
+  it('does not re-send the cookie on requests that leave the session untouched', async () => {
+    app = await buildApp(Promise.resolve());
+    const cookieHeader = sidCookie(await app.inject({ method: 'POST', url: '/login' }));
+    const res = await app.inject({ method: 'GET', url: '/me', headers: { cookie: cookieHeader } });
+    expect(res.json().userId).toBe(1);
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 });
