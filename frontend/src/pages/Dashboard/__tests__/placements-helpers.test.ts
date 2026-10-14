@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildGainAreas, buildStepPath, buildValueSegments, computePlacementRange } from '../placements/geometry';
-import { granularityFor, pickPlacementSeries, summarizePlacements, type PlacementPoint } from '../placements/series';
+import {
+  granularityFor, pickPlacementSeries, rebasePlacements, summarizePlacements, visibleWindow, type PlacementPoint,
+} from '../placements/series';
 
 const pt = (date: string, contributed: number, value: number, estimated = false): PlacementPoint => ({
   date, contributed, value, gain: value - contributed, estimated, unmapped: [],
@@ -36,12 +38,38 @@ describe('pickPlacementSeries', () => {
   });
 });
 
-describe('summarizePlacements / granularityFor', () => {
-  it('summarises the last point with a gain ratio', () => {
-    expect(summarizePlacements([pt('a', 100, 100), pt('b', 200, 210)])).toEqual({ value: 210, contributed: 200, gain: 10, gainPct: 0.05 });
+describe('rebasePlacements / visibleWindow', () => {
+  // Lifetime gain 100 at the window start, 130 at the end, 50 deposited between.
+  const pts = [pt('2026-01-01', 1000, 1100), pt('2026-02-01', 1050, 1170), pt('2026-03-01', 1050, 1180)];
+
+  it('restarts Versé at the start Valeur so gain counts from the window start', () => {
+    const r = rebasePlacements(pts, 0, false);
+    expect(r.map((p) => p.contributed)).toEqual([1100, 1150, 1150]);
+    expect(r.map((p) => p.gain)).toEqual([0, 20, 30]);
+    expect(r.map((p) => p.deposits)).toEqual([0, 50, 50]);
+    expect(r.map((p) => p.value)).toEqual([1100, 1170, 1180]);
   });
-  it('gainPct is null when nothing was contributed; empty yields null', () => {
-    expect(summarizePlacements([pt('a', 0, 5)])!.gainPct).toBeNull();
+
+  it('keeps lifetime figures from the origin', () => {
+    const r = rebasePlacements(pts, 0, true);
+    expect(r.map((p) => [p.contributed, p.gain, p.deposits])).toEqual([[1000, 100, 1000], [1050, 120, 1050], [1050, 130, 1050]]);
+  });
+
+  it('bounds the zoom window to the points inside it', () => {
+    expect(visibleWindow(pts, null)).toEqual({ startIdx: 0, endIdx: 2 });
+    const zoom = { startMs: Date.parse('2026-01-15'), endMs: Date.parse('2026-02-20') };
+    expect(visibleWindow(pts, zoom)).toEqual({ startIdx: 1, endIdx: 1 });
+    expect(visibleWindow([], null)).toEqual({ startIdx: 0, endIdx: 0 });
+  });
+});
+
+describe('summarizePlacements / granularityFor', () => {
+  it('summarises the last point, gain over the capital engaged', () => {
+    const r = rebasePlacements([pt('a', 1000, 1100), pt('b', 1050, 1170)], 0, false);
+    expect(summarizePlacements(r)).toEqual({ value: 1170, deposits: 50, gain: 20, gainPct: 20 / 1150 });
+  });
+  it('gainPct is null without capital; empty yields null', () => {
+    expect(summarizePlacements(rebasePlacements([pt('a', 0, 5)], 0, true))!.gainPct).toBeNull();
     expect(summarizePlacements([])).toBeNull();
   });
   it('uses monthly buckets only for long ranges', () => {

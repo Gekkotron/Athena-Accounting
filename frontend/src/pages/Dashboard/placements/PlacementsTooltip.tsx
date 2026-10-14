@@ -1,14 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { formatAmount, formatDate, formatMonth } from '../../../lib/format';
-import type { PlacementPoint } from './series';
+import type { WindowPoint } from './series';
 
 interface Props {
-  point: PlacementPoint;
+  point: WindowPoint;
   currency: string;
   x: number;
   y: number;
   containerWidth: number;
   granularity: 'day' | 'month';
+  period: boolean;
 }
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -17,7 +18,7 @@ export function signedAmount(n: number, currency: string): string {
   return `${n > 0 ? '+' : ''}${formatAmount(n, currency)}`;
 }
 
-export function PlacementsTooltip({ point, currency, x, y, containerWidth, granularity }: Props): JSX.Element {
+export function PlacementsTooltip({ point, currency, x, y, containerWidth, granularity, period }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
   const gainClass = point.gain > 0 ? 'text-sage-300' : point.gain < 0 ? 'text-clay-300' : 'text-ink-300';
   return (
@@ -39,11 +40,11 @@ export function PlacementsTooltip({ point, currency, x, y, containerWidth, granu
           <span className="text-ink-100 private">{formatAmount(point.value, currency)}</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-ink-400">{t('placements.tooltip.contributed')}</span>
-          <span className="text-ink-300 private">{formatAmount(point.contributed, currency)}</span>
+          <span className="text-ink-400">{t(period ? 'placements.tooltip.depositsPeriod' : 'placements.tooltip.contributed')}</span>
+          <span className="text-ink-300 private">{formatAmount(point.deposits, currency)}</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-ink-400">{t('placements.tooltip.gain')}</span>
+          <span className="text-ink-400">{t(period ? 'placements.tooltip.gainPeriod' : 'placements.tooltip.gain')}</span>
           <span className={`${gainClass} private`}>{signedAmount(point.gain, currency)}</span>
         </div>
       </div>

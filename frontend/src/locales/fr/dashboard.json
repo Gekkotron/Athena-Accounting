@@ -148,12 +148,16 @@
       "value": "Valeur",
       "contributed": "Versé",
       "gain": "Plus-value",
-      "estimated": "estimé"
+      "estimated": "estimé",
+      "depositsPeriod": "Versé sur la période",
+      "gainPeriod": "Plus-value sur la période"
     },
     "summary": {
       "value": "Valeur",
       "contributed": "Versé",
-      "gain": "Plus-value"
+      "gain": "Plus-value",
+      "depositsPeriod": "Versé sur la période",
+      "gainPeriod": "Plus-value sur la période"
     },
     "zoomReset": "Réinitialiser le zoom",
     "error": "Impossible de charger les placements"

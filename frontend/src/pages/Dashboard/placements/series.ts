@@ -57,20 +57,57 @@ export function pickPlacementSeries(
   };
 }
 
+// Point rebased on a window start: `contributed` is the Versé line level
+// (start Valeur + deposits since), `gain` the gain made since the start and
+// `deposits` the net deposits since the start.
+export interface WindowPoint extends PlacementPoint {
+  deposits: number;
+}
+
+// First and last point indexes inside the zoom window (whole series unzoomed).
+export function visibleWindow(
+  points: PlacementPoint[],
+  zoom: { startMs: number; endMs: number } | null,
+): { startIdx: number; endIdx: number } {
+  const last = points.length - 1;
+  if (!zoom || last < 0) return { startIdx: 0, endIdx: Math.max(last, 0) };
+  let startIdx = points.findIndex((p) => Date.parse(p.date) >= zoom.startMs);
+  if (startIdx === -1) startIdx = last;
+  let endIdx = last;
+  while (endIdx > startIdx && Date.parse(points[endIdx]!.date) > zoom.endMs) endIdx--;
+  return { startIdx, endIdx };
+}
+
+// Rebases the series on points[startIdx] so the gain area and figures cover
+// only the visible window: the Versé line restarts at that point's Valeur and
+// grows with later deposits, so Valeur - Versé is the gain made since.
+// `fromOrigin` (whole history, unzoomed) rebases on zero, keeping the
+// lifetime figures.
+export function rebasePlacements(points: PlacementPoint[], startIdx: number, fromOrigin: boolean): WindowPoint[] {
+  const base = fromOrigin ? { value: 0, contributed: 0, gain: 0 } : points[startIdx];
+  if (!base) return [];
+  return points.map((p) => {
+    const deposits = p.contributed - base.contributed;
+    return { ...p, contributed: base.value + deposits, gain: p.gain - base.gain, deposits };
+  });
+}
+
 export interface PlacementSummary {
   value: number;
-  contributed: number;
+  // Net deposits over the window.
+  deposits: number;
   gain: number;
-  // Ratio (0.05 = +5 %), null when nothing was contributed.
+  // Ratio (0.05 = +5 %) of the gain to the capital engaged (start Valeur +
+  // deposits), null when that capital is not positive.
   gainPct: number | null;
 }
 
-export function summarizePlacements(points: PlacementPoint[]): PlacementSummary | null {
+export function summarizePlacements(points: WindowPoint[]): PlacementSummary | null {
   const last = points[points.length - 1];
   if (!last) return null;
   return {
     value: last.value,
-    contributed: last.contributed,
+    deposits: last.deposits,
     gain: last.gain,
     gainPct: last.contributed > 0 ? last.gain / last.contributed : null,
   };

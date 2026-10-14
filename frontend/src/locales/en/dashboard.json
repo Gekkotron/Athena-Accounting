@@ -148,12 +148,16 @@
       "value": "Value",
       "contributed": "Contributed",
       "gain": "Gain",
-      "estimated": "estimated"
+      "estimated": "estimated",
+      "depositsPeriod": "Contributed in period",
+      "gainPeriod": "Gain in period"
     },
     "summary": {
       "value": "Value",
       "contributed": "Contributed",
-      "gain": "Gain"
+      "gain": "Gain",
+      "depositsPeriod": "Contributed in period",
+      "gainPeriod": "Gain in period"
     },
     "zoomReset": "Reset zoom",
     "error": "Could not load investments"

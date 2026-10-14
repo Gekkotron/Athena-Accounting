@@ -63,6 +63,21 @@ it('draws both areas, the dots and the Valeur / Versé / Plus-value summary', as
   expect(opts).toMatchObject({ query: { granularity: 'month' } });
 });
 
+it('counts the plus-value from the start of the selected range', async () => {
+  apiMock.mockResolvedValue({
+    points: [
+      { currency: 'EUR', bucket: '2026-01-01', contributed: '1000.00', value: '1100.00', gain: '100.00', estimated: false },
+      { currency: 'EUR', bucket: '2026-02-01', contributed: '1050.00', value: '1180.00', gain: '130.00', estimated: false },
+    ],
+    consolidated: null,
+  } as never);
+  renderSection();
+  const summary = await screen.findByTestId('placements-summary');
+  expect(summary.textContent).toMatch(/Versé sur la période 50,00/);
+  expect(summary.textContent).toMatch(/Plus-value sur la période \+30,00/);
+  expect(summary.textContent).not.toMatch(/130,00/);
+});
+
 it('lists only investment and savings accounts in the picker and scopes the query', async () => {
   renderSection();
   await screen.findByTestId('placements-summary');

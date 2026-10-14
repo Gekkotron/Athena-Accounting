@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAmountCompact, formatDateShort } from '../../../lib/format';
 import { computeActiveWindow, buildAxisTicks } from '../../../components/BalanceChart/lib';
@@ -8,12 +8,16 @@ import {
 } from '../../../components/BalanceChart/useBalanceChartInteractions';
 import { buildGainAreas, buildStepPath, buildValueSegments, computePlacementRange } from './geometry';
 import { PlacementsTooltip } from './PlacementsTooltip';
-import type { PlacementPoint } from './series';
+import type { WindowPoint } from './series';
 
 interface Props {
-  points: PlacementPoint[];
+  points: WindowPoint[];
   currency: string;
   granularity: 'day' | 'month';
+  // Points are rebased on a window start (labels say "sur la période").
+  period: boolean;
+  zoom: ZoomState | null;
+  setZoom: (z: ZoomState | null) => void;
   height?: number;
 }
 
@@ -22,9 +26,8 @@ const PAD = { top: 24, right: 24, bottom: 32, left: 64 };
 // Dots would crowd a dense daily series; they only help on sparse ones.
 const MAX_DOTS = 60;
 
-export function PlacementsChart({ points, currency, granularity, height = 240 }: Props): JSX.Element {
+export function PlacementsChart({ points, currency, granularity, period, zoom, setZoom, height = 240 }: Props): JSX.Element {
   const { t } = useTranslation('dashboard');
-  const [zoom, setZoom] = useState<ZoomState | null>(null);
   const innerW = W - PAD.left - PAD.right;
   const innerH = height - PAD.top - PAD.bottom;
 
@@ -62,7 +65,7 @@ export function PlacementsChart({ points, currency, granularity, height = 240 }:
           from: formatDateShort(points[0]!.date),
           to: formatDateShort(last.date),
           value: formatAmountCompact(last.value, currency),
-          contributed: formatAmountCompact(last.contributed, currency),
+          contributed: formatAmountCompact(last.deposits, currency),
         })}
         viewBox={`0 0 ${W} ${height}`}
         preserveAspectRatio="xMidYMid meet"
@@ -125,7 +128,7 @@ export function PlacementsChart({ points, currency, granularity, height = 240 }:
       )}
 
       {hover !== null && drag === null && hovered && (
-        <PlacementsTooltip point={hovered} currency={currency} x={hover.x} y={hover.y} containerWidth={containerRef.current?.clientWidth ?? 1000} granularity={granularity} />
+        <PlacementsTooltip point={hovered} currency={currency} x={hover.x} y={hover.y} containerWidth={containerRef.current?.clientWidth ?? 1000} granularity={granularity} period={period} />
       )}
     </div>
   );
