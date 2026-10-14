@@ -98,7 +98,7 @@ export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRo
         <td className="px-4 py-2.5 text-ink-300 whitespace-nowrap font-mono text-xs">{formatDate(tx.date)}</td>
         <td className="px-4 py-2.5 text-ink-400 whitespace-nowrap hidden sm:table-cell">{account?.name ?? '?'}</td>
         <td className="px-4 py-2.5 text-ink-100">
-          <div className="truncate max-w-[18rem] md:max-w-md flex items-center gap-1.5" title={tx.rawLabel}>
+          <div className="truncate max-w-[12rem] lg:max-w-xs flex items-center gap-1.5" title={tx.rawLabel}>
             <span className="truncate">{tx.rawLabel}</span>
             {(tx.attachmentCount ?? 0) > 0 && (
               <span
@@ -143,7 +143,7 @@ export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRo
           ) : (
             <>
               <select
-                className="input-sm"
+                className="input-sm w-auto"
                 value={tx.categoryId ?? ''}
                 disabled={!!tx.transferGroupId}
                 onChange={(e) =>
