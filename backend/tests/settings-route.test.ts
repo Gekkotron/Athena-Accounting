@@ -49,6 +49,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       bankSyncHour: 2,
       backupHour: 3,
       displayCurrency: null,
+      dashboardHiddenSections: [],
       notifications: DEFAULT_NOTIFICATIONS,
     });
   });
@@ -69,6 +70,7 @@ describe.skipIf(!RUN)('/api/settings', () => {
       bankSyncHour: 2,
       backupHour: 3,
       displayCurrency: null,
+      dashboardHiddenSections: [],
       notifications: DEFAULT_NOTIFICATIONS,
     });
   });
