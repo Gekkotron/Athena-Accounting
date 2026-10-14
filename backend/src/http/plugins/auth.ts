@@ -7,6 +7,7 @@ import session from '@fastify/session';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '../../env.js';
 import { LOCAL_USER_ID, LOCAL_USERNAME } from '../../domain/auth/localUser.js';
+import { createSessionStore } from './session-store.js';
 
 declare module 'fastify' {
   interface Session { userId?: number; username?: string; totpPending?: boolean; }
@@ -41,6 +42,9 @@ export const authPlugin = fp(async function authPlugin(app: FastifyInstance) {
     secret: env.SESSION_SECRET,
     cookieName: 'athena.sid',
     saveUninitialized: false,
+    // Tombstoning store: stops `rolling` re-saves from in-flight requests
+    // resurrecting a session that logout / rotateSession() destroyed.
+    store: createSessionStore(),
     cookie: {
       secure: env.COOKIE_SECURE,
       httpOnly: true,

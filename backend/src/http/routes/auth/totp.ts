@@ -5,6 +5,7 @@ import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { users, userTotp, userTotpRecoveryCodes } from '../../../db/schema.js';
 import { env } from '../../../env.js';
+import { rotateSession } from '../../plugins/session-store.js';
 import {
   generateCode,
   generateRecoveryCode,
@@ -244,7 +245,7 @@ export async function totpRoutes(app: FastifyInstance): Promise<void> {
     // Rotate the session id on second-factor completion (fixation
     // defence).
     const username = req.session.username;
-    await req.session.regenerate();
+    await rotateSession(req);
     req.session.userId = uid;
     req.session.username = username;
     req.session.totpPending = false;

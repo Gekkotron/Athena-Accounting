@@ -6,6 +6,7 @@ import { db } from '../../db/client.js';
 import { users, userTotp } from '../../db/schema.js';
 import { env } from '../../env.js';
 import { LOCAL_USER_ID, LOCAL_PLACEHOLDER_HASH } from '../../domain/auth/localUser.js';
+import { rotateSession } from '../plugins/session-store.js';
 
 const ARGON2_OPTS = {
   algorithm: Algorithm.Argon2id,
@@ -89,7 +90,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!ok) return reply.code(401).send({ error: 'invalid credentials' });
 
     // Rotate the session id on login to prevent session fixation.
-    await req.session.regenerate();
+    await rotateSession(req);
     req.session.userId = user.id;
     req.session.username = user.username;
 
