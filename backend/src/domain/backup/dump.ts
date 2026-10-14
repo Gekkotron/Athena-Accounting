@@ -3,6 +3,7 @@ import { db } from '../../db/client.js';
 import {
   accounts,
   accountFilenamePatterns,
+  accountValuations,
   balanceCheckpoints,
   categories,
   categoryBudgets,
@@ -28,7 +29,7 @@ export async function buildDump(uid: number) {
   {
     const [
       accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets,
-      goals, goalEvents, ruleSplitRows,
+      goals, goalEvents, ruleSplitRows, valuations,
     ] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
@@ -52,6 +53,7 @@ export async function buildDump(uid: number) {
         .innerJoin(rules, eq(ruleSplits.ruleId, rules.id))
         .where(eq(rules.userId, uid))
         .then((rows) => rows.map((r) => r.rule_splits)),
+      db.select().from(accountValuations).where(eq(accountValuations.userId, uid)),
     ]);
     const ruleSplitsByRule = new Map<number, Array<typeof ruleSplitRows[number]>>();
     for (const rs of ruleSplitRows) {
@@ -211,6 +213,12 @@ export async function buildDump(uid: number) {
           };
         });
       })(),
+      accountValuations: valuations.map((v) => ({
+        account: accountById.get(v.accountId)?.name ?? '',
+        date: v.date,
+        value: v.value,
+        source: v.source,
+      })),
     };
 
     return dump;

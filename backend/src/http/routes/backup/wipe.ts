@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { db } from '../../../db/client.js';
 import {
   accounts,
+  accountValuations,
   accountFilenamePatterns,
   balanceCheckpoints,
   categories,
@@ -39,6 +40,7 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
     await tx.execute(sql`TRUNCATE
       user_totp_recovery_codes, user_totp,
       savings_goal_events, savings_goals,
+      account_valuations,
       transaction_splits, transaction_attachments,
       rule_splits,
       recurring_series_transactions, recurring_series,
@@ -65,6 +67,7 @@ export async function wipeUserData(tx: Tx, uid: number): Promise<void> {
   await tx.delete(userTotp).where(eq(userTotp.userId, uid));
   await tx.delete(savingsGoalEvents).where(eq(savingsGoalEvents.userId, uid));
   await tx.delete(savingsGoals).where(eq(savingsGoals.userId, uid));
+  await tx.delete(accountValuations).where(eq(accountValuations.userId, uid));
   await tx.delete(transactionAttachments).where(eq(transactionAttachments.userId, uid));
   await tx.delete(transactionSplits)
     .where(sql`transaction_id IN (SELECT id FROM transactions WHERE user_id = ${uid})`);

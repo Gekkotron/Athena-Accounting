@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { userId } from '../../plugins/auth.js';
+import { computeValuation } from '../../../domain/investments/gain.js';
 
 // List accounts with computed current balance + counts. Raw SQL here (same
 // pattern as reports.ts) because Drizzle's column-reference interpolation
@@ -17,6 +18,12 @@ import { userId } from '../../plugins/auth.js';
 //     - t.lock_years IS NOT NULL AND t.date + t.lock_years years <= today, OR
 //     - t.lock_years IS NULL AND (a.lock_years IS NULL OR a.opening_date + a.lock_years years <= today).
 //   blocked_balance = current_balance - available_balance.
+//
+// Valuation fields: `contributed` (Versé) is opening_balance plus every
+// transaction since opening_date except income-kind categories, for
+// investment/savings accounts only. `latest_value`/`latest_value_date` come
+// from the newest account_valuations row at or before today. Valeur and gain
+// are derived in domain/investments/gain.ts.
 export function registerList(app: FastifyInstance): void {
   app.get('/api/accounts', async (req) => {
     const uid = userId(req);
@@ -37,6 +44,9 @@ export function registerList(app: FastifyInstance): void {
       counted_transaction_count: number;
       iban: string | null;
       iban_locked: boolean;
+      contributed: string | null;
+      latest_value: string | null;
+      latest_value_date: string | null;
     }>(sql`
       SELECT
         a.id,
@@ -98,30 +108,64 @@ export function registerList(app: FastifyInstance): void {
           WHERE bca.account_id = a.id
             AND bca.iban IS NOT NULL
             AND bca.iban <> ''
-        )                                                      AS iban_locked
+        )                                                      AS iban_locked,
+        CASE WHEN a.type IN ('investment', 'savings') THEN
+          (
+            a.opening_balance + COALESCE(
+              (SELECT SUM(t.amount) FROM transactions t
+                LEFT JOIN categories c ON c.id = t.category_id
+                WHERE t.account_id = a.id AND t.date >= a.opening_date
+                  AND (c.kind IS NULL OR c.kind <> 'income')),
+              0
+            )
+          )::text
+        END                                                    AS contributed,
+        lv.value::text                                         AS latest_value,
+        to_char(lv.date, 'YYYY-MM-DD')                         AS latest_value_date
       FROM accounts a
+      LEFT JOIN LATERAL (
+        SELECT v.value, v.date
+          FROM account_valuations v
+         WHERE v.account_id = a.id AND v.date <= CURRENT_DATE
+         ORDER BY v.date DESC
+         LIMIT 1
+      ) lv ON TRUE
       WHERE a.user_id = ${uid}
       ORDER BY a.display_order ASC, a.name ASC
     `);
 
-    const accounts = result.rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      type: r.type,
-      currency: r.currency,
-      openingBalance: r.opening_balance,
-      openingDate: r.opening_date,
-      displayOrder: r.display_order,
-      createdAt: r.created_at,
-      lockYears: r.lock_years,
-      closedAt: r.closed_at,
-      currentBalance: r.current_balance,
-      availableBalance: r.available_balance,
-      transactionCount: r.transaction_count,
-      countedTransactionCount: r.counted_transaction_count,
-      iban: r.iban,
-      ibanLocked: r.iban_locked,
-    }));
+    const accounts = result.rows.map((r) => {
+      const v = computeValuation({
+        type: r.type,
+        currentBalance: r.current_balance,
+        contributed: r.contributed,
+        latestValue: r.latest_value,
+      });
+      return {
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        currency: r.currency,
+        openingBalance: r.opening_balance,
+        openingDate: r.opening_date,
+        displayOrder: r.display_order,
+        createdAt: r.created_at,
+        lockYears: r.lock_years,
+        closedAt: r.closed_at,
+        currentBalance: r.current_balance,
+        availableBalance: r.available_balance,
+        transactionCount: r.transaction_count,
+        countedTransactionCount: r.counted_transaction_count,
+        iban: r.iban,
+        ibanLocked: r.iban_locked,
+        contributed: r.contributed,
+        latestValue: r.latest_value,
+        latestValueDate: r.latest_value_date,
+        value: v.value,
+        gain: v.gain,
+        gainPct: v.gainPct,
+      };
+    });
 
     return { accounts };
   });

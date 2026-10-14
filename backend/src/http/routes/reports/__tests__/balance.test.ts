@@ -34,8 +34,8 @@ describe('resolveDisplayCurrency', () => {
 
 describe('buildConsolidatedBlock', () => {
   const perCurrencyRows = [
-    { currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', account_count: 1 },
-    { currency: 'USD', total: '100.00', available: '50.00', invested: '0.00', account_count: 1 },
+    { currency: 'EUR', total: '100.00', available: '100.00', invested: '0.00', unrealized: '0.00', account_count: 1 },
+    { currency: 'USD', total: '100.00', available: '50.00', invested: '0.00', unrealized: '0.00', account_count: 1 },
   ];
   const rates = [
     { fromCcy: 'USD', toCcy: 'EUR', effectiveFrom: '2020-01-01', rate: '0.9' },
@@ -46,6 +46,7 @@ describe('buildConsolidatedBlock', () => {
     expect(out.display).toBe('EUR');
     expect(out.total).toBe('190.00');
     expect(out.available).toBe('145.00');
+    expect(out.unrealized).toBe('0.00');
     expect(out.unmapped).toEqual([]);
   });
 
@@ -53,7 +54,17 @@ describe('buildConsolidatedBlock', () => {
     const out = buildConsolidatedBlock(perCurrencyRows, 'EUR', [], '2026-08-14');
     expect(out.total).toBe('100.00');
     expect(out.unmapped).toEqual([
-      { currency: 'USD', total: '100.00', available: '50.00', invested: '0.00', account_count: 1 },
+      { currency: 'USD', total: '100.00', available: '50.00', invested: '0.00', unrealized: '0.00', account_count: 1 },
     ]);
+  });
+
+  it('converts unrealized gains alongside the other totals', () => {
+    const rows = [
+      { currency: 'EUR', total: '1100.00', available: '1100.00', invested: '1100.00', unrealized: '100.00', account_count: 1 },
+      { currency: 'USD', total: '500.00', available: '500.00', invested: '500.00', unrealized: '-20.00', account_count: 1 },
+    ];
+    const out = buildConsolidatedBlock(rows, 'EUR', rates, '2026-08-14');
+    expect(out.unrealized).toBe('82.00');
+    expect(out.total).toBe('1550.00');
   });
 });

@@ -195,6 +195,17 @@ export const BackupBody = z.object({
       note: z.string().nullable().optional(),
     }),
   ).optional(),
+  // Investment valuations (migration 0047). Optional so older backups still
+  // validate. Referenced by account name; restore skips a row whose account
+  // did not restore.
+  accountValuations: z.array(
+    z.object({
+      account: z.string(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      value: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+      source: z.string().optional(),
+    }),
+  ).optional(),
 });
 
 export type BackupDump = z.infer<typeof BackupBody>;

@@ -14,6 +14,7 @@ import {
   restoreRules,
 } from './restore-steps.js';
 import {
+  restoreAccountValuations,
   restoreFileImports,
   restoreSavingsGoalsAndEvents,
   restoreTransactions,
@@ -76,6 +77,12 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         dump.savingsGoalEvents ?? [],
         accountIdByName,
       );
+      const valuationsInserted = await restoreAccountValuations(
+        tx,
+        uid,
+        dump.accountValuations ?? [],
+        accountIdByName,
+      );
 
       return {
         imported: {
@@ -89,6 +96,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           fileImports: fileImportsInserted,
           savingsGoals: goals.goalsInserted,
           savingsGoalEvents: goals.eventsInserted,
+          accountValuations: valuationsInserted,
         },
         skipped: {
           rules: rulesResult.skippedSplits,

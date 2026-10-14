@@ -71,3 +71,20 @@ export const ReorderBody = z.object({
 });
 
 export const SourceIdParam = z.object({ sourceId: z.coerce.number().int().positive() });
+
+// Valuation date must be a real calendar day: the regex alone lets
+// 2026-13-45 through to Postgres, which would answer 500.
+const realIsoDate = isoDate.refine((s) => {
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}, 'must be a real calendar date');
+
+export const ValuationBody = z.object({
+  date: realIsoDate,
+  value: decimal,
+});
+
+export const ValuationParams = z.object({
+  id: z.coerce.number().int().positive(),
+  valuationId: z.coerce.number().int().positive(),
+});

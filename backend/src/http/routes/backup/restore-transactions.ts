@@ -1,5 +1,6 @@
 import { db } from '../../../db/client.js';
 import {
+  accountValuations,
   fileImports,
   savingsGoalEvents,
   savingsGoals,
@@ -219,4 +220,33 @@ export async function restoreSavingsGoalsAndEvents(
   }
 
   return { goalsInserted, goalsSkipped, eventsInserted: eventRows.length, eventsSkipped };
+}
+
+// Investment valuations: natural key is (accountName, date). Rows whose
+// account did not resolve are skipped. Returns the inserted count.
+export async function restoreAccountValuations(
+  tx: Tx,
+  uid: number,
+  dumpValuations: NonNullable<BackupDump['accountValuations']>,
+  accountIdByName: Map<string, number>,
+): Promise<number> {
+  const rows: Array<typeof accountValuations.$inferInsert> = [];
+  for (const v of dumpValuations) {
+    const accId = resolveNameToId(v.account, accountIdByName);
+    if (accId === null) continue;
+    rows.push({
+      userId: uid,
+      accountId: accId,
+      date: v.date,
+      value: v.value,
+      source: v.source ?? 'manual',
+    });
+  }
+  for (let i = 0; i < rows.length; i += RESTORE_TX_CHUNK) {
+    await tx
+      .insert(accountValuations)
+      .values(rows.slice(i, i + RESTORE_TX_CHUNK))
+      .onConflictDoNothing();
+  }
+  return rows.length;
 }

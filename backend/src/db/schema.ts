@@ -866,6 +866,29 @@ export const savingsGoalEvents = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// account_valuations — user-entered market value snapshots for investment
+// accounts (migration 0047). The latest row at or before a date replaces the
+// book balance as the account's "Valeur"; one row per (account, date).
+// ---------------------------------------------------------------------------
+
+export const accountValuations = pgTable(
+  'account_valuations',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    accountId: integer('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    value: numeric('value', { precision: 14, scale: 2 }).notNull(),
+    source: text('source').notNull().default('manual'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqAccountDate: uniqueIndex('account_valuations_account_date_uq').on(t.accountId, t.date),
+    idxUser: index('account_valuations_user_idx').on(t.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // backup_destinations — per-user remote backup destination (migration 0031).
 // One row per user: WebDAV or folder target for scheduled encrypted backups.
 // secret_encrypted (WebDAV password) and passphrase_encrypted (enc1 backup

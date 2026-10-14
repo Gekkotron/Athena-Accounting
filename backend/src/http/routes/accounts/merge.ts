@@ -226,6 +226,23 @@ export function registerMerge(app: FastifyInstance): void {
       `);
       const goalsMoved = goalsRes.rows.length;
 
+      // Step E-ter — account_valuations: unique (account_id, date). On a
+      // date collision the target's valuation wins.
+      await tx.execute(sql`
+        DELETE FROM account_valuations
+         WHERE account_id = ${sourceId}
+           AND date IN (
+             SELECT date FROM account_valuations WHERE account_id = ${targetId}
+           )
+      `);
+      const valuationsRes = await tx.execute<{ id: number }>(sql`
+        UPDATE account_valuations
+           SET account_id = ${targetId}
+         WHERE account_id = ${sourceId}
+        RETURNING id
+      `);
+      const valuationsMoved = valuationsRes.rows.length;
+
       // Step F — bump target's opening_balance by source's.
       const openingBalanceAdded = source.openingBalance;
       await tx.execute(sql`
@@ -248,6 +265,7 @@ export function registerMerge(app: FastifyInstance): void {
         templatesMoved,
         draftsMoved,
         goalsMoved,
+        valuationsMoved,
         openingBalanceAdded,
       };
     });

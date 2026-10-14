@@ -13,6 +13,8 @@ type PerCurrencyRow = {
   total: string;
   available: string;
   invested: string;
+  // Σ Gain (Valeur − Versé) over investment + savings accounts.
+  unrealized: string;
   account_count: number;
 };
 
@@ -21,10 +23,11 @@ type ConsolidatedBlock = {
   total: string;
   available: string;
   invested: string;
+  unrealized: string;
   unmapped: PerCurrencyRow[];
 };
 
-const CONSOLIDATE_KEYS = ['total', 'available', 'invested'] as const;
+const CONSOLIDATE_KEYS = ['total', 'available', 'invested', 'unrealized'] as const;
 
 // Resolves the effective display currency from the `?display=` query param,
 // falling back to the caller-supplied settings value when the param is
@@ -56,6 +59,7 @@ export function buildConsolidatedBlock(
     total: out.totals.total,
     available: out.totals.available,
     invested: out.totals.invested,
+    unrealized: out.totals.unrealized,
     // consolidate() pushes back the exact row objects it received for any
     // currency it couldn't map — its generic signature only names the
     // `{ currency } & Record<K, string>` fields it operates on, but each
@@ -74,9 +78,17 @@ export function registerBalanceRoute(app: FastifyInstance): void {
     // invested = the subset of `available` that lives in an account whose type
     // is 'investment'. Client computes: disponible = available - invested;
     // bloqué = total - available.
+    //
+    // Investment accounts with a valuation use Valeur (latest valuation) in
+    // place of the book balance: adjustment = Valeur - book. While the
+    // account-level lock is active the adjustment only lifts `total`
+    // (→ Bloqué); otherwise it also lifts `available` and so `invested`
+    // (→ Placé). unrealized = Valeur - Versé for investment/savings accounts,
+    // where Versé excludes income-kind transactions.
     const rows = await db.execute<PerCurrencyRow>(sql`
-      WITH per_account AS (
+      WITH base AS (
         SELECT
+          a.id,
           a.currency,
           a.type,
           (
@@ -85,7 +97,7 @@ export function registerBalanceRoute(app: FastifyInstance): void {
                 WHERE t.account_id = a.id AND t.date >= a.opening_date),
               0
             )
-          ) AS total,
+          ) AS book,
           (
             (CASE
                WHEN a.lock_years IS NULL
@@ -106,15 +118,44 @@ export function registerBalanceRoute(app: FastifyInstance): void {
                       END
                     )),
                 0)
-          ) AS available
+          ) AS available_book,
+          (
+            a.lock_years IS NOT NULL
+            AND (a.opening_date + (INTERVAL '1 year' * a.lock_years))::date > CURRENT_DATE
+          ) AS account_locked,
+          CASE WHEN a.type IN ('investment', 'savings') THEN
+            a.opening_balance + COALESCE(
+              (SELECT SUM(t.amount) FROM transactions t
+                LEFT JOIN categories c ON c.id = t.category_id
+                WHERE t.account_id = a.id AND t.date >= a.opening_date
+                  AND (c.kind IS NULL OR c.kind <> 'income')),
+              0
+            )
+          END AS contributed,
+          CASE WHEN a.type = 'investment' THEN
+            (SELECT v.value FROM account_valuations v
+              WHERE v.account_id = a.id AND v.date <= CURRENT_DATE
+              ORDER BY v.date DESC LIMIT 1)
+          END AS latest_value
         FROM accounts a
         WHERE a.user_id = ${uid}
+      ),
+      per_account AS (
+        SELECT
+          currency,
+          type,
+          book + COALESCE(latest_value - book, 0) AS total,
+          available_book + CASE WHEN account_locked THEN 0 ELSE COALESCE(latest_value - book, 0) END AS available,
+          CASE WHEN contributed IS NULL THEN 0
+               ELSE COALESCE(latest_value, book) - contributed END AS unrealized
+        FROM base
       )
       SELECT
         currency,
         SUM(total)::text AS total,
         SUM(available)::text AS available,
         SUM(CASE WHEN type = 'investment' THEN available ELSE 0 END)::text AS invested,
+        SUM(unrealized)::text AS unrealized,
         COUNT(*)::int AS account_count
       FROM per_account
       GROUP BY currency

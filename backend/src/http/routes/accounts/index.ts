@@ -3,6 +3,7 @@ import { registerList } from './list.js';
 import { registerReorder } from './reorder.js';
 import { registerCrud } from './crud.js';
 import { registerMerge } from './merge.js';
+import { registerValuations } from './valuations.js';
 
 export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   // Every route in this plugin requires auth.
@@ -12,4 +13,5 @@ export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   registerReorder(app);
   registerCrud(app);
   registerMerge(app);
+  registerValuations(app);
 }
