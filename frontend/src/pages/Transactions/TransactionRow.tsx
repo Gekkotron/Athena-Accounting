@@ -63,6 +63,7 @@ export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRo
   ) {
   const { t } = useTranslation(['transactions', 'common']);
   const currency = account?.currency ?? 'EUR';
+  const selectedCategory = tx.categoryId != null ? catById.get(tx.categoryId) : undefined;
   // Amber warning when the saved checkpoint no longer matches the recomputed
   // running balance — a transaction was edited, deleted, or back-imported
   // since the balance was frozen. Direct value comparison is correct here
@@ -142,23 +143,33 @@ export const TransactionRow = memo(forwardRef<HTMLTableRowElement, TransactionRo
             </button>
           ) : (
             <>
-              <select
-                className="input-sm w-auto"
-                value={tx.categoryId ?? ''}
-                disabled={!!tx.transferGroupId}
-                onChange={(e) =>
-                  onUpdateCategory(tx.id, {
-                    categoryId: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              >
-                <option value="">—</option>
-                {sortedCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {formatCategoryPath(c, catById)}
-                  </option>
-                ))}
-              </select>
+              {/* Sized to the selected option, not the widest one: an invisible
+                  copy of the current label (CSS content, so it isn't DOM text) shares the
+                  grid cell and sets the width; pr-7 leaves room for the chevron. */}
+              <div className="inline-grid">
+                <span
+                  aria-hidden
+                  data-label={selectedCategory ? formatCategoryPath(selectedCategory, catById) : '—'}
+                  className="invisible whitespace-nowrap border px-2 pr-7 text-xs [grid-area:1/1] after:content-[attr(data-label)]"
+                />
+                <select
+                  className="input-sm [grid-area:1/1]"
+                  value={tx.categoryId ?? ''}
+                  disabled={!!tx.transferGroupId}
+                  onChange={(e) =>
+                    onUpdateCategory(tx.id, {
+                      categoryId: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">—</option>
+                  {sortedCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {formatCategoryPath(c, catById)}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {tx.categorySource === 'manual' && <div className="text-[10px] text-ink-500 mt-1">{t('row.manualTag')}</div>}
             </>
           )}
