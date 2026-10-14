@@ -8,6 +8,8 @@ import { formatAmount, amountSignClass, formatDate } from '../../lib/format';
 import { BalanceCheckpointsDrawer } from './BalanceCheckpointsDrawer';
 import { AccountCardGoals } from './AccountCardGoals';
 import { AccountCardValue } from './AccountCardValue';
+import { lockedAmount } from './valuation-lib';
+import { todayLocalIso } from '../../lib/dates';
 
 // IBAN rendered with 4-char groups (what printed statements look like) so the
 // user can scan it; copy writes the compact form the bank actually stores.
@@ -45,12 +47,9 @@ export function AccountCard({
     }
   };
   const showsValue = a.type === 'investment' || a.type === 'savings';
-  // Valeur (== book balance unless an investment has a valuation); the
-  // locked-part maths mirrors the backend, where a valuation adjustment on a
-  // locked account lands in total only.
-  const current = Number(a.value ?? a.currentBalance ?? '0');
-  const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
-  const blocked = current - available;
+  // Locked-part maths mirrors the backend: a valuation adjustment counts as
+  // locked only while the account-level lock is active.
+  const blocked = lockedAmount(a, todayLocalIso());
   const hasBlocked = Math.abs(blocked) >= 0.005;
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),

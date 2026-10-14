@@ -53,7 +53,7 @@ export function AccountCardValue({
         </div>
       )}
       {a.type === 'investment' && onUpdateValue && (
-        <button type="button" className="btn-sm mt-3" onClick={() => onUpdateValue(a)}>
+        <button type="button" className="btn-ghost !py-1 !px-2 text-xs mt-3" onClick={() => onUpdateValue(a)}>
           {t('card.updateValue')}
         </button>
       )}

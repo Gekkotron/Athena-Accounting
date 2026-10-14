@@ -16,7 +16,7 @@ export function ValuationDialog({
   account: Account | null;
   onClose: () => void;
 }) {
-  const { t } = useTranslation(['accounts', 'common']);
+  const { t, i18n } = useTranslation(['accounts', 'common']);
   const qc = useQueryClient();
   const today = todayLocalIso();
   const [date, setDate] = useState(today);
@@ -108,13 +108,13 @@ export function ValuationDialog({
               type="text"
               inputMode="decimal"
               className="input-sm w-32 block mt-1 text-right"
-              placeholder="0.00"
+              placeholder={i18n.language?.startsWith('en') ? '0.00' : '0,00'}
               value={valueText}
               onChange={(e) => setValueText(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && canSave) submit(); }}
             />
           </label>
-          <button type="button" className="btn-sm" disabled={!canSave} onClick={submit}>
+          <button type="button" className="btn-primary" disabled={!canSave} onClick={submit}>
             {t('valuation.save')}
           </button>
         </div>

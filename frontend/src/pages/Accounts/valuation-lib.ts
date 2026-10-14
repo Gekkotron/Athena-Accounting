@@ -40,3 +40,29 @@ export function gainToneClass(value: string | number | null | undefined): string
 export function numberLocale(language: string | undefined): string {
   return language?.startsWith('en') ? 'en-US' : 'fr-FR';
 }
+
+// Locked part of an account, mirroring the backend balance report: the
+// book-based locked amount (current − available), plus the valuation
+// adjustment (Valeur − book) only while the account-level lock is active.
+// An unlocked investment's plus-value is Placé, never Bloqué.
+export function lockedAmount(
+  a: {
+    value?: string | null;
+    currentBalance?: string | null;
+    availableBalance?: string | null;
+    lockYears?: number | null;
+    openingDate: string;
+  },
+  today: string,
+): number {
+  const book = Number(a.currentBalance ?? '0');
+  const available = Number(a.availableBalance ?? a.currentBalance ?? '0');
+  const value = Number(a.value ?? a.currentBalance ?? '0');
+  let locked = book - available;
+  if (a.lockYears != null) {
+    const [y, m, d] = a.openingDate.split('-');
+    const unlock = `${Number(y) + a.lockYears}-${m}-${d}`;
+    if (unlock > today) locked += value - book;
+  }
+  return locked;
+}

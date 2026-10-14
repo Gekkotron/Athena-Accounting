@@ -58,10 +58,10 @@ export function DashboardHero({ primary }: Props): JSX.Element {
       </div>
       {showBreakdown && (
         <dl className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl">
-          <HeroStat label={t('hero.labels.total')} value={total} currency={primary.currency} tone="ink" />
+          <HeroStat label={t('hero.labels.total')} value={total} currency={primary.currency} tone="ink"
+            sub={hasUnrealized ? t('hero.gainSubline', { amount: signedAmount(unrealized, (v) => formatAmount(v, primary.currency)) }) : undefined} />
           {hasInvested && (
-            <HeroStat label={t('hero.labels.invested')} value={invested} currency={primary.currency} tone="sky"
-              sub={hasUnrealized ? t('hero.gainSubline', { amount: signedAmount(unrealized, (v) => formatAmount(v, primary.currency)) }) : undefined} />
+            <HeroStat label={t('hero.labels.invested')} value={invested} currency={primary.currency} tone="sky" />
           )}
           {hasBlocked && (
             <HeroStat label={t('hero.labels.blocked')} value={blocked} currency={primary.currency} tone="amber" />
