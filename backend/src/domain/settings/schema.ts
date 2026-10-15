@@ -82,7 +82,6 @@ export const SettingsSchema = z
     chartGapThresholdDays: z.number().int().min(1).max(60).optional(),
     duplicateSimilarityThreshold: z.number().int().min(0).max(100).optional(),
     showForecast: z.boolean().optional(),
-    showUnrealizedGains: z.boolean().optional(),
     transactionsDefaultAccount: z
       .union([
         z.literal('all'),
@@ -95,13 +94,12 @@ export const SettingsSchema = z
     displayCurrency: z
       .union([z.string().regex(/^[A-Z]{3}$/), z.null()])
       .optional(),
-    // Unknown ids (e.g. a section removed in a later release, like the old
-    // 'placements') are dropped before validation: the schema is strict and
-    // mergeSettings parses the whole stored blob, so one stale id would
-    // otherwise reset every setting to defaults. Dedup via the transform so
-    // a stored blob with repeats (never written by the UI, but cheap
-    // defense) can't produce an off-by-one checkbox state. Max cap matches
-    // the fixed enum length.
+    // Dedup via the transform so a stored blob with repeats (never written
+    // by the UI, but cheap defense) can't produce an off-by-one checkbox
+    // state. Max cap matches the fixed enum length.
+    // Unknown ids (a section removed in a later release) are dropped before
+    // validation, so one stale id can't fail the parse and reset every
+    // setting.
     dashboardHiddenSections: z
       .preprocess(
         (v) =>
@@ -126,7 +124,6 @@ export type FullSettings = {
   chartGapThresholdDays: number;
   duplicateSimilarityThreshold: number;
   showForecast: boolean;
-  showUnrealizedGains: boolean;
   transactionsDefaultAccount: TransactionsDefaultAccount;
   bankSyncHour: number;
   backupHour: number;
@@ -207,7 +204,10 @@ export function mergeNotifications(
 export function mergeSettings(stored: unknown, patch: Partial<Settings> = {}): FullSettings {
   const safe: FullSettings = { ...DEFAULTS, dashboardHiddenSections: [...DEFAULTS.dashboardHiddenSections] };
   const src = (stored && typeof stored === 'object') ? (stored as Record<string, unknown>) : {};
-  const parsed = SettingsSchema.safeParse(src);
+  // Stored blobs are parsed non-strict: a key from a removed setting (e.g.
+  // the reverted showUnrealizedGains) is dropped instead of failing the
+  // whole parse and resetting every setting. PATCH stays strict.
+  const parsed = SettingsSchema.strip().safeParse(src);
   if (parsed.success) {
     const { notifications: storedNotifications, ...rest } = parsed.data;
     Object.assign(safe, rest);

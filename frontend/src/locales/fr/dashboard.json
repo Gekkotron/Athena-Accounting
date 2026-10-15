@@ -28,10 +28,6 @@
     "evolution": "Évolution · {{currency}}",
     "categoryBreakdown": "Répartition par catégorie"
   },
-  "unrealizedGains": {
-    "label": "Plus-values latentes",
-    "tooltip": "Compte les placements à leur valeur estimée (dernières valorisations) au lieu du montant versé"
-  },
   "forecast": {
     "label": "Voir la projection",
     "tooltip": "Prolonge la courbe avec une projection en pointillé basée sur vos moyennes mensuelles de revenus et de dépenses."
@@ -119,6 +115,7 @@
       "balance": "Solde",
       "insights": "Insights",
       "budget": "Budget",
+      "placements": "Placements",
       "evolution": "Évolution",
       "sankey": "Flux"
     }
@@ -136,5 +133,33 @@
       "overBudgetCount_other": "{{count}} catégories",
       "held": "Retenu"
     }
+  },
+  "placements": {
+    "title": "Placements · {{currency}}",
+    "empty": "Pas encore assez de données pour tracer la courbe.",
+    "chartAria": "Valeur et versé des placements, {{count}} points du {{from}} au {{to}}, valeur actuelle {{value}}, versé {{contributed}}",
+    "scopeAria": "Compte et période des placements",
+    "legend": {
+      "value": "Valeur",
+      "contributed": "Versé",
+      "estimated": "estimé"
+    },
+    "tooltip": {
+      "value": "Valeur",
+      "contributed": "Versé",
+      "gain": "Plus-value",
+      "estimated": "estimé",
+      "depositsPeriod": "Versé sur la période",
+      "gainPeriod": "Plus-value sur la période"
+    },
+    "summary": {
+      "value": "Valeur",
+      "contributed": "Versé",
+      "gain": "Plus-value",
+      "depositsPeriod": "Versé sur la période",
+      "gainPeriod": "Plus-value sur la période"
+    },
+    "zoomReset": "Réinitialiser le zoom",
+    "error": "Impossible de charger les placements"
   }
 }

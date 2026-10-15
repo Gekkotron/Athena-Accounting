@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  aggregateByCurrency,
   computeAccountSeries,
+  consolidatePoints,
   type SeriesAccountInput,
 } from '../series.js';
 
@@ -145,5 +147,47 @@ describe('computeAccountSeries', () => {
   it('caps the range at today', () => {
     const pts = computeAccountSeries(base, range({ toDate: '2026-12-31', today: '2026-01-02' }));
     expect(pts.map((p) => p.bucket)).toEqual(['2026-01-01', '2026-01-02']);
+  });
+});
+
+describe('aggregateByCurrency / consolidatePoints', () => {
+  const p = (bucket: string, c: number, v: number, estimated = false) => ({
+    bucket,
+    contributedCents: c,
+    valueCents: v,
+    estimated,
+  });
+
+  it('sums per currency and bucket, ORing estimated', () => {
+    const out = aggregateByCurrency([
+      { currency: 'EUR', points: [p('2026-01-01', 1000, 1100)] },
+      { currency: 'EUR', points: [p('2026-01-01', 500, 450, true)] },
+      { currency: 'USD', points: [p('2026-01-01', 200, 200)] },
+    ]);
+    expect(out).toEqual([
+      { currency: 'EUR', bucket: '2026-01-01', contributed: '15.00', value: '15.50', gain: '0.50', estimated: true },
+      { currency: 'USD', bucket: '2026-01-01', contributed: '2.00', value: '2.00', gain: '0.00', estimated: false },
+    ]);
+  });
+
+  it('converts to the display currency and reports unmapped currencies', () => {
+    const points = aggregateByCurrency([
+      { currency: 'EUR', points: [p('2026-01-01', 10000, 11000)] },
+      { currency: 'USD', points: [p('2026-01-01', 10000, 12000, true)] },
+      { currency: 'GBP', points: [p('2026-01-01', 100, 100)] },
+    ]);
+    const out = consolidatePoints(points, 'EUR', [
+      { fromCcy: 'USD', toCcy: 'EUR', effectiveFrom: '2025-01-01', rate: '0.5' },
+    ]);
+    expect(out).toEqual([
+      {
+        bucket: '2026-01-01',
+        contributed: '150.00',
+        value: '170.00',
+        gain: '20.00',
+        estimated: true,
+        unmapped: ['GBP'],
+      },
+    ]);
   });
 });

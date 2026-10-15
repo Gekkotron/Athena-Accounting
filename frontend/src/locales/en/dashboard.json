@@ -28,10 +28,6 @@
     "evolution": "Trend · {{currency}}",
     "categoryBreakdown": "Breakdown by category"
   },
-  "unrealizedGains": {
-    "label": "Unrealized gains",
-    "tooltip": "Counts investment accounts at their estimated value (latest valuations) instead of the amount paid in"
-  },
   "forecast": {
     "label": "Show projection",
     "tooltip": "Extends the curve with a dashed projection based on your average monthly income and spending."
@@ -119,6 +115,7 @@
       "balance": "Balance",
       "insights": "Insights",
       "budget": "Budget",
+      "placements": "Investments",
       "evolution": "Trend",
       "sankey": "Flow"
     }
@@ -136,5 +133,33 @@
       "overBudgetCount_other": "{{count}} categories",
       "held": "Held"
     }
+  },
+  "placements": {
+    "title": "Investments · {{currency}}",
+    "empty": "Not enough data yet to draw the curve.",
+    "chartAria": "Investment value and contributions, {{count}} points from {{from}} to {{to}}, current value {{value}}, contributed {{contributed}}",
+    "scopeAria": "Investments account and period",
+    "legend": {
+      "value": "Value",
+      "contributed": "Contributed",
+      "estimated": "estimated"
+    },
+    "tooltip": {
+      "value": "Value",
+      "contributed": "Contributed",
+      "gain": "Gain",
+      "estimated": "estimated",
+      "depositsPeriod": "Contributed in period",
+      "gainPeriod": "Gain in period"
+    },
+    "summary": {
+      "value": "Value",
+      "contributed": "Contributed",
+      "gain": "Gain",
+      "depositsPeriod": "Contributed in period",
+      "gainPeriod": "Gain in period"
+    },
+    "zoomReset": "Reset zoom",
+    "error": "Could not load investments"
   }
 }

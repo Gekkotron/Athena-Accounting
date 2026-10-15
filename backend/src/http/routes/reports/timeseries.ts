@@ -7,10 +7,6 @@ import { loadUserRates } from '../../../domain/fx/rates-repo.js';
 import { aggregateTimeseriesByBucket } from '../../../domain/fx/aggregate-timeseries.js';
 import { loadUserDisplayCurrency } from '../../../domain/settings/loader.js';
 import { resolveDisplayCurrency } from './balance.js';
-import { todayLocalIso } from '../../../lib/dates.js';
-import { loadInvestmentSeriesInputs } from '../../../domain/investments/load.js';
-import { computeAccountSeries } from '../../../domain/investments/series.js';
-import { mergeGainSeries } from '../../../domain/investments/merge-gains.js';
 
 export function registerTimeseriesRoute(app: FastifyInstance): void {
   // Running balance per account over time. Returns one row per (account, date)
@@ -23,7 +19,7 @@ export function registerTimeseriesRoute(app: FastifyInstance): void {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid query', issues: parsed.error.issues });
     }
-    const { fromDate, toDate, granularity, withGains } = parsed.data;
+    const { fromDate, toDate, granularity } = parsed.data;
 
     const truncFmt = granularity === 'month' ? "'month'" : "'day'";
 
@@ -91,26 +87,6 @@ export function registerTimeseriesRoute(app: FastifyInstance): void {
       ORDER BY account_id, bucket
     `);
 
-    // withGains: investment accounts with valuations are counted at Valeur
-    // (interpolated between valuations) instead of book balance. Done before
-    // consolidation so the display-currency block includes the gains.
-    let finalRows = rows.rows;
-    if (withGains) {
-      const today = todayLocalIso();
-      const inputs = await loadInvestmentSeriesInputs(uid, { today });
-      const series = inputs.map((i) => ({
-        accountId: i.id,
-        currency: i.currency,
-        points: computeAccountSeries(i.account, {
-          fromDate: fromDate ?? i.account.openingDate,
-          toDate: toDate ?? today,
-          today,
-          granularity,
-        }),
-      }));
-      finalRows = mergeGainSeries(finalRows, series, { fromDate, toDate });
-    }
-
     const q = req.query as { display?: string } | undefined;
     const displayParam = q?.display;
     const settingsDisplay = displayParam === undefined ? await loadUserDisplayCurrency(uid) : null;
@@ -122,9 +98,9 @@ export function registerTimeseriesRoute(app: FastifyInstance): void {
     let consolidated: { display: string; points: Array<{ bucket: string; total: string; unmapped: string[] }> } | null = null;
     if (resolved !== null) {
       const rates = await loadUserRates(uid);
-      consolidated = { display: resolved, points: aggregateTimeseriesByBucket(finalRows, resolved, rates) };
+      consolidated = { display: resolved, points: aggregateTimeseriesByBucket(rows.rows, resolved, rates) };
     }
 
-    return { points: finalRows, consolidated };
+    return { points: rows.rows, consolidated };
   });
 }

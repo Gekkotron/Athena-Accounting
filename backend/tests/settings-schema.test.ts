@@ -12,14 +12,13 @@ describe('mergeSettings', () => {
     expect(out.dashboardRange).toBe('12m');
   });
 
-  it('unknown keys in stored do not survive and known keys still apply on the wholesale fallback', () => {
-    // Zod's default parse fails on unknown keys with .strict(), so the whole
-    // blob falls back to DEFAULTS. Test 5 covers the same fallback behavior for
-    // out-of-range values; this test locks in that an unknown key is one of
-    // those triggers.
-    const out = mergeSettings({ dashboardRange: '6m', bogus: 'x' } as any, {});
-    expect(out).toEqual(DEFAULTS);
+  it('drops unknown keys in stored and keeps the known ones', () => {
+    // Stored blobs parse non-strict, so a key from a removed setting (like
+    // the reverted showUnrealizedGains) can't reset every other setting.
+    const out = mergeSettings({ dashboardRange: '6m', showUnrealizedGains: true, bogus: 'x' } as any, {});
+    expect(out).toEqual({ ...DEFAULTS, dashboardRange: '6m' });
     expect((out as any).bogus).toBeUndefined();
+    expect(out).not.toHaveProperty('showUnrealizedGains');
   });
 
   it('falls back to defaults when stored is not an object', () => {
@@ -78,17 +77,9 @@ describe('dashboardHiddenSections', () => {
   });
 
   it('drops unknown ids and keeps the rest of the stored blob', () => {
-    const out = mergeSettings(
-      { dashboardHiddenSections: ['placements', 'sankey'], showForecast: true },
-      {},
-    );
+    const out = mergeSettings({ dashboardHiddenSections: ['nope', 'sankey'], showForecast: true }, {});
     expect(out.dashboardHiddenSections).toEqual(['sankey']);
     expect(out.showForecast).toBe(true);
-  });
-
-  it('showUnrealizedGains defaults to false and is stored when set', () => {
-    expect(mergeSettings({}, {}).showUnrealizedGains).toBe(false);
-    expect(mergeSettings({ showUnrealizedGains: true }, {}).showUnrealizedGains).toBe(true);
   });
 
   it('does not share the array with DEFAULTS (callers can mutate safely)', () => {

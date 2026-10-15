@@ -12,13 +12,6 @@ const AccountIdsCsv = z
     message: 'each id must be a positive integer',
   });
 
-// '1' or 'true' → on; anything else (or absent) → off. Never rejects, so a
-// stray value can't turn a chart request into a 400.
-const FlagParam = z
-  .unknown()
-  .transform((v) => v === '1' || v === 'true')
-  .optional();
-
 export const RangeQuery = z.object({
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -32,8 +25,6 @@ export const RangeQuery = z.object({
   // Used by the Dashboard's "All available accounts" scope to aggregate over
   // the subset whose lock has elapsed.
   accountIds: AccountIdsCsv.optional(),
-  // /api/reports/timeseries only: count investment accounts at Valeur.
-  withGains: FlagParam,
 });
 
 export const BudgetQuery = z.object({
