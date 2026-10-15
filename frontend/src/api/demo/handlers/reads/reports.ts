@@ -3,7 +3,8 @@ import { getState, type DemoFxRate } from '../../store';
 import { registerHandler, type DemoRequest } from '../../index';
 import { ApiError } from '../../../apiError';
 import { aggregateTimeseriesByBucket, consolidate, resolveRate } from '../../../../lib/fx';
-import { bucketFor, categoryById, money, monthOf, resolveDisplayCurrency, settingsDisplayCurrency, txs } from './lib';
+import { bucketFor, categoryById, money, monthOf, resolveDisplayCurrency, settingsDisplayCurrency, todayIso, txs } from './lib';
+import { valuationSeries } from './valuation-series';
 import { localizeCategoryName } from '../../i18n-categories';
 
 function handleReportsTimeseries(req: DemoRequest) {
@@ -11,7 +12,22 @@ function handleReportsTimeseries(req: DemoRequest) {
   const granularity = (req.query.granularity as 'day' | 'week' | 'month' | undefined) ?? 'day';
   const points: BalancePoint[] = [];
   const allTx = txs();
+  const withGains = req.query.withGains === '1';
+  const incomeIds = new Set(state.categories.filter((c) => c.kind === 'income').map((c) => c.id));
   for (const acc of state.accounts) {
+    // withGains: an investment account with valuations is replaced by dense
+    // per-bucket rows whose cumulative is the Valeur.
+    const vals = withGains && acc.type === 'investment'
+      ? (state.accountValuations ?? []).filter((v) => v.accountId === acc.id).map((v) => ({ date: v.date, value: Number(v.value) }))
+      : [];
+    if (vals.length > 0) {
+      let prevValue = Number(acc.openingBalance);
+      for (const { bucket, value } of valuationSeries(acc, incomeIds, vals, todayIso(), granularity)) {
+        points.push({ account_id: acc.id, currency: acc.currency, bucket, delta: money(value - prevValue), cumulative: money(value) });
+        prevValue = value;
+      }
+      continue;
+    }
     // Group tx by bucket, sum deltas, then cumulate.
     const perBucket = new Map<string, number>();
     for (const t of allTx) {

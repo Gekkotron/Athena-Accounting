@@ -10,7 +10,6 @@ import { registerReportsHandlers } from './reports';
 import { registerTriHandlers } from './tri';
 import { registerRecurringHandlers } from './recurring';
 import { registerFxRatesReadHandlers } from './fx-rates';
-import { registerInvestmentsReadHandlers } from './investments';
 
 export function registerReadHandlers(): void {
   registerSimpleHandlers();
@@ -20,5 +19,4 @@ export function registerReadHandlers(): void {
   registerTriHandlers();
   registerRecurringHandlers();
   registerFxRatesReadHandlers();
-  registerInvestmentsReadHandlers();
 }

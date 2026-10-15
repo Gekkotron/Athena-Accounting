@@ -19,7 +19,6 @@ export const DASHBOARD_SECTION_IDS = [
   'insights',
   'budget',
   'savings',
-  'placements',
   'evolution',
   'categories',
   'sankey',
@@ -92,6 +91,9 @@ export interface Settings {
   // extends past today with a dashed projected line derived from active
   // recurring series.
   showForecast: boolean;
+  // Évolution chart counts investment accounts at their valued amount
+  // (latest valuations) instead of the amount paid in.
+  showUnrealizedGains: boolean;
   // Transactions page pre-selects this account on load. 'first-checking'
   // means: auto-pick the earliest `type: 'checking'` account. Users can
   // pin a specific id or 'all' via Settings.
@@ -157,6 +159,7 @@ export const DEFAULTS: Settings = {
   chartGapThresholdDays: 6,
   duplicateSimilarityThreshold: 0,
   showForecast: false,
+  showUnrealizedGains: false,
   transactionsDefaultAccount: 'first-checking',
   bankSyncHour: 2,
   backupHour: 3,

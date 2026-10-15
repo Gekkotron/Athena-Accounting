@@ -77,9 +77,18 @@ describe('dashboardHiddenSections', () => {
     expect(out.dashboardHiddenSections).toEqual(['sankey', 'budget']);
   });
 
-  it('rejects unknown ids (whole blob falls back to defaults)', () => {
-    const out = mergeSettings({ dashboardHiddenSections: ['nope'] }, {});
-    expect(out.dashboardHiddenSections).toEqual([]);
+  it('drops unknown ids and keeps the rest of the stored blob', () => {
+    const out = mergeSettings(
+      { dashboardHiddenSections: ['placements', 'sankey'], showForecast: true },
+      {},
+    );
+    expect(out.dashboardHiddenSections).toEqual(['sankey']);
+    expect(out.showForecast).toBe(true);
+  });
+
+  it('showUnrealizedGains defaults to false and is stored when set', () => {
+    expect(mergeSettings({}, {}).showUnrealizedGains).toBe(false);
+    expect(mergeSettings({ showUnrealizedGains: true }, {}).showUnrealizedGains).toBe(true);
   });
 
   it('does not share the array with DEFAULTS (callers can mutate safely)', () => {

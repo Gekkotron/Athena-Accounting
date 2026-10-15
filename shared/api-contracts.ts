@@ -124,32 +124,6 @@ export interface AccountValuation {
   source: string;
 }
 
-// GET /api/reports/investments-timeseries — Versé / Valeur / Gain per bucket
-// for investment + savings accounts. Money fields are fixed-point strings;
-// `estimated` marks interpolated or carried-forward values.
-export interface InvestmentsSeriesPoint {
-  currency: string;
-  bucket: string;   // YYYY-MM-DD (first of month when granularity=month)
-  contributed: string;
-  value: string;
-  gain: string;
-  estimated: boolean;
-}
-
-export interface InvestmentsConsolidatedPoint {
-  bucket: string;
-  contributed: string;
-  value: string;
-  gain: string;
-  estimated: boolean;
-  unmapped: string[];
-}
-
-export interface InvestmentsTimeseries {
-  points: InvestmentsSeriesPoint[];
-  consolidated: { display: string; points: InvestmentsConsolidatedPoint[] } | null;
-}
-
 export interface BalanceCheckpoint {
   id: number;
   accountId: number;

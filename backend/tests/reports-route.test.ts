@@ -154,6 +154,29 @@ describe.skipIf(!RUN)('/api/reports', () => {
       expect(juneRows).toHaveLength(1);
     });
 
+    it('withGains=1 counts an investment account at its valuation', async () => {
+      const inv = await app.inject({
+        method: 'POST', url: '/api/accounts', headers: { cookie },
+        payload: { name: 'RINV', type: 'investment', currency: 'EUR', openingBalance: '1000', openingDate: '2026-06-01' },
+      });
+      const invId = inv.json().account.id;
+      const val = await app.inject({
+        method: 'PUT', url: `/api/accounts/${invId}/valuations`, headers: { cookie },
+        payload: { date: '2026-06-10', value: '1200' },
+      });
+      expect(val.statusCode).toBeLessThan(300);
+
+      const last = async (qs: string) => {
+        const res = await app.inject({ method: 'GET', url: `/api/reports/timeseries${qs}`, headers: { cookie } });
+        expect(res.statusCode).toBe(200);
+        const pts = res.json().points.filter((p: { account_id: number }) => p.account_id === invId);
+        return Number(pts[pts.length - 1].cumulative);
+      };
+      expect(await last('')).toBeCloseTo(1000);
+      expect(await last('?withGains=1')).toBeCloseTo(1200);
+      expect(await last('?withGains=nope')).toBeCloseTo(1000);
+    });
+
     it('rejects an invalid date range with 400', async () => {
       const res = await app.inject({
         method: 'GET', url: '/api/reports/timeseries?fromDate=15-06-2026',

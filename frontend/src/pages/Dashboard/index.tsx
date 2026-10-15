@@ -18,9 +18,9 @@ import { InsightsSection } from './InsightsSection';
 import { BudgetEnvelopeSection } from './BudgetEnvelopeSection';
 import { SankeySection } from './SankeySection';
 import { SavingsGoalsSection } from './SavingsGoalsSection';
-import { PlacementsSection, isPlacementAccount } from './PlacementsSection';
 import { ChartScopeBar } from './ChartScopeBar';
 import { DashboardSectionNav } from './DashboardSectionNav';
+import { EvolutionHeaderToggles } from './EvolutionHeaderToggles';
 import { useDashboardScope } from './useDashboardScope';
 import { EmptyState, ErrorState, ChartSkeleton } from '../../components/StateBlocks';
 import { SectionRule } from '../../components/SectionRule';
@@ -39,9 +39,13 @@ export function Dashboard(): JSX.Element {
     }),
   });
   const seriesQ = useQuery({
-    queryKey: ['reports', 'timeseries', settings.displayCurrency],
+    queryKey: ['reports', 'timeseries', settings.displayCurrency, settings.showUnrealizedGains],
     queryFn: () => api<{ points: BalancePoint[]; consolidated: TimeseriesConsolidatedBlock | null }>('/api/reports/timeseries', {
-      query: { granularity: 'day', ...(settings.displayCurrency ? { display: settings.displayCurrency } : {}) },
+      query: {
+        granularity: 'day',
+        ...(settings.displayCurrency ? { display: settings.displayCurrency } : {}),
+        ...(settings.showUnrealizedGains ? { withGains: 1 } : {}),
+      },
     }),
   });
 
@@ -80,13 +84,6 @@ export function Dashboard(): JSX.Element {
   // Memoized by the array reference so DashboardSectionNav's observer
   // effect doesn't re-register on every parent render.
   const hidden = useMemo(() => new Set(settings.dashboardHiddenSections), [settings.dashboardHiddenSections]);
-  // The Placements pill/section only exist when an investment or savings
-  // account does; fold that into the set the nav filters on.
-  const hasPlacements = accounts.some(isPlacementAccount);
-  const navHidden = useMemo(
-    () => (hasPlacements ? hidden : new Set([...hidden, 'placements'])),
-    [hidden, hasPlacements],
-  );
   const chartsHidden = hidden.has('evolution') && hidden.has('categories') && hidden.has('sankey');
 
   // Average-based forecast overlay for the Trend chart — see
@@ -144,7 +141,7 @@ export function Dashboard(): JSX.Element {
           nine stacked sections without scrolling the whole way. Each pill
           targets one of the id="dash-…" wrappers below. Pills for hidden
           sections are filtered out via the `hidden` prop. */}
-      {!rootErr && !rootEmpty && <DashboardSectionNav hidden={navHidden} />}
+      {!rootErr && !rootEmpty && <DashboardSectionNav hidden={hidden} />}
 
       {/* Sections below are hidden while the root queries are erroring or
           empty — no point showing a wall of skeletons behind a top-level
@@ -171,14 +168,6 @@ export function Dashboard(): JSX.Element {
         </div>
       )}
       {!rootErr && !rootEmpty && !hidden.has('savings') && <SavingsGoalsSection />}
-      {!rootErr && !rootEmpty && !hidden.has('placements') && hasPlacements && (
-        <PlacementsSection
-          accounts={accounts}
-          displayCurrency={settings.displayCurrency}
-          primaryCurrency={primary?.currency}
-          defaultRange={settings.dashboardRange}
-        />
-      )}
 
       {/* Single page-wide scope bar for the three chart surfaces below
           (Evolution, Category donut, Sankey). All three mutate the same
@@ -201,10 +190,12 @@ export function Dashboard(): JSX.Element {
           <span ref={curveAnchor} aria-hidden className="pointer-events-none absolute right-4 top-4 h-1 w-1" />
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <SectionRule className="flex-1">{t('sections.evolution', { currency: chartCurrency })}</SectionRule>
-            <label className="flex items-center gap-1.5 text-xs text-ink-400 cursor-pointer select-none" title={t('forecast.tooltip')}>
-              <input type="checkbox" checked={settings.showForecast} onChange={(e) => patchSettings({ showForecast: e.target.checked })} className="accent-sage-500" />
-              {t('forecast.label')}
-            </label>
+            <EvolutionHeaderToggles
+              showForecast={settings.showForecast}
+              showUnrealizedGains={settings.showUnrealizedGains}
+              hasAnyInvestment={hasAnyInvestment}
+              onPatch={patchSettings}
+            />
           </div>
           {seriesQ.isError ? (
             <ErrorState variant="inline" error={seriesQ.error} onRetry={() => void seriesQ.refetch()} />

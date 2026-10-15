@@ -82,6 +82,7 @@ export const SettingsSchema = z
     chartGapThresholdDays: z.number().int().min(1).max(60).optional(),
     duplicateSimilarityThreshold: z.number().int().min(0).max(100).optional(),
     showForecast: z.boolean().optional(),
+    showUnrealizedGains: z.boolean().optional(),
     transactionsDefaultAccount: z
       .union([
         z.literal('all'),
@@ -94,13 +95,24 @@ export const SettingsSchema = z
     displayCurrency: z
       .union([z.string().regex(/^[A-Z]{3}$/), z.null()])
       .optional(),
-    // Dedup via the transform so a stored blob with repeats (never written
-    // by the UI, but cheap defense) can't produce an off-by-one checkbox
-    // state. Max cap matches the fixed enum length.
+    // Unknown ids (e.g. a section removed in a later release, like the old
+    // 'placements') are dropped before validation: the schema is strict and
+    // mergeSettings parses the whole stored blob, so one stale id would
+    // otherwise reset every setting to defaults. Dedup via the transform so
+    // a stored blob with repeats (never written by the UI, but cheap
+    // defense) can't produce an off-by-one checkbox state. Max cap matches
+    // the fixed enum length.
     dashboardHiddenSections: z
-      .array(z.enum(DASHBOARD_SECTION_IDS as unknown as [DashboardSectionId, ...DashboardSectionId[]]))
-      .max(DASHBOARD_SECTION_IDS.length)
-      .transform((v) => Array.from(new Set(v)))
+      .preprocess(
+        (v) =>
+          Array.isArray(v)
+            ? v.filter((x) => (DASHBOARD_SECTION_IDS as readonly unknown[]).includes(x))
+            : v,
+        z
+          .array(z.enum(DASHBOARD_SECTION_IDS as unknown as [DashboardSectionId, ...DashboardSectionId[]]))
+          .max(DASHBOARD_SECTION_IDS.length)
+          .transform((v) => Array.from(new Set(v))),
+      )
       .optional(),
     notifications: NotificationsSchema.optional(),
   })
@@ -114,6 +126,7 @@ export type FullSettings = {
   chartGapThresholdDays: number;
   duplicateSimilarityThreshold: number;
   showForecast: boolean;
+  showUnrealizedGains: boolean;
   transactionsDefaultAccount: TransactionsDefaultAccount;
   bankSyncHour: number;
   backupHour: number;

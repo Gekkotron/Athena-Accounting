@@ -11,6 +11,9 @@ export const DEFAULTS = {
   // Récurrent → Dashboard Trend chart projection overlay. Off by default
   // so existing users see the same chart until they opt in.
   showForecast: false,
+  // Évolution chart counts investment accounts at Valeur (unrealized gains
+  // included) instead of book balance. Off by default.
+  showUnrealizedGains: false,
   // Transactions page pre-selects this account on load. 'first-checking'
   // means: auto-pick the earliest `type: 'checking'` account. Users can
   // pin a specific id or 'all' via Settings.
@@ -67,7 +70,6 @@ export const DASHBOARD_SECTION_IDS = [
   'insights',
   'budget',
   'savings',
-  'placements',
   'evolution',
   'categories',
   'sankey',

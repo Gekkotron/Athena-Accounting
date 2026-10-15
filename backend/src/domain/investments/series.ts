@@ -14,9 +14,6 @@
 // one, and value(t) = versé(t) + gain(t), so a deposit between two
 // valuations raises the value immediately.
 
-import { resolveRate } from '../fx/resolve-rate.js';
-import type { FxRate } from '../fx/types.js';
-
 export type SeriesGranularity = 'day' | 'month';
 
 export type SeriesAccountInput = {
@@ -44,24 +41,6 @@ export type AccountPoint = {
   estimated: boolean;
 };
 
-export type CurrencyPoint = {
-  currency: string;
-  bucket: string;
-  contributed: string;
-  value: string;
-  gain: string;
-  estimated: boolean;
-};
-
-export type ConsolidatedPoint = {
-  bucket: string;
-  contributed: string;
-  value: string;
-  gain: string;
-  estimated: boolean;
-  unmapped: string[];
-};
-
 const DAY_MS = 86_400_000;
 
 export function dayNumber(iso: string): number {
@@ -75,10 +54,6 @@ export function isoOfDay(n: number): string {
 
 export function bucketOf(iso: string, granularity: SeriesGranularity): string {
   return granularity === 'month' ? `${iso.slice(0, 7)}-01` : iso;
-}
-
-export function formatCents(c: number): string {
-  return (c / 100).toFixed(2);
 }
 
 type Step = { days: number[]; cum: number[] };
@@ -194,86 +169,4 @@ export function computeAccountSeries(
       estimated: point.estimated && !anchorInBucket,
     }))
     .sort((a, b) => a.bucket.localeCompare(b.bucket));
-}
-
-// Sums account series into one series per (currency, bucket).
-export function aggregateByCurrency(
-  series: Array<{ currency: string; points: AccountPoint[] }>,
-): CurrencyPoint[] {
-  const map = new Map<
-    string,
-    { currency: string; bucket: string; contributed: number; value: number; estimated: boolean }
-  >();
-  for (const s of series) {
-    for (const p of s.points) {
-      const key = `${s.currency}|${p.bucket}`;
-      const e = map.get(key) ?? {
-        currency: s.currency,
-        bucket: p.bucket,
-        contributed: 0,
-        value: 0,
-        estimated: false,
-      };
-      e.contributed += p.contributedCents;
-      e.value += p.valueCents;
-      e.estimated = e.estimated || p.estimated;
-      map.set(key, e);
-    }
-  }
-  return [...map.values()]
-    .sort((a, b) => a.currency.localeCompare(b.currency) || a.bucket.localeCompare(b.bucket))
-    .map((e) => ({
-      currency: e.currency,
-      bucket: e.bucket,
-      contributed: formatCents(e.contributed),
-      value: formatCents(e.value),
-      gain: formatCents(e.value - e.contributed),
-      estimated: e.estimated,
-    }));
-}
-
-// Converts per-currency points into one display currency, per bucket. A
-// currency with no rate at the bucket date is listed in `unmapped` and left
-// out of the sums.
-export function consolidatePoints(
-  points: CurrencyPoint[],
-  display: string,
-  rates: FxRate[],
-): ConsolidatedPoint[] {
-  const map = new Map<
-    string,
-    { contributed: number; value: number; estimated: boolean; unmapped: Set<string> }
-  >();
-  for (const p of points) {
-    const e = map.get(p.bucket) ?? {
-      contributed: 0,
-      value: 0,
-      estimated: false,
-      unmapped: new Set<string>(),
-    };
-    map.set(p.bucket, e);
-    const rate = resolveRate(rates, p.currency, display, p.bucket);
-    if (rate === null) {
-      e.unmapped.add(p.currency);
-      continue;
-    }
-    e.contributed += Number(p.contributed) * rate;
-    e.value += Number(p.value) * rate;
-    e.estimated = e.estimated || p.estimated;
-  }
-  const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-  return [...map.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([bucket, e]) => {
-      const contributed = round2(e.contributed);
-      const value = round2(e.value);
-      return {
-        bucket,
-        contributed: contributed.toFixed(2),
-        value: value.toFixed(2),
-        gain: round2(value - contributed).toFixed(2),
-        estimated: e.estimated,
-        unmapped: [...e.unmapped].sort(),
-      };
-    });
 }
