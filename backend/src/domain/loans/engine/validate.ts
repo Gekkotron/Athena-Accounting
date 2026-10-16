@@ -22,6 +22,9 @@ export function validateTerms(t: LoanTerms): LoanError[] {
   if (!isIsoDate(t.startDate)) errors.push({ code: 'invalid_date', field: 'startDate' });
   rate(t.annualRate, 'annualRate');
   rate(t.insuranceRate, 'insuranceRate');
+  if (t.insuranceAmount != null && t.insuranceAmount !== '' && !isDecimal(t.insuranceAmount)) {
+    errors.push({ code: 'invalid_amount', field: 'insuranceAmount' });
+  }
   if (!isDecimal(t.fees)) errors.push({ code: 'invalid_amount', field: 'fees' });
 
   let months = 0;

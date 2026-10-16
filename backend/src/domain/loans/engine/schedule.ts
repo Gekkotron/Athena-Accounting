@@ -41,6 +41,11 @@ function warn(c: Cursor, code: LoanWarning['code'], field: string): void {
 }
 
 function insuranceCents(t: LoanTerms, balance: number): number {
+  // Fixed monthly amount (if the user mirrored a flat premium from their
+  // bank's schedule) short-circuits the rate × basis computation.
+  if (t.insuranceAmount != null && t.insuranceAmount !== '') {
+    return toCents(t.insuranceAmount);
+  }
   const r = monthlyRate(t.insuranceRate);
   return roundHalfAway((t.insuranceBasis === 'initial' ? toCents(t.principal) : balance) * r);
 }

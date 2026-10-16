@@ -32,6 +32,11 @@ export interface LoanTerms {
   annualRate: string; // nominal annual %, "3.5" = 3.5 %
   insuranceRate: string; // annual %
   insuranceBasis: InsuranceBasis;
+  // Optional fixed monthly insurance (euros). When non-empty, every row
+  // bills this exact amount and insuranceRate/insuranceBasis are ignored.
+  // Lets users mirror a bank schedule that quotes a flat monthly premium
+  // (common on consumer and mortgage loans) instead of a rate.
+  insuranceAmount?: string | null;
   fees: string;
   periods: FixedPeriod[];
   finalPeriod: FinalPeriod;

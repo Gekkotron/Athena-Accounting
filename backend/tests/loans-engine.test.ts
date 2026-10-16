@@ -138,6 +138,27 @@ describe('insurance', () => {
     expect(Number(res.summary.totals.insurance)).toBeLessThan(12000);
     checkInvariants(t, res);
   });
+
+  it('fixed monthly amount overrides rate and basis', () => {
+    // Matches a bank schedule that quotes a flat 42,71 € premium — the
+    // user's input to compare against their lender's amortisation table.
+    const t = terms({
+      insuranceRate: '0.30',       // ignored
+      insuranceBasis: 'remaining', // ignored
+      insuranceAmount: '42.71',
+    });
+    const res = ok(buildSchedule(t, ASOF));
+    expect(res.schedule.every((r) => r.insurance === '42.71')).toBe(true);
+    expect(res.summary.totals.insurance).toBe('10250.40'); // 42.71 * 240
+    checkInvariants(t, res);
+  });
+
+  it('empty insuranceAmount string falls back to rate × basis', () => {
+    const t = terms({ insuranceRate: '0.30', insuranceAmount: '' });
+    const res = ok(buildSchedule(t, ASOF));
+    expect(res.schedule.every((r) => r.insurance === '50.00')).toBe(true);
+    checkInvariants(t, res);
+  });
 });
 
 describe('deferrals', () => {
