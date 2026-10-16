@@ -159,6 +159,26 @@ describe('insurance', () => {
     expect(res.schedule.every((r) => r.insurance === '50.00')).toBe(true);
     checkInvariants(t, res);
   });
+
+  it('remaining_annual holds the premium for 12 months then revises', () => {
+    // Matches a bank schedule that recomputes the premium on the loan's
+    // yearly anniversary (révision annuelle) off the capital owed at
+    // that moment, and keeps it constant for the next 12 rows.
+    const t = terms({ insuranceRate: '0.354', insuranceBasis: 'remaining_annual' });
+    const res = ok(buildSchedule(t, ASOF));
+    const first12 = res.schedule.slice(0, 12);
+    const nextYear = res.schedule.slice(12, 24);
+    expect(new Set(first12.map((r) => r.insurance)).size).toBe(1);
+    expect(new Set(nextYear.map((r) => r.insurance)).size).toBe(1);
+    expect(first12[0]!.insurance).toBe('59.00'); // 200000 × 0.00354 / 12 = 59.00
+    // Year 2 is billed off the balance at month 12, which is lower, so the
+    // premium drops.
+    expect(Number(nextYear[0]!.insurance)).toBeLessThan(59);
+    // And year 20 (last) is lower than year 1.
+    const last12 = res.schedule.slice(-12);
+    expect(Number(last12[0]!.insurance)).toBeLessThan(Number(first12[0]!.insurance));
+    checkInvariants(t, res);
+  });
 });
 
 describe('deferrals', () => {

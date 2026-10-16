@@ -14,6 +14,10 @@ import {
 interface Cursor {
   rows: ScheduleRow[];
   balance: number; // capital owed after the last pushed row
+  // Balance at the start of the current annual policy year. Updated at
+  // row 0 and at every anniversary (index % 12 === 0). Only read when
+  // insuranceBasis === 'remaining_annual'.
+  yearStartBalance: number;
   penalties: number;
   lastEffect: RepaymentEffect | null; // effect of the latest applied early repayment
   applied: Set<number>; // indexes into terms.earlyRepayments
@@ -40,14 +44,18 @@ function warn(c: Cursor, code: LoanWarning['code'], field: string): void {
   if (!c.warnings.some((w) => w.code === code && w.field === field)) c.warnings.push({ code, field });
 }
 
-function insuranceCents(t: LoanTerms, balance: number): number {
+function insuranceCents(t: LoanTerms, c: Cursor): number {
   // Fixed monthly amount (if the user mirrored a flat premium from their
   // bank's schedule) short-circuits the rate × basis computation.
   if (t.insuranceAmount != null && t.insuranceAmount !== '') {
     return toCents(t.insuranceAmount);
   }
   const r = monthlyRate(t.insuranceRate);
-  return roundHalfAway((t.insuranceBasis === 'initial' ? toCents(t.principal) : balance) * r);
+  const base =
+    t.insuranceBasis === 'initial' ? toCents(t.principal)
+    : t.insuranceBasis === 'remaining_annual' ? c.yearStartBalance
+    : c.balance;
+  return roundHalfAway(base * r);
 }
 
 // Pushes one instalment, then applies that month's early repayments.
@@ -55,7 +63,12 @@ function insuranceCents(t: LoanTerms, balance: number): number {
 function pushRow(t: LoanTerms, c: Cursor, m: Month, withEarly: boolean): number {
   const index = c.rows.length;
   const date = instalmentDate(t.startDate, index);
-  const insurance = insuranceCents(t, c.balance);
+  // At each loan anniversary (every 12 months from startDate) freeze the
+  // current balance so a `remaining_annual` insurance premium can bill off
+  // it for the next 12 rows. The initial freeze at row 0 is set up by
+  // runFixed() when the cursor is created.
+  if (index > 0 && index % 12 === 0) c.yearStartBalance = c.balance;
+  const insurance = insuranceCents(t, c);
   c.balance -= m.capital;
   let early = 0;
   if (withEarly) {
@@ -87,8 +100,9 @@ function pushRow(t: LoanTerms, c: Cursor, m: Month, withEarly: boolean): number 
 }
 
 function runFixed(t: LoanTerms, withEarly: boolean): Cursor {
+  const principal = toCents(t.principal);
   const c: Cursor = {
-    rows: [], balance: toCents(t.principal), penalties: 0,
+    rows: [], balance: principal, yearStartBalance: principal, penalties: 0,
     lastEffect: null, applied: new Set(), warnings: [],
   };
   t.periods.forEach((p, pi) => {

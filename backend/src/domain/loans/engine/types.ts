@@ -4,7 +4,13 @@
 
 export const MAX_INSTALMENTS = 600;
 
-export type InsuranceBasis = 'initial' | 'remaining';
+// 'initial'          — premium is `rate × principal / 12` every month (constant).
+// 'remaining'        — premium is `rate × capital owed this month / 12`, so it
+//                       drops with every instalment.
+// 'remaining_annual' — premium is `rate × capital owed at the loan's annual
+//                       anniversary / 12`, held constant for the next 12 months.
+//                       Matches the French bank convention "révision annuelle".
+export type InsuranceBasis = 'initial' | 'remaining' | 'remaining_annual';
 export type FixedPeriodKind = 'payment' | 'partial_deferral' | 'total_deferral';
 export type RepaymentEffect = 'reduce_payment' | 'shorten';
 
