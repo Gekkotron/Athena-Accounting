@@ -1,6 +1,6 @@
 # Loans — design
 
-**Status:** proposed
+**Status:** implemented
 **Date:** 2026-10-16
 
 ## Problem
