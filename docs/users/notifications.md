@@ -97,17 +97,32 @@ is sent to Discord until you paste a webhook URL and enable the channel:
 1. In Discord, open *Server settings → Integrations → Webhooks → New
    Webhook*, pick the target channel, then **Copy Webhook URL**.
 2. In *Paramètres → Notifications → Canaux*, tick **Discord (webhook)**,
-   paste the URL, then save. The form refuses anything that isn't a
-   `discord.com/api/webhooks/…` URL.
+   paste the URL, then click **Save Discord settings**.
+3. Click *Send a test* to check that the message lands in the channel.
+
+Only Discord's own webhook endpoints are accepted —
+`https://discord.com/api/webhooks/<id>/<token>`, plus the `discordapp.com`,
+`ptb.discord.com` and `canary.discord.com` variants. The form flags any other
+URL, and the server rejects it too, so Athena can never be pointed at a host
+on your LAN or at some other site.
 
 Treat the webhook URL like a password: anyone who has it can post in that
 channel. It stays on your server and is only used when a notification
 fires. Messages go through the same **Confidentialité** masks as the other
 channels, so hidden amounts and merchants never leave your server.
 
-**Rate limit** — *Max notifications per minute* works like the WhatsApp
-one (`0` = no limit; extra alerts are dropped from Discord only, and the
-manual *Send a test* button bypasses the limit).
+Each alert is posted as one message: the title in bold, with the body
+underneath (cut to Discord's 2,000-character limit). Mentions are turned
+off, so a merchant label containing `@everyone` or `@here` will not ping
+the channel. If Discord is down or the webhook has been deleted, the send
+fails silently. The in-app inbox and browser notification still receive
+the alert.
+
+**Rate limit**: *Max notifications per minute* works like the WhatsApp
+one (`0` = no limit). Past the cap on a rolling one-minute window, extra
+alerts are dropped from Discord only. Failed sends don't consume a slot,
+and the manual *Send a test* button bypasses the limit. The counter lives
+in memory, so restarting the server resets it.
 
 ## Big transaction
 
@@ -153,9 +168,11 @@ glances at your screen or a lock-screen preview:
 Both are on by default and can be turned off independently in the
 *Confidentialité* tab of the Notifications settings if you'd rather see
 the real numbers. The inbox at
-*/notifications* always shows the full transaction detail — the privacy
-toggles apply only to toast pop-ups and browser notifications, which appear
-in more visible contexts (a shoulder-surfer at your screen).
+*/notifications* always shows the full transaction detail. The privacy
+toggles apply to everything that leaves the inbox: toast pop-ups, browser
+notifications, and the WhatsApp and Discord messages. These show up in more
+visible places, like a lock screen, a shared Discord channel, or someone
+looking over your shoulder.
 
 ## See also
 
