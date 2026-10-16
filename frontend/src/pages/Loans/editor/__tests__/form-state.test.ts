@@ -40,6 +40,26 @@ describe('formToTerms', () => {
     });
   });
 
+  it('parses French-formatted rates, final amount and early repayments', () => {
+    const res = formToTerms({
+      ...french(),
+      periods: [{ kind: 'payment', months: '12', amount: '800,00', rate: '2,5' }],
+      solve: 'end_date',
+      finalAmount: '1 400,00',
+      finalRate: '3,25 %',
+      earlyRepayments: [{ date: '2030-01', amount: '20 000,50', effect: 'shorten', penalty: '600,5' }],
+    });
+    expect(res).toEqual({
+      terms: {
+        principal: '245000', startDate: '2026-02-05', annualRate: '3.85', insuranceRate: '0.345',
+        insuranceBasis: 'initial', fees: '1850.50',
+        periods: [{ kind: 'payment', months: 12, amount: '800.00', rate: '2.5' }],
+        finalPeriod: { solve: 'end_date', amount: '1400.00', rate: '3.25' },
+        earlyRepayments: [{ date: '2030-01', amount: '20000.50', effect: 'shorten', penalty: '600.5' }],
+      },
+    });
+  });
+
   it('defaults blank insurance and fees to 0', () => {
     const res = formToTerms({ ...french(), insuranceRate: '', fees: '' });
     expect('terms' in res && res.terms.insuranceRate).toBe('0');
