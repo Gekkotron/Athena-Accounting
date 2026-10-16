@@ -2,11 +2,20 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { listLoans } from '../../api/loans';
+import { listLoans, type Loan, type LoanDetail } from '../../api/loans';
+import { todayLocalIso } from '../../lib/dates';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { LoanCard } from './LoanCard';
 import { LoanDrawer } from './LoanDrawer';
 import { sortLoans, type LoansTab } from './loan-list';
+import { LoanEditor } from './editor/LoanEditor';
+import { asSimulation, emptyForm, formFromLoan, type LoanForm } from './editor/form-state';
+
+interface EditorState {
+  title: string;
+  form: LoanForm;
+  loanId: number | null;
+}
 
 const TABS: LoansTab[] = ['loans', 'simulations'];
 
@@ -24,6 +33,26 @@ export function Loans() {
     setParams(params, { replace: true });
   };
 
+  const [editor, setEditor] = useState<EditorState | null>(null);
+
+  const openCreate = () => setEditor({
+    title: t(tab === 'simulations' ? 'form.createSimulationTitle' : 'form.createTitle'),
+    form: emptyForm(tab === 'simulations', todayLocalIso()),
+    loanId: null,
+  });
+  const openEdit = (d: LoanDetail) =>
+    setEditor({ title: t('form.editTitle'), form: formFromLoan(d.loan), loanId: d.loan.id });
+  const openDuplicate = (d: LoanDetail) => setEditor({
+    title: t('form.createSimulationTitle'),
+    form: asSimulation(formFromLoan(d.loan), d.loan, t('form.copyName', { name: d.loan.name })),
+    loanId: null,
+  });
+  const onSaved = (loan: Loan) => {
+    setEditor(null);
+    setOpenId(loan.id);
+    if (loan.isSimulation !== (tab === 'simulations')) selectTab(loan.isSimulation ? 'simulations' : 'loans');
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-4">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -31,6 +60,9 @@ export function Loans() {
           <h1 className="display text-2xl">{t('title')}</h1>
           <p className="text-sm text-ink-500 mt-1 max-w-xl">{t('subtitle')}</p>
         </div>
+        <button type="button" className="btn-primary" onClick={openCreate}>
+          {t(tab === 'simulations' ? 'actions.newSimulation' : 'actions.newLoan')}
+        </button>
       </header>
 
       <div role="tablist" aria-label={t('title')} className="mb-4 flex gap-1">
@@ -61,7 +93,19 @@ export function Loans() {
           ))}
         </div>
       )}
-      {openId !== null && <LoanDrawer id={openId} onClose={() => setOpenId(null)} />}
+      {openId !== null && (
+        <LoanDrawer id={openId} onClose={() => setOpenId(null)} onEdit={openEdit} onDuplicate={openDuplicate} />
+      )}
+      {editor && (
+        <LoanEditor
+          key={`${editor.loanId ?? 'new'}-${editor.title}`}
+          title={editor.title}
+          initial={editor.form}
+          loanId={editor.loanId}
+          onClose={() => setEditor(null)}
+          onSaved={onSaved}
+        />
+      )}
     </div>
   );
 }
