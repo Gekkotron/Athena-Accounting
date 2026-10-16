@@ -59,22 +59,23 @@ describe('MoyennesMensuellesSection', () => {
     expect(screen.getByText(/sur 2 mois glissants/)).toBeInTheDocument();
   });
 
-  it('buckets rows into spend/income by SIGN, not by category kind', async () => {
-    // Only "neutral" or uncategorized rows in the payload. Old aggregation
-    // dropped these because it filtered on category_kind — the sign-based
-    // bucketing must still classify them.
+  it('keeps neutral/uncategorised rows (as spend) and counts revenue from income-kind only', async () => {
+    // Old aggregation dropped neutral/uncategorised rows because it filtered
+    // on category_kind — they must still reach the spend bucket. Revenue is
+    // income-kind only (same rule as the Sankey), so an uncategorised credit
+    // nets into spend rather than inflating "Revenu moyen mensuel".
     apiMock.mockResolvedValue({
       rows: [
-        { month: '2025-03-01', category_id: null, total: '-300.00' }, // uncat spend
-        { month: '2025-03-01', category_id: null, total: '500.00' },  // uncat income
+        { month: '2025-03-01', category_id: null, category_kind: null, total: '-450.00' }, // uncat spend
+        { month: '2025-03-01', category_id: 2, category_kind: 'neutral', total: '-80.00' },
+        { month: '2025-03-01', category_id: null, category_kind: null, total: '30.00' },  // uncat credit
+        { month: '2025-03-01', category_id: 1, category_kind: 'income', total: '700.00' },
       ],
     });
     renderWithProviders();
-    // Both widgets should reflect the non-zero average, which formats with
-    // a euro symbol. The exact string depends on locale nbsp handling —
-    // assert on the presence of the digit sequences.
-    expect(await screen.findByText(/300/)).toBeInTheDocument();
-    expect(screen.getByText(/500/)).toBeInTheDocument();
+    expect(await screen.findByText(/500/)).toBeInTheDocument(); // spend −450 −80 +30
+    expect(screen.getByText(/700/)).toBeInTheDocument(); // revenue
+    expect(screen.getByText(/200/)).toBeInTheDocument(); // savings = net flow
   });
 
   it('renders the singular "mois glissant" label when the window is exactly one month', async () => {

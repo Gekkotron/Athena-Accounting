@@ -17,14 +17,19 @@ export function computeMonthlyStats(rows: CategoryReportRow[]): MonthlyStats {
   // one side of a self-transfer with a dedicated category (e.g. "Épargne")
   // — get honest averages. Skipped from BOTH buckets so avgSavings stays
   // consistent (revenue − expenses cancels out on both legs).
+  //
+  // Revenue counts income-kind categories only — the same rule as the
+  // Sankey and the Insights panel. A positive row in an expense/neutral/
+  // uncategorised category (refund month, reimbursement) nets into spend
+  // instead of inflating revenue, so avgSavings stays the true net flow.
   const monthly = new Map<string, { spend: number; income: number }>();
   for (const r of rows) {
     if (r.category_is_internal_transfer) continue;
     const cur = monthly.get(r.month) ?? { spend: 0, income: 0 };
     const amount = Number(r.total);
     if (!Number.isFinite(amount)) continue;
-    if (amount < 0) cur.spend += amount;
-    else if (amount > 0) cur.income += amount;
+    if (r.category_kind === 'income') cur.income += amount;
+    else cur.spend += amount;
     monthly.set(r.month, cur);
   }
   // Guard against /0 when there is no history yet.
