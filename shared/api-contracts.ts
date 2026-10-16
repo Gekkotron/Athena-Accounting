@@ -220,3 +220,123 @@ export interface Notification {
   readAt: string | null;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Loans (migration 0048). Mirrors backend/src/domain/loans/engine/types.ts
+// and backend/src/domain/loans/record.ts by hand — the backend's rootDir
+// can't import this file. The demo handler type-checks engine output against
+// these types, so a drift fails `tsc -b` in the frontend.
+// ---------------------------------------------------------------------------
+
+export type LoanKind = 'mortgage' | 'consumer' | 'auto' | 'other';
+export type LoanInsuranceBasis = 'initial' | 'remaining';
+export type LoanFixedPeriodKind = 'payment' | 'partial_deferral' | 'total_deferral';
+export type LoanRepaymentEffect = 'reduce_payment' | 'shorten';
+
+export interface LoanFixedPeriod {
+  kind: LoanFixedPeriodKind;
+  months: number;
+  amount?: string;
+  rate?: string | null;
+}
+
+export type LoanFinalPeriod =
+  | { solve: 'payment'; endDate: string; rate?: string | null }
+  | { solve: 'end_date'; amount: string; rate?: string | null };
+
+export interface LoanEarlyRepayment {
+  date: string;
+  amount: string;
+  effect: LoanRepaymentEffect;
+  penalty?: string;
+}
+
+export interface LoanTermsInput {
+  principal: string;
+  startDate: string;
+  annualRate: string;
+  insuranceRate: string;
+  insuranceBasis: LoanInsuranceBasis;
+  fees: string;
+  periods: LoanFixedPeriod[];
+  finalPeriod: LoanFinalPeriod;
+  earlyRepayments: LoanEarlyRepayment[];
+}
+
+export interface LoanInput extends LoanTermsInput {
+  name: string;
+  kind: LoanKind;
+  isSimulation: boolean;
+  sourceLoanId: number | null;
+  currency: string;
+}
+
+export interface Loan extends LoanInput {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoanScheduleRow {
+  index: number;
+  date: string;
+  periodIndex: number; // -1 = final period
+  kind: LoanFixedPeriodKind | 'final';
+  rate: string;
+  payment: string;
+  interest: string;
+  capital: string;
+  insurance: string;
+  earlyRepayment: string | null;
+  balance: string;
+}
+
+export interface LoanSummary {
+  currentPayment: string;
+  currentPaymentWithInsurance: string;
+  solvedPayment: string | null;
+  endDate: string;
+  durationMonths: number;
+  totals: {
+    interest: string;
+    insurance: string;
+    fees: string;
+    penalties: string;
+    cost: string;
+    totalPaid: string;
+  };
+  today: {
+    asOf: string;
+    capitalOwed: string;
+    repaidPct: number;
+    interestPaid: string;
+    monthsLeft: number;
+    nextInstalment: { date: string; amount: string } | null;
+    status: 'not_started' | 'active' | 'repaid';
+  };
+}
+
+// Engine errors (422 body `errors`) and warnings share this shape; `code`
+// is an i18n key under `loans:issues.*`, `field` a dotted LoanTermsInput path.
+export interface LoanIssue {
+  code: string;
+  field?: string;
+}
+
+export interface LoanListItem extends Loan {
+  summary: LoanSummary | null; // null = stored terms the engine now rejects
+}
+
+export interface LoanDetail {
+  loan: Loan;
+  schedule: LoanScheduleRow[];
+  summary: LoanSummary | null;
+  warnings: LoanIssue[];
+  errors?: LoanIssue[];
+}
+
+export interface LoanSimulation {
+  schedule: LoanScheduleRow[];
+  summary: LoanSummary;
+  warnings: LoanIssue[];
+}

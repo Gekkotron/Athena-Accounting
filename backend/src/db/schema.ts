@@ -18,6 +18,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import type { EarlyRepayment, FinalPeriod, FixedPeriod } from '../domain/loans/engine/types.js';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -885,6 +886,40 @@ export const accountValuations = pgTable(
   (t) => ({
     uqAccountDate: uniqueIndex('account_valuations_account_date_uq').on(t.accountId, t.date),
     idxUser: index('account_valuations_user_idx').on(t.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// loans — user loans and saved simulations (migration 0048). Inputs only:
+// the schedule is recomputed by domain/loans/engine on every read.
+// ---------------------------------------------------------------------------
+
+export const loans = pgTable(
+  'loans',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    kind: text('kind').notNull().default('other'),
+    isSimulation: boolean('is_simulation').notNull().default(false),
+    // Self-reference — same `(): any` escape hatch as categories.parentId.
+    sourceLoanId: integer('source_loan_id').references((): any => loans.id, { onDelete: 'set null' }),
+    currency: varchar('currency', { length: 3 }).notNull().default('EUR'),
+    principal: numeric('principal', { precision: 14, scale: 2 }).notNull(),
+    startDate: date('start_date').notNull(),
+    annualRate: numeric('annual_rate', { precision: 7, scale: 4 }).notNull(),
+    insuranceRate: numeric('insurance_rate', { precision: 7, scale: 4 }).notNull().default('0'),
+    insuranceBasis: text('insurance_basis').notNull().default('initial'),
+    fees: numeric('fees', { precision: 14, scale: 2 }).notNull().default('0'),
+    periods: jsonb('periods').$type<FixedPeriod[]>().notNull().default([]),
+    finalPeriod: jsonb('final_period').$type<FinalPeriod>().notNull(),
+    earlyRepayments: jsonb('early_repayments').$type<EarlyRepayment[]>().notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqUserName: uniqueIndex('loans_user_name_uq').on(t.userId, t.name),
+    idxUser: index('loans_user_idx').on(t.userId),
   }),
 );
 
