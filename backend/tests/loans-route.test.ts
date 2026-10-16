@@ -97,6 +97,17 @@ describe.skipIf(!RUN)('/api/loans', () => {
     await create(body());
     const res = await create(body());
     expect(res.statusCode).toBe(409);
+    expect(res.json()).toEqual({ error: 'a loan with this name already exists' });
+  });
+
+  it('409 when a PUT renames a loan to a name already taken', async () => {
+    await create(body({ name: 'A' }));
+    const idB = (await create(body({ name: 'B' }))).json().loan.id;
+    const res = await app.inject({
+      method: 'PUT', url: `/api/loans/${idB}`, headers: { cookie }, payload: body({ name: 'A' }),
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toEqual({ error: 'a loan with this name already exists' });
   });
 
   it('hides other users\' loans (404)', async () => {
