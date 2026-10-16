@@ -17,9 +17,15 @@ export async function restoreLoans(
   const inserted = await tx
     .insert(loans)
     .values(dumpLoans.map((l) => {
-      const { sourceLoan, ...rest } = l;
+      const { sourceLoan, createdAt, updatedAt, ...rest } = l;
       void sourceLoan; // re-linked in the second pass below
-      return { ...rest, userId: uid, sourceLoanId: null };
+      return {
+        ...rest,
+        userId: uid,
+        sourceLoanId: null,
+        ...(createdAt ? { createdAt: new Date(createdAt) } : {}),
+        ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}),
+      };
     }))
     .returning({ id: loans.id, name: loans.name });
   const idByName = new Map(inserted.map((r) => [r.name, r.id]));

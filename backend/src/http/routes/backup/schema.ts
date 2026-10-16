@@ -210,7 +210,11 @@ export const BackupBody = z.object({
   // Loans (migration 0048). Natural key is the loan name; a simulation
   // points at its source loan by name. Optional so older dumps restore.
   loans: z.array(
-    LoanBody.omit({ sourceLoanId: true }).extend({ sourceLoan: z.string().nullable() }),
+    LoanBody.omit({ sourceLoanId: true }).extend({
+      sourceLoan: z.string().nullable(),
+      createdAt: z.string().datetime().optional(),
+      updatedAt: z.string().datetime().optional(),
+    }),
   ).optional(),
 });
 

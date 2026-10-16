@@ -70,4 +70,31 @@ describe.skipIf(!RUN)('backup: loans', () => {
     expect(imp.statusCode).toBe(200);
     expect(await listLoans()).toEqual([]);
   });
+
+  it('preserves timestamps and nulls a source that is absent from the dump', async () => {
+    const dump = await exportDump();
+    const loan = {
+      name: 'Orphan sim', kind: 'mortgage', isSimulation: true, sourceLoan: 'Maison',
+      currency: 'EUR', principal: '100000.00', startDate: '2026-02-05', annualRate: '3.5',
+      insuranceRate: '0', insuranceBasis: 'remaining', fees: '0.00', periods: [],
+      finalPeriod: { solve: 'payment', endDate: '2046-01' }, earlyRepayments: [],
+      createdAt: '2025-03-04T05:06:07.000Z', updatedAt: '2025-04-05T06:07:08.000Z',
+    };
+    const imp = await app.inject({ method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: { ...dump, loans: [loan] } });
+    expect(imp.statusCode).toBe(200);
+    const after = await listLoans();
+    expect(after).toHaveLength(1);
+    expect(after[0]!.sourceLoanId).toBeNull();
+    expect((after[0] as unknown as { createdAt: string }).createdAt).toBe('2025-03-04T05:06:07.000Z');
+    const again = await exportDump();
+    expect(again.loans[0].updatedAt).toBe('2025-04-05T06:07:08.000Z');
+  });
+
+  it('rejects a malformed loan entry with 400', async () => {
+    const dump = await exportDump();
+    const bad = { ...dump.loans[0], annualRate: '150' };
+    const imp = await app.inject({ method: 'POST', url: '/api/backup/import', headers: { cookie }, payload: { ...dump, loans: [bad] } });
+    expect(imp.statusCode).toBe(400);
+    expect(imp.json()).toEqual(expect.objectContaining({ issues: expect.any(Array) }));
+  });
 });

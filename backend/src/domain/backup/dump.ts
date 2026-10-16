@@ -239,6 +239,8 @@ export async function buildDump(uid: number) {
           periods: l.periods,
           finalPeriod: l.finalPeriod,
           earlyRepayments: l.earlyRepayments,
+          createdAt: l.createdAt.toISOString(),
+          updatedAt: l.updatedAt.toISOString(),
         }));
       })(),
     };
