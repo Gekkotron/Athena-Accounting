@@ -17,6 +17,7 @@ import type {
 import type { DemoState } from './store';
 import { DEMO_SCHEMA_VERSION, type DemoAccountValuation } from './store';
 import { clone } from './seed-utils';
+import { buildSeedLoans } from './seed-loans';
 import {
   CAT,
   ACC,
@@ -89,6 +90,7 @@ export function buildSeedState(): DemoState {
     savingsGoalEvents,
     fxRates: [],
     accountValuations: buildValuations(),
+    loans: buildSeedLoans(),
     settings: {
       locale: 'fr',
       currency: 'EUR',

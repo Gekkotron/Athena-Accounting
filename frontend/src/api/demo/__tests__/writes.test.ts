@@ -114,7 +114,7 @@ describe('demo write handlers', () => {
       method: 'POST',
       json: { passphrase: 'demo-passphrase' },
     });
-    expect(dump.v).toBe(8);
+    expect(dump.v).toBe(9);
     expect(dump.accounts).toHaveLength(3);
   });
 });

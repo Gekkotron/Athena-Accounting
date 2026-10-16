@@ -19,6 +19,9 @@ RUN npm install --no-audit --no-fund
 # '../../../shared/api-contracts' (three parents from types.ts → /shared).
 # Copy it before the frontend tree so the workdir layout is deterministic.
 COPY shared /shared
+# The demo handler imports the pure loan engine from the backend tree
+# (one source of truth for loan maths); mirror its path next to /shared.
+COPY backend/src/domain/loans/engine /backend/src/domain/loans/engine
 COPY frontend ./
 
 RUN npm run build

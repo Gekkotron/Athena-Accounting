@@ -14,6 +14,7 @@ import type {
   SavingsGoal, SavingsGoalEvent,
 } from '../types';
 import type { FxRate } from '../../lib/fx';
+import type { Loan } from '../../../../shared/api-contracts';
 
 // Bumped whenever the seed shape changes in a way that must reach every
 // visitor on their next tab open. Mismatch triggers a silent reseed.
@@ -24,7 +25,8 @@ import type { FxRate } from '../../lib/fx';
 //   v=4 → v=5  savingsGoals + savingsGoalEvents seeded (migration 0037)
 //   v=5 → v=6  fxRates seeded (empty) + settings.displayCurrency (manual
 //              FX table, Task 7)
-export const DEMO_SCHEMA_VERSION = 8;
+//   v=8 → v=9  loans seeded (migration 0048)
+export const DEMO_SCHEMA_VERSION = 9;
 const STORAGE_KEY = 'athena_demo_state';
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -51,6 +53,8 @@ export interface DemoState {
   fxRates?: DemoFxRate[];
   // Investment valuations (v8). Optional like the other late additions.
   accountValuations?: DemoAccountValuation[];
+  // Loans + saved simulations (v9). Optional like the other late additions.
+  loans?: Loan[];
   settings: Record<string, unknown>;
   // Remote-backup destination (Sauvegarde distante card). Non-secret parts
   // only — the demo never stores passwords or passphrases. Optional so
@@ -101,6 +105,7 @@ export function registerSeedProvider(fn: () => DemoState): void {
 function emptyState(): DemoState {
   return {
     v: DEMO_SCHEMA_VERSION,
+    loans: [],
     accounts: [],
     categories: [],
     rules: [],
