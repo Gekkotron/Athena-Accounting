@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { listLoans } from '../../api/loans';
 import { EmptyState, ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { LoanCard } from './LoanCard';
+import { LoanDrawer } from './LoanDrawer';
 import { sortLoans, type LoansTab } from './loan-list';
 
 const TABS: LoansTab[] = ['loans', 'simulations'];
@@ -60,7 +61,7 @@ export function Loans() {
           ))}
         </div>
       )}
-      {openId !== null && <span hidden data-open-loan={openId} />}
+      {openId !== null && <LoanDrawer id={openId} onClose={() => setOpenId(null)} />}
     </div>
   );
 }
