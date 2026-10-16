@@ -28,6 +28,26 @@ const CallMeBotSchema = z
   .strict()
   .optional();
 
+// Discord channel webhook: the URL is a bearer secret for one channel. The
+// server POSTs to whatever URL is stored, so restrict it to Discord's own
+// webhook endpoints (SSRF guard: no LAN hosts, no arbitrary https targets).
+const DiscordSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    webhookUrl: z
+      .string()
+      .max(512)
+      .refine(
+        (v) => v === '' || /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+\/?$/.test(v),
+        { message: 'Invalid Discord webhook URL' },
+      )
+      .optional(),
+    // Max Discord sends per rolling 1-minute window; 0 = no limit.
+    maxPerMinute: z.number().int().min(0).max(1000).optional(),
+  })
+  .strict()
+  .optional();
+
 const NotificationsSchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -37,6 +57,7 @@ const NotificationsSchema = z
         osNative: z.boolean().optional(),
         webPush: z.boolean().optional(),
         callmebot: CallMeBotSchema,
+        discord: DiscordSchema,
       })
       .partial()
       .optional(),
@@ -136,6 +157,7 @@ export type FullSettings = {
       osNative: boolean;
       webPush: boolean;
       callmebot: { enabled: boolean; phone: string; apiKey: string; maxPerMinute: number };
+      discord: { enabled: boolean; webhookUrl: string; maxPerMinute: number };
     };
     privacy: { hideAmount: boolean; hideMerchant: boolean };
     triggers: {
@@ -161,7 +183,7 @@ export function mergeNotifications(
   base: FullSettings['notifications'],
   patch: NotificationsPatch | undefined,
 ): FullSettings['notifications'] {
-  // `channels.callmebot` is the only nested object inside `channels`; the
+  // `channels.callmebot` and `channels.discord` are the only nested objects inside `channels`; the
   // other channels (`toast`, `osNative`, `webPush`) are booleans and merge
   // field-wise via the spread. For callmebot, do a per-field merge so a patch
   // that only toggles `enabled` doesn't wipe `phone`/`apiKey` (and vice versa).
@@ -173,9 +195,14 @@ export function mergeNotifications(
     maxPerMinute:
       patch?.channels?.callmebot?.maxPerMinute ?? base.channels.callmebot.maxPerMinute,
   };
+  const patchedDiscord = {
+    enabled: patch?.channels?.discord?.enabled ?? base.channels.discord.enabled,
+    webhookUrl: patch?.channels?.discord?.webhookUrl ?? base.channels.discord.webhookUrl,
+    maxPerMinute: patch?.channels?.discord?.maxPerMinute ?? base.channels.discord.maxPerMinute,
+  };
   return {
     enabled: patch?.enabled ?? base.enabled,
-    channels: { ...basePatchChannels, callmebot: patchedCallmebot },
+    channels: { ...basePatchChannels, callmebot: patchedCallmebot, discord: patchedDiscord },
     privacy: { ...base.privacy, ...patch?.privacy },
     triggers: {
       bigTransaction: {

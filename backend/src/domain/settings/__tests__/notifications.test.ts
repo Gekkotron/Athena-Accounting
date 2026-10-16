@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSettings } from '../schema.js';
+import { SettingsSchema, mergeSettings } from '../schema.js';
 
 describe('settings.notifications', () => {
   it('defaults are privacy-safe and enabled', () => {
@@ -11,6 +11,27 @@ describe('settings.notifications', () => {
     expect(s.notifications.channels.osNative).toBe(false);
     expect(s.notifications.channels.webPush).toBe(false);
     expect(s.notifications.channels.callmebot).toEqual({ enabled: false, phone: '', apiKey: '', maxPerMinute: 0 });
+    expect(s.notifications.channels.discord).toEqual({ enabled: false, webhookUrl: '', maxPerMinute: 0 });
+  });
+
+  it('deep-merges discord settings so a partial patch keeps siblings', () => {
+    const url = 'https://discord.com/api/webhooks/123/abc-DEF_9';
+    const after = mergeSettings(
+      { notifications: { channels: { discord: { enabled: true, webhookUrl: url, maxPerMinute: 5 } } } },
+      { notifications: { channels: { discord: { enabled: false } } } },
+    );
+    expect(after.notifications.channels.discord).toEqual({ enabled: false, webhookUrl: url, maxPerMinute: 5 });
+    expect(after.notifications.channels.callmebot.enabled).toBe(false);
+  });
+
+  it('validates the discord webhook URL (SSRF guard)', () => {
+    const parse = (webhookUrl: string) =>
+      SettingsSchema.safeParse({ notifications: { channels: { discord: { webhookUrl } } } }).success;
+    expect(parse('')).toBe(true);
+    expect(parse('https://discord.com/api/webhooks/123/abc-DEF_9')).toBe(true);
+    expect(parse('http://192.168.1.1/x')).toBe(false);
+    expect(parse('https://evil.com/api/webhooks/1/a')).toBe(false);
+    expect(parse('http://discord.com/api/webhooks/1/a')).toBe(false);
   });
 
   it('deep-merges callmebot credentials so a partial patch keeps siblings', () => {

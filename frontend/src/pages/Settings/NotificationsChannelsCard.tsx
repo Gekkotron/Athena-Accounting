@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import type { NotificationPrefs, NotificationPrefsPatch } from '../../lib/settings';
+import { DiscordChannelFields } from './DiscordChannelFields';
 import { requestWebPushPermission } from '../../lib/notifications/channels/webPush';
 
 function currentPermission(): NotificationPermission | 'unsupported' {
@@ -178,6 +179,7 @@ export function NotificationsChannelsCard({
         )}
       </div>
 
+      <DiscordChannelFields prefs={prefs} onPatch={onPatch} />
     </div>
   );
 }

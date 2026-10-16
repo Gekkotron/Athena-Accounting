@@ -13,6 +13,10 @@ exact format (`## [X.Y.Z] - YYYY-MM-DD`).
 ## [Unreleased]
 
 ### Added
+- **Discord notifications.** A new *Discord (webhook)* channel in
+  *Paramètres → Notifications → Canaux* posts alerts to a Discord channel
+  via a webhook URL (restricted to Discord webhook endpoints), with the same privacy masks
+  and per-minute rate limit as the WhatsApp channel.
 - **Four new import formats land together.** Athena now reads **QIF**
   (Quicken Interchange Format — Bank/CCard/Cash/Oth sections, FR+US
   decimal/date variants), **MT940** (SWIFT pre-ISO20022 bank statements —

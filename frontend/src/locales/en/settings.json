@@ -278,6 +278,16 @@
           "save": "Save CallMeBot settings",
           "help": "Activate it once from your phone — see <1>CallMeBot WhatsApp setup</1>. Your phone number and key stay on your server and are only sent to callmebot.com when a notification fires."
         },
+        "discord": {
+          "label": "Discord (webhook)",
+          "webhookUrlLabel": "Webhook URL",
+          "webhookUrlPlaceholder": "https://discord.com/api/webhooks/…",
+          "webhookUrlInvalid": "This doesn't look like a Discord webhook URL (https://discord.com/api/webhooks/…).",
+          "maxPerMinuteLabel": "Max notifications per minute",
+          "maxPerMinuteHelp": "0 = no limit. Past this cap on a rolling minute, notifications are not sent to Discord (the inbox and browser notification are kept).",
+          "save": "Save Discord settings",
+          "help": "Create a webhook in your Discord server — see <1>Intro to Webhooks</1>. Treat the URL like a password. It stays on your server and is only sent to Discord when a notification fires."
+        },
         "browserNotificationsTip": {
           "title": "Tip: allow notifications in your browser",
           "intro": "Browser notifications require your permission. If they are blocked:",

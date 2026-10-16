@@ -38,6 +38,7 @@ export const DEFAULTS = {
       osNative: false,
       webPush: false,
       callmebot: { enabled: false, phone: '', apiKey: '', maxPerMinute: 0 },
+      discord: { enabled: false, webhookUrl: '', maxPerMinute: 0 },
     },
     privacy: { hideAmount: true, hideMerchant: true },
     triggers: {

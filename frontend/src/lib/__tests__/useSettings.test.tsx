@@ -89,6 +89,33 @@ describe('useSettings', () => {
     expect(n.triggers.bankSyncFailed).toEqual(DEFAULTS.notifications.triggers.bankSyncFailed);
   });
 
+  it('optimistic update keeps discord siblings on a partial discord patch', async () => {
+    const withDiscord = {
+      ...DEFAULTS,
+      notifications: {
+        ...DEFAULTS.notifications,
+        channels: {
+          ...DEFAULTS.notifications.channels,
+          discord: { enabled: false, webhookUrl: 'https://discord.com/api/webhooks/1/abc', maxPerMinute: 5 },
+        },
+      },
+    };
+    apiMock.mockImplementation((_path: string, init?: any) => {
+      if (init?.method === 'PATCH') return new Promise(() => {});
+      return Promise.resolve({ settings: withDiscord });
+    });
+    const { result } = renderHook(() => useSettings(), { wrapper: wrap() });
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    act(() => result.current.patch({ notifications: { channels: { discord: { enabled: true } } } }));
+    await waitFor(() => expect(result.current.settings.notifications.channels.discord.enabled).toBe(true));
+    expect(result.current.settings.notifications.channels.discord).toEqual({
+      enabled: true,
+      webhookUrl: 'https://discord.com/api/webhooks/1/abc',
+      maxPerMinute: 5,
+    });
+    expect(result.current.settings.notifications.channels.callmebot).toEqual(DEFAULTS.notifications.channels.callmebot);
+  });
+
   it('invalidates on settle so a fresh GET is refetched', async () => {
     apiMock.mockImplementation((_path: string, init?: any) => {
       if (init?.method === 'PATCH') return Promise.resolve({ settings: { ...DEFAULTS, dashboardRange: '6m' } });

@@ -36,11 +36,23 @@ export interface CallMeBotPrefs {
   maxPerMinute: number;
 }
 
+export interface DiscordPrefs {
+  enabled: boolean;
+  // Discord channel webhook URL; '' = not configured. The backend rejects
+  // anything that isn't a discord.com/api/webhooks URL.
+  webhookUrl: string;
+  // Max Discord sends per rolling 1-minute window; 0 = no limit. Only
+  // automatic emissions are gated — a manual "Send a test" always goes
+  // through.
+  maxPerMinute: number;
+}
+
 export interface NotificationChannels {
   toast: boolean;
   osNative: boolean;
   webPush: boolean;
   callmebot: CallMeBotPrefs;
+  discord: DiscordPrefs;
 }
 
 export interface NotificationPrivacy {
@@ -73,6 +85,7 @@ export interface NotificationPrefsPatch {
     osNative?: boolean;
     webPush?: boolean;
     callmebot?: Partial<CallMeBotPrefs>;
+    discord?: Partial<DiscordPrefs>;
   };
   privacy?: Partial<NotificationPrivacy>;
   triggers?: {
@@ -138,9 +151,15 @@ export function mergeNotifications(
     maxPerMinute:
       patch.channels?.callmebot?.maxPerMinute ?? base.channels.callmebot.maxPerMinute,
   };
+  const discord: DiscordPrefs = {
+    enabled: patch.channels?.discord?.enabled ?? base.channels.discord.enabled,
+    webhookUrl: patch.channels?.discord?.webhookUrl ?? base.channels.discord.webhookUrl,
+    maxPerMinute:
+      patch.channels?.discord?.maxPerMinute ?? base.channels.discord.maxPerMinute,
+  };
   return {
     enabled: patch.enabled ?? base.enabled,
-    channels: { ...base.channels, ...patch.channels, callmebot },
+    channels: { ...base.channels, ...patch.channels, callmebot, discord },
     privacy: { ...base.privacy, ...patch.privacy },
     triggers: {
       bigTransaction: { ...base.triggers.bigTransaction, ...t?.bigTransaction },
@@ -169,6 +188,7 @@ export const DEFAULTS: Settings = {
       osNative: false,
       webPush: false,
       callmebot: { enabled: false, phone: '', apiKey: '', maxPerMinute: 0 },
+      discord: { enabled: false, webhookUrl: '', maxPerMinute: 0 },
     },
     privacy: { hideAmount: true, hideMerchant: true },
     triggers: {

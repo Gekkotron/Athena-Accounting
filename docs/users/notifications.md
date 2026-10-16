@@ -16,7 +16,7 @@ whole feature on or off; the settings underneath are split across three
 tabs so each concern stays out of the others' way:
 
 - **Canaux** — where alerts appear (in-app toast, browser notification,
-  and optionally WhatsApp via CallMeBot).
+  and optionally WhatsApp via CallMeBot or a Discord channel).
 - **Confidentialité** — what a notification is allowed to show on your
   screen.
 - **Alertes** — which triggers are on and what their thresholds are.
@@ -87,6 +87,27 @@ inbox and browser notification are unaffected.
 alerts are dropped from the WhatsApp channel only; the inbox and browser
 notification still receive them. Failed sends don't consume a slot, and
 the manual *Send a test* button bypasses the limit entirely.
+
+## Discord
+
+Alerts can also be posted to a Discord channel through a
+[webhook](https://support.discord.com/hc/en-us/articles/228383668). Nothing
+is sent to Discord until you paste a webhook URL and enable the channel:
+
+1. In Discord, open *Server settings → Integrations → Webhooks → New
+   Webhook*, pick the target channel, then **Copy Webhook URL**.
+2. In *Paramètres → Notifications → Canaux*, tick **Discord (webhook)**,
+   paste the URL, then save. The form refuses anything that isn't a
+   `discord.com/api/webhooks/…` URL.
+
+Treat the webhook URL like a password: anyone who has it can post in that
+channel. It stays on your server and is only used when a notification
+fires. Messages go through the same **Confidentialité** masks as the other
+channels, so hidden amounts and merchants never leave your server.
+
+**Rate limit** — *Max notifications per minute* works like the WhatsApp
+one (`0` = no limit; extra alerts are dropped from Discord only, and the
+manual *Send a test* button bypasses the limit).
 
 ## Big transaction
 

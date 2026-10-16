@@ -5,6 +5,7 @@ import { mergeSettings } from '../settings/schema.js';
 import { renderBody, renderFullDetail, renderTitle } from './render.js';
 import { broadcast } from './bus.js';
 import { sendCallMeBot } from './channels/callmebot.js';
+import { sendDiscord } from './channels/discord.js';
 import type { Notification, NotificationKind, NotificationPayload } from './types.js';
 
 // Resolves an account/category name for `uid` — undefined if the row is
@@ -101,18 +102,25 @@ export async function emitNotification(
   };
   broadcast(userId, { row: out });
 
-  // Server-side side-channels (WhatsApp via CallMeBot). Rendered with the
-  // user's privacy prefs so amounts/merchants stay hidden end-to-end — these
-  // messages leave the LAN, unlike the in-app toast/inbox. Fire-and-forget:
-  // a failed external send must not block the row that already landed.
-  if (prefs.channels.callmebot?.enabled) {
+  // Server-side side-channels (WhatsApp via CallMeBot, Discord webhook).
+  // Rendered with the user's privacy prefs so amounts/merchants stay hidden
+  // end-to-end — these messages leave the LAN, unlike the in-app toast/inbox.
+  // Fire-and-forget: a failed external send must not block the row that
+  // already landed.
+  const callmebotOn = prefs.channels.callmebot?.enabled;
+  const discordOn = prefs.channels.discord?.enabled;
+  if (callmebotOn || discordOn) {
     const privateTitle = renderTitle(enriched, prefs.privacy);
     const privateBody = renderBody(enriched, prefs.privacy);
     // Manual "Send a test" always delivers; the min-interval rate limit
     // only applies to automatic emissions.
-    void sendCallMeBot(prefs.channels.callmebot, privateTitle, privateBody, undefined, {
-      skipRateLimit: kind === 'test',
-    });
+    const sendOpts = { skipRateLimit: kind === 'test' };
+    if (callmebotOn) {
+      void sendCallMeBot(prefs.channels.callmebot, privateTitle, privateBody, undefined, sendOpts);
+    }
+    if (discordOn) {
+      void sendDiscord(prefs.channels.discord, privateTitle, privateBody, undefined, sendOpts);
+    }
   }
 
   return out;
