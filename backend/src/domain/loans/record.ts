@@ -24,6 +24,9 @@ export interface LoanRecord {
   annualRate: string;
   insuranceRate: string;
   insuranceBasis: InsuranceBasis;
+  // Flat monthly premium override (euros, decimal string). When null, the
+  // engine falls back to `insuranceRate × basis / 12` per the usual rules.
+  insuranceAmount?: string | null;
   fees: string;
   periods: FixedPeriod[];
   finalPeriod: FinalPeriod;
@@ -51,6 +54,7 @@ export function toRecord(row: LoanRow): LoanRecord {
     annualRate: trimDecimal(row.annualRate),
     insuranceRate: trimDecimal(row.insuranceRate),
     insuranceBasis: row.insuranceBasis as InsuranceBasis,
+    insuranceAmount: row.insuranceMonthlyAmount ?? null,
     fees: row.fees,
     periods: row.periods,
     finalPeriod: row.finalPeriod,
@@ -70,6 +74,7 @@ export function toTerms(t: LoanTerms): LoanTerms {
     annualRate: t.annualRate,
     insuranceRate: t.insuranceRate,
     insuranceBasis: t.insuranceBasis,
+    insuranceAmount: t.insuranceAmount ?? null,
     fees: t.fees,
     periods: t.periods,
     finalPeriod: t.finalPeriod,

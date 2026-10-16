@@ -69,6 +69,7 @@ export function termsOf(l: LoanTermsInput): LoanTermsInput {
     annualRate: l.annualRate,
     insuranceRate: l.insuranceRate,
     insuranceBasis: l.insuranceBasis,
+    insuranceAmount: l.insuranceAmount,
     fees: l.fees,
     periods: l.periods,
     finalPeriod: l.finalPeriod,

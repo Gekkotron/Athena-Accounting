@@ -82,7 +82,13 @@
     "annualRate": "Interest rate (% per year)",
     "insuranceRate": "Insurance rate (% per year)",
     "insuranceBasis": "Insurance calculated on",
-    "basis": { "initial": "Initial capital", "remaining": "Capital owed" },
+    "basis": {
+      "initial": "Initial capital",
+      "remaining": "Capital owed each month",
+      "remaining_annual": "Capital owed on the loan's anniversary"
+    },
+    "insuranceAmount": "Or a fixed monthly premium (€)",
+    "insuranceHint": "Set a monthly premium if your bank quotes a flat amount; otherwise pick a rate above. French mortgages usually use \"Capital owed on the loan's anniversary\" (révision annuelle).",
     "fees": "One-off fees",
     "periods": "Periods before the last one",
     "addPeriod": "Add a period",

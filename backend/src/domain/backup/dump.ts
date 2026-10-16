@@ -235,6 +235,7 @@ export async function buildDump(uid: number) {
           annualRate: trimDecimal(l.annualRate),
           insuranceRate: trimDecimal(l.insuranceRate),
           insuranceBasis: l.insuranceBasis,
+          insuranceAmount: l.insuranceMonthlyAmount,
           fees: l.fees,
           periods: l.periods,
           finalPeriod: l.finalPeriod,

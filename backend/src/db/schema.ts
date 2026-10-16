@@ -910,6 +910,7 @@ export const loans = pgTable(
     annualRate: numeric('annual_rate', { precision: 7, scale: 4 }).notNull(),
     insuranceRate: numeric('insurance_rate', { precision: 7, scale: 4 }).notNull().default('0'),
     insuranceBasis: text('insurance_basis').notNull().default('initial'),
+    insuranceMonthlyAmount: numeric('insurance_monthly_amount', { precision: 14, scale: 2 }),
     fees: numeric('fees', { precision: 14, scale: 2 }).notNull().default('0'),
     periods: jsonb('periods').$type<FixedPeriod[]>().notNull().default([]),
     finalPeriod: jsonb('final_period').$type<FinalPeriod>().notNull(),

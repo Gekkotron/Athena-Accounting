@@ -39,6 +39,9 @@ export interface LoanForm {
   annualRate: string;
   insuranceRate: string;
   insuranceBasis: LoanInsuranceBasis;
+  // '' means "use the rate × basis computation above"; a decimal entry
+  // bills exactly that flat premium every month and ignores rate+basis.
+  insuranceAmount: string;
   fees: string;
   periods: PeriodForm[];
   solve: 'payment' | 'end_date';
@@ -65,7 +68,8 @@ export function parseRate(raw: string): string | null {
 export function emptyForm(isSimulation: boolean, today: string): LoanForm {
   return {
     name: '', kind: 'mortgage', isSimulation, sourceLoanId: null, currency: 'EUR',
-    principal: '', startDate: today, annualRate: '', insuranceRate: '0', insuranceBasis: 'initial', fees: '0',
+    principal: '', startDate: today, annualRate: '', insuranceRate: '0', insuranceBasis: 'initial',
+    insuranceAmount: '', fees: '0',
     periods: [], solve: 'payment', endDate: '', finalAmount: '', finalRate: '', earlyRepayments: [],
   };
 }
@@ -75,7 +79,8 @@ export function formFromLoan(l: LoanInput): LoanForm {
   return {
     name: l.name, kind: l.kind, isSimulation: l.isSimulation, sourceLoanId: l.sourceLoanId, currency: l.currency,
     principal: l.principal, startDate: l.startDate, annualRate: l.annualRate, insuranceRate: l.insuranceRate,
-    insuranceBasis: l.insuranceBasis, fees: l.fees,
+    insuranceBasis: l.insuranceBasis, insuranceAmount: l.insuranceAmount ?? '',
+    fees: l.fees,
     periods: l.periods.map((p) => ({ kind: p.kind, months: String(p.months), amount: p.amount ?? '', rate: p.rate ?? '' })),
     solve: fp.solve,
     endDate: fp.solve === 'payment' ? fp.endDate : '',
@@ -124,6 +129,7 @@ export function formToTerms(f: LoanForm): { terms: LoanTermsInput } | { fieldErr
   const principal = money(f.principal, 'principal');
   const annualRate = rate(f.annualRate, 'annualRate');
   const insuranceRate = optional(f.insuranceRate, (r) => rate(r, 'insuranceRate')) ?? '0';
+  const insuranceAmount = optional(f.insuranceAmount, (r) => money(r, 'insuranceAmount'));
   const fees = optional(f.fees, (r) => money(r, 'fees')) ?? '0';
 
   const periods = f.periods.map((p, i): LoanFixedPeriod => {
@@ -156,8 +162,9 @@ export function formToTerms(f: LoanForm): { terms: LoanTermsInput } | { fieldErr
   if (Object.keys(errors).length > 0) return { fieldErrors: errors };
   return {
     terms: {
-      principal, startDate: f.startDate, annualRate, insuranceRate, insuranceBasis: f.insuranceBasis, fees,
-      periods, finalPeriod, earlyRepayments,
+      principal, startDate: f.startDate, annualRate, insuranceRate, insuranceBasis: f.insuranceBasis,
+      ...(insuranceAmount !== undefined ? { insuranceAmount } : {}),
+      fees, periods, finalPeriod, earlyRepayments,
     },
   };
 }

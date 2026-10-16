@@ -51,7 +51,10 @@ export const LoanTermsBody = z.object({
   startDate: isoDate,
   annualRate: rate,
   insuranceRate: rate.default('0'),
-  insuranceBasis: z.enum(['initial', 'remaining']).default('initial'),
+  insuranceBasis: z.enum(['initial', 'remaining', 'remaining_annual']).default('initial'),
+  // When set, bills this exact monthly premium and ignores rate × basis.
+  // `null`/omitted keeps the rate-based behaviour.
+  insuranceAmount: money.nullable().default(null),
   fees: money.default('0'),
   periods: z.array(FixedPeriod).max(50).default([]),
   finalPeriod: FinalPeriod,

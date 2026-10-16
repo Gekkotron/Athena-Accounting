@@ -4,7 +4,7 @@ import { SelectField, TextField } from './Field';
 import type { FieldErrors, LoanForm } from './form-state';
 
 const KINDS: LoanKind[] = ['mortgage', 'consumer', 'auto', 'other'];
-const BASES: LoanInsuranceBasis[] = ['initial', 'remaining'];
+const BASES: LoanInsuranceBasis[] = ['initial', 'remaining', 'remaining_annual'];
 
 interface Props {
   form: LoanForm;
@@ -34,6 +34,11 @@ export function BasicsFields({ form, onChange, errors }: Props) {
       <SelectField id="loan-insurance-basis" label={t('form.insuranceBasis')} value={form.insuranceBasis}
         options={BASES.map((b) => ({ value: b, label: t(`form.basis.${b}`) }))}
         onChange={(insuranceBasis) => onChange({ insuranceBasis })} />
+      <TextField id="loan-insurance-amount" label={t('form.insuranceAmount')} inputMode="decimal"
+        value={form.insuranceAmount}
+        onChange={(insuranceAmount) => onChange({ insuranceAmount })}
+        error={errors.insuranceAmount} />
+      <p className="md:col-span-2 text-[11px] text-ink-500 -mt-1">{t('form.insuranceHint')}</p>
     </fieldset>
   );
 }

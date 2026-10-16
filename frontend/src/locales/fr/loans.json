@@ -82,7 +82,13 @@
     "annualRate": "Taux d'intérêt (% par an)",
     "insuranceRate": "Taux d'assurance (% par an)",
     "insuranceBasis": "Assurance calculée sur",
-    "basis": { "initial": "Le capital initial", "remaining": "Le capital restant dû" },
+    "basis": {
+      "initial": "Le capital initial",
+      "remaining": "Le capital restant dû chaque mois",
+      "remaining_annual": "Le capital restant dû à la date anniversaire"
+    },
+    "insuranceAmount": "Ou un montant mensuel fixe (€)",
+    "insuranceHint": "Indiquez un montant mensuel si votre banque facture une prime fixe ; sinon utilisez un taux ci-dessus. Les prêts immobiliers français utilisent généralement « Le capital restant dû à la date anniversaire » (révision annuelle).",
     "fees": "Frais (dossier, garantie…)",
     "periods": "Périodes avant la dernière",
     "addPeriod": "Ajouter une période",

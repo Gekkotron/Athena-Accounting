@@ -14,6 +14,7 @@ const row: LoanRow = {
   annualRate: '3.5000',
   insuranceRate: '0.3450',
   insuranceBasis: 'remaining',
+  insuranceMonthlyAmount: null,
   fees: '1200.00',
   periods: [{ kind: 'partial_deferral', months: 12 }],
   finalPeriod: { solve: 'payment', endDate: '2046-01' },
@@ -34,7 +35,8 @@ describe('loan record mapping', () => {
     expect(toRecord(row)).toEqual({
       id: 7, name: 'Maison', kind: 'mortgage', isSimulation: false, sourceLoanId: null,
       currency: 'EUR', principal: '200000.00', startDate: '2026-02-05',
-      annualRate: '3.5', insuranceRate: '0.345', insuranceBasis: 'remaining', fees: '1200.00',
+      annualRate: '3.5', insuranceRate: '0.345', insuranceBasis: 'remaining',
+      insuranceAmount: null, fees: '1200.00',
       periods: [{ kind: 'partial_deferral', months: 12 }],
       finalPeriod: { solve: 'payment', endDate: '2046-01' },
       earlyRepayments: [],
@@ -45,9 +47,11 @@ describe('loan record mapping', () => {
   it('keeps only engine fields in toTerms', () => {
     const terms = toTerms(toRecord(row));
     expect(Object.keys(terms).sort()).toEqual([
-      'annualRate', 'earlyRepayments', 'fees', 'finalPeriod', 'insuranceBasis',
-      'insuranceRate', 'periods', 'principal', 'startDate',
+      'annualRate', 'earlyRepayments', 'fees', 'finalPeriod',
+      'insuranceAmount', 'insuranceBasis', 'insuranceRate',
+      'periods', 'principal', 'startDate',
     ]);
+    expect(terms.insuranceAmount).toBeNull();
   });
 
   it('formats today as a local ISO date', () => {

@@ -229,7 +229,7 @@ export interface Notification {
 // ---------------------------------------------------------------------------
 
 export type LoanKind = 'mortgage' | 'consumer' | 'auto' | 'other';
-export type LoanInsuranceBasis = 'initial' | 'remaining';
+export type LoanInsuranceBasis = 'initial' | 'remaining' | 'remaining_annual';
 export type LoanFixedPeriodKind = 'payment' | 'partial_deferral' | 'total_deferral';
 export type LoanRepaymentEffect = 'reduce_payment' | 'shorten';
 
@@ -257,6 +257,9 @@ export interface LoanTermsInput {
   annualRate: string;
   insuranceRate: string;
   insuranceBasis: LoanInsuranceBasis;
+  // Optional flat monthly premium. When set (non-null), overrides the
+  // rate × basis computation. `null`/omitted keeps the rate-based behaviour.
+  insuranceAmount?: string | null;
   fees: string;
   periods: LoanFixedPeriod[];
   finalPeriod: LoanFinalPeriod;
