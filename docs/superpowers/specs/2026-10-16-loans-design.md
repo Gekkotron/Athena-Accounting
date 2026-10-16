@@ -58,7 +58,9 @@ frontend/src/api/demo/handlers/loans.ts  demo handler
 **Demo mode** has no backend. The demo handler imports the engine directly
 from `backend/src/domain/loans/engine/` (Vite bundles a pure TS file from
 outside `frontend/src`; the engine therefore must stay dependency-free and
-use only relative imports). If this fights the toolchain, fall back to the
+use only relative imports). `frontend/Dockerfile` (repo-root context) gets
+one extra `COPY backend/src/domain/loans/engine` line so the image build
+still resolves it. If this fights the toolchain, fall back to the
 repo's usual demo mirror *plus* a shared fixture file of reference cases
 that both copies must pass.
 
@@ -68,15 +70,16 @@ that both copies must pass.
 |---|---|---|---|
 | GET | `/api/loans` | `?asOf=YYYY-MM-DD` (optional) | `{ loans: LoanListItem[] }` — definition fields + `summary` |
 | GET | `/api/loans/:id` | `?asOf=` | `{ loan: LoanDefinition, schedule: ScheduleRow[], summary }` |
-| POST | `/api/loans` | `LoanInput` | `201 { loan }` |
-| PATCH | `/api/loans/:id` | partial `LoanInput` | `{ loan }` |
-| DELETE | `/api/loans/:id` | — | `204` |
+| POST | `/api/loans` | `LoanInput` | `201 { loan, summary }` |
+| PUT | `/api/loans/:id` | full `LoanInput` (replace) | `{ loan, summary }` |
+| DELETE | `/api/loans/:id` | — | `{ ok: true }` |
 | POST | `/api/loans/simulate` | `LoanInput` (no id needed), `?asOf=` | `{ schedule, summary, warnings }` |
 
 - All routes are user-scoped; another user's id returns 404.
-- POST/PATCH run the engine before writing: engine **errors** → 422 with
-  `{ code, message, field? }`; engine **warnings** are returned but do not
-  block the save.
+- Zod shape errors → 400 `{ error, issues }` (repo convention). POST/PUT run the engine before writing: engine **errors** → 422 with
+  `{ error: 'invalid loan', errors: [{ code, field? }] }`; engine **warnings** never block a save
+  (the editor shows them from the live `/simulate` preview; `GET /:id`
+  returns them too).
 - `/simulate` returns 422 on errors too, so the editor can show them inline.
 - `asOf` defaults to today (server local date).
 - Contract types (`LoanDefinition`, `LoanInput`, `ScheduleRow`,
@@ -188,6 +191,8 @@ month's instalment:
   when the final period starts (for `reduce_payment`, `P` is solved from
   the then-lower `B` against the original end date; for `shorten`, `P` is
   the value it would have had without the repayment).
+- If several repayments fall inside fixed periods with different effects,
+  the most recent one decides.
 - `penalty` is added to total cost.
 
 **Errors** (engine returns `{ ok: false, errors }`; API → 422):
@@ -220,7 +225,7 @@ type LoanSummary = {
   solvedPayment: string | null; // P of the final period (initial value)
   endDate: string; durationMonths: number;
   totals: { interest: string; insurance: string; fees: string; penalties: string;
-            cost: string; repaid: string }; // cost = interest+insurance+fees+penalties
+            cost: string; totalPaid: string }; // cost = interest+insurance+fees+penalties; totalPaid = principal+cost
   today: { asOf: string; capitalOwed: string; repaidPct: number;
            interestPaid: string; monthsLeft: number;
            nextInstalment: { date: string; amount: string } | null;
@@ -249,7 +254,7 @@ and sort last.
 3. Periods timeline — one row per period (dates, kind, amount, rate); the
    final period labelled "computed".
 4. Schedule table — grouped by year (collapsible, yearly subtotals),
-   scrolled to the current month.
+   current year expanded and the current month highlighted.
 5. Actions — Edit, What-if, Duplicate as simulation, Delete.
 
 **Editor** (create / edit / blank simulator):
@@ -271,13 +276,19 @@ helper `splitAtDate(definition, schedule, X, newAmount)`): history up to
 X−1 becomes a fixed `payment` period at the instalment actually in force
 (splitting existing periods if needed), and a new final period starts at X
 with `{ solve: 'end_date', amount: newAmount }`. Result is previewed via
-`/simulate` before saving.
+`/simulate` before saving. Early repayments dated before X now sit inside fixed
+history, so their `effect` is rewritten to the new final period's neutral
+effect (`shorten` for `solve: 'end_date'`, `reduce_payment` for
+`solve: 'payment'`) — otherwise the "most recent effect decides" rule
+would override the amount the user just typed. The "new rate from X"
+lever uses the same split with `{ solve: 'payment', endDate: <current end
+month>, rate }` (renegotiation keeps the end date).
 
 **What-if mode** on a saved loan: side-by-side **Current vs What-if**
 (end date, monthly payment, total cost, deltas such as "−7 500 €, 2 ans 8
 mois plus tôt"); quick levers (add early repayment, change payment from a
 date, change rate) plus the full timeline editor. Exits: **Discard**,
-**Apply to loan** (PATCH), **Save as simulation** (POST with
+**Apply to loan** (PUT), **Save as simulation** (POST with
 `is_simulation = true`, `source_loan_id` set). A simulation with a
 `source_loan_id` opens with the same comparison against its source.
 
