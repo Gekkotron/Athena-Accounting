@@ -23,10 +23,11 @@ export function PreviewSummary({ preview, pending, failed, issues, currency }: P
       </div>
       {failed && <div className="text-amber-300">{t('form.previewFailed')}</div>}
       {s && issues.length === 0 && (
-        <dl className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <dl className="grid grid-cols-2 md:grid-cols-5 gap-2">
           <div><dt className="text-ink-500">{t('summary.monthly')}</dt><dd className="font-mono private">{fmt(s.currentPaymentWithInsurance)}</dd></div>
           <div><dt className="text-ink-500">{t('summary.endDate')}</dt><dd>{formatMonth(s.endDate)}</dd></div>
           <div><dt className="text-ink-500">{t('summary.interest')}</dt><dd className="font-mono private">{fmt(s.totals.interest)}</dd></div>
+          <div><dt className="text-ink-500">{t('summary.insurance')}</dt><dd className="font-mono private">{fmt(s.totals.insurance)}</dd></div>
           <div><dt className="text-ink-500">{t('summary.cost')}</dt><dd className="font-mono private">{fmt(s.totals.cost)}</dd></div>
         </dl>
       )}

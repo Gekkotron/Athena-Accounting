@@ -54,7 +54,12 @@
     "invalid": "The stored terms of this loan are rejected by the calculator. Edit the loan to fix them.",
     "comparedWith": "Compared with {{name}}"
   },
-  "chart": { "title": "Capital owed over time", "today": "Today", "aria": "Capital owed from {{from}} to {{to}}" },
+  "chart": {
+    "title": "Capital owed over time",
+    "today": "Today",
+    "aria": "Capital owed from {{from}} to {{to}}",
+    "legend": { "capital": "Capital owed", "interest": "Interest paid", "insurance": "Insurance paid" }
+  },
   "timeline": {
     "title": "Periods",
     "computed": "computed",

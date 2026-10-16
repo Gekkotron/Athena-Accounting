@@ -54,7 +54,12 @@
     "invalid": "Le calculateur refuse les conditions enregistrées de ce prêt. Modifiez le prêt pour les corriger.",
     "comparedWith": "Comparé à {{name}}"
   },
-  "chart": { "title": "Capital restant dû dans le temps", "today": "Aujourd'hui", "aria": "Capital restant dû de {{from}} à {{to}}" },
+  "chart": {
+    "title": "Capital restant dû dans le temps",
+    "today": "Aujourd'hui",
+    "aria": "Capital restant dû de {{from}} à {{to}}",
+    "legend": { "capital": "Capital restant", "interest": "Intérêts cumulés", "insurance": "Assurance cumulée" }
+  },
   "timeline": {
     "title": "Périodes",
     "computed": "calculé",
