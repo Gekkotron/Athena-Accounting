@@ -47,6 +47,7 @@ import { securityRoutes } from './http/routes/security.js';
 import { bankSyncRoutes } from './http/routes/bank-sync/index.js';
 import { attachmentsRoutes } from './http/routes/attachments.js';
 import { savingsGoalsRoutes } from './http/routes/goals/index.js';
+import { loansRoutes } from './http/routes/loans/index.js';
 import { fxRatesRoutes } from './http/routes/fx-rates.js';
 import { metricsPlugin } from './http/plugins/metrics.js';
 
@@ -184,6 +185,7 @@ await app.register(totpRoutes);
   await app.register(bankSyncRoutes);
   await app.register(attachmentsRoutes);
   await app.register(savingsGoalsRoutes);
+  await app.register(loansRoutes);
   await app.register(fxRatesRoutes);
 
   const serveStatic = env.SERVE_STATIC ?? env.NODE_ENV === 'production';
