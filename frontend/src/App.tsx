@@ -41,6 +41,7 @@ const UpcomingTab = lazy(() => import('./pages/Recurrent/UpcomingTab').then((m) 
 const ForecastTab = lazy(() => import('./pages/Recurrent/ForecastTab').then((m) => ({ default: m.ForecastTab })));
 const Accounts = lazy(() => import('./pages/Accounts').then((m) => ({ default: m.Accounts })));
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })));
+const Loans = lazy(() => import('./pages/Loans').then((m) => ({ default: m.Loans })));
 const Imports = lazy(() => import('./pages/Data/Imports').then((m) => ({ default: m.Imports })));
 const BankSync = lazy(() => import('./pages/Data/BankSync').then((m) => ({ default: m.BankSync })));
 const Duplicates = lazy(() => import('./pages/Data/Duplicates').then((m) => ({ default: m.Duplicates })));
@@ -225,6 +226,7 @@ export default function App() {
 
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/goals" element={<Goals />} />
+            <Route path="/loans" element={<Loans />} />
 
             {/* Données hub */}
             <Route path="/data" element={<HubLayout title={t('nav.items.data')} tabs={DONNEES_TABS} />}>

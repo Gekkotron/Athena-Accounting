@@ -26,6 +26,7 @@ export const nav: NavSection[] = [
         ],
       },
       { to: '/goals', labelKey: 'nav.items.goals', icon: 'goals' },
+      { to: '/loans', labelKey: 'nav.items.loans', icon: 'loans' },
     ],
   },
   {

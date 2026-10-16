@@ -101,6 +101,19 @@ export function IconGoals({ className, size = 16 }: IconProps) {
   );
 }
 
+export function IconLoans({ className, size = 16 }: IconProps) {
+  // House outline carrying a percent sign — reads as "loan / mortgage" at
+  // 16 px, same stroke weight as the rest of the set.
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M2.5 7.5L8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5V7.5Z" />
+      <path d="M6.2 11.6l3.6-3.6" />
+      <circle cx="6.5" cy="8.3" r="0.6" />
+      <circle cx="9.5" cy="11.3" r="0.6" />
+    </svg>
+  );
+}
+
 export const navIcons = {
   dashboard: IconDashboard,
   transactions: IconTransactions,
@@ -110,5 +123,6 @@ export const navIcons = {
   imports: IconImports,
   recurrent: IconRecurrent,
   goals: IconGoals,
+  loans: IconLoans,
 } as const;
 export type NavIconName = keyof typeof navIcons;
