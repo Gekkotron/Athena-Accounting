@@ -9,6 +9,8 @@ import { LoanCard } from './LoanCard';
 import { LoanDrawer } from './LoanDrawer';
 import { sortLoans, type LoansTab } from './loan-list';
 import { LoanEditor } from './editor/LoanEditor';
+import { WhatIfPanel } from './whatif/WhatIfPanel';
+import { ChangePaymentDialog } from './ChangePaymentDialog';
 import { asSimulation, emptyForm, formFromLoan, type LoanForm } from './editor/form-state';
 
 interface EditorState {
@@ -34,6 +36,8 @@ export function Loans() {
   };
 
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [whatIf, setWhatIf] = useState<LoanDetail | null>(null);
+  const [changing, setChanging] = useState<LoanDetail | null>(null);
 
   const openCreate = () => setEditor({
     title: t(tab === 'simulations' ? 'form.createSimulationTitle' : 'form.createTitle'),
@@ -94,7 +98,14 @@ export function Loans() {
         </div>
       )}
       {openId !== null && (
-        <LoanDrawer id={openId} onClose={() => setOpenId(null)} onEdit={openEdit} onDuplicate={openDuplicate} />
+        <LoanDrawer
+          id={openId}
+          onClose={() => setOpenId(null)}
+          onEdit={openEdit}
+          onDuplicate={openDuplicate}
+          onWhatIf={setWhatIf}
+          onChangePayment={setChanging}
+        />
       )}
       {editor && (
         <LoanEditor
@@ -104,6 +115,27 @@ export function Loans() {
           loanId={editor.loanId}
           onClose={() => setEditor(null)}
           onSaved={onSaved}
+        />
+      )}
+      {whatIf && (
+        <WhatIfPanel
+          detail={whatIf}
+          onClose={() => setWhatIf(null)}
+          onSaveAsSimulation={(form) => {
+            setWhatIf(null);
+            setEditor({ title: t('form.createSimulationTitle'), form, loanId: null });
+          }}
+        />
+      )}
+      {changing && (
+        <ChangePaymentDialog
+          detail={changing}
+          onCancel={() => setChanging(null)}
+          onConfirm={(terms) => {
+            const loan = changing.loan;
+            setChanging(null);
+            setEditor({ title: t('form.editTitle'), form: formFromLoan({ ...loan, ...terms }), loanId: loan.id });
+          }}
         />
       )}
     </div>

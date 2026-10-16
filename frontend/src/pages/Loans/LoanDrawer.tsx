@@ -8,6 +8,7 @@ import { SummaryStrip } from './SummaryStrip';
 import { CapitalChart } from './CapitalChart';
 import { PeriodsTimeline } from './PeriodsTimeline';
 import { ScheduleTable } from './ScheduleTable';
+import { SourceComparison } from './whatif/SourceComparison';
 
 type Action = (d: LoanDetail) => void;
 
@@ -77,6 +78,9 @@ export function LoanDrawer({ id, onClose, onEdit, onChangePayment, onWhatIf, onD
         ) : d.summary ? (
           <>
             <SummaryStrip summary={d.summary} currency={d.loan.currency} />
+            {d.loan.sourceLoanId !== null && (
+              <SourceComparison sourceId={d.loan.sourceLoanId} summary={d.summary} currency={d.loan.currency} />
+            )}
             <CapitalChart schedule={d.schedule} principal={d.loan.principal} asOf={d.summary.today.asOf} />
             <PeriodsTimeline schedule={d.schedule} currency={d.loan.currency} />
             <ScheduleTable schedule={d.schedule} asOf={d.summary.today.asOf} currency={d.loan.currency} />
