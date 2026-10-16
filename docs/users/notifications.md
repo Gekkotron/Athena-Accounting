@@ -11,7 +11,7 @@ that failed. Everything runs from your own server: alerts are computed
 locally and delivered over the same connection your browser already has
 open, with no cloud service involved.
 
-Configure alerts in *Paramètres → Notifications*. A master toggle turns the
+Configure alerts in *Réglages → Notifications*. A master toggle turns the
 whole feature on or off; the settings underneath are split across three
 tabs so each concern stays out of the others' way:
 
@@ -30,7 +30,7 @@ icon in the header and in the inbox at */notifications*.
 Athena runs on your own server, and most home setups reach it over plain
 HTTP on a local IP — no HTTPS certificate. Chrome treats such origins as
 **insecure**, and refuses to grant the `Notification` permission from
-them: the *Notification du navigateur* toggle in *Paramètres →
+them: the *Notification du navigateur* toggle in *Réglages →
 Notifications → Canaux* will stay off no matter how many times you flip
 it, because the browser silently drops the permission request.
 
@@ -49,7 +49,7 @@ secure:
 ![Chrome flag &laquo;&nbsp;Insecure origins treated as secure&nbsp;&raquo; set to Enabled, with a redacted local address in the origins list](/img/users/en/notifications-chrome-flag.svg)
 
 After the relaunch, load Athena at the same address you whitelisted, go
-back to *Paramètres → Notifications → Canaux*, and toggle *Notification
+back to *Réglages → Notifications → Canaux*, and toggle *Notification
 du navigateur* on — Chrome will now prompt for permission normally.
 
 :::caution
@@ -71,7 +71,7 @@ channel and enable it:
 
 1. Follow CallMeBot's one-time activation from your phone to get a 7-digit
    API key tied to your number.
-2. In *Paramètres → Notifications → Canaux*, open the **WhatsApp
+2. In *Réglages → Notifications → Canaux*, open the **WhatsApp
    (CallMeBot)** card, enter the phone number (international format) and
    the API key, then save.
 
@@ -96,7 +96,7 @@ is sent to Discord until you paste a webhook URL and enable the channel:
 
 1. In Discord, open *Server settings → Integrations → Webhooks → New
    Webhook*, pick the target channel, then **Copy Webhook URL**.
-2. In *Paramètres → Notifications → Canaux*, tick **Discord (webhook)**,
+2. In *Réglages → Notifications → Canaux*, tick **Discord (webhook)**,
    paste the URL, then click **Save Discord settings**.
 3. Click *Send a test* to check that the message lands in the channel.
 
