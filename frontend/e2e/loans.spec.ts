@@ -1,8 +1,23 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // End-to-end through the browser-only demo: the seeded loans render, a new
 // loan's payment is computed live by the shared engine, and a what-if early
 // repayment reports its savings.
+//
+// The demo app is served with HashRouter (every nav link is `#/<path>`),
+// so direct deep links use the `/#/loans` form. On any route that includes
+// the Dashboard first-visit tour we have to dismiss it to free the UI.
+async function dismissWelcomeTour(page: Page): Promise<void> {
+  const tour = page.getByRole('dialog', { name: /Solde global|Total balance/i });
+  try {
+    await tour.waitFor({ state: 'visible', timeout: 3_000 });
+    await page.keyboard.press('Escape');
+    await tour.waitFor({ state: 'hidden' });
+  } catch {
+    // No tour on this route — nothing to dismiss.
+  }
+}
+
 test.describe('loans (demo)', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -11,7 +26,8 @@ test.describe('loans (demo)', () => {
   });
 
   test('create a loan, then try an early repayment', async ({ page }) => {
-    await page.goto('/loans');
+    await page.goto('/#/loans');
+    await dismissWelcomeTour(page);
     await expect(page.getByRole('button', { name: 'Résidence principale' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Nouveau prêt' }).click();

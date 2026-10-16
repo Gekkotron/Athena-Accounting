@@ -36,6 +36,19 @@ frontend/playwright/.cache
 
 # Backend / desktop / website — not needed by the frontend build
 backend
+# ...except the pure loan engine, which the demo handler imports directly
+# (same source of truth as the backend routes; see frontend/Dockerfile).
+# BuildKit's negation needs each parent re-included for the final leaf to
+# apply.
+!backend
+backend/*
+backend/src/*
+backend/src/domain/*
+backend/src/domain/loans/*
+!backend/src
+!backend/src/domain
+!backend/src/domain/loans
+!backend/src/domain/loans/engine
 desktop
 website
 docs
