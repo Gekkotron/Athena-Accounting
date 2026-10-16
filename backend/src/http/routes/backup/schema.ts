@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LoanBody } from '../loans/schemas.js';
 
 // Versioned envelope. Bump `version` when the shape changes in a non-additive
 // way — the importer refuses unknown versions outright.
@@ -205,6 +206,11 @@ export const BackupBody = z.object({
       value: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
       source: z.string().optional(),
     }),
+  ).optional(),
+  // Loans (migration 0048). Natural key is the loan name; a simulation
+  // points at its source loan by name. Optional so older dumps restore.
+  loans: z.array(
+    LoanBody.omit({ sourceLoanId: true }).extend({ sourceLoan: z.string().nullable() }),
   ).optional(),
 });
 

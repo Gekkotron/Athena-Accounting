@@ -8,6 +8,7 @@ import {
   categories,
   categoryBudgets,
   fileImports,
+  loans,
   ruleSplits,
   rules,
   savingsGoalEvents,
@@ -15,6 +16,7 @@ import {
   transactions,
   transactionSplits,
 } from '../../db/schema.js';
+import { trimDecimal } from '../loans/record.js';
 import { VERSION, fileImportKey } from '../../http/routes/backup/schema.js';
 
 // Emits a portable JSON dump using natural keys (account / category names).
@@ -29,7 +31,7 @@ export async function buildDump(uid: number) {
   {
     const [
       accs, cats, patterns, rls, txs, fimps, checkpoints, splits, budgets,
-      goals, goalEvents, ruleSplitRows, valuations,
+      goals, goalEvents, ruleSplitRows, valuations, loanRows,
     ] = await Promise.all([
       db.select().from(accounts).where(eq(accounts.userId, uid)),
       db.select().from(categories).where(eq(categories.userId, uid)),
@@ -54,6 +56,7 @@ export async function buildDump(uid: number) {
         .where(eq(rules.userId, uid))
         .then((rows) => rows.map((r) => r.rule_splits)),
       db.select().from(accountValuations).where(eq(accountValuations.userId, uid)),
+      db.select().from(loans).where(eq(loans.userId, uid)),
     ]);
     const ruleSplitsByRule = new Map<number, Array<typeof ruleSplitRows[number]>>();
     for (const rs of ruleSplitRows) {
@@ -219,6 +222,25 @@ export async function buildDump(uid: number) {
         value: v.value,
         source: v.source,
       })),
+      loans: (() => {
+        const nameById = new Map(loanRows.map((l) => [l.id, l.name]));
+        return loanRows.map((l) => ({
+          name: l.name,
+          kind: l.kind,
+          isSimulation: l.isSimulation,
+          sourceLoan: l.sourceLoanId !== null ? (nameById.get(l.sourceLoanId) ?? null) : null,
+          currency: l.currency,
+          principal: l.principal,
+          startDate: l.startDate,
+          annualRate: trimDecimal(l.annualRate),
+          insuranceRate: trimDecimal(l.insuranceRate),
+          insuranceBasis: l.insuranceBasis,
+          fees: l.fees,
+          periods: l.periods,
+          finalPeriod: l.finalPeriod,
+          earlyRepayments: l.earlyRepayments,
+        }));
+      })(),
     };
 
     return dump;

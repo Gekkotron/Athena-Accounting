@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { db } from '../../../db/client.js';
 import { userId } from '../../plugins/auth.js';
 import { wipeUserData } from './wipe.js';
+import { restoreLoans } from './restore-loans.js';
 import { BackupBody } from './schema.js';
 import { decryptEnvelope, isEncryptedEnvelope } from './crypto.js';
 import { flushSnapshots } from '../../../db/snapshotScheduler.js';
@@ -83,6 +84,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
         dump.accountValuations ?? [],
         accountIdByName,
       );
+      const loansInserted = await restoreLoans(tx, uid, dump.loans ?? []);
 
       return {
         imported: {
@@ -97,6 +99,7 @@ export function registerRestoreRoute(app: FastifyInstance): void {
           savingsGoals: goals.goalsInserted,
           savingsGoalEvents: goals.eventsInserted,
           accountValuations: valuationsInserted,
+          loans: loansInserted,
         },
         skipped: {
           rules: rulesResult.skippedSplits,
