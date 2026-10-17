@@ -5,7 +5,7 @@ sidebar_position: 3
 
 # Définir un budget
 
-Un budget dans Athena, c'est un plafond de dépense par catégorie sur une période donnée. Suivi en temps réel, dépassement mis en évidence, projection sur la fin de période — le tout sans quitter le tableau de bord.
+Un budget dans Ledger, c'est un plafond de dépense par catégorie sur une période donnée. Suivi en temps réel, dépassement mis en évidence, projection sur la fin de période — le tout sans quitter le tableau de bord.
 
 ## 1. Créer un plafond mensuel par catégorie
 

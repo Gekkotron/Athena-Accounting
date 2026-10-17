@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Catégorisation
 
-Athena catégorise les transactions de deux façons : des **règles** qui
+Ledger catégorise les transactions de deux façons : des **règles** qui
 s'exécutent à chaque import, et une **assignation manuelle** via
 l'onglet Tri. Chaque transaction porte un tag de **source** — `auto`,
 `default` ou `manual` — qui détermine qui possède sa catégorie la
@@ -17,7 +17,7 @@ ce que « régénérer les catégories » fait réellement.
 ## Le moteur de règles
 
 Les règles sont des associations mot-clé → catégorie configurées dans
-**Règles**. À chaque import, Athena parcourt vos règles actives par
+**Règles**. À chaque import, Ledger parcourt vos règles actives par
 ordre de priorité (la plus haute d'abord, égalités départagées par
 l'id de règle) et applique la catégorie de la première règle qui
 matche. Les transactions non matchées tombent dans la catégorie par
@@ -26,7 +26,7 @@ défaut `Divers`.
 La correspondance est :
 
 - **Insensible aux accents et à la casse.** `carrefour`, `CARREFOUR`
-  et `Carrefour` matchent tous — Athena normalise le mot-clé et le
+  et `Carrefour` matchent tous — Ledger normalise le mot-clé et le
   libellé de la transaction avant de comparer.
 - **Mot entier par défaut.** `paye` ne matchera pas `payweb`. Passez
   une règle en **Sous-chaîne** pour un match plus souple, ou en
@@ -46,7 +46,7 @@ catégorie.
 ## L'onglet Tri
 
 L'onglet Tri est l'endroit où vous traitez tout ce que les règles
-n'ont pas attrapé. Athena regroupe les transactions non catégorisées
+n'ont pas attrapé. Ledger regroupe les transactions non catégorisées
 (et celles tombées dans `Divers`) par **libellé normalisé** — donc
 `CARREFOUR CITY 12/03` et `CARREFOUR MARKET 04/06` atterrissent dans
 le même groupe — et trie les groupes par fréquence, de sorte que les
@@ -67,7 +67,7 @@ effet, un groupe à la fois.
 
 ### Transformer une assignation en règle
 
-La case **Créer des règles** (cochée par défaut) demande à Athena de
+La case **Créer des règles** (cochée par défaut) demande à Ledger de
 créer aussi une règle sur le libellé normalisé du groupe pendant
 l'assignation. Ainsi, le `CARREFOUR CITY 04/07` du mois prochain sera
 attrapé automatiquement au moment de l'import — vous ne payez le coût
@@ -93,14 +93,14 @@ non-catégorisables restantes et manuelles préservées.
 
 Quand vous transférez de l'argent entre deux de vos propres comptes,
 les deux jambes atterrissent dans vos imports comme des lignes de
-dépense et de revenu ordinaires. Le détecteur de virement d'Athena
+dépense et de revenu ordinaires. Le détecteur de virement de Ledger
 les apparie via un `transfer_group_id` partagé et les exclut des
 agrégats revenus/dépenses pour qu'ils ne gonflent pas vos totaux.
 
 Les règles de virement vivent à `/api/transfer-rules` et associent un
 **mot-clé** (par ex. `virement compte joint`) à une **direction**
 (`outgoing` ou `incoming`) et, optionnellement, à un compte homologue
-spécifique. Une fois qu'une règle matche une jambe entrante, Athena
+spécifique. Une fois qu'une règle matche une jambe entrante, Ledger
 cherche la jambe miroir dans le compte homologue à ±7 jours et relie
 les deux. L'interface pour ces règles est actuellement minimale — la
 plupart des utilisateurs les configurent via l'API ou en important
@@ -173,7 +173,7 @@ pourcentages actuels.
 
 ## Comment les sources interagissent
 
-Chaque transaction stocke une **source** qui dit à Athena d'où vient
+Chaque transaction stocke une **source** qui dit à Ledger d'où vient
 sa catégorie :
 
 - **`auto`** — assignée par le moteur de règles à l'import.

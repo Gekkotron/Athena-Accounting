@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Pour les utilisateurs
 
-Vous avez installé Athena, ou vous vous apprêtez à le faire. Commencez ici.
+Vous avez installé Ledger, ou vous vous apprêtez à le faire. Commencez ici.
 
 - **[Démarrage](getting-started.md)** — choisissez un parcours (serveur familial Docker vs application de bureau solo), installez, effectuez l'onboarding initial.
 - **[Installation bureau](desktop-install.md)** — téléchargez l'application autonome, découvrez le premier lancement par OS, l'emplacement des données et comment sauvegarder.

@@ -5,7 +5,7 @@ sidebar_position: 6
 
 # Notifications
 
-Athena peut vous alerter quand quelque chose dans vos comptes franchit un
+Ledger peut vous alerter quand quelque chose dans vos comptes franchit un
 seuil que vous avez fixé : un gros achat, un solde bas, une enveloppe
 dépassée ou une synchronisation bancaire en échec. Tout tourne sur votre
 propre serveur. Les alertes sont calculées localement et transmises par la
@@ -29,7 +29,7 @@ l'adresse */notifications*.
 
 ## Notifications du navigateur sur un réseau local (HTTP)
 
-Athena tourne sur votre propre serveur, et la plupart des installations
+Ledger tourne sur votre propre serveur, et la plupart des installations
 domestiques y accèdent en HTTP simple sur une IP locale, sans certificat
 HTTPS. Chrome considère ces origines comme **non sécurisées** et refuse d'y
 accorder la permission `Notification`. La case *Notification du navigateur*
@@ -44,13 +44,13 @@ comme sécurisée :
    `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
 2. Passez **Insecure origins treated as secure** sur *Enabled*.
 3. Dans la zone de texte qui apparaît, saisissez l'adresse de votre serveur
-   Athena, schéma et port compris, par exemple `http://<ip-lan>:<port>`.
+   Ledger, schéma et port compris, par exemple `http://<ip-lan>:<port>`.
    Plusieurs origines peuvent être séparées par des virgules.
 4. Relancez Chrome quand il vous le propose.
 
 ![Flag Chrome « Insecure origins treated as secure » réglé sur Enabled, avec une adresse locale masquée dans la liste des origines](/img/users/en/notifications-chrome-flag.svg)
 
-Après le redémarrage, ouvrez Athena à l'adresse exacte que vous avez
+Après le redémarrage, ouvrez Ledger à l'adresse exacte que vous avez
 autorisée, retournez dans *Réglages → Notifications → Canaux* et cochez
 *Notification du navigateur* : Chrome affichera alors la demande de
 permission normalement.
@@ -58,9 +58,9 @@ permission normalement.
 :::caution
 
 Le flag s'applique à tous les onglets de ce profil Chrome qui chargent
-l'origine autorisée. Gardez donc une liste courte (votre serveur Athena, rien
+l'origine autorisée. Gardez donc une liste courte (votre serveur Ledger, rien
 d'autre). Firefox et Safari n'ont pas d'équivalent. La solution durable, quel
-que soit le navigateur, est de placer Athena derrière HTTPS (une autorité de
+que soit le navigateur, est de placer Ledger derrière HTTPS (une autorité de
 certification locale, Tailscale, ou un reverse proxy avec un vrai
 certificat).
 
@@ -113,7 +113,7 @@ le canal :
 Seuls les webhooks officiels de Discord sont acceptés :
 `https://discord.com/api/webhooks/<id>/<jeton>`, ainsi que les variantes
 `discordapp.com`, `ptb.discord.com` et `canary.discord.com`. Le formulaire
-signale toute autre URL, et le serveur la refuse aussi : Athena ne peut donc
+signale toute autre URL, et le serveur la refuse aussi : Ledger ne peut donc
 jamais être dirigé vers une machine de votre réseau local ni vers un autre
 site.
 
@@ -143,7 +143,7 @@ Se déclenche quand une transaction dépasse, sur un compte, le montant que
 vous avez fixé pour ce compte. Le seuil se règle compte par compte dans la
 carte « Grosse transaction » de l'onglet *Alertes*. Laissez un compte vide
 pour ne jamais être alerté dessus. Si plusieurs transactions concernées
-arrivent en même temps (un import, une synchro bancaire), Athena attend
+arrivent en même temps (un import, une synchro bancaire), Ledger attend
 quelques secondes et envoie une seule notification récapitulative au lieu
 d'une par ligne.
 

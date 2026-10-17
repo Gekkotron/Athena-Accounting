@@ -49,7 +49,7 @@ export function DemoUnavailableModal() {
         </div>
         <div className="text-sm text-ink-400 mb-5 leading-relaxed">
           {feature ? `${feature} n'est pas disponible dans la démo.` : "Cette fonctionnalité n'est pas disponible dans la démo."}{' '}
-          Installez Athena sur votre machine pour l'utiliser — la démo ne
+          Installez Ledger sur votre machine pour l'utiliser — la démo ne
           garde rien côté serveur, elle vit dans votre navigateur.
         </div>
         <div className="flex justify-end gap-2">

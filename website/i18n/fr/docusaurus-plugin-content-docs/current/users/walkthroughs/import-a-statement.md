@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Importer un relevé bancaire
 
-Athena accepte les fichiers **OFX**, **QFX**, **CSV** (format français) et **PDF** de relevé bancaire. Ce guide vous accompagne du dépôt du fichier jusqu'à la vérification du solde.
+Ledger accepte les fichiers **OFX**, **QFX**, **CSV** (format français) et **PDF** de relevé bancaire. Ce guide vous accompagne du dépôt du fichier jusqu'à la vérification du solde.
 
 ## 1. Ouvrir la page Imports
 
@@ -25,7 +25,7 @@ Après l'import, l'onglet **Doublons** liste les transactions candidates : deux 
 
 ## 4. Vérifier le solde de contrôle
 
-Rendez-vous sur **Comptes** dans la barre latérale. Chaque compte affiche son solde calculé par Athena à partir des transactions présentes. Comparez-le au solde de clôture indiqué en bas de votre relevé PDF — s'il diffère, c'est le signe qu'une ligne a été zappée à l'import ou qu'un doublon reste à traiter.
+Rendez-vous sur **Comptes** dans la barre latérale. Chaque compte affiche son solde calculé par Ledger à partir des transactions présentes. Comparez-le au solde de clôture indiqué en bas de votre relevé PDF — s'il diffère, c'est le signe qu'une ligne a été zappée à l'import ou qu'un doublon reste à traiter.
 
 ![Vérification du solde sur la page Comptes](/img/walkthroughs/fr/import-03-comptes-solde.png)
 
@@ -35,8 +35,8 @@ Une fois le solde vérifié, transformez-le en **point de contrôle**. Cliquez s
 
 Trois raisons de le faire dès maintenant :
 
-- **Garde-fou d'intégrité.** Chaque futur import est comparé silencieusement à tous les points de contrôle passés. Si un solde recalculé s'écarte de la référence d'un centime, Athena affiche l'écart — c'est le seul moyen fiable de détecter une transaction perdue lors d'un import, ou un doublon fusionné à tort des mois plus tard.
-- **Ancrage d'historique.** Vos comptes n'ont pas besoin d'être « propres depuis le jour 1 ». Ancrez le solde du jour, importez seulement les derniers mois, et Athena calcule tout ce qui vient après en s'appuyant sur cette ancre.
+- **Garde-fou d'intégrité.** Chaque futur import est comparé silencieusement à tous les points de contrôle passés. Si un solde recalculé s'écarte de la référence d'un centime, Ledger affiche l'écart — c'est le seul moyen fiable de détecter une transaction perdue lors d'un import, ou un doublon fusionné à tort des mois plus tard.
+- **Ancrage d'historique.** Vos comptes n'ont pas besoin d'être « propres depuis le jour 1 ». Ancrez le solde du jour, importez seulement les derniers mois, et Ledger calcule tout ce qui vient après en s'appuyant sur cette ancre.
 - **Trace papier.** Chaque point porte une date et une note libre — les entrées les plus récentes s'ouvrent en tête du tiroir, groupées par année.
 
 ![Tiroir des points de contrôle sur la carte du compte](/img/walkthroughs/fr/import-04-checkpoints.png)

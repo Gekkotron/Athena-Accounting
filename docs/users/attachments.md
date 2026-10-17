@@ -7,7 +7,7 @@ sidebar_position: 5
 
 Attach receipts, invoices, or contracts to a transaction so the paper
 trail lives right next to the row it explains. Attachments are stored
-locally on your Athena instance — Athena's LAN-only, no-cloud stance
+locally on your Ledger instance — Ledger's LAN-only, no-cloud stance
 applies to them exactly like the rest of your data.
 
 ## What can be attached
@@ -35,13 +35,13 @@ label for any row that has attachments.
 
 ## Where files are stored
 
-Attachments live on your Athena machine's disk under
+Attachments live on your Ledger machine's disk under
 `<DATA_DIR>/attachments/<user_id>/<attachment_id>.bin`. Only the
 metadata (original filename, MIME type, size, creation date) is written
 to the database — the bytes are never inlined in the Postgres/PGlite
 row, so backups and desktop-app database exports stay small.
 
-`<DATA_DIR>` depends on how you're running Athena — see the [installing
+`<DATA_DIR>` depends on how you're running Ledger — see the [installing
 guide](./desktop-install.md) and the [configuration
 reference](../reference/configuration.md) for the exact resolution
 rules:
@@ -50,13 +50,13 @@ rules:
   mounts to a named volume (or the path you configured). Include that
   volume in your host-level backup routine to preserve attachments.
 - **Desktop app**: the per-OS user data directory (macOS
-  `~/Library/Application Support/Athena/`, Windows
-  `%APPDATA%\Athena\`, Linux `~/.local/share/Athena/`), with the
+  `~/Library/Application Support/Ledger/`, Windows
+  `%APPDATA%\Ledger\`, Linux `~/.local/share/Ledger/`), with the
   `attachments/` subdirectory next to the PGlite database file.
 - **Bare-metal / `npm start`**: the current working directory unless
   `DATA_DIR` is set explicitly.
 
-Only Athena is expected to write inside `attachments/` — do not add,
+Only Ledger is expected to write inside `attachments/` — do not add,
 rename, or delete files there by hand. The database and the disk go
 out of sync silently if you do.
 
@@ -85,15 +85,15 @@ attachment archive re-upload only when it actually changed.
 - **Scheduled backup**: when a remote destination is configured (folder,
   WebDAV, or FTP), each nightly run always uploads a fresh JSON dump.
   The attachment archive is uploaded **only when your attachment
-  library has changed since the last successful upload** — Athena
+  library has changed since the last successful upload** — Ledger
   fingerprints the current library (row count + newest timestamp) and
   compares it to the fingerprint stored on the destination. Unchanged
   → skipped, saving bandwidth and remote storage on quiet days. The
   keep-last retention applies to each family independently.
 
-If you are backing up the whole machine outside of Athena's routine
+If you are backing up the whole machine outside of Ledger's routine
 (rsync, Time Machine, borg…), including `<DATA_DIR>/attachments/` in
-that backup is enough — you don't have to run Athena's archive export
+that backup is enough — you don't have to run Ledger's archive export
 too.
 
 ## Deleting
@@ -111,7 +111,7 @@ never required.
   explicitly.
 - The stored files are **not encrypted at rest** by default — they sit
   on disk with the file permissions your OS gave them. For a stronger
-  boundary, host Athena on a full-disk-encrypted volume, or wrap
+  boundary, host Ledger on a full-disk-encrypted volume, or wrap
   `<DATA_DIR>` in an encrypted container (LUKS, VeraCrypt, FileVault).
 - The manual and scheduled backup archives **are** encrypted end-to-end
   with your passphrase, so you can push them to any storage you don't
@@ -124,5 +124,5 @@ never required.
 - [Backup and recovery](./backup-recovery.md) — the general backup story,
   including how the JSON dump and the attachments archive share a
   passphrase.
-- [Security and privacy](./security-and-privacy.md) — Athena's overall
+- [Security and privacy](./security-and-privacy.md) — Ledger's overall
   security model, including local-only storage.

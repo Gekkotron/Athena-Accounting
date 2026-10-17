@@ -8,13 +8,13 @@ sidebar_position: 8
 Le « chiffrement au repos » protège le fichier de base de données lui-même
 — pour qu'une personne qui met la main sur votre disque, votre sauvegarde
 externe ou le système de fichiers de votre serveur ne puisse pas
-simplement y lire vos comptes et transactions. Athena traite cela
+simplement y lire vos comptes et transactions. Ledger traite cela
 différemment selon le pilote de base de données utilisé :
 
-- **Application bureau (PGlite)** — Athena peut chiffrer le fichier de
+- **Application bureau (PGlite)** — Ledger peut chiffrer le fichier de
   base de données lui-même. C'est optionnel, à activer depuis les
   Réglages.
-- **Docker / serveur familial (Postgres)** — Athena ne chiffre **pas**
+- **Docker / serveur familial (Postgres)** — Ledger ne chiffre **pas**
   les fichiers de Postgres. Les protéger relève du niveau hôte/volume,
   décrit plus bas.
 
@@ -44,14 +44,14 @@ forme de deux fichiers :
 - `athena.db.enc.bak` — le précédent, conservé comme filet de sécurité
   au cas où une écriture serait interrompue en pleine rotation.
 
-**Quand l'instantané se rafraîchit.** Athena ne rechiffre pas à chaque
+**Quand l'instantané se rafraîchit.** Ledger ne rechiffre pas à chaque
 modification — cela mettrait le disque à rude épreuve. À la place, il
 attend : environ **10 secondes** après votre dernière modification, il
 écrit un instantané frais. Si vous continuez à modifier des données sans
 interruption (un long import, par exemple), cette attente est repoussée
 à chaque fois, mais seulement jusqu'à un **plafond de 60 secondes** —
 après une minute d'écritures continues, l'instantané est forcé plutôt que
-repoussé indéfiniment. Athena écrit aussi toujours un dernier instantané
+repoussé indéfiniment. Ledger écrit aussi toujours un dernier instantané
 lors d'une fermeture propre de l'application.
 
 **La fenêtre de risque en cas de crash.** À cause de cette attente, un
@@ -94,14 +94,14 @@ fenêtre ne s'affiche, tant que le bon mot de passe n'a pas été saisi.
 
 ## Docker / serveur familial (Postgres)
 
-Si vous faites tourner Athena en stack Docker Compose sur Postgres, rien
-de ce qui précède ne s'applique : **Athena ne chiffre pas le dossier de
+Si vous faites tourner Ledger en stack Docker Compose sur Postgres, rien
+de ce qui précède ne s'applique : **Ledger ne chiffre pas le dossier de
 données Postgres**. Toute personne ayant un accès Docker ou root sur la
 machine hôte peut lire chaque compte et transaction en lignes en clair —
 par exemple avec `docker exec -it <conteneur> psql -U <user> -d <db>`, ou
 simplement en ouvrant les fichiers du dossier monté `./postgres-data` avec
 n'importe quel outil compatible Postgres. C'est une propriété de
-Postgres/Docker, pas quelque chose que la couche applicative d'Athena
+Postgres/Docker, pas quelque chose que la couche applicative de Ledger
 peut empêcher depuis l'intérieur du conteneur.
 
 Si cela compte pour votre installation — une machine partagée, un

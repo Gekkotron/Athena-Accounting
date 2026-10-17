@@ -5,15 +5,15 @@ sidebar_position: 7
 
 # Sécurité et confidentialité
 
-Athena est conçu pour tourner sur votre propre machine et y rester. Pas
+Ledger est conçu pour tourner sur votre propre machine et y rester. Pas
 de cloud, pas de télémétrie, pas d'analytics tiers — le seul trafic
-réseau qu'Athena initie est celui que vous demandez (un import, un export
+réseau que Ledger initie est celui que vous demandez (un import, un export
 de sauvegarde, un appel MCP vers un modèle que vous connectez vous-même).
 
 ## Modèle de sécurité
 
 **LAN-only par défaut.** Le stack Docker Compose expose le frontend et le
-backend sur votre hôte, et la posture recommandée est de garder Athena
+backend sur votre hôte, et la posture recommandée est de garder Ledger
 accessible uniquement depuis votre réseau local — derrière votre box, pas
 exposé sur l'internet public. Le build Tauri (application de bureau) va
 un cran plus loin : il se lie à `127.0.0.1` sur un port aléatoire et
@@ -52,7 +52,7 @@ jamais `127.0.0.1` — aucun autre processus du LAN ne peut l'atteindre.
 ## Verrouillage d'écran
 
 Après 5 minutes sans activité (souris, clavier, défilement, écran
-tactile), Athena affiche un écran de verrouillage plein écran. Votre
+tactile), Ledger affiche un écran de verrouillage plein écran. Votre
 session et tout ce que vous étiez en train de faire — page courante,
 filtres, brouillons de formulaire non enregistrés — survivent au
 verrouillage : seul l'affichage est masqué. Le bouton œil dans la mise
@@ -122,7 +122,7 @@ Révoquer un jeton depuis Réglages l'invalide immédiatement.
 
 ## Les sauvegardes sont toujours chiffrées
 
-L'export de sauvegarde d'Athena (`/api/backup/export`, ou le bouton dans
+L'export de sauvegarde de Ledger (`/api/backup/export`, ou le bouton dans
 l'onglet Données) exige une phrase secrète : le dump — tous les comptes,
 transactions, catégories, règles, budgets et points de contrôle — est
 scellé en AES-256-GCM avec une clé dérivée par scrypt (N=2¹⁵, r=8, p=1),
@@ -145,19 +145,19 @@ complet et le playbook de récupération d'un fichier corrompu.
 
 ## Posture de confidentialité
 
-- **Pas de télémétrie.** Athena n'appelle pas la maison. Pas de métriques
+- **Pas de télémétrie.** Ledger n'appelle pas la maison. Pas de métriques
   d'usage, pas de rapports de crash, pas de balise analytics « anonyme » —
   rien ne quitte votre machine sans que vous le déclenchiez.
 - **Pas d'analytics tiers.** Le frontend ne charge ni Google Analytics,
   ni Plausible, ni Segment, ni Sentry, ni équivalent. Aucun script tiers
   sur aucune page.
-- **Pas de cloud.** Il n'y a pas de service backend Athena, pas de
-  système de compte partagé, pas de « Se connecter avec Athena ». Chaque
+- **Pas de cloud.** Il n'y a pas de service backend Ledger, pas de
+  système de compte partagé, pas de « Se connecter avec Ledger ». Chaque
   installation est autonome.
 - **Vos données restent vos données.** Le fichier de base vit dans votre
   `DATA_DIR` (voir la
   [Référence de configuration](../reference/configuration.md)) ; les
-  sauvegardes atterrissent là où vous le décidez. Désinstaller Athena et
+  sauvegardes atterrissent là où vous le décidez. Désinstaller Ledger et
   supprimer ce dossier constitue un effacement complet.
 
 ## Voir aussi

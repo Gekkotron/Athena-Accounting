@@ -5,7 +5,7 @@ sidebar_position: 3
 
 # Installation bureau
 
-L'application de bureau est la façon « pas d'installation, pas de Docker » de faire tourner Athena. C'est une application unique sur macOS, Windows ou Linux — vous double-cliquez, une fenêtre s'ouvre, et tout (base de données, backend, interface) tourne dans ce processus, sur votre propre machine. Pas de LAN, pas d'autres utilisateurs, pas de cloud.
+L'application de bureau est la façon « pas d'installation, pas de Docker » de faire tourner Ledger. C'est une application unique sur macOS, Windows ou Linux — vous double-cliquez, une fenêtre s'ouvre, et tout (base de données, backend, interface) tourne dans ce processus, sur votre propre machine. Pas de LAN, pas d'autres utilisateurs, pas de cloud.
 
 Si vous voulez un serveur familial auquel tout le foyer se connecte, sautez cette page et lisez plutôt **[Démarrage avec Docker](getting-started.md)**.
 

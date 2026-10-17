@@ -118,7 +118,7 @@ describe('demo-mode propagation', () => {
     mockFetch(() =>
       json(
         {
-          error: "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser.",
+          error: "Cette fonctionnalité n'est pas disponible dans la démo. Installez Ledger pour l'utiliser.",
           demoStub: true,
           path: '/api/pdf-templates',
         },

@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # Categorise transactions
 
-A properly categorised transaction feeds the dashboard, the budgets and the reports. Athena offers three routes: single-row edits, assisted bulk sorting, and automatic rules that take over from there.
+A properly categorised transaction feeds the dashboard, the budgets and the reports. Ledger offers three routes: single-row edits, assisted bulk sorting, and automatic rules that take over from there.
 
 ## 1. Edit a category inline
 
@@ -15,7 +15,7 @@ Open **Transactions** from the sidebar. Every row exposes a **Category** picker 
 
 ## 2. Sort in bulk from the "Sort" workshop
 
-For a first sweep over a freshly loaded import, open **Rules → Sort**. The workshop groups uncategorised transactions by label pattern — assign the category once and the whole batch follows. On each assignment, Athena offers to **turn the batch into a rule** so future identical labels get sorted on their own.
+For a first sweep over a freshly loaded import, open **Rules → Sort**. The workshop groups uncategorised transactions by label pattern — assign the category once and the whole batch follows. On each assignment, Ledger offers to **turn the batch into a rule** so future identical labels get sorted on their own.
 
 ![Sort workshop grouped by pattern](/img/walkthroughs/en/categorise-02-tri.png)
 

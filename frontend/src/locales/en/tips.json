@@ -42,7 +42,7 @@
       "1": { "title": "Create a category", "body": "Add a custom category to refine your tracking." }
     },
     "recurring-detected": {
-      "0": { "title": "Detected series", "body": "Athena automatically spots recurring transactions (subscriptions, salaries, rent) in your imports." },
+      "0": { "title": "Detected series", "body": "Ledger automatically spots recurring transactions (subscriptions, salaries, rent) in your imports." },
       "1": { "title": "Confirm or dismiss", "body": "Confirm a series to track it, or dismiss it if it isn't actually recurring." }
     },
     "recurring-upcoming": {

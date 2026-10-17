@@ -223,7 +223,7 @@
   }
 }
 
-/* Light-mode fallback — Athena's docs default to dark, but the site does
+/* Light-mode fallback — Ledger's docs default to dark, but the site does
    support the light toggle. Keep it legible. */
 html:not([data-theme='dark']) .card {
   background: #ffffff;

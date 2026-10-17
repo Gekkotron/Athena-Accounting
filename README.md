@@ -12,7 +12,7 @@ your money as a Sankey diagram you can actually read. Your ledger,
 your box, your rules.
 
 <p align="center">
-  <img src="website/static/img/walkthroughs/en/reports-01-dashboard.png" alt="Athena dashboard — balance curve, account cards, budgets strip" width="32%" />
+  <img src="website/static/img/walkthroughs/en/reports-01-dashboard.png" alt="Ledger dashboard — balance curve, account cards, budgets strip" width="32%" />
   <img src="website/static/img/walkthroughs/en/reports-03-dashboard-bottom.png" alt="Sankey cash-flow diagram from income to expense categories" width="32%" />
   <img src="website/static/img/walkthroughs/en/budget-02-enveloppes.png" alt="Envelopes view — zero-based allocation with rollover and holds" width="32%" />
 </p>
@@ -37,7 +37,7 @@ your box, your rules.
 
 [![Try the demo](https://img.shields.io/badge/Try%20the%20demo-in%20your%20browser-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Ledger/demo/)
 
-A fully interactive Athena runs directly in your browser — no account,
+A fully interactive Ledger runs directly in your browser — no account,
 no install, no server. All state lives in `localStorage`; a **Reset
 demo** button restores the seed. Open it to walk the dashboard,
 categorise transactions, and see budgets against six months of
@@ -55,7 +55,7 @@ a reference bucket (configuration, API, glossary).
 ## Install
 
 Two supported paths from the same codebase — pick the one that matches
-how you want to use Athena:
+how you want to use Ledger:
 
 [![Docker install](https://img.shields.io/badge/Install-Docker%20%28family%20server%29-2496ed?logo=docker&logoColor=white)](docs/users/getting-started.md)
 [![Desktop install](https://img.shields.io/badge/Install-Desktop%20app%20%28solo%20user%29-4b8bbe?logo=tauri&logoColor=white)](docs/users/desktop-install.md)
@@ -74,7 +74,7 @@ how you want to use Athena:
 Both paths ship the same features, the same UI, and the same backup
 format. You can move a backup export between them freely.
 
-Athena is MIT-licensed and solo-maintained on sponsor time. If it
+Ledger is MIT-licensed and solo-maintained on sponsor time. If it
 replaces a subscription for you, consider
 [sponsoring on GitHub](https://github.com/sponsors/Gekkotron) — or via
 [Patreon](https://www.patreon.com/Gekkotron) or
@@ -118,7 +118,7 @@ libraries and why each one).
 
 ## Features
 
-**Imports** — the core of Athena
+**Imports** — the core of Ledger
 
 - Import OFX (SGML, Latin-1 or UTF-8), French CSV, and PDF bank
   statements. The first PDF from a new bank opens an interactive template
@@ -537,16 +537,16 @@ To keep expectations honest — these are deliberate scope choices, not
 oversights.
 
 - **Bank sync through credential-holding cloud aggregators**
-  (GoCardless, SimpleFIN, Plaid). Athena does ship an optional
+  (GoCardless, SimpleFIN, Plaid). Ledger does ship an optional
   [bank sync](docs/users/bank-sync.md), but only as a
   bring-your-own-credentials pass-through (Enable Banking): you own the
   application keys, access is read-only, and no third party stores your
   transactions. Anything that parks your bank data or credentials in
   someone else's cloud stays out.
 - **Multi-device sync via a hosted server.** Every browser on your LAN
-  already talks to the same self-hosted Athena; there's no per-device
+  already talks to the same self-hosted Ledger; there's no per-device
   local state to reconcile.
-- **A managed cloud offering or paid SaaS tier.** Athena is
+- **A managed cloud offering or paid SaaS tier.** Ledger is
   self-hosted, MIT-licensed, and funded (if at all) by voluntary
   sponsorship.
 

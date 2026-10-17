@@ -5,7 +5,7 @@ sidebar_position: 8
 
 # Backup and recovery
 
-Athena keeps all your data local — on your home server (Docker) or in the desktop app's PGlite file. Backing up is simply producing a portable JSON file that you file away wherever you like; restoring is feeding it back into a fresh or existing install.
+Ledger keeps all your data local — on your home server (Docker) or in the desktop app's PGlite file. Backing up is simply producing a portable JSON file that you file away wherever you like; restoring is feeding it back into a fresh or existing install.
 
 :::caution Know what your export contains
 Export files contain the full set of your accounts, transactions, rules and budgets. Every export is **always encrypted** — you set a passphrase in the **Export data** dialog, and the file is sealed with AES-256-GCM (scrypt-derived key); there's no plain-JSON option any more. Restoring prompts for that same passphrase; there is **no recovery** if you lose it, so treat it like a password-manager master password — and keep it safe independently of any encryption-at-rest password on the app itself, since the two are unrelated and losing both leaves nothing to recover.
@@ -17,13 +17,13 @@ Export files contain the full set of your accounts, transactions, rules and budg
   - macOS: `~/Library/Application Support/Athena Ledger/`
   - Linux: `~/.local/share/Athena Ledger/`
   - Windows: `%APPDATA%\Athena Ledger\`
-  (Athena creates the folder on first launch.)
+  (Ledger creates the folder on first launch.)
 - **Home server (Docker).** The named volume `athena_pgdata` is mounted at `/var/lib/postgresql/data` in the Postgres container. Backing up the raw volume is possible, but the JSON export described below is more portable — it works across versions and restores just as well onto the desktop app as onto Docker.
 
 ## Export (via the UI)
 
 1. Open **Settings → Data → Backup**.
-2. Click **Export data**, enter a passphrase when prompted. Athena downloads a file named `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`.
+2. Click **Export data**, enter a passphrase when prompted. Ledger downloads a file named `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`.
 3. Keep that passphrase somewhere safe — it's the only way to open the file later.
 
 Under the hood: export is a `POST /api/backup/export` with the passphrase in the request body (never a query string, so it never lands in access logs or browser history), which serialises your user with every relation using natural keys (account names, category names) and then seals the result. The plain `GET /api/backup/export` this used to be now returns `410 Gone`.
@@ -32,7 +32,7 @@ Under the hood: export is a `POST /api/backup/export` with the passphrase in the
 
 ## Remote backups (scheduled)
 
-Athena can push an encrypted backup to a remote destination **automatically, once a night**, from **Settings → Data → Backup**, *Remote backup* card. Every pushed file is the same always-encrypted `.enc.json` envelope as a manual export — the passphrase you configure on the card seals each dump, and there is **no recovery** if you lose it.
+Ledger can push an encrypted backup to a remote destination **automatically, once a night**, from **Settings → Data → Backup**, *Remote backup* card. Every pushed file is the same always-encrypted `.enc.json` envelope as a manual export — the passphrase you configure on the card seals each dump, and there is **no recovery** if you lose it.
 
 Files are named `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`. Retention keeps the newest N files (*Backups to keep*, default 30); pruning only ever touches files matching that exact name pattern, so anything else living in the same folder is never deleted.
 
@@ -45,7 +45,7 @@ Works with any WebDAV server. Common homes for it:
 - **Synology** — install the *WebDAV Server* package; the share is exposed on port 5005 (http) or 5006 (https).
 - **Nextcloud** — use the files DAV endpoint: `https://your-nextcloud/remote.php/dav/files/USERNAME/`.
 
-The optional *Subfolder* keeps Athena's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
+The optional *Subfolder* keeps Ledger's files in their own directory (created automatically on first push). With a plain-`http` URL the WebDAV **password** travels unencrypted on your LAN — acceptable on a trusted home network, but worth knowing; the backup **contents** are always encrypted either way.
 
 The **Freebox has no WebDAV server** (its disk only speaks FTP/SMB/AFP —
 WebDAV is a [long-open feature request](https://dev.freebox.fr/bugs/task/37418)).
@@ -60,7 +60,7 @@ server on the LAN:
 - **Freebox** — enable FTP in Freebox OS (Paramètres de la Freebox → Mode
   avancé → **FTP**) and set the password there. Server:
   `mafreebox.freebox.fr`, port `21`, user `freebox`. The optional
-  *Subfolder* keeps Athena's files in their own directory (created
+  *Subfolder* keeps Ledger's files in their own directory (created
   automatically on first push).
 
 FTP sends the **password** unencrypted on your LAN (there is no FTPS
@@ -71,7 +71,7 @@ dropped connection never leaves a truncated backup behind.
 
 ### Folder destination
 
-An absolute path on the machine running the backend: an SMB/NFS mount, an external disk, a synced folder. The folder must already exist — Athena deliberately refuses to create it, so a missing network mount fails loudly instead of silently writing to a local stub. In Docker, mount the target into the backend container and point the path at the mount.
+An absolute path on the machine running the backend: an SMB/NFS mount, an external disk, a synced folder. The folder must already exist — Ledger deliberately refuses to create it, so a missing network mount fails loudly instead of silently writing to a local stub. In Docker, mount the target into the backend container and point the path at the mount.
 
 **Freebox example** — enable *Partages Windows* in Freebox OS (Paramètres → Mode avancé), mount the share on the host (share name is typically `Disque dur`; `smbclient -L mafreebox.freebox.fr -N` lists it), e.g. in `/etc/fstab`:
 
@@ -81,7 +81,7 @@ An absolute path on the machine running the backend: an SMB/NFS mount, an extern
 
 then bind-mount a subfolder into the backend container (`/mnt/freebox/athena-backups:/backups`) and use `/backups` as the folder path.
 
-Want an off-site copy without giving Athena cloud credentials? Point the folder destination at a directory that `rclone`, Syncthing, or your NAS's own cloud tooling replicates.
+Want an off-site copy without giving Ledger cloud credentials? Point the folder destination at a directory that `rclone`, Syncthing, or your NAS's own cloud tooling replicates.
 
 ### Schedule, retention and status
 
@@ -113,7 +113,7 @@ Prefer the built-in remote backups above. If you want full control over transpor
 
 1. **Back up first.** A restore overwrites all data for the current user. Take an export of the present before you go.
 2. Open **Settings → Data → Backup**, *Restore* section.
-3. Pick your `.json` file. Athena will:
+3. Pick your `.json` file. Ledger will:
    - check that the format version is one it knows (v1 to v4 today);
    - delete the current user's rows (in a transaction);
    - re-inject accounts, categories, rules, budgets, checkpoints, imports and transactions.
@@ -125,7 +125,7 @@ Because the file is portable, the same procedure works to migrate from a Docker 
 
 1. Close the app.
 2. Rename `$DATA_DIR/athena.db` to `athena.db.corrupt` (don't delete it — just in case).
-3. Relaunch the app: Athena creates an empty database and shows onboarding.
+3. Relaunch the app: Ledger creates an empty database and shows onboarding.
 4. Go through **Restore** with your latest export.
 
 If you don't have a recent export, `athena.db.corrupt` can sometimes be read by `sqlite3` or `pglite` with `PRAGMA integrity_check` and then recovered manually — this is a technical operation, not consumer-grade.
@@ -134,7 +134,7 @@ If you don't have a recent export, `athena.db.corrupt` can sometimes be read by 
 
 - **Multiple tabs.** Don't restore from several tabs at the same time — the restore takes a transactional lock, but two clients downloading and then re-uploading the same file can produce duplicate import records if one finishes after the other.
 - **Wrong user (Docker).** On the home server, every user has their own dataset. A restore overwrites **only** the logged-in user's rows; other household members are untouched. Double-check that you're signed in on the right account before restoring.
-- **Format versions.** Athena rejects files whose `version` is higher than what it knows. Downgrade ⇒ immediate failure, no partial restore.
+- **Format versions.** Ledger rejects files whose `version` is higher than what it knows. Downgrade ⇒ immediate failure, no partial restore.
 
 ## Proof of correctness
 

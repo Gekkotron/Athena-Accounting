@@ -5,7 +5,7 @@ sidebar_position: 3
 
 # Desktop install
 
-The desktop app is the "no install, no Docker" way to run Athena. It's a
+The desktop app is the "no install, no Docker" way to run Ledger. It's a
 single application on macOS, Windows, or Linux — you double-click it, a
 window opens, and everything (database, backend, UI) runs inside that
 process on your own machine. No LAN, no other users, no cloud.

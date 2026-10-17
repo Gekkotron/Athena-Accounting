@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Consulter les rapports
 
-Le tableau de bord d'Athena tient dans une seule page — une lecture verticale qui répond à trois questions : « De combien je dispose ? », « Comment ça évolue ? », « Où part l'argent ? ».
+Le tableau de bord de Ledger tient dans une seule page — une lecture verticale qui répond à trois questions : « De combien je dispose ? », « Comment ça évolue ? », « Où part l'argent ? ».
 
 ## 1. Solde, moyennes mensuelles et insights
 

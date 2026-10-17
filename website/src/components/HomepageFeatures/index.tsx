@@ -135,7 +135,7 @@ export default function HomepageFeatures(): React.JSX.Element {
           <Translate id="feat.section.eyebrow">The bill of materials</Translate>
         </p>
         <h2 id="features-heading" className={styles.sectionHeading}>
-          <Translate id="feat.section.title">Everything Athena is, on one page.</Translate>
+          <Translate id="feat.section.title">Everything Ledger is, on one page.</Translate>
         </h2>
       </div>
       <div className={styles.grid}>

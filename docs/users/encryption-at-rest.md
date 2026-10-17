@@ -7,13 +7,13 @@ sidebar_position: 8
 
 "Encryption at rest" means protecting the database file itself — so that
 someone who gets hold of your disk, your backup drive, or your server's
-filesystem can't just read your accounts and transactions out of it. Athena
+filesystem can't just read your accounts and transactions out of it. Ledger
 handles this differently depending on which of its two database drivers you
 run:
 
-- **Desktop app (PGlite)** — Athena can encrypt the database file itself.
+- **Desktop app (PGlite)** — Ledger can encrypt the database file itself.
   This is opt-in, from Settings.
-- **Docker / home server (Postgres)** — Athena does **not** encrypt
+- **Docker / home server (Postgres)** — Ledger does **not** encrypt
   Postgres's files. Protecting them is a host/volume-level job, described
   below.
 
@@ -39,13 +39,13 @@ The snapshot lives in your data directory (see
 - `athena.db.enc.bak` — the previous one, kept as a fallback in case a
   write is interrupted mid-rotation.
 
-**When the snapshot refreshes.** Athena doesn't re-encrypt on every single
+**When the snapshot refreshes.** Ledger doesn't re-encrypt on every single
 change — that would thrash the disk. Instead it debounces: about **10
 seconds** after your last change, it writes a fresh snapshot. If you keep
 making changes continuously (a long import, for example) the debounce keeps
 getting pushed back, but only up to a **60-second ceiling** — after a
 minute of nonstop writes, it flushes anyway rather than postponing forever.
-Athena also always writes one final snapshot on a clean quit.
+Ledger also always writes one final snapshot on a clean quit.
 
 **The crash window.** Because of that debounce, a hard crash or force-quit
 can lose whatever changed in the last few seconds since the last snapshot
@@ -82,14 +82,14 @@ password is entered.
 
 ## Docker / home server (Postgres)
 
-If you're running Athena as a Docker Compose stack against Postgres, none
-of the above applies: **Athena does not encrypt the Postgres data
+If you're running Ledger as a Docker Compose stack against Postgres, none
+of the above applies: **Ledger does not encrypt the Postgres data
 directory**. Anyone who has Docker access or root on the host machine can
 read every account and transaction as plain rows — for example with
 `docker exec -it <container> psql -U <user> -d <db>`, or simply by opening
 the files under the bind-mounted `./postgres-data` directory with any
 Postgres-aware tool. This is a Postgres/Docker property, not something
-Athena's application layer can prevent from inside the container.
+Ledger's application layer can prevent from inside the container.
 
 If that matters for your setup — a shared machine, a laptop that could be
 lost or stolen while running — the fix is to encrypt at the **volume**

@@ -10,7 +10,7 @@ Une démo interactive tourne dans votre navigateur — pas de compte, pas d'inst
 [Ouvrir la démo →](./demo)
 :::
 
-Athena existe en deux saveurs, à partir du même code. Choisissez celle qui correspond à votre usage — les deux restent en local, aucune ne parle au cloud, et vos données ne quittent jamais la machine sur laquelle vous l'installez.
+Ledger existe en deux saveurs, à partir du même code. Choisissez celle qui correspond à votre usage — les deux restent en local, aucune ne parle au cloud, et vos données ne quittent jamais la machine sur laquelle vous l'installez.
 
 ## Choisissez votre parcours
 
@@ -62,7 +62,7 @@ Le reste de cette page suit le parcours **Docker**. Si vous avez choisi le burea
 - Les ports `8000` (frontend), `8001` (backend) et `5432` (PostgreSQL) libres sur `127.0.0.1`. Frontend et backend écoutent sur toutes les interfaces par défaut pour que les autres appareils du LAN atteignent l'application ; Postgres reste sur loopback, le backend l'atteint via le réseau Compose.
 - Un navigateur moderne.
 
-Athena n'a **pas** besoin de nom de domaine, de certificat TLS ou d'IP publique. Il tourne sur votre LAN et y reste.
+Ledger n'a **pas** besoin de nom de domaine, de certificat TLS ou d'IP publique. Il tourne sur votre LAN et y reste.
 
 ## Installer
 
@@ -110,7 +110,7 @@ La première visite affiche un écran d'onboarding au lieu d'un formulaire de lo
 - Votre mot de passe est haché avec **argon2id** (sel par utilisateur, paramètres OWASP 2024) avant que quoi que ce soit touche la base. Le mot de passe en clair n'est jamais stocké.
 - L'endpoint d'onboarding est protégé par un **verrou anti-takeover** : une fois le premier utilisateur créé, toute autre tentative d'onboarding est refusée. Cela empêche quelqu'un sur votre LAN de vous prendre de vitesse sur votre propre instance.
 
-Choisissez un mot de passe solide et stockez-le dans un gestionnaire de mots de passe. Athena n'a pas de flux « j'ai oublié mon mot de passe » par email car il n'envoie pas d'email.
+Choisissez un mot de passe solide et stockez-le dans un gestionnaire de mots de passe. Ledger n'a pas de flux « j'ai oublié mon mot de passe » par email car il n'envoie pas d'email.
 
 ## Mettre à jour
 

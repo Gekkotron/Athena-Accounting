@@ -90,7 +90,7 @@
       },
       "manual": {
         "summary": "Redirect not working? Finalize manually",
-        "help": "If the return page is unreachable (redirect URL differs from Athena's address), copy the full URL shown in the address bar after authorizing — the code is in it — and paste it here.",
+        "help": "If the return page is unreachable (redirect URL differs from Ledger's address), copy the full URL shown in the address bar after authorizing — the code is in it — and paste it here.",
         "inputLabel": "Return URL or authorization code",
         "placeholder": "https://…/bank-sync/callback?code=…  or the bare code",
         "button": "Submit",
@@ -111,7 +111,7 @@
         "disconnectDialogTitle": "Disconnect {{name}}?",
         "disconnectDialogDescription": "Mapped accounts will stop syncing. Already-imported transactions are kept.",
         "unmapped": "— Skip —",
-        "mappingLabel": "Athena account for",
+        "mappingLabel": "Ledger account for",
         "syncResult": "{{imported}} transaction(s) imported, {{deduped}} duplicate(s) skipped.",
         "duplicatesSummary": "Show skipped duplicates ({{count}})",
         "duplicatesMore": "… and {{count}} more"
@@ -120,7 +120,7 @@
         "title": "Bank connection",
         "exchanging": "Finalizing the connection with your bank…",
         "mappingTitle": "Map {{name}} accounts",
-        "mappingHelp": "Map each bank account to an Athena account. Accounts marked “Skip” won't sync — you can change this later in Données → Synchronisation bancaire.",
+        "mappingHelp": "Map each bank account to a Ledger account. Accounts marked “Skip” won't sync — you can change this later in Données → Synchronisation bancaire.",
         "save": "Save",
         "skip": "Later",
         "error": "The connection failed. Start the connection again from Données → Synchronisation bancaire.",

@@ -33,13 +33,13 @@ describe('reconcile', () => {
     expect(r.summary).toEqual({ statementLines: 1, matched: 1, missing: 0, mismatched: 0, extra: 0 });
   });
 
-  it('reports a statement line absent from Athena as missing', () => {
+  it('reports a statement line absent from Ledger as missing', () => {
     const r = reconcile([line()], []);
     expect(r.summary.missing).toBe(1);
     expect(r.missing).toEqual([{ date: '2026-03-10', amount: '-12.50', rawLabel: 'CB CARREFOUR' }]);
   });
 
-  it('reports an Athena row absent from the statement as extra', () => {
+  it('reports a Ledger row absent from the statement as extra', () => {
     const e = tx({ dedupKey: 'zz', normalizedLabel: 'other', date: '2026-03-10' });
     const r = reconcile([line()], [e]);
     expect(r.extra).toEqual([{ id: e.id, date: e.date, amount: e.amount, rawLabel: e.rawLabel }]);
@@ -154,10 +154,10 @@ describe('renderReconcileSummary', () => {
       [tx({ dedupKey: 'x', amount: '-99.00' }), tx({ dedupKey: 'e', normalizedLabel: 'e', rawLabel: 'EXTRA ONE' })],
     );
     const out = renderReconcileSummary(r, 'A');
-    expect(out).toContain('Missing (not in Athena): 2026-03-10 -12.50 MISSING ONE.');
-    expect(out).toContain('statement -12.50 vs Athena -99.00 (amount_differs)');
-    expect(out).toContain('Extra (in Athena, not on statement): 2026-03-10 -12.50 EXTRA ONE.');
-    expect(out).toContain('import this PDF in Athena');
+    expect(out).toContain('Missing (not in Ledger): 2026-03-10 -12.50 MISSING ONE.');
+    expect(out).toContain('statement -12.50 vs Ledger -99.00 (amount_differs)');
+    expect(out).toContain('Extra (in Ledger, not on statement): 2026-03-10 -12.50 EXTRA ONE.');
+    expect(out).toContain('import this PDF in Ledger');
   });
 
   it('omits the import hint when nothing is missing', () => {

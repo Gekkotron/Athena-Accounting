@@ -5,7 +5,7 @@ sidebar_position: 5
 
 # Tableau de bord
 
-Le Tableau de bord est la lecture d'un coup d'œil d'Athena sur votre argent. Il répond, de haut en bas, à trois questions : « Combien ai-je de disponible ? », « Comment cela évolue-t-il ? » et « Où part l'argent ? ». Chaque carte réagit aux deux sélecteurs du bandeau de la page — un **sélecteur de période** et un **sélecteur de comptes** — pour restreindre l'ensemble de la vue à un compte joint, un trimestre ou un mois donné sans quitter la page.
+Le Tableau de bord est la lecture d'un coup d'œil de Ledger sur votre argent. Il répond, de haut en bas, à trois questions : « Combien ai-je de disponible ? », « Comment cela évolue-t-il ? » et « Où part l'argent ? ». Chaque carte réagit aux deux sélecteurs du bandeau de la page — un **sélecteur de période** et un **sélecteur de comptes** — pour restreindre l'ensemble de la vue à un compte joint, un trimestre ou un mois donné sans quitter la page.
 
 ## Solde net, moyennes mensuelles et Insights
 

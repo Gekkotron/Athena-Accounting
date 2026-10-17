@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # View reports
 
-Athena's dashboard fits on a single page — a top-down read that answers three questions: "How much do I have available?", "How is it evolving?", "Where is the money going?".
+Ledger's dashboard fits on a single page — a top-down read that answers three questions: "How much do I have available?", "How is it evolving?", "Where is the money going?".
 
 ## 1. Balance, monthly averages, and insights
 

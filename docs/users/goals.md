@@ -23,7 +23,7 @@ Each goal has:
 
 - **A name** — anything, up to 128 characters.
 - **A target amount** — must be strictly positive, kept in the account's
-  currency (Athena has no FX yet — see [Accounts and data](accounts-and-data)).
+  currency (Ledger has no FX yet — see [Accounts and data](accounts-and-data)).
 - **A target date** — optional. When set, it drives the "X € / month
   needed" projection and the "N days overdue" warning.
 - **A color** — optional accent.
@@ -46,7 +46,7 @@ Two entry points:
   Objectifs strip with a `+ Nouvel objectif` chip that opens the same
   modal, preselected on that account.
 
-Athena rejects a non-positive target (400 error surfaced inline) and a
+Ledger rejects a non-positive target (400 error surfaced inline) and a
 duplicate `(account, name)` pair (409 with a French message). The name
 uniqueness is scoped per account — you can have *Vacances* on the
 Livret A and *Vacances* on the Compte courant without a conflict.
@@ -65,7 +65,7 @@ in the drawer:
 The event lands in the ledger of *the goal*, not the ledger of the
 underlying account. The account's real balance stays untouched.
 
-**Reached your target?** The response from Athena includes a
+**Reached your target?** The response from Ledger includes a
 `justReached` flag on the transition that first crosses the target from
 below — the app fires a one-shot success toast. Goals don't auto-close
 on completion; you close them explicitly when you're ready to archive
@@ -82,7 +82,7 @@ When you set a target date:
 - **Past date + still under target** — the card shows
   `en retard de N jours`. The monthly projection disappears; setting a
   new target date brings it back.
-- **Past date + already reached** — Athena treats the goal as done and
+- **Past date + already reached** — Ledger treats the goal as done and
   hides both clauses. Close it when you're ready.
 - **No target date** — both clauses are hidden. This is the right
   choice for open-ended saving (an emergency fund).
@@ -115,7 +115,7 @@ Beyond the dedicated Goals page:
 An amber warning appears on an account section header when the sum of
 all non-closed goals exceeds the account's current balance:
 `Vous avez réservé plus que votre solde disponible sur ce compte.` This
-is advisory only — Athena is a retrospective ledger, and the intent
+is advisory only — Ledger is a retrospective ledger, and the intent
 often precedes the money.
 
 ## Backup

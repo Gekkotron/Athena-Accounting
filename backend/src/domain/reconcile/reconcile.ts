@@ -106,16 +106,16 @@ export function renderReconcileSummary(report: ReconcileReport, accountName: str
     `${s.matched} matched, ${s.missing} missing, ${s.mismatched} mismatch, ${s.extra} extra.`,
   );
   if (report.missing.length) {
-    lines.push('Missing (not in Athena): ' + report.missing.map((m) => `${m.date} ${m.amount} ${m.rawLabel}`).join('; ') + '.');
+    lines.push('Missing (not in Ledger): ' + report.missing.map((m) => `${m.date} ${m.amount} ${m.rawLabel}`).join('; ') + '.');
   }
   if (report.mismatched.length) {
-    lines.push('Mismatch: ' + report.mismatched.map((m) => `${m.statement.date} ${m.statement.label} — statement ${m.statement.amount} vs Athena ${m.athena.amount} (${m.reason})`).join('; ') + '.');
+    lines.push('Mismatch: ' + report.mismatched.map((m) => `${m.statement.date} ${m.statement.label} — statement ${m.statement.amount} vs Ledger ${m.athena.amount} (${m.reason})`).join('; ') + '.');
   }
   if (report.extra.length) {
-    lines.push('Extra (in Athena, not on statement): ' + report.extra.map((e) => `${e.date} ${e.amount} ${e.rawLabel}`).join('; ') + '.');
+    lines.push('Extra (in Ledger, not on statement): ' + report.extra.map((e) => `${e.date} ${e.amount} ${e.rawLabel}`).join('; ') + '.');
   }
   if (s.missing > 0) {
-    lines.push('To add the missing transactions, import this PDF in Athena — dedup will insert only these and skip the rest.');
+    lines.push('To add the missing transactions, import this PDF in Ledger — dedup will insert only these and skip the rest.');
   }
   return lines.join('\n');
 }

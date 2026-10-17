@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # For users
 
-You installed Athena or plan to. Start here.
+You installed Ledger or plan to. Start here.
 
 - **[Getting started](getting-started.md)** — pick a path (Docker
   family server vs solo desktop app), install, first-run onboarding.

@@ -1,7 +1,7 @@
 {
   "title": "Tableau de bord",
   "empty": {
-    "title": "Bienvenue sur Athena",
+    "title": "Bienvenue sur Ledger",
     "hint": "Commencez par créer un compte, puis importez vos premières transactions.",
     "cta": "Créer un compte"
   },

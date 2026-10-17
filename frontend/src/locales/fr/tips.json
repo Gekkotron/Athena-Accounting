@@ -42,7 +42,7 @@
       "1": { "title": "Créer une catégorie", "body": "Ajoutez une catégorie personnalisée pour affiner votre suivi." }
     },
     "recurring-detected": {
-      "0": { "title": "Séries détectées", "body": "Athena repère automatiquement les transactions récurrentes (abonnements, salaires, loyers) dans vos imports." },
+      "0": { "title": "Séries détectées", "body": "Ledger repère automatiquement les transactions récurrentes (abonnements, salaires, loyers) dans vos imports." },
       "1": { "title": "Valider ou ignorer", "body": "Confirmez une série pour la suivre, ou ignorez-la si ce n'est pas récurrent." }
     },
     "recurring-upcoming": {

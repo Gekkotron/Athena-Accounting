@@ -35,7 +35,7 @@ Puis l'**échéancier** :
     s'ajoutent au capital restant dû ;
   - chaque période peut avoir son propre taux (taux variable,
     renégociation).
-- **Dernière période** — Athena calcule ce que vous ne connaissez pas :
+- **Dernière période** — Ledger calcule ce que vous ne connaissez pas :
   - *Je connais la date de fin* → elle calcule la mensualité ;
   - *Je connais la mensualité* → elle calcule la date de fin.
 - **Remboursements anticipés** — une somme versée un mois donné, qui

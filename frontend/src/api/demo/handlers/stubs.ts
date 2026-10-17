@@ -5,7 +5,7 @@
 import { ApiError } from '../../apiError';
 import { registerHandler } from '../index';
 
-const DEMO_MSG = "Cette fonctionnalité n'est pas disponible dans la démo. Installez Athena pour l'utiliser.";
+const DEMO_MSG = "Cette fonctionnalité n'est pas disponible dans la démo. Installez Ledger pour l'utiliser.";
 
 function stub(_req: unknown): never {
   throw new ApiError(DEMO_MSG, 501, { demoStub: true });

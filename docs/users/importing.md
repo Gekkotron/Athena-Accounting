@@ -5,17 +5,17 @@ sidebar_position: 3
 
 # Importing
 
-Importing is the core of Athena. This page covers every format Athena
+Importing is the core of Ledger. This page covers every format Ledger
 accepts, the PDF template wizard (the piece most people find magical),
 multi-account statement handling, deduplication, and what to do when
 something doesn't import cleanly.
 
 ## Supported formats
 
-| Format | How Athena reads it |
+| Format | How Ledger reads it |
 |--------|---------------------|
-| **OFX / QFX** | Bank-standard exchange format. Athena parses SGML-style OFX in Latin-1 (Windows-1252) or UTF-8 — encoding is detected from the OFX header. Import is one drop-and-done step. |
-| **CSV (French banks)** | Auto-detected separator (`;` or `,`), French date format `JJ/MM/AAAA`, French decimal comma. Header names are matched accent- and case-insensitively. Athena expects a date column, a label column, and either a `Montant` column or a `Débit` + `Crédit` pair. |
+| **OFX / QFX** | Bank-standard exchange format. Ledger parses SGML-style OFX in Latin-1 (Windows-1252) or UTF-8 — encoding is detected from the OFX header. Import is one drop-and-done step. |
+| **CSV (French banks)** | Auto-detected separator (`;` or `,`), French date format `JJ/MM/AAAA`, French decimal comma. Header names are matched accent- and case-insensitively. Ledger expects a date column, a label column, and either a `Montant` column or a `Débit` + `Crédit` pair. |
 | **Excel (`.xlsx`)** | Open XML spreadsheets. Same header-detection rules as CSV (date / label / `Montant` or `Débit`+`Crédit`). Real Excel date cells, Excel serial dates, and string dates are all recognised. The header row doesn't have to be the first row — the first 20 rows are scanned. Legacy binary `.xls` isn't supported; re-save as `.xlsx` in Excel or LibreOffice. |
 | **CAMT.053 / CAMT.052** | ISO 20022 SEPA XML statements. Widely emitted by EU banks alongside PDF. One drop-and-done step. |
 | **MT940 / `.sta` / `.swift`** | SWIFT pre-ISO 20022 bank-statement format. UTF-8 or Windows-1252, 2-digit years treated as 19xx when ≥ 80 else 20xx, bank reference from `:61:` used as the dedup fingerprint when present. |
@@ -36,18 +36,18 @@ Create the destination account first (*Accounts → Add*). The
 opening balance and opening date are mandatory — every reported balance
 is computed as `opening_balance + SUM(amount WHERE date >= opening_date)`.
 
-Optionally, add **filename patterns** on the same account tab. Athena
+Optionally, add **filename patterns** on the same account tab. Ledger
 matches the pattern against the file you drop and picks the target
 account automatically, so you don't have to select one every time.
 
 ## OFX and CSV
 
-Both are one-step. Drop the file on the Imports page; Athena parses
+Both are one-step. Drop the file on the Imports page; Ledger parses
 it, runs categorization rules, and inserts new transactions. The
 response reports inserted vs deduped counts.
 
 **Encoding note (OFX):** French banks typically emit OFX in
-Windows-1252. Athena detects the encoding from the OFX header and
+Windows-1252. Ledger detects the encoding from the OFX header and
 re-encodes to UTF-8 for the database. If your OFX file has garbled
 accents in the label after import, that's a bug — please open an issue
 with a redacted sample.
@@ -55,19 +55,19 @@ with a redacted sample.
 ## The PDF template wizard
 
 PDFs don't have a machine-readable transaction format the way OFX
-does. Athena solves this by asking you to **paint the transaction
+does. Ledger solves this by asking you to **paint the transaction
 zones once per bank format**, then reusing that template for every
 future statement in the same format.
 
 ### First-time flow
 
 1. Drop a PDF from a new bank on the Imports page.
-2. Athena opens the template wizard: your PDF on the left, three
+2. Ledger opens the template wizard: your PDF on the left, three
    tools on the right — **Amount**, **Date**, **Label**.
 3. Draw a rectangle over one occurrence of each of the three fields.
-   You're teaching Athena "amounts live in this column, dates in this
+   You're teaching Ledger "amounts live in this column, dates in this
    column, labels in this column."
-4. Athena replays the template on the whole PDF and shows you the
+4. Ledger replays the template on the whole PDF and shows you the
    transactions it found. If they look right, save the template and
    import. If not, adjust the rectangles.
 
@@ -77,12 +77,12 @@ in the same format skips the wizard entirely.
 ### Multi-account PDF statements
 
 Some banks emit a single PDF that contains multiple accounts (joint
-statements, family bundles). Athena handles this with **content-based
+statements, family bundles). Ledger handles this with **content-based
 page filtering**:
 
 - The template stores an "account anchor" — a text pattern that
   appears on pages belonging to your account.
-- On import, Athena keeps only the pages that match the anchor and
+- On import, Ledger keeps only the pages that match the anchor and
   filters out the rest.
 - If pages are ambiguous, a **"mine / other account"** selector lets
   you assign them manually.
@@ -90,7 +90,7 @@ page filtering**:
 ### Auto-recovery: when a template stops matching
 
 Banks occasionally reword statement headers. If a saved template
-stops finding transactions on a fresh statement, Athena
+stops finding transactions on a fresh statement, Ledger
 **auto-recovers** by re-training the template against the new
 statement — so you don't lose the wizard investment when your bank
 ships a minor layout change.
@@ -118,14 +118,14 @@ to those movements (for example "Épargne" or "Virement interne") as
 an **internal transfer** in **Rules → Categories**. Transactions
 sitting in such a category are excluded from monthly averages and
 donut totals. The `transfer_group_id` column on transactions is kept
-for historical grouping, but Athena no longer auto-links mirror legs
+for historical grouping, but Ledger no longer auto-links mirror legs
 during import.
 
 ## The watch folder (automatic imports)
 
 If you'd rather skip the upload form entirely, set the
 `WATCH_IMPORTS_DIR` environment variable on the backend (see
-[Configuration](../reference/configuration.md)). Athena then polls that
+[Configuration](../reference/configuration.md)). Ledger then polls that
 directory every 60 seconds and imports any statement dropped into a
 subfolder named after the destination account — for example
 `watch/Compte courant/mai-2026.pdf`. The folder-name match is case-
@@ -153,7 +153,7 @@ Your rectangles are probably too tight. Amounts and dates need a
 little horizontal padding; labels usually need a wider box.
 
 **"pdfjs fragmented the text weirdly."**
-Some PDFs render text in overlapping fragments. Athena's parser
+Some PDFs render text in overlapping fragments. Ledger's parser
 handles the common cases; if you hit an edge case, please open an
 issue with a redacted sample statement.
 

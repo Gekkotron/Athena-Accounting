@@ -7,11 +7,11 @@ sidebar_position: 7
 
 Ajoutez un second facteur à votre connexion pour qu'un mot de passe
 volé, à lui seul, ne suffise plus à prendre le contrôle de votre
-Athena. La 2FA est **optionnelle et par utilisateur** — chaque compte
+Ledger. La 2FA est **optionnelle et par utilisateur** — chaque compte
 décide s'il l'active, et l'étape supplémentaire ne s'affiche à la
 connexion que pour les comptes qui ont choisi de s'inscrire.
 
-La 2FA d'Athena utilise la norme RFC 6238 (TOTP) : un code à 6
+La 2FA de Ledger utilise la norme RFC 6238 (TOTP) : un code à 6
 chiffres qui change toutes les 30 secondes, généré par n'importe quelle
 application authentificatrice que vous utilisez déjà (Google
 Authenticator, Aegis, 1Password, Bitwarden, Ente Auth…). Pas de SMS,
@@ -22,14 +22,14 @@ téléphone (ou une clé matérielle qui l'émule).
 
 Une installation en mono-utilisateur sur un serveur familial derrière
 un LAN de confiance reste tolérable sans 2FA : l'accès physique
-contrôle le périmètre et Athena n'est pas exposée à Internet public.
+contrôle le périmètre et Ledger n'est pas exposée à Internet public.
 Activez-la si l'une de ces situations s'applique :
 
-- Vous avez réutilisé le mot de passe Athena ailleurs (une fuite sur
+- Vous avez réutilisé le mot de passe Ledger ailleurs (une fuite sur
   un autre service livre alors une connexion valide ici).
 - Une personne du réseau local pourrait apercevoir un mot de passe
   noté ou enregistré.
-- Vous avez exposé Athena au-delà du LAN (tunnel inverse, VPN
+- Vous avez exposé Ledger au-delà du LAN (tunnel inverse, VPN
   Tailscale, redirection de port nginx sur le routeur).
 - Vous voulez simplement une assurance supplémentaire —
   l'inscription prend environ une minute et se désactive en quelques
@@ -39,7 +39,7 @@ Activez-la si l'une de ces situations s'applique :
 
 *Réglages → Sécurité → Double authentification (2FA) → Activer*.
 
-1. **Confirmez votre mot de passe.** Athena demande le mot de passe
+1. **Confirmez votre mot de passe.** Ledger demande le mot de passe
    actuel avant de générer le secret. Cela empêche qu'une session
    volée n'inscrive silencieusement un facteur qu'un attaquant
    contrôle, vous verrouillant hors de votre propre compte.
@@ -50,7 +50,7 @@ Activez-la si l'une de ces situations s'applique :
    secret en base32 — saisissez-la manuellement.
 3. **Saisissez le code à 6 chiffres** affiché par l'application et
    cliquez sur **Vérifier**. Cela prouve que le secret est bien
-   arrivé dans l'application avant qu'Athena ne bascule le compte
+   arrivé dans l'application avant que Ledger ne bascule le compte
    sur l'état « 2FA active ».
 4. **Sauvegardez vos codes de récupération.** Dix codes à usage
    unique sont affichés une seule fois, juste après l'étape de
@@ -73,7 +73,7 @@ Une fois inscrit, le parcours de connexion gagne une seconde étape :
    connexion, comme d'habitude.
 2. Lorsque le mot de passe est correct, l'écran bascule sur un champ
    **code à 6 chiffres**. Ouvrez votre application authentificatrice
-   et saisissez le code actuel pour Athena.
+   et saisissez le code actuel pour Ledger.
 3. Si vous n'avez pas l'application sous la main (téléphone perdu,
    batterie vide), cliquez sur **Utiliser un code de récupération**
    et saisissez un des codes que vous avez sauvegardés à
@@ -84,7 +84,7 @@ Une fois inscrit, le parcours de connexion gagne une seconde étape :
    connexion sur le mauvais compte.
 
 Le code à 6 chiffres tolère ±30 s de dérive, donc un petit décalage
-d'horloge entre votre téléphone et le serveur Athena ne fait pas
+d'horloge entre votre téléphone et le serveur Ledger ne fait pas
 échouer la vérification.
 
 ## Codes de récupération
@@ -126,9 +126,9 @@ nouveaux codes.
 ## Sauvegardes et migration vers une nouvelle machine
 
 **La 2FA n'est délibérément pas incluse dans les sauvegardes.** Le
-compte est lié à l'installation Athena spécifique qui a généré le
+compte est lié à l'installation Ledger spécifique qui a généré le
 secret, comme un cookie de session est lié à un navigateur précis.
-Restaurer une sauvegarde JSON dans une nouvelle installation Athena
+Restaurer une sauvegarde JSON dans une nouvelle installation Ledger
 rapatrie vos transactions, comptes, catégories, règles, budgets et
 pièces jointes — mais l'état 2FA est laissé de côté.
 
@@ -140,7 +140,7 @@ application authentificatrice une fois le nouveau secret confirmé.
 C'est volontaire — traiter la 2FA comme portable signifierait que
 quiconque récupère une sauvegarde peut cloner le secret et générer
 des codes valides pour votre compte. La conserver par installation
-oblige la machine Athena physique à faire partie de la compromission.
+oblige la machine Ledger physique à faire partie de la compromission.
 
 ## Où vit le secret
 
@@ -186,7 +186,7 @@ notes SECURITY.md pour la procédure de rotation.
 ## Voir aussi
 
 - [Sécurité et confidentialité](./security-and-privacy.md) — le
-  modèle de sécurité global d'Athena.
+  modèle de sécurité global de Ledger.
 - [Chiffrement au repos](./encryption-at-rest.md) — comment le
   fichier de base est protégé.
 - [Sauvegarde et récupération](./backup-recovery.md) — ce que les

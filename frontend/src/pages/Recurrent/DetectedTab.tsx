@@ -94,7 +94,7 @@ export function DetectedTab(): JSX.Element {
     return (
       <EmptyState
         title="Aucune série récurrente détectée pour l'instant."
-        hint="Athena repère automatiquement les prélèvements réguliers après chaque import. Lancez une détection manuelle si vous avez déjà des transactions."
+        hint="Ledger repère automatiquement les prélèvements réguliers après chaque import. Lancez une détection manuelle si vous avez déjà des transactions."
         action={
           <button
             type="button"

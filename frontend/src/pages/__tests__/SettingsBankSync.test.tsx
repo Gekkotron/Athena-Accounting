@@ -177,7 +177,7 @@ describe('SettingsBankSync', () => {
     renderSection();
     const user = userEvent.setup();
 
-    const select = await screen.findByLabelText(/Compte Athena pour Compte Courant CIC/);
+    const select = await screen.findByLabelText(/Compte Ledger pour Compte Courant CIC/);
     await user.selectOptions(select, '2');
 
     await waitFor(() => {

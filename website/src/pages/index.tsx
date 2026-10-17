@@ -174,14 +174,14 @@ function ClosingCta() {
         </h2>
         <p className={styles.closingBody}>
           <Translate id="home.closing.body">
-            Athena runs on a Raspberry Pi, a spare mini-PC, or your laptop. There is no account to create, no plan to upgrade, and no server that can be turned off.
+            Ledger runs on a Raspberry Pi, a spare mini-PC, or your laptop. There is no account to create, no plan to upgrade, and no server that can be turned off.
           </Translate>
         </p>
         <div className={styles.closingCtas}>
           <Link
             to="/docs/users/getting-started"
             className={clsx('button button--primary button--lg', styles.ctaPrimary)}>
-            <Translate id="home.closing.cta1">Install Athena</Translate>
+            <Translate id="home.closing.cta1">Install Ledger</Translate>
             <span className={styles.ctaArrow} aria-hidden="true">
               →
             </span>

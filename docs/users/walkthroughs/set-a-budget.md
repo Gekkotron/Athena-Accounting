@@ -5,7 +5,7 @@ sidebar_position: 3
 
 # Set a budget
 
-Athena offers two budgeting approaches side by side: **Caps** (a loose
+Ledger offers two budgeting approaches side by side: **Caps** (a loose
 per-category limit the app warns you about) and **Envelopes** (strict
 YNAB-style allocation of every euro before you spend it). You can switch
 between them at any time — same data, different lens.

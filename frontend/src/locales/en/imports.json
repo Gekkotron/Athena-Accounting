@@ -7,9 +7,9 @@
     "pdfEncrypted": "PDF is password-protected",
     "pdfTooLarge": "PDF exceeds 10MB limit",
     "needsTemplate": {
-      "noTextLayer": "PDF has no text layer; set up a template via Athena import first",
-      "noTemplate": "No saved template for this statement + account; import it once in Athena first",
-      "templateStale": "Saved template no longer matches this PDF; re-train it via Athena import",
+      "noTextLayer": "PDF has no text layer; set up a template via Ledger import first",
+      "noTemplate": "No saved template for this statement + account; import it once in Ledger first",
+      "templateStale": "Saved template no longer matches this PDF; re-train it via Ledger import",
       "default": "This PDF needs a template"
     },
     "templateYieldedNoRows": "Saved template did not match this PDF; re-train it",
@@ -180,7 +180,7 @@
       "action": "Action"
     },
     "similarityTitle": "Minimum label similarity of the group (Jaccard on tokens, excluding boilerplate words).",
-    "demoHint": "Duplicate detection cross-matches transactions on the database side. Install Athena locally to use it.",
+    "demoHint": "Duplicate detection cross-matches transactions on the database side. Install Ledger locally to use it.",
     "selectTransactionAriaLabel": "Select transaction #{{id}}",
     "deleteTransactionTitle": "Delete transaction #{{id}}",
     "deleteTransactionAriaLabel": "Delete this transaction"

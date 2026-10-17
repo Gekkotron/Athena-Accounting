@@ -5,15 +5,15 @@ sidebar_position: 7
 
 # Security and privacy
 
-Athena is designed to run on your own machine and stay there. There is no
+Ledger is designed to run on your own machine and stay there. There is no
 cloud, no telemetry, no third-party analytics — the only network traffic
-Athena initiates is the one you ask for (an import, a backup export, an MCP
+Ledger initiates is the one you ask for (an import, a backup export, an MCP
 call to a model you connect yourself).
 
 ## Security model
 
 **LAN-only by default.** The Docker Compose stack binds the frontend and
-backend to your host, and the recommended posture is to keep Athena reachable
+backend to your host, and the recommended posture is to keep Ledger reachable
 from your home network only — behind your router, not exposed to the public
 internet. The Tauri desktop build goes one step further: it binds to
 `127.0.0.1` on a random port and is unreachable from any other machine.
@@ -46,7 +46,7 @@ other process on the LAN can reach it.
 
 ## Screen lock
 
-After 5 minutes of no mouse, keyboard, scroll, or touch activity, Athena
+After 5 minutes of no mouse, keyboard, scroll, or touch activity, Ledger
 shows a full-screen lock overlay. Your session and everything you were
 doing — current page, filters, unsaved form drafts — survive the lock;
 only the view is hidden. The eye button in the layout locks the screen
@@ -108,7 +108,7 @@ Revoking a token from Settings invalidates it immediately.
 
 ## Backups are always encrypted
 
-Athena's backup export (`/api/backup/export`, or the button on the Data
+Ledger's backup export (`/api/backup/export`, or the button on the Data
 tab) requires a passphrase: the dump — every account, transaction,
 category, rule, budget, and checkpoint — is sealed with AES-256-GCM under
 a scrypt-derived key (N=2¹⁵, r=8, p=1), which makes it both unreadable and
@@ -129,17 +129,17 @@ the corrupt-file recovery playbook.
 
 ## Privacy stance
 
-- **No telemetry.** Athena does not phone home. No usage metrics, no crash
+- **No telemetry.** Ledger does not phone home. No usage metrics, no crash
   reports, no "anonymous" analytics beacon — nothing leaves your machine
   unless you initiate it.
 - **No third-party analytics.** The frontend loads no Google Analytics,
   Plausible, Segment, Sentry, or equivalent. There are no third-party
   scripts on any page.
-- **No cloud.** There is no Athena backend service, no shared account
-  system, no "sign in with Athena." Every install is self-contained.
+- **No cloud.** There is no Ledger backend service, no shared account
+  system, no "sign in with Ledger." Every install is self-contained.
 - **Your data stays yours.** The database file lives in your `DATA_DIR`
   (see [Configuration reference](../reference/configuration.md)); backups
-  land wherever you point them. Uninstalling Athena and deleting that
+  land wherever you point them. Uninstalling Ledger and deleting that
   directory is a complete data wipe.
 
 ## See also

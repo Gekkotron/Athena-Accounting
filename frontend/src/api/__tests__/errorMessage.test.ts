@@ -16,13 +16,13 @@ describe('errorMessage', () => {
   });
 
   it('translates needs_template + reason "template_stale" into its specific French variant', () => {
-    const err = new ApiError('saved template no longer matches this PDF; re-train it via Athena import', 422, {
+    const err = new ApiError('saved template no longer matches this PDF; re-train it via Ledger import', 422, {
       code: 'needs_template',
       reason: 'template_stale',
-      error: 'saved template no longer matches this PDF; re-train it via Athena import',
+      error: 'saved template no longer matches this PDF; re-train it via Ledger import',
     });
     expect(errorMessage(err, i18n.t)).toBe(
-      'Le modèle enregistré ne correspond plus à ce PDF ; ré-entraînez-le via l\'import d\'Athena',
+      'Le modèle enregistré ne correspond plus à ce PDF ; ré-entraînez-le via l\'import de Ledger',
     );
   });
 

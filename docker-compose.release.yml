@@ -1,4 +1,4 @@
-# Run Athena from the prebuilt images published to GHCR by the Release
+# Run Ledger from the prebuilt images published to GHCR by the Release
 # workflow — no Node toolchain, no source build on the host:
 #
 #   ./install.sh                                        # writes .env (secrets)

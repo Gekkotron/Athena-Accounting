@@ -12,7 +12,7 @@ restores the original dataset.
 [Open the demo →](./demo)
 :::
 
-Athena ships in two flavours from the same codebase. Pick the one that
+Ledger ships in two flavours from the same codebase. Pick the one that
 matches how you want to use it — both stay local, neither talks to the
 cloud, and your data never leaves the machine you install it on.
 
@@ -76,7 +76,7 @@ to both paths unchanged.
   the compose network.
 - A modern browser.
 
-Athena does **not** need a domain name, TLS certificates, or a public
+Ledger does **not** need a domain name, TLS certificates, or a public
 IP. It runs on your LAN and stays there.
 
 ## Install
@@ -143,7 +143,7 @@ asks for a username and password.
   refused. This prevents someone on your LAN from beating you to your
   own instance.
 
-Pick a strong password and store it in a password manager. Athena has
+Pick a strong password and store it in a password manager. Ledger has
 no "forgot my password" email flow because it doesn't send email.
 
 ## Updating

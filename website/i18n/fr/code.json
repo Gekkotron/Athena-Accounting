@@ -108,11 +108,11 @@
     "description": "Closing CTA heading"
   },
   "home.closing.body": {
-    "message": "Athena tourne sur un Raspberry Pi, un mini-PC de rechange, ou votre portable. Aucun compte à créer, aucun forfait à mettre à niveau, aucun serveur qui puisse être éteint.",
+    "message": "Ledger tourne sur un Raspberry Pi, un mini-PC de rechange, ou votre portable. Aucun compte à créer, aucun forfait à mettre à niveau, aucun serveur qui puisse être éteint.",
     "description": "Closing CTA body"
   },
   "home.closing.cta1": {
-    "message": "Installer Athena",
+    "message": "Installer Ledger",
     "description": "Closing primary CTA"
   },
   "home.closing.cta2": {
@@ -136,7 +136,7 @@
     "description": "Eyebrow above the feature grid section title"
   },
   "feat.section.title": {
-    "message": "Tout ce qu'est Athena, sur une seule page.",
+    "message": "Tout ce qu'est Ledger, sur une seule page.",
     "description": "Feature grid section title"
   },
   "feat.imports.eyebrow": {

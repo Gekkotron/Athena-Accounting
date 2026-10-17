@@ -23,7 +23,7 @@ Chaque objectif comporte :
 
 - **Un nom** — libre, jusqu'à 128 caractères.
 - **Un montant cible** — strictement positif, dans la devise du compte
-  (Athena n'a pas encore de conversion — voir
+  (Ledger n'a pas encore de conversion — voir
   [Comptes et données](accounts-and-data)).
 - **Une date cible** — optionnelle. Elle alimente la projection
   « X € / mois pour tenir la date » et l'avertissement « en retard de
@@ -48,7 +48,7 @@ Deux points d'entrée :
   compacte *Objectifs* avec une puce `+ Nouvel objectif` qui ouvre la
   même modale, pré-sélectionnée sur ce compte.
 
-Athena rejette une cible non positive (erreur 400 affichée en ligne) et
+Ledger rejette une cible non positive (erreur 400 affichée en ligne) et
 un couple `(compte, nom)` en doublon (409 avec un message en français).
 L'unicité du nom est portée par compte — vous pouvez avoir *Vacances*
 sur le Livret A et *Vacances* sur le Compte courant sans conflit.
@@ -67,7 +67,7 @@ Ouvrez un objectif (cliquez sur une carte) et utilisez le formulaire
 L'événement se pose dans le ledger *de l'objectif*, pas dans celui du
 compte sous-jacent. Le solde réel du compte n'est pas touché.
 
-**Cible atteinte ?** La réponse d'Athena inclut un drapeau `justReached`
+**Cible atteinte ?** La réponse de Ledger inclut un drapeau `justReached`
 sur la transition qui franchit la cible depuis le dessous — l'app
 déclenche un toast de succès unique. Les objectifs ne se ferment pas
 automatiquement à l'atteinte ; vous les clôturez explicitement quand
@@ -85,7 +85,7 @@ Quand vous définissez une date cible :
 - **Date passée + toujours sous la cible** — la carte affiche
   `en retard de N jours`. La projection mensuelle disparaît ; poser une
   nouvelle date cible la ramène.
-- **Date passée + déjà atteint** — Athena considère l'objectif comme
+- **Date passée + déjà atteint** — Ledger considère l'objectif comme
   fait et masque les deux clauses. Vous n'avez plus qu'à le clore.
 - **Sans date cible** — les deux clauses sont masquées. C'est le bon
   choix pour une épargne ouverte (un fond d'urgence).
@@ -119,7 +119,7 @@ Au-delà de la page Objectifs dédiée :
 Un avertissement ambre apparaît sur l'en-tête de la section d'un compte
 quand la somme des objectifs non-clos dépasse le solde courant :
 `Vous avez réservé plus que votre solde disponible sur ce compte`.
-C'est purement indicatif — Athena est un ledger rétrospectif, et
+C'est purement indicatif — Ledger est un ledger rétrospectif, et
 l'intention précède souvent le mouvement bancaire.
 
 ## Backup

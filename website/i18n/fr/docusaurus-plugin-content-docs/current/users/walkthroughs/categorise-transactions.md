@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # Catégoriser les transactions
 
-Une transaction bien catégorisée alimente le tableau de bord, les budgets et les rapports. Athena propose trois voies : édition unitaire, tri assisté par lots, et règles automatiques qui prennent le relais pour la suite.
+Une transaction bien catégorisée alimente le tableau de bord, les budgets et les rapports. Ledger propose trois voies : édition unitaire, tri assisté par lots, et règles automatiques qui prennent le relais pour la suite.
 
 ## 1. Éditer une catégorie en ligne
 
@@ -15,7 +15,7 @@ Ouvrez **Transactions** dans la barre latérale. Chaque ligne expose un sélecte
 
 ## 2. Trier par lots depuis l'atelier « Tri »
 
-Pour un premier passage massif sur un import fraîchement chargé, ouvrez **Règles → Tri**. L'atelier vous présente les transactions non catégorisées regroupées par motif de libellé — assignez la catégorie une fois, tout le lot suit. À chaque assignation, Athena vous propose de **transformer le lot en règle** pour que les prochains libellés identiques soient triés tout seuls.
+Pour un premier passage massif sur un import fraîchement chargé, ouvrez **Règles → Tri**. L'atelier vous présente les transactions non catégorisées regroupées par motif de libellé — assignez la catégorie une fois, tout le lot suit. À chaque assignation, Ledger vous propose de **transformer le lot en règle** pour que les prochains libellés identiques soient triés tout seuls.
 
 ![Atelier de tri par motif](/img/walkthroughs/fr/categorise-02-tri.png)
 

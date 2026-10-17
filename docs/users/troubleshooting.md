@@ -7,7 +7,7 @@ sidebar_position: 9
 
 Common issues and how to work around them. Each subsection follows the
 same shape: what you see, why it happens, and how to fix it. If your
-problem isn't listed, open an issue with your Athena version, the
+problem isn't listed, open an issue with your Ledger version, the
 smallest example that reproduces it, and the relevant lines from
 `docker compose logs` (see [Gathering diagnostics](#gathering-diagnostics)).
 
@@ -60,7 +60,7 @@ migration error — typically `relation "…" already exists` or
 `column "…" does not exist`.
 
 **Cause.** The `postgres-data/` volume is left over from an earlier,
-incompatible schema (e.g. you upgraded Athena across a breaking
+incompatible schema (e.g. you upgraded Ledger across a breaking
 migration, or you seeded the database manually).
 
 **Fix.** For a fresh install, remove the stale volume:
@@ -99,7 +99,7 @@ characters or accented characters are mangled (`Ã©` instead of `é`).
 
 **Cause.** French and Belgian banks often produce OFX files encoded in
 `ISO-8859-1` (or `windows-1252`), while the OFX 1.x header declares
-`UTF-8` — or declares nothing at all. Athena reads UTF-8 by default and
+`UTF-8` — or declares nothing at all. Ledger reads UTF-8 by default and
 falls back to Latin-1 when it detects invalid UTF-8 sequences, but a
 file with mixed encoding can slip through.
 
@@ -119,7 +119,7 @@ force `windows-1252` decoding on every import from that source.
 in the amount field, or the whole file on a single line).
 
 **Cause.** Two common variants: the file uses `;` as a separator
-(French bank export) but Athena guessed `,`, or the file has a header
+(French bank export) but Ledger guessed `,`, or the file has a header
 row of prose above the actual column headers.
 
 **Fix.** In the wizard, change the separator explicitly (`;`, `,`,
@@ -127,7 +127,7 @@ row of prose above the actual column headers.
 mapping as a template on the account so the next import from the same
 bank auto-detects it. If the file is fundamentally malformed (mixed
 separators, unquoted commas inside memo fields), open it in a text
-editor and clean it up before importing — Athena will not silently
+editor and clean it up before importing — Ledger will not silently
 guess in that case.
 
 ## Balance mismatch
@@ -138,7 +138,7 @@ almost every mismatch.
 
 ### A transaction is missing
 
-**Symptom.** Athena's balance is lower (or higher) than the bank's by
+**Symptom.** Ledger's balance is lower (or higher) than the bank's by
 exactly one transaction's amount.
 
 **Cause.** A statement covered a partial period, and one transaction
@@ -156,7 +156,7 @@ line-by-line with the bank's statement PDF. Add the missing row via
 import and once from a PDF import (or once from each of two overlapping
 statements).
 
-**Cause.** Athena's deduplication compares date, amount and a
+**Cause.** Ledger's deduplication compares date, amount and a
 normalised memo. If the two sources produced slightly different memos
 (e.g. `CB CARREFOUR 12/03` vs `PAIEMENT CARTE CARREFOUR`), the
 fingerprint doesn't match and the second copy is kept.
@@ -173,7 +173,7 @@ both memos to the same canonical form before dedup runs.
 present ever since a specific date.
 
 **Cause.** A **checkpoint** — the "as of DD/MM/YYYY, the bank says the
-balance is X" anchor Athena uses as its source of truth — was entered
+balance is X" anchor Ledger uses as its source of truth — was entered
 with the wrong value, or the transactions before it were edited after
 the checkpoint was set. Every displayed balance is `checkpoint + sum
 of transactions after the checkpoint`, so a wrong checkpoint offsets
@@ -182,7 +182,7 @@ everything downstream.
 **Fix.** Open **Settings → Account → Checkpoints**, delete the drifted
 checkpoint, and re-add it with the value from a bank statement whose
 date you trust. If several checkpoints are wrong, keep only the oldest
-correct one — Athena recomputes from there.
+correct one — Ledger recomputes from there.
 
 ## Backup and restore errors
 
@@ -191,8 +191,8 @@ correct one — Athena recomputes from there.
 **Symptom.** The restore fails immediately with
 `unsupported backup version: v5 (this build supports up to v4)`.
 
-**Cause.** The export was produced by a newer Athena than the one you
-are restoring into. Athena refuses to open forward-versioned files —
+**Cause.** The export was produced by a newer Ledger than the one you
+are restoring into. Ledger refuses to open forward-versioned files —
 downgrading a schema is not safe, so this is by design.
 
 **Fix.** Upgrade the target install (`git pull && docker compose up -d
@@ -210,7 +210,7 @@ user's rows. A second client (another tab, or an active import running
 in the background) is holding a row-level lock and the restore times
 out waiting for it.
 
-**Fix.** Close every other Athena tab and cancel any running import,
+**Fix.** Close every other Ledger tab and cancel any running import,
 then retry. The restore is idempotent — the failed run left no partial
 state behind, thanks to the transaction rollback.
 
@@ -355,7 +355,7 @@ detected series exist.
 
 ### A monthly bill is missing from Detected
 
-**Symptom.** You pay the same subscription every month, but Athena
+**Symptom.** You pay the same subscription every month, but Ledger
 never surfaced it under **Recurring → Detected**.
 
 **Cause.** The detector needs at least three occurrences with a
@@ -389,7 +389,7 @@ duplicate drops off.
 ### Tools don't appear in the client
 
 **Symptom.** You wired the `athena` MCP server into your client's
-config, restarted the client, and the six Athena tools
+config, restarted the client, and the six Ledger tools
 (`search_transactions`, `create_transaction`, …) still don't show up.
 
 **Cause.** Either the `command`/`args` path in the client config
@@ -409,10 +409,10 @@ clients.
 `unauthorized` or `invalid token`.
 
 **Cause.** The `ATHENA_MCP_TOKEN` in the client config is empty,
-truncated on paste, or was rotated in Athena and not updated in the
+truncated on paste, or was rotated in Ledger and not updated in the
 client.
 
-**Fix.** In Athena, open **Settings → MCP**, revoke and regenerate
+**Fix.** In Ledger, open **Settings → MCP**, revoke and regenerate
 the token, copy it whole (they're long — mind the terminal wrap),
 paste into the client config, restart the client. Also check the
 `ATHENA_MCP_USER` matches your login username exactly (case matters).
@@ -457,7 +457,7 @@ everyone out on purpose.
 **Symptom.** On a brand-new install, the login page rejects
 everything you try, and there's no obvious sign-up link.
 
-**Cause.** Athena is single-user per install and does not expose a
+**Cause.** Ledger is single-user per install and does not expose a
 public sign-up. The first user must be seeded — either via the
 desktop app's onboarding flow, or, on Docker, via the backend's
 first-run command.
@@ -497,9 +497,9 @@ the Dock (macOS) or the process starts and immediately exits
 file, or the updater couldn't finish overwriting one of the app's
 resources.
 
-**Fix.** Force-quit every running instance (macOS: `⌘⌥⎋` → Athena
+**Fix.** Force-quit every running instance (macOS: `⌘⌥⎋` → Ledger
 Accounting → Force Quit; Windows: Task Manager → End task on every
-Athena process). Relaunch. If the crash repeats, follow
+Ledger process). Relaunch. If the crash repeats, follow
 [`athena.db` is corrupted](#athenadb-is-corrupted-desktop-app) — the
 file may have been left mid-write by the update.
 

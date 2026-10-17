@@ -7,8 +7,8 @@ sidebar_position: 5
 
 Attachez un reçu, une facture ou un contrat à une transaction pour que la
 trace papier vive à côté de la ligne qu'elle explique. Les pièces jointes
-sont stockées localement sur votre instance Athena — la philosophie
-LAN-only, sans cloud, d'Athena s'applique à elles exactement comme au
+sont stockées localement sur votre instance Ledger — la philosophie
+LAN-only, sans cloud, de Ledger s'applique à elles exactement comme au
 reste de vos données.
 
 ## Ce que vous pouvez attacher
@@ -39,14 +39,14 @@ indique le nombre de pièces jointes de la ligne, quand il y en a.
 
 ## Où les fichiers sont stockés
 
-Les pièces jointes vivent sur le disque de votre machine Athena, sous
+Les pièces jointes vivent sur le disque de votre machine Ledger, sous
 `<DATA_DIR>/attachments/<user_id>/<attachment_id>.bin`. Seules les
 métadonnées (nom du fichier d'origine, type MIME, taille, date de
 création) sont écrites en base — les octets ne sont jamais inlinés dans
 la ligne Postgres/PGlite, donc les sauvegardes et les exports de base
 de l'application desktop restent légers.
 
-`<DATA_DIR>` dépend de la façon dont vous exécutez Athena — voir le
+`<DATA_DIR>` dépend de la façon dont vous exécutez Ledger — voir le
 [guide d'installation](./desktop-install.md) et la [référence de
 configuration](../reference/configuration.md) pour les règles exactes :
 
@@ -55,13 +55,13 @@ configuration](../reference/configuration.md) pour les règles exactes :
   ce volume dans votre routine de sauvegarde côté hôte pour préserver
   les pièces jointes.
 - **Application desktop** : le répertoire de données utilisateur du
-  système (macOS `~/Library/Application Support/Athena/`, Windows
-  `%APPDATA%\Athena\`, Linux `~/.local/share/Athena/`), avec le
+  système (macOS `~/Library/Application Support/Ledger/`, Windows
+  `%APPDATA%\Ledger\`, Linux `~/.local/share/Ledger/`), avec le
   sous-dossier `attachments/` à côté du fichier de base PGlite.
 - **Sans conteneur / `npm start`** : le répertoire de travail courant
   sauf si `DATA_DIR` est défini explicitement.
 
-Seul Athena est censé écrire dans `attachments/` — n'y ajoutez pas, n'y
+Seul Ledger est censé écrire dans `attachments/` — n'y ajoutez pas, n'y
 renommez pas et n'y supprimez pas de fichiers à la main. La base et le
 disque se désynchronisent silencieusement sinon.
 
@@ -93,16 +93,16 @@ de ne re-téléverser que quand quelque chose a réellement changé.
   configurée (dossier, WebDAV ou FTP), chaque exécution nocturne
   téléverse toujours un nouveau dump JSON. L'archive des pièces
   jointes n'est téléversée **que si votre bibliothèque a changé
-  depuis le dernier envoi réussi** — Athena en calcule une empreinte
+  depuis le dernier envoi réussi** — Ledger en calcule une empreinte
   (nombre de lignes + horodatage le plus récent) et la compare à celle
   stockée sur la destination. Inchangée → sauté, ce qui économise
   bande passante et espace distant les jours calmes. La rétention
   keep-last s'applique indépendamment à chaque famille de fichiers.
 
-Si vous sauvegardez la machine entière en dehors de la routine Athena
+Si vous sauvegardez la machine entière en dehors de la routine Ledger
 (rsync, Time Machine, borg…), inclure `<DATA_DIR>/attachments/` dans
 cette sauvegarde suffit — vous n'avez pas besoin d'exécuter aussi
-l'export d'archive Athena.
+l'export d'archive Ledger.
 
 ## Supprimer
 
@@ -120,7 +120,7 @@ nécessaire.
   ne les exportiez explicitement.
 - Les fichiers stockés **ne sont pas chiffrés au repos** par défaut —
   ils sont sur le disque avec les permissions que votre OS leur a
-  données. Pour une barrière plus forte, hébergez Athena sur un volume
+  données. Pour une barrière plus forte, hébergez Ledger sur un volume
   chiffré (chiffrement de disque complet) ou enveloppez `<DATA_DIR>`
   dans un conteneur chiffré (LUKS, VeraCrypt, FileVault).
 - Les archives de sauvegarde manuelles et planifiées **sont**, elles,
@@ -136,4 +136,4 @@ nécessaire.
   d'ensemble des sauvegardes, dont le partage de passphrase entre le
   dump JSON et l'archive des pièces jointes.
 - [Sécurité et confidentialité](./security-and-privacy.md) — le modèle
-  de sécurité d'Athena, dont le stockage local uniquement.
+  de sécurité de Ledger, dont le stockage local uniquement.

@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Categorization
 
-Athena categorizes transactions two ways: **rules** that run on every
+Ledger categorizes transactions two ways: **rules** that run on every
 import, and **manual assignment** via the Sort tab. Every
 transaction carries a **source** tag — `auto`, `default`, or `manual` —
 that decides who owns its category the next time rules are re-applied.
@@ -16,7 +16,7 @@ totals, and what "regenerate categories" actually does.
 ## The rule engine
 
 Rules are keyword-to-category assignments configured in **Rules**. On
-every import Athena walks your enabled rules in priority order (highest
+every import Ledger walks your enabled rules in priority order (highest
 first, ties broken by rule id) and stamps the first matching rule's
 category onto the transaction. Unmatched transactions fall into the
 built-in `Divers` (default) category.
@@ -24,7 +24,7 @@ built-in `Divers` (default) category.
 Matching is:
 
 - **Accent- and case-insensitive.** `carrefour`, `CARREFOUR`, and
-  `Carrefour` all match — Athena normalises both the keyword and the
+  `Carrefour` all match — Ledger normalises both the keyword and the
   transaction label before comparing.
 - **Whole word by default.** `paye` won't match `payweb`. Switch a
   rule to **Substring** for a looser match, or to **Regex** for full
@@ -42,7 +42,7 @@ to the same category.
 ## The Sort tab
 
 The Sort tab is where you deal with everything the rules didn't catch.
-Athena groups uncategorised transactions (and transactions that fell
+Ledger groups uncategorised transactions (and transactions that fell
 into `Divers`) by **normalised label** — so `CARREFOUR CITY 12/03` and
 `CARREFOUR MARKET 04/06` land in the same bucket — and sorts the
 buckets by frequency, so the biggest wins are always at the top.
@@ -61,7 +61,7 @@ a time.
 
 ### Turn an assignment into a rule
 
-The **Create rules** checkbox (on by default) tells Athena to also
+The **Create rules** checkbox (on by default) tells Ledger to also
 create a rule for the group's normalised label as it assigns. That
 way, next month's `CARREFOUR CITY 04/07` gets picked up automatically
 at import time — you only pay the sorting cost once per merchant.
@@ -154,7 +154,7 @@ rule if it still matches, at the current percentages.
 
 ## How sources interact
 
-Every transaction stores a **source** that tells Athena where its
+Every transaction stores a **source** that tells Ledger where its
 category came from:
 
 - **`auto`** — assigned by the rule engine at import time.

@@ -81,7 +81,7 @@
   "ariaLabel": "Sous-navigation {{title}}"
  },
  "offline": {
-  "message": "Vous êtes hors ligne — le serveur Athena est peut-être injoignable."
+  "message": "Vous êtes hors ligne — le serveur Ledger est peut-être injoignable."
  },
  "lock": {
   "screenTitle": "Écran verrouillé",

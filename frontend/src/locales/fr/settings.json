@@ -90,7 +90,7 @@
       },
       "manual": {
         "summary": "La redirection n'aboutit pas ? Finaliser manuellement",
-        "help": "Si la page de retour est inaccessible (URL de redirection différente de l'adresse d'Athena), copiez l'URL complète affichée dans la barre d'adresse après l'autorisation — le code y figure — et collez-la ici.",
+        "help": "Si la page de retour est inaccessible (URL de redirection différente de l'adresse de Ledger), copiez l'URL complète affichée dans la barre d'adresse après l'autorisation — le code y figure — et collez-la ici.",
         "inputLabel": "URL de retour ou code d'autorisation",
         "placeholder": "https://…/bank-sync/callback?code=…  ou le code seul",
         "button": "Valider",
@@ -111,7 +111,7 @@
         "disconnectDialogTitle": "Déconnecter {{name}} ?",
         "disconnectDialogDescription": "Les comptes associés ne seront plus synchronisés. Les transactions déjà importées sont conservées.",
         "unmapped": "— Ignorer —",
-        "mappingLabel": "Compte Athena pour",
+        "mappingLabel": "Compte Ledger pour",
         "syncResult": "{{imported}} transaction(s) importée(s), {{deduped}} doublon(s) ignoré(s).",
         "duplicatesSummary": "Voir les doublons ignorés ({{count}})",
         "duplicatesMore": "… et {{count}} autre(s)"
@@ -120,7 +120,7 @@
         "title": "Connexion bancaire",
         "exchanging": "Finalisation de la connexion avec votre banque…",
         "mappingTitle": "Associer les comptes {{name}}",
-        "mappingHelp": "Associez chaque compte bancaire à un compte Athena. Les comptes marqués « Ignorer » ne seront pas synchronisés — vous pourrez changer cela dans Données → Synchronisation bancaire.",
+        "mappingHelp": "Associez chaque compte bancaire à un compte Ledger. Les comptes marqués « Ignorer » ne seront pas synchronisés — vous pourrez changer cela dans Données → Synchronisation bancaire.",
         "save": "Enregistrer",
         "skip": "Plus tard",
         "error": "La connexion a échoué. Relancez la connexion depuis Données → Synchronisation bancaire.",

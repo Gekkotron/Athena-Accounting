@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Import a bank statement
 
-Athena accepts every format your bank is likely to emit — **OFX / QFX**, French **CSV**, **Excel** (`.xlsx`), **CAMT.053 / CAMT.052** (ISO 20022 SEPA XML), **MT940** (SWIFT), **QIF** (Quicken / legacy software), **BAI2** (US cash management), and **PDF** statements. This guide walks you from dropping the file to verifying the balance.
+Ledger accepts every format your bank is likely to emit — **OFX / QFX**, French **CSV**, **Excel** (`.xlsx`), **CAMT.053 / CAMT.052** (ISO 20022 SEPA XML), **MT940** (SWIFT), **QIF** (Quicken / legacy software), **BAI2** (US cash management), and **PDF** statements. This guide walks you from dropping the file to verifying the balance.
 
 ## 1. Open the Imports page
 
@@ -25,7 +25,7 @@ After the import, the **Duplicates** tab lists candidate transactions: two rows 
 
 ## 4. Verify the control balance
 
-Head to **Accounts** in the sidebar. Every account displays the balance Athena computed from the transactions on hand. Compare it to the closing balance printed at the bottom of your PDF statement — if it differs, a row was skipped during import, or a duplicate is still waiting to be handled.
+Head to **Accounts** in the sidebar. Every account displays the balance Ledger computed from the transactions on hand. Compare it to the closing balance printed at the bottom of your PDF statement — if it differs, a row was skipped during import, or a duplicate is still waiting to be handled.
 
 ![Balance check on the Accounts page](/img/walkthroughs/en/import-03-comptes-solde.png)
 
@@ -35,8 +35,8 @@ Once the balance is verified, turn it into a **checkpoint**. Click ▸ **Checkpo
 
 Three reasons to do this now:
 
-- **Integrity safeguard.** Every future import is silently compared to all past checkpoints. If a recomputed balance drifts from the reference by even one cent, Athena surfaces the delta — this is the only reliable way to catch a transaction lost during an import, or a duplicate merged in error months later.
-- **History anchor.** Your accounts don't need to be "clean from day one". Anchor today's balance, import only the last few months, and Athena computes everything after that from this anchor.
+- **Integrity safeguard.** Every future import is silently compared to all past checkpoints. If a recomputed balance drifts from the reference by even one cent, Ledger surfaces the delta — this is the only reliable way to catch a transaction lost during an import, or a duplicate merged in error months later.
+- **History anchor.** Your accounts don't need to be "clean from day one". Anchor today's balance, import only the last few months, and Ledger computes everything after that from this anchor.
 - **Paper trail.** Every checkpoint carries a date and a free-form note — the most recent entries open at the top of the drawer, grouped by year.
 
 ![Checkpoints drawer on the account card](/img/walkthroughs/en/import-04-checkpoints.png)

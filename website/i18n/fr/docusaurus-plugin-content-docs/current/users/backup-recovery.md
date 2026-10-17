@@ -5,7 +5,7 @@ sidebar_position: 8
 
 # Sauvegarde et restauration
 
-Athena garde toutes vos données en local — sur votre serveur familial
+Ledger garde toutes vos données en local — sur votre serveur familial
 (Docker) ou dans le fichier PGlite de l'application bureau. Sauvegarder,
 c'est simplement produire un fichier JSON portable que vous rangez où
 bon vous semble ; restaurer, c'est le renvoyer dans une installation
@@ -32,7 +32,7 @@ plus rien à récupérer.
   - macOS : `~/Library/Application Support/Athena Ledger/`
   - Linux : `~/.local/share/Athena Ledger/`
   - Windows : `%APPDATA%\Athena Ledger\`
-  (Athena crée le dossier au premier lancement.)
+  (Ledger crée le dossier au premier lancement.)
 - **Serveur familial (Docker).** Le volume nommé `athena_pgdata` est
   monté sur `/var/lib/postgresql/data` dans le conteneur Postgres.
   Sauvegarder le volume brut est possible, mais l'export JSON
@@ -44,7 +44,7 @@ plus rien à récupérer.
 
 1. Ouvrez **Réglages → Données → Sauvegarde**.
 2. Cliquez sur **Exporter les données**, saisissez une phrase secrète
-   quand elle est demandée. Athena télécharge un fichier
+   quand elle est demandée. Ledger télécharge un fichier
    `athena-backup-YYYY-MM-DD-HHMMSS.enc.json`.
 3. Gardez cette phrase secrète en lieu sûr — c'est le seul moyen de
    rouvrir le fichier plus tard.
@@ -61,7 +61,7 @@ en clair renvoie désormais `410 Gone`.
 
 ## Sauvegardes distantes (planifiées)
 
-Athena peut pousser une sauvegarde chiffrée vers une destination distante **automatiquement, une fois par nuit**, depuis **Réglages → Données → Sauvegarde**, carte *Sauvegarde distante*. Chaque fichier poussé est la même enveloppe `.enc.json` toujours chiffrée qu'un export manuel — la phrase secrète configurée sur la carte scelle chaque dump, et il n'existe **aucune récupération** en cas de perte.
+Ledger peut pousser une sauvegarde chiffrée vers une destination distante **automatiquement, une fois par nuit**, depuis **Réglages → Données → Sauvegarde**, carte *Sauvegarde distante*. Chaque fichier poussé est la même enveloppe `.enc.json` toujours chiffrée qu'un export manuel — la phrase secrète configurée sur la carte scelle chaque dump, et il n'existe **aucune récupération** en cas de perte.
 
 Les fichiers sont nommés `athena-backup-AAAA-MM-JJ-HHMMSS.enc.json`. La rétention garde les N fichiers les plus récents (*Sauvegardes conservées*, 30 par défaut) ; le nettoyage ne touche que les fichiers correspondant exactement à ce motif de nom — tout autre fichier présent dans le même dossier n'est jamais supprimé.
 
@@ -74,7 +74,7 @@ Fonctionne avec n'importe quel serveur WebDAV. Emplacements courants :
 - **Synology** — installez le paquet *WebDAV Server* ; le partage est exposé sur le port 5005 (http) ou 5006 (https).
 - **Nextcloud** — utilisez le point d'accès DAV des fichiers : `https://votre-nextcloud/remote.php/dav/files/UTILISATEUR/`.
 
-Le *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
+Le *Sous-dossier* optionnel range les fichiers de Ledger dans leur propre répertoire (créé automatiquement au premier envoi). Avec une URL en `http` simple, le **mot de passe** WebDAV circule en clair sur votre réseau local — acceptable sur un réseau domestique de confiance, mais bon à savoir ; le **contenu** des sauvegardes est de toute façon toujours chiffré.
 
 La **Freebox n'a pas de serveur WebDAV** (son disque ne parle que
 FTP/SMB/AFP — WebDAV est une [demande ouverte de longue date](https://dev.freebox.fr/bugs/task/37418)).
@@ -89,7 +89,7 @@ n'importe quel serveur FTP du réseau local :
 - **Freebox** — activez le FTP dans Freebox OS (Paramètres de la Freebox →
   Mode avancé → **FTP**) et définissez-y le mot de passe. Serveur :
   `mafreebox.freebox.fr`, port `21`, utilisateur `freebox`. Le
-  *Sous-dossier* optionnel range les fichiers d'Athena dans leur propre
+  *Sous-dossier* optionnel range les fichiers de Ledger dans leur propre
   répertoire (créé automatiquement au premier envoi).
 
 Le FTP envoie le **mot de passe** en clair sur votre réseau local (pas de
@@ -101,7 +101,7 @@ laisse jamais une sauvegarde tronquée.
 
 ### Destination dossier
 
-Un chemin absolu sur la machine qui exécute le backend : un montage SMB/NFS, un disque externe, un dossier synchronisé. Le dossier doit déjà exister — Athena refuse volontairement de le créer, pour qu'un montage réseau absent échoue bruyamment au lieu d'écrire en silence dans un dossier local fantôme. Sous Docker, montez la cible dans le conteneur backend et pointez le chemin vers le montage.
+Un chemin absolu sur la machine qui exécute le backend : un montage SMB/NFS, un disque externe, un dossier synchronisé. Le dossier doit déjà exister — Ledger refuse volontairement de le créer, pour qu'un montage réseau absent échoue bruyamment au lieu d'écrire en silence dans un dossier local fantôme. Sous Docker, montez la cible dans le conteneur backend et pointez le chemin vers le montage.
 
 **Exemple Freebox** — activez *Partages Windows* dans Freebox OS (Paramètres → Mode avancé), montez le partage sur l'hôte (le nom du partage est en général `Disque dur` ; `smbclient -L mafreebox.freebox.fr -N` le liste), p. ex. dans `/etc/fstab` :
 
@@ -111,7 +111,7 @@ Un chemin absolu sur la machine qui exécute le backend : un montage SMB/NFS, un
 
 puis bind-montez un sous-dossier dans le conteneur backend (`/mnt/freebox/athena-backups:/backups`) et utilisez `/backups` comme chemin de dossier.
 
-Envie d'une copie hors site sans confier d'identifiants cloud à Athena ? Pointez la destination dossier vers un répertoire que `rclone`, Syncthing ou l'outillage cloud de votre NAS réplique.
+Envie d'une copie hors site sans confier d'identifiants cloud à Ledger ? Pointez la destination dossier vers un répertoire que `rclone`, Syncthing ou l'outillage cloud de votre NAS réplique.
 
 ### Horaire, rétention et statut
 
@@ -149,7 +149,7 @@ Préférez les sauvegardes distantes intégrées ci-dessus. Pour garder la main 
 1. **Sauvegardez d'abord.** Une restauration écrase toutes les données
    de l'utilisateur courant. Faites un export du présent avant.
 2. Ouvrez **Réglages → Données → Sauvegarde**, section *Restaurer*.
-3. Sélectionnez votre fichier `.json`. Athena :
+3. Sélectionnez votre fichier `.json`. Ledger :
    - vérifie que la version du format est connue (v1 à v4 aujourd'hui) ;
    - supprime les lignes de l'utilisateur courant (dans une
      transaction) ;
@@ -166,7 +166,7 @@ migrer d'un serveur Docker vers l'application bureau (ou l'inverse).
 1. Fermez l'application.
 2. Renommez `$DATA_DIR/athena.db` en `athena.db.corrupt` (ne le
    supprimez pas — au cas où).
-3. Relancez l'application : Athena crée une base vide et affiche
+3. Relancez l'application : Ledger crée une base vide et affiche
    l'onboarding.
 4. Passez par **Restaurer** avec votre dernier export.
 
@@ -187,7 +187,7 @@ grand-public.
   écrase **uniquement** les lignes de l'utilisateur connecté ; les
   autres membres du foyer ne sont pas touchés. Vérifiez que vous êtes
   bien connecté au bon compte avant de restaurer.
-- **Versions de format.** Athena refuse les fichiers dont
+- **Versions de format.** Ledger refuse les fichiers dont
   `version` est supérieur à ce qu'il connaît. Rétrogradation ⇒
   échec immédiat, pas de restauration partielle.
 

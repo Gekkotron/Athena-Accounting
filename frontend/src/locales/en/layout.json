@@ -81,7 +81,7 @@
   "ariaLabel": "Sub-navigation {{title}}"
  },
  "offline": {
-  "message": "You are offline — the Athena server may be unreachable."
+  "message": "You are offline — the Ledger server may be unreachable."
  },
  "lock": {
   "screenTitle": "Screen locked",

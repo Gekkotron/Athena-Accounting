@@ -15,7 +15,7 @@
   "steps": {
     "header": {
       "title": "Select the header",
-      "tooltip": "Draw around the bank's logo / name at the top of the page. This zone acts as a fingerprint: next time you import a statement from the same bank, Athena will recognize the template automatically."
+      "tooltip": "Draw around the bank's logo / name at the top of the page. This zone acts as a fingerprint: next time you import a statement from the same bank, Ledger will recognize the template automatically."
     },
     "table": {
       "title": "Select the transactions table",
@@ -23,7 +23,7 @@
     },
     "date": {
       "title": "Select the Date column",
-      "tooltip": "Draw a thin vertical band that covers only the date column, inside the table you just outlined. The height doesn't matter — Athena only uses the left/right bounds."
+      "tooltip": "Draw a thin vertical band that covers only the date column, inside the table you just outlined. The height doesn't matter — Ledger only uses the left/right bounds."
     },
     "description": {
       "title": "Select the Description column",

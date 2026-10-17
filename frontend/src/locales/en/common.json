@@ -17,7 +17,7 @@
     "neutral": "Neutral"
   },
   "errors": {
-    "demoUnavailable": "This feature is not available in the demo. Install Athena to use it."
+    "demoUnavailable": "This feature is not available in the demo. Install Ledger to use it."
   },
   "fx": {
     "convertedFrom_one": "Converted from {{count}} currency · Adjust",

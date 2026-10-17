@@ -112,7 +112,7 @@ export function DemoUnavailableState({
       </div>
       <div className="text-sm text-ink-400 max-w-md">
         {hint ??
-          "Cette section a besoin du back-end Athena pour fonctionner. Installez Athena localement pour l'utiliser."}
+          "Cette section a besoin du back-end Ledger pour fonctionner. Installez Ledger localement pour l'utiliser."}
       </div>
       <a
         href="https://gekkotron.github.io/Athena-Ledger/docs/users/getting-started"

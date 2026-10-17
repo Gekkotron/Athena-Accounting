@@ -54,7 +54,7 @@ account.
 Each account is single-currency by design — the running-balance math
 in `opening_balance + SUM(amount)` only holds when every row is
 denominated the same way. If you hold the same physical account in
-two currencies, model it as two Athena accounts.
+two currencies, model it as two Ledger accounts.
 
 Per-account surfaces (cards, the balance chart, individual balances)
 always display in the account's own currency. If your accounts span
@@ -69,7 +69,7 @@ bottom of *Settings*:
    rate you've entered. Add a row per `(from, to, effective from)`
    triplet; the Dashboard uses the most recent effective-from rate on
    or before each transaction's date. Rates are entered manually
-   (Athena does not fetch live rates).
+   (Ledger does not fetch live rates).
 
 Missing pairs surface as a hint below the picker (*"EUR detected on
 an account — no rate to USD yet"*) so you know which rate to add
@@ -127,7 +127,7 @@ The merge modal only offers same-currency destinations. It moves
 every transaction on the source into the target, adds the source's
 opening balance to the target's, repoints checkpoints and filename
 patterns, and deletes the source. The action is irreversible;
-Athena warns before running it.
+Ledger warns before running it.
 
 Transfer links between the source and other accounts are broken by
 the merge — re-run categorization if you rely on transfer detection.
@@ -152,9 +152,9 @@ four sub-tabs:
 | Sub-tab | What it does |
 |---------|--------------|
 | **Imports** | Drop OFX / CSV / PDF files and watch them land. Multi-file drops, per-file summaries, and the audit log for previously imported files live here. See [Importing](importing.md). |
-| **Duplicates** | Athena silently dedupes on import, but if a duplicate slips through (same day, same amount, different label), the Duplicates panel shows near-matches side by side and lets you merge or dismiss. |
+| **Duplicates** | Ledger silently dedupes on import, but if a duplicate slips through (same day, same amount, different label), the Duplicates panel shows near-matches side by side and lets you merge or dismiss. |
 | **PDF templates** | The templates painted by the wizard on first import. Rename, inspect, or delete them here. Deleting a template forces the next matching PDF back through the wizard. |
-| **Backup** | Export everything (accounts, categories, rules, transactions, checkpoints, file-import audit) as one JSON envelope, or restore from one. Restore is destructive — Athena confirms before wiping. See [Backup and recovery](backup-recovery.md). |
+| **Backup** | Export everything (accounts, categories, rules, transactions, checkpoints, file-import audit) as one JSON envelope, or restore from one. Restore is destructive — Ledger confirms before wiping. See [Backup and recovery](backup-recovery.md). |
 
 The Data tab is intentionally the only place that touches files. If
 you're looking for a control that reads or writes something external,

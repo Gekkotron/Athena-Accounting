@@ -5,7 +5,7 @@ sidebar_position: 5
 
 # Dashboard
 
-The Dashboard is Athena's single-page read on your money. It answers three questions, top to bottom: "How much do I have available?", "How is it evolving?", and "Where is the money going?". Every card responds to the two pickers in the page header — a **Range picker** (period) and an **Account scope picker** — so you can narrow the whole view to a joint account, a quarter, or a single month without leaving the page.
+The Dashboard is Ledger's single-page read on your money. It answers three questions, top to bottom: "How much do I have available?", "How is it evolving?", and "Where is the money going?". Every card responds to the two pickers in the page header — a **Range picker** (period) and an **Account scope picker** — so you can narrow the whole view to a joint account, a quarter, or a single month without leaving the page.
 
 ## Net Balance, monthly averages, and Insights
 

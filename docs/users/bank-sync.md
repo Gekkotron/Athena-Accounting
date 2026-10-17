@@ -8,19 +8,19 @@ sidebar_position: 4
 Bank sync pulls transactions straight from your bank so you don't have
 to download statements. It is **optional** — [file import](./importing.md)
 (OFX/CSV/PDF) remains the baseline that always works — and it is built so
-that **you** own every credential involved: Athena ships no API key and
+that **you** own every credential involved: Ledger ships no API key and
 runs no cloud service.
 
 ## How it works
 
 Under European PSD2 rules, banks only expose their account APIs to
-licensed providers. Athena therefore connects through
+licensed providers. Ledger therefore connects through
 [Enable Banking](https://enablebanking.com), a licensed European AISP
 whose free *restricted production* mode lets you access **your own bank
 accounts** with your own application credentials. Enable Banking is a
 pass-through: it does not retain your banking data — transactions
-transit their API and land in your Athena database, on your machine.
-Athena's LAN-only, no-cloud stance is unchanged.
+transit their API and land in your Ledger database, on your machine.
+Ledger's LAN-only, no-cloud stance is unchanged.
 
 Access is strictly **read-only** (account information only, no payment
 initiation), and the consent you grant your bank expires after 90–180
@@ -33,12 +33,12 @@ days — reconnecting takes one mobile confirmation.
    the restricted mode allows — accounts you have not linked are never
    returned by the API).
 3. Create an **application**. When asked for a redirect URL, use your
-   Athena address followed by `/bank-sync/callback` — the exact value is
+   Ledger address followed by `/bank-sync/callback` — the exact value is
    shown in *Données → Synchronisation bancaire*. Download the RS256
    private key the Control Panel generates for the application.
-4. In Athena, open *Données → Synchronisation bancaire* and paste the
+4. In Ledger, open *Données → Synchronisation bancaire* and paste the
    **application ID** and the **private key** (the full PEM file,
-   including the `BEGIN`/`END` lines). Athena validates the pair against
+   including the `BEGIN`/`END` lines). Ledger validates the pair against
    Enable Banking before saving; the key is encrypted at rest and never
    shown, returned, or logged again.
 
@@ -50,13 +50,13 @@ holding it can read the accounts you linked.
 Pick your bank in the list and click **Connecter**. You are redirected
 to your bank's own consent page, confirm there (for most French banks
 this is one mobile-app validation — CIC/Crédit Mutuel's *Confirmation
-Mobile*, for example), and land back in Athena. Then map each bank
-account to an Athena account — accounts marked *Ignorer* are not
+Mobile*, for example), and land back in Ledger. Then map each bank
+account to a Ledger account — accounts marked *Ignorer* are not
 synced. You can change the mapping at any time from Données → Synchronisation bancaire.
 
 ## Syncing
 
-Once connected, Athena syncs automatically **once a day at the hour you
+Once connected, Ledger syncs automatically **once a day at the hour you
 choose** in *Données → Synchronisation bancaire* (default 02:00; disable
 entirely with `BANK_SYNC_AUTO=0` — see the
 [configuration reference](../reference/configuration.md)). If the server
@@ -95,10 +95,10 @@ connection card shows where you stand:
 ## Privacy
 
 - Your transactions transit Enable Banking's API but are not stored
-  there; they live only in your Athena database.
+  there; they live only in your Ledger database.
 - Your application private key is encrypted at rest with a key derived
   from your server's `SESSION_SECRET`; no endpoint ever returns it.
-- Revoking access is always possible: disconnect in Athena, revoke the
+- Revoking access is always possible: disconnect in Ledger, revoke the
   consent at your bank, or delete the application at enablebanking.com.
 
 ## An honest caveat
@@ -106,7 +106,7 @@ connection card shows where you stand:
 Enable Banking's restricted production mode is a free evaluation tier,
 not a contractual product — its terms could change someday (a
 predecessor service, GoCardless Bank Account Data, closed its free tier
-in 2025). That is exactly why file import stays Athena's first-class
+in 2025). That is exactly why file import stays Ledger's first-class
 path and bank sync is an optional layer on top.
 
 ## Troubleshooting
@@ -122,20 +122,20 @@ path and bank sync is an optional layer on top.
   [coverage](https://enablebanking.com/coverage/).
 - **"URL uses unsupported scheme" when whitelisting the redirect URL** —
   the Enable Banking Control Panel refuses plain `http://` addresses.
-  Whitelist the `https://` twin of your Athena address (e.g.
+  Whitelist the `https://` twin of your Ledger address (e.g.
   `https://192.168.1.20:8080/bank-sync/callback`) — the panel never
   contacts it, so it doesn't need to exist. After approving the consent,
   the browser fails to load that `https://` page; the single-use code is
   still in the address bar. Change `https` back to `http` there and press
-  Enter (you land on Athena's mapping page), or paste the full URL into
+  Enter (you land on Ledger's mapping page), or paste the full URL into
   *"Finaliser manuellement"*. Alternatively `http://localhost:<port>/bank-sync/callback`
   may be accepted — usable directly on the server or through an SSH
   tunnel.
-- **The redirect never reaches Athena** (the whitelisted URL doesn't
-  match the address you browse Athena at, or the Control Panel refused
+- **The redirect never reaches Ledger** (the whitelisted URL doesn't
+  match the address you browse Ledger at, or the Control Panel refused
   your LAN URL) — the authorization code is still in the final page's
   address bar. Copy that full URL and paste it into *Données →
-  Synchronisation bancaire → "Finaliser manuellement"*; Athena extracts
+  Synchronisation bancaire → "Finaliser manuellement"*; Ledger extracts
   the code and creates the connection. Remember the redirect URL only
   needs to be reachable by **your browser**, never by Enable Banking —
   a LAN address like `http://192.168.1.20:8080/bank-sync/callback` is
@@ -158,5 +158,5 @@ path and bank sync is an optional layer on top.
   PDF wizard.
 - [Configuration reference](../reference/configuration.md) —
   `BANK_SYNC_AUTO` and every other environment variable.
-- [Security and privacy](./security-and-privacy.md) — Athena's overall
+- [Security and privacy](./security-and-privacy.md) — Ledger's overall
   security model.

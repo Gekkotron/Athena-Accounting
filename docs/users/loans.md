@@ -35,7 +35,7 @@ Then the **timeline**:
   - *Total deferral*: you pay nothing but insurance; the interest is added
     to the capital owed.
   - Each period can have its own rate (variable rate, renegotiation).
-- **Last period** — Athena computes what you don't know:
+- **Last period** — Ledger computes what you don't know:
   - *I know the end date* → it computes the monthly payment;
   - *I know the monthly amount* → it computes the end date.
 - **Early repayments** — a lump sum on a month, which either **lowers the

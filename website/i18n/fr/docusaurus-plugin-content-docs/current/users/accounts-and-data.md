@@ -45,7 +45,7 @@ ci-dessous.
 Chaque compte est mono-devise par construction — le calcul du solde
 courant `solde_ouverture + SOMME(montant)` ne tient que si toutes les
 lignes sont dans la même unité. Si vous détenez le même compte
-physique en deux devises, modélisez-le comme deux comptes Athena.
+physique en deux devises, modélisez-le comme deux comptes Ledger.
 
 Les surfaces par compte (cartes, courbe du solde, soldes
 individuels) restent toujours dans la devise propre au compte. Si
@@ -61,7 +61,7 @@ consolidé unique, activez la section **Multi-devises** au bas des
    contient tous les taux que vous avez saisis. Ajoutez une ligne
    par triplet `(De, Vers, Effectif à partir du)` ; le tableau de
    bord applique à chaque transaction le taux le plus récent
-   effectif à sa date. Les taux sont saisis manuellement (Athena ne
+   effectif à sa date. Les taux sont saisis manuellement (Ledger ne
    récupère pas de cotations en direct).
 
 Les paires manquantes sont signalées sous le sélecteur (*« EUR
@@ -126,7 +126,7 @@ La fenêtre de fusion ne propose que des destinations de même devise.
 Elle déplace toutes les transactions de la source vers la cible,
 additionne le solde d'ouverture de la source à celui de la cible,
 repointe les points de contrôle et les motifs de nom de fichier,
-puis supprime la source. L'action est irréversible ; Athena vous
+puis supprime la source. L'action est irréversible ; Ledger vous
 avertit avant exécution.
 
 Les liens de virement interne entre la source et d'autres comptes
@@ -154,9 +154,9 @@ navigation principale. Quatre sous-onglets :
 | Sous-onglet | Rôle |
 |-------------|------|
 | **Imports** | Déposez vos fichiers OFX / CSV / PDF et regardez-les arriver. Dépôts multi-fichiers, résumé par fichier et journal d'audit des imports précédents vivent ici. Voir [Import](importing.md). |
-| **Doublons** | Athena déduplique silencieusement à l'import, mais si un doublon passe (même jour, même montant, libellé différent), le panneau Doublons présente les candidats côte à côte et vous laisse fusionner ou ignorer. |
+| **Doublons** | Ledger déduplique silencieusement à l'import, mais si un doublon passe (même jour, même montant, libellé différent), le panneau Doublons présente les candidats côte à côte et vous laisse fusionner ou ignorer. |
 | **Modèles PDF** | Les modèles peints par l'assistant lors du premier import. Renommez, inspectez ou supprimez-les ici. Supprimer un modèle renvoie le prochain PDF correspondant vers l'assistant. |
-| **Sauvegarde** | Exportez tout (comptes, catégories, règles, transactions, points de contrôle, journal d'imports) dans une enveloppe JSON unique, ou restaurez depuis une telle enveloppe. La restauration est destructrice — Athena confirme avant d'écraser. Voir [Sauvegarde et restauration](backup-recovery.md). |
+| **Sauvegarde** | Exportez tout (comptes, catégories, règles, transactions, points de contrôle, journal d'imports) dans une enveloppe JSON unique, ou restaurez depuis une telle enveloppe. La restauration est destructrice — Ledger confirme avant d'écraser. Voir [Sauvegarde et restauration](backup-recovery.md). |
 
 L'onglet Données est volontairement le seul endroit qui touche à
 des fichiers. Si vous cherchez un contrôle qui lit ou écrit quelque
