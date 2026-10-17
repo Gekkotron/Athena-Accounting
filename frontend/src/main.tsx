@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, HashRouter } from 'react-router-dom';
@@ -30,11 +30,25 @@ const isDemo = Boolean(import.meta.env.VITE_DEMO);
 const Router = isDemo ? HashRouter : BrowserRouter;
 const routerProps = isDemo ? {} : { basename: import.meta.env.BASE_URL };
 
+// Signals the pre-React splash in index.html (see <style>#splash and the
+// companion inline <script>) that it can start fading out. Mounted INSIDE
+// the Suspense boundary so the event fires only after the first lazy route
+// chunk has resolved and painted real content — otherwise the splash would
+// lift to expose the empty Suspense fallback for a frame.
+function AppReadySignal() {
+  useEffect(() => {
+    document.documentElement.dataset.appReady = '1';
+    document.dispatchEvent(new Event('app:ready'));
+  }, []);
+  return null;
+}
+
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <Router {...routerProps}>
         <Suspense fallback={<div />}>
+          <AppReadySignal />
           <App />
         </Suspense>
       </Router>

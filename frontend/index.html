@@ -7,9 +7,168 @@
     <link rel="icon" type="image/png" href="/owl-logo.png" />
     <link rel="apple-touch-icon" href="/owl-logo.png" />
     <title>Athena Ledger</title>
+    <style>
+      html, body { background: #0b0d11; margin: 0; }
+      #splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #0b0d11;
+        color: #e6e8ed;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        overflow: hidden;
+        transition: opacity 420ms ease-out, visibility 420ms ease-out;
+      }
+      #splash.splash--leaving { opacity: 0; visibility: hidden; }
+      #splash::before, #splash::after {
+        content: ''; position: absolute; inset: 0; pointer-events: none;
+      }
+      #splash::before {
+        background:
+          radial-gradient(620px 420px at 50% 42%, rgba(125, 211, 192, 0.14), transparent 60%),
+          radial-gradient(900px 600px at 115% 115%, rgba(220, 120, 97, 0.05), transparent 60%),
+          radial-gradient(1200px 800px at -10% -10%, rgba(125, 211, 192, 0.05), transparent 60%);
+      }
+      #splash::after {
+        opacity: 0.4; mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      }
+
+      .splash__mark {
+        position: relative;
+        width: 112px; height: 112px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 28px;
+      }
+      .splash__halo {
+        position: absolute; inset: -36px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(125, 211, 192, 0.38), rgba(125, 211, 192, 0) 65%);
+        filter: blur(6px);
+        animation: splash-breathe 3.2s ease-in-out infinite;
+      }
+      .splash__plate {
+        position: relative;
+        width: 112px; height: 112px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, #161a21 0%, #0f1218 100%);
+        box-shadow:
+          0 24px 60px -24px rgba(0, 0, 0, 0.85),
+          0 0 0 1px rgba(125, 211, 192, 0.10),
+          0 1px 0 rgba(255, 255, 255, 0.03) inset;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .splash__img {
+        width: 86px; height: 86px;
+        border-radius: 20px;
+        display: block;
+      }
+      .splash__sheen {
+        position: absolute; inset: 0;
+        border-radius: 26px;
+        pointer-events: none;
+        background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 40%);
+      }
+
+      .splash__word {
+        font-family: Georgia, 'Fraunces Variable', 'Times New Roman', serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 1;
+        letter-spacing: -0.015em;
+        color: #f4f5f8;
+        display: flex; align-items: baseline; gap: 10px;
+      }
+      .splash__word .accent {
+        font-style: italic;
+        color: #7dd3c0;
+        font-weight: 500;
+      }
+
+      .splash__sub {
+        margin-top: 18px;
+        font-size: 10px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: #7c8493;
+        display: flex; align-items: center; gap: 14px;
+      }
+      .splash__sub .bar {
+        width: 32px; height: 1px; background: #272d3b;
+      }
+      .splash__dots { display: inline-flex; gap: 5px; margin-left: 2px; }
+      .splash__dots i {
+        width: 4px; height: 4px; border-radius: 50%; background: #52baa6;
+        display: inline-block;
+        animation: splash-dot 1.3s infinite ease-in-out both;
+      }
+      .splash__dots i:nth-child(2) { animation-delay: 0.15s; }
+      .splash__dots i:nth-child(3) { animation-delay: 0.30s; }
+
+      @keyframes splash-breathe {
+        0%, 100% { opacity: 0.55; transform: scale(1); }
+        50%      { opacity: 1;    transform: scale(1.08); }
+      }
+      @keyframes splash-dot {
+        0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+        40%           { opacity: 1;    transform: translateY(-3px); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .splash__halo, .splash__dots i { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true" role="presentation">
+      <div class="splash__mark">
+        <div class="splash__halo"></div>
+        <div class="splash__plate">
+          <img class="splash__img" src="/owl-logo.png" alt="" />
+          <div class="splash__sheen"></div>
+        </div>
+      </div>
+      <div class="splash__word">
+        <span>Athena</span><span class="accent">Ledger</span>
+      </div>
+      <div class="splash__sub">
+        <span class="bar"></span>
+        <span>Chargement</span>
+        <span class="splash__dots"><i></i><i></i><i></i></span>
+        <span class="bar"></span>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      // Splash lifecycle. The app signals readiness by dispatching
+      // `app:ready` from main.tsx AFTER the first lazy route chunk has
+      // mounted real content — see <Suspense fallback> + AppReadySignal.
+      // That's the only reliable "we have real pixels now" moment, so we
+      // listen for it rather than watching the #root subtree (which would
+      // flip the instant React mounts its empty Suspense fallback).
+      // A hard 8 s safety net removes the splash if something goes wrong.
+      (function () {
+        var splash = document.getElementById('splash');
+        if (!splash) return;
+        var removed = false;
+        var minUntil = Date.now() + 450; // avoid flashing on near-instant loads
+        function leave() {
+          if (removed) return;
+          removed = true;
+          splash.classList.add('splash--leaving');
+          setTimeout(function () {
+            if (splash.parentNode) splash.parentNode.removeChild(splash);
+          }, 500);
+        }
+        function scheduleLeave() {
+          setTimeout(leave, Math.max(0, minUntil - Date.now()));
+        }
+        if (document.documentElement.dataset.appReady === '1') {
+          scheduleLeave();
+        } else {
+          document.addEventListener('app:ready', scheduleLeave, { once: true });
+        }
+        setTimeout(leave, 8000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
