@@ -105,6 +105,10 @@ export function Loans() {
           onDuplicate={openDuplicate}
           onWhatIf={setWhatIf}
           onChangePayment={setChanging}
+          onConverted={(loan) => {
+            setOpenId(loan.id);
+            if (tab === 'simulations') selectTab('loans');
+          }}
         />
       )}
       {editor && (

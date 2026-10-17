@@ -151,4 +151,32 @@ describe.skipIf(!RUN)('/api/loans', () => {
     const self = await app.inject({ method: 'PUT', url: `/api/loans/${id}`, headers: { cookie }, payload: body({ sourceLoanId: id }) });
     expect(self.statusCode).toBe(400);
   });
+
+  describe('POST /api/loans/:id/convert', () => {
+    const convert = (id: number, c = cookie) =>
+      app.inject({ method: 'POST', url: `/api/loans/${id}/convert`, headers: { cookie: c } });
+
+    it('promotes a simulation to a real loan, clearing its source link', async () => {
+      const sourceId = (await create(body())).json().loan.id;
+      const simId = (await create(body({ name: 'Maison — sim', isSimulation: true, sourceLoanId: sourceId }))).json().loan.id;
+      const res = await convert(simId);
+      expect(res.statusCode).toBe(200);
+      const { loan, summary } = res.json();
+      expect(loan).toMatchObject({ id: simId, name: 'Maison — sim', isSimulation: false, sourceLoanId: null });
+      expect(summary.solvedPayment).toBe('1159.92');
+    });
+
+    it('400 when the loan is already real', async () => {
+      const id = (await create(body())).json().loan.id;
+      const res = await convert(id);
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({ error: 'loan is not a simulation' });
+    });
+
+    it('404 on an unknown id or another user\'s simulation', async () => {
+      expect((await convert(999_999)).statusCode).toBe(404);
+      const simId = (await create(body({ name: 'theirs', isSimulation: true }), otherCookie)).json().loan.id;
+      expect((await convert(simId)).statusCode).toBe(404);
+    });
+  });
 });

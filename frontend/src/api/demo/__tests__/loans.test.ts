@@ -73,4 +73,28 @@ describe('demo /api/loans', () => {
     const sim = (await list()).find((l) => l.isSimulation)!;
     expect(sim.sourceLoanId).toBeNull();
   });
+
+  it('converts a simulation into a real loan, clearing its source link', async () => {
+    const sim = (await list()).find((l) => l.isSimulation)!;
+    const res = await api<{ loan: Loan }>(`/api/loans/${sim.id}/convert`, { method: 'POST' });
+    expect(res.loan).toMatchObject({ id: sim.id, isSimulation: false, sourceLoanId: null });
+    const after = await list();
+    expect(after.filter((l) => l.isSimulation)).toHaveLength(0);
+    expect(after.find((l) => l.id === sim.id)!.isSimulation).toBe(false);
+  });
+
+  it('400 when converting a loan that is already real', async () => {
+    const loans = await list();
+    const real = loans.find((l) => !l.isSimulation)!;
+    const err = await api(`/api/loans/${real.id}/convert`, { method: 'POST' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(400);
+    expect((err as ApiError).data).toEqual({ error: 'loan is not a simulation' });
+  });
+
+  it('404 when converting an unknown id', async () => {
+    const err = await api(`/api/loans/999999/convert`, { method: 'POST' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(404);
+  });
 });

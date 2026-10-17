@@ -50,6 +50,10 @@ export function deleteLoan(id: number) {
   return api<{ ok: true }>(`/api/loans/${id}`, { method: 'DELETE' });
 }
 
+export function convertSimulation(id: number) {
+  return api<{ loan: Loan; summary: LoanSummary }>(`/api/loans/${id}/convert`, { method: 'POST' });
+}
+
 export function simulateLoan(terms: LoanTermsInput) {
   return api<LoanSimulation>('/api/loans/simulate', { method: 'POST', json: terms });
 }

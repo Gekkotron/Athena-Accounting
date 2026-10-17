@@ -11,8 +11,9 @@ vi.mock('../../../api/loans', async (orig) => ({
   ...(await orig<typeof import('../../../api/loans')>()),
   getLoan: vi.fn(),
   deleteLoan: vi.fn(),
+  convertSimulation: vi.fn(),
 }));
-import { deleteLoan, getLoan } from '../../../api/loans';
+import { convertSimulation, deleteLoan, getLoan } from '../../../api/loans';
 
 pinLocale('loans', 'common');
 
@@ -44,6 +45,7 @@ function renderDrawer(props: Partial<Parameters<typeof LoanDrawer>[0]> = {}) {
 beforeEach(() => {
   vi.mocked(getLoan).mockReset();
   vi.mocked(deleteLoan).mockReset();
+  vi.mocked(convertSimulation).mockReset();
 });
 
 describe('LoanDrawer', () => {
@@ -84,5 +86,27 @@ describe('LoanDrawer', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Modifier' }));
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ loan }));
     expect(screen.queryByRole('button', { name: 'Et si…' })).toBeNull();
+  });
+
+  it('hides the "Convertir en prêt" button on a real loan', async () => {
+    vi.mocked(getLoan).mockResolvedValue(detail());
+    renderDrawer({ onConverted: vi.fn() });
+    await screen.findByRole('heading', { name: 'Maison' });
+    expect(screen.queryByRole('button', { name: 'Convertir en prêt' })).toBeNull();
+  });
+
+  it('shows "Convertir en prêt" on a simulation and promotes it, then closes', async () => {
+    const sim: Loan = { ...loan, isSimulation: true, name: 'Maison — sim' };
+    const simRes = buildSchedule(sim, '2026-10-16');
+    if (!simRes.ok) throw new Error('fixture invalid');
+    vi.mocked(getLoan).mockResolvedValue({ loan: sim, schedule: simRes.schedule, summary: simRes.summary, warnings: simRes.warnings });
+    const promoted: Loan = { ...sim, isSimulation: false, sourceLoanId: null };
+    vi.mocked(convertSimulation).mockResolvedValue({ loan: promoted, summary: simRes.summary! });
+    const onConverted = vi.fn();
+    const { onClose } = renderDrawer({ onConverted });
+    await userEvent.click(await screen.findByRole('button', { name: 'Convertir en prêt' }));
+    expect(convertSimulation).toHaveBeenCalledWith(4);
+    await vi.waitFor(() => expect(onConverted).toHaveBeenCalledWith(promoted));
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });

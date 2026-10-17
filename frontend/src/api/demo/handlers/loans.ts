@@ -132,6 +132,21 @@ function handleDelete(req: DemoRequest) {
   return { ok: true };
 }
 
+function handleConvert(req: DemoRequest) {
+  const id = Number(req.query.id);
+  const current = loanOrThrow(id);
+  if (!current.isSimulation) {
+    throw new ApiError('loan is not a simulation', 400, { error: 'loan is not a simulation' });
+  }
+  const loan: Loan = { ...current, isSimulation: false, sourceLoanId: null, updatedAt: new Date().toISOString() };
+  setState((s) => {
+    s.loans = (s.loans ?? []).map((l) => (l.id === id ? loan : l));
+  });
+  const res = run(loan);
+  if (!res.ok) invalid(res.errors);
+  return { loan, summary: res.summary };
+}
+
 function handleSimulate(req: DemoRequest) {
   const b = (req.body ?? {}) as Partial<LoanTermsInput>;
   if (!b.finalPeriod || typeof b.principal !== 'string') {
@@ -159,4 +174,5 @@ export function registerLoansHandlers(): void {
   registerHandler('GET', '/api/loans/:id', handleGet);
   registerHandler('PUT', '/api/loans/:id', handleUpdate);
   registerHandler('DELETE', '/api/loans/:id', handleDelete);
+  registerHandler('POST', '/api/loans/:id/convert', handleConvert);
 }

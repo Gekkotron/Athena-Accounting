@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { deleteLoan, getLoan, type LoanDetail } from '../../api/loans';
+import { convertSimulation, deleteLoan, getLoan, type Loan, type LoanDetail } from '../../api/loans';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ErrorState, LoadingBlock } from '../../components/StateBlocks';
 import { SummaryStrip } from './SummaryStrip';
@@ -19,9 +19,10 @@ interface Props {
   onChangePayment?: Action;
   onWhatIf?: Action;
   onDuplicate?: Action;
+  onConverted?: (loan: Loan) => void;
 }
 
-export function LoanDrawer({ id, onClose, onEdit, onChangePayment, onWhatIf, onDuplicate }: Props) {
+export function LoanDrawer({ id, onClose, onEdit, onChangePayment, onWhatIf, onDuplicate, onConverted }: Props) {
   const { t } = useTranslation('loans');
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['loans', 'detail', id], queryFn: () => getLoan(id) });
@@ -30,6 +31,14 @@ export function LoanDrawer({ id, onClose, onEdit, onChangePayment, onWhatIf, onD
     mutationFn: () => deleteLoan(id),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['loans'] });
+      onClose();
+    },
+  });
+  const convert = useMutation({
+    mutationFn: () => convertSimulation(id),
+    onSuccess: async ({ loan }) => {
+      await qc.invalidateQueries({ queryKey: ['loans'] });
+      onConverted?.(loan);
       onClose();
     },
   });
@@ -62,6 +71,16 @@ export function LoanDrawer({ id, onClose, onEdit, onChangePayment, onWhatIf, onD
             {d && actions.map(([key, fn]) => fn && (
               <button key={key} type="button" className="btn-secondary" onClick={() => fn(d)}>{t(key)}</button>
             ))}
+            {d?.loan.isSimulation && onConverted && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => convert.mutate()}
+                disabled={convert.isPending}
+              >
+                {t('actions.convertToLoan')}
+              </button>
+            )}
             {d && (
               <button type="button" className="btn-secondary" onClick={() => setConfirming(true)}>
                 {t('actions.delete')}
