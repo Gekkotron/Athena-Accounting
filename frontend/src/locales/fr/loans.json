@@ -55,10 +55,10 @@
     "comparedWith": "Comparé à {{name}}"
   },
   "chart": {
-    "title": "Capital restant dû dans le temps",
+    "title": "Paiements cumulés dans le temps",
     "today": "Aujourd'hui",
-    "aria": "Capital restant dû de {{from}} à {{to}}",
-    "legend": { "capital": "Capital restant", "interest": "Intérêts cumulés", "insurance": "Assurance cumulée" }
+    "aria": "Répartition des paiements cumulés de {{from}} à {{to}}",
+    "legend": { "capital": "Capital remboursé", "interest": "Intérêts", "insurance": "Assurance" }
   },
   "timeline": {
     "title": "Périodes",

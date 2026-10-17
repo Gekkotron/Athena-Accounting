@@ -54,7 +54,7 @@ describe('LoanDrawer', () => {
     expect(screen.getByText('Capital restant dû')).toBeInTheDocument();
     expect(screen.getByText('Différé partiel')).toBeInTheDocument();
     expect(screen.getByText('calculé')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Capital restant dû/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /paiements cumulés/i })).toBeInTheDocument();
     expect(screen.getByText('2046')).toBeInTheDocument(); // last schedule year group
   });
 

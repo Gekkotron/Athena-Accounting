@@ -23,9 +23,9 @@ export function CapitalChart({ schedule, principal, asOf }: Props) {
       <div className="flex items-baseline justify-between mb-2 gap-3 flex-wrap">
         <h3 className="label">{t('chart.title')}</h3>
         <ul className="flex gap-3 text-[11px] text-ink-400">
-          <li className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-sage-400" />{t('chart.legend.capital')}</li>
-          <li className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-clay-400" />{t('chart.legend.interest')}</li>
-          <li className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-amber-400" />{t('chart.legend.insurance')}</li>
+          <li className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-sage-500" />{t('chart.legend.capital')}</li>
+          <li className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-clay-400" />{t('chart.legend.interest')}</li>
+          <li className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400" />{t('chart.legend.insurance')}</li>
         </ul>
       </div>
       <svg
@@ -35,12 +35,12 @@ export function CapitalChart({ schedule, principal, asOf }: Props) {
         aria-label={t('chart.aria', { from: formatMonth(first.date), to: formatMonth(last.date) })}
         className="w-full h-36"
       >
-        <path d={g.area} className="fill-sage-500/20" />
-        <path d={g.line} className="fill-none stroke-sage-400" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-        <path d={g.interestLine} className="fill-none stroke-clay-400" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-        <path d={g.insuranceLine} className="fill-none stroke-amber-400" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+        <path d={g.capitalArea} className="fill-sage-500/70" />
+        <path d={g.interestArea} className="fill-clay-400/75" />
+        <path d={g.insuranceArea} className="fill-amber-400/80" />
+        <path d={g.totalLine} className="fill-none stroke-ink-100/20" strokeWidth={1} vectorEffect="non-scaling-stroke" />
         {g.boundaries.map((bx) => (
-          <line key={bx} x1={bx} x2={bx} y1={0} y2={H} className="stroke-ink-600"
+          <line key={bx} x1={bx} x2={bx} y1={0} y2={H} className="stroke-ink-100/25"
             strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
         ))}
         {g.todayX !== null && (
@@ -49,7 +49,7 @@ export function CapitalChart({ schedule, principal, asOf }: Props) {
           </line>
         )}
         {g.early.map((p) => (
-          <circle key={`${p.x}-${p.y}`} cx={p.x} cy={p.y} r={3} className="fill-clay-300" />
+          <circle key={`${p.x}-${p.y}`} cx={p.x} cy={p.y} r={3} className="fill-ink-100 stroke-ink-900" strokeWidth={1} />
         ))}
       </svg>
     </section>

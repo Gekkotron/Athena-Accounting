@@ -55,10 +55,10 @@
     "comparedWith": "Compared with {{name}}"
   },
   "chart": {
-    "title": "Capital owed over time",
+    "title": "Cumulative payments over time",
     "today": "Today",
-    "aria": "Capital owed from {{from}} to {{to}}",
-    "legend": { "capital": "Capital owed", "interest": "Interest paid", "insurance": "Insurance paid" }
+    "aria": "Cumulative payment breakdown from {{from}} to {{to}}",
+    "legend": { "capital": "Capital repaid", "interest": "Interest", "insurance": "Insurance" }
   },
   "timeline": {
     "title": "Periods",
