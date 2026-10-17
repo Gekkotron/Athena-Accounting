@@ -178,7 +178,7 @@
     "security": {
       "sectionTitle": "Sécurité",
       "subtitle": "Mot de passe du compte, verrouillage, double facteur et accès MCP.",
-      "postgresPointer": "Le chiffrement au repos protège le fichier de base de données local (PGlite). Cette installation utilise PostgreSQL : la protection du volume de données relève de votre infrastructure serveur — consultez la documentation (https://gekkotron.github.io/Athena-Accounting/docs/users/encryption-at-rest) pour la configuration recommandée (chiffrement du disque, sauvegardes chiffrées).",
+      "postgresPointer": "Le chiffrement au repos protège le fichier de base de données local (PGlite). Cette installation utilise PostgreSQL : la protection du volume de données relève de votre infrastructure serveur — consultez la documentation (https://gekkotron.github.io/Athena-Ledger/docs/users/encryption-at-rest) pour la configuration recommandée (chiffrement du disque, sauvegardes chiffrées).",
       "noRecoveryWarning": "Attention : si vous oubliez ce mot de passe, vos données seront définitivement irrécupérables — sauf si vous disposez d'une sauvegarde exportée au préalable. Il n'existe aucun moyen de réinitialiser ce mot de passe.",
       "disablePending": "La désactivation du chiffrement est programmée : elle prendra effet au prochain démarrage de l'application.",
       "wrongPassword": "Mot de passe incorrect.",

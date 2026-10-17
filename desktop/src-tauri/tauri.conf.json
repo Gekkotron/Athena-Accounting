@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Athena Accounting",
+  "productName": "Athena Ledger",
   "version": "1.0.0-rc.8",
-  "identifier": "com.athena.accounting.desktop",
+  "identifier": "com.athena.ledger.desktop",
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable versions of Athena Accounting are listed here.
+All notable versions of Athena Ledger are listed here.
 
 Format inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project follows [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH`.

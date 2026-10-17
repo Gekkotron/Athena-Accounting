@@ -10,9 +10,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', ['VITE_']);
   const viteDemo = env.VITE_DEMO ?? '';
   const isDemo = viteDemo === '1';
-  // When VITE_DEMO=1 we're building for gh-pages under /Athena-Accounting/demo/.
+  // When VITE_DEMO=1 we're building for gh-pages under /Athena-Ledger/demo/.
   // A build-time base override lets local previews still use '/'.
-  const demoBase = env.VITE_DEMO_BASE ?? '/Athena-Accounting/demo/';
+  const demoBase = env.VITE_DEMO_BASE ?? '/Athena-Ledger/demo/';
   return {
     plugins: [
       react(),
@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['owl-logo.png', 'owl-192.png', 'owl-512.png'],
         manifest: {
-          name: 'Athena Accounting',
+          name: 'Athena Ledger',
           short_name: 'Athena',
           description: 'Personal accounting — self-hosted, LAN-friendly.',
           theme_color: '#0b0d11',

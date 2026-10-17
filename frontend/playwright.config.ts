@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 // E2E smoke for the browser-only demo build. Boots `vite preview` against
 // a fresh `dist-demo/` on port 4173 and runs the specs in `./e2e`.
 //
-// VITE_DEMO_BASE=/ overrides the gh-pages base (`/Athena-Accounting/demo/`)
+// VITE_DEMO_BASE=/ overrides the gh-pages base (`/Athena-Ledger/demo/`)
 // so tests can navigate to `/` directly. VITE_DEMO=1 is set both by the
 // `build:demo` script and here explicitly for `vite preview`, which reloads
 // the config and needs the same env to serve at the overridden base.

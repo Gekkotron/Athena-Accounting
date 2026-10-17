@@ -6,7 +6,7 @@ tags: [release, desktop, docker, tauri]
 draft: true
 ---
 
-Athena Accounting now ships in two flavours from the same repo. The
+Athena Ledger now ships in two flavours from the same repo. The
 family-server Docker stack you already know is unchanged. Alongside it,
 there's a new **desktop app** — a single download for macOS, Windows,
 or Linux, no Docker, no prerequisites, single user.
@@ -76,7 +76,7 @@ Two decisions worth calling out:
 ## Getting it
 
 - **Desktop app** — download from the
-  [latest release](https://github.com/Gekkotron/Athena-Accounting/releases/latest)
+  [latest release](https://github.com/Gekkotron/Athena-Ledger/releases/latest)
   and follow the [desktop install guide](/docs/users/desktop-install).
 - **Docker stack** — clone the repo and follow the
   [getting-started guide](/docs/users/getting-started).
@@ -93,4 +93,4 @@ Two decisions worth calling out:
 
 Feedback, bugs, and "it doesn't work on my
 &lt;distro/window-manager/CPU-arch&gt;" reports are welcome on the
-[issue tracker](https://github.com/Gekkotron/Athena-Accounting/issues).
+[issue tracker](https://github.com/Gekkotron/Athena-Ledger/issues).

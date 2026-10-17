@@ -21,7 +21,7 @@ const PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Athena Accounting</title>
+<title>Athena Ledger</title>
 <style>
   body { font-family: system-ui, sans-serif; display: flex; align-items: center;
          justify-content: center; height: 100vh; margin: 0; background: #111827; color: #e5e7eb; }
@@ -39,7 +39,7 @@ const PAGE = `<!doctype html>
 </head>
 <body>
 <form id="unlock-form">
-  <h1>Athena Accounting</h1>
+  <h1>Athena Ledger</h1>
   <label for="password">Mot de passe</label>
   <input type="password" id="password" name="password" autofocus autocomplete="current-password" />
   <button type="submit">Déverrouiller</button>

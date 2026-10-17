@@ -18,13 +18,13 @@ instead.
 
 Pick the file for your OS from the latest release:
 
-- **[Latest release on GitHub](https://github.com/Gekkotron/Athena-Accounting/releases/latest)**
+- **[Latest release on GitHub](https://github.com/Gekkotron/Athena-Ledger/releases/latest)**
 
 | OS | File |
 |----|------|
-| macOS (Apple Silicon or Intel) | `Athena-Accounting_<version>_universal.dmg` |
-| Windows 10 / 11 (x64) | `Athena-Accounting_<version>_x64-setup.exe` |
-| Linux (x64) | `Athena-Accounting_<version>_amd64.AppImage` |
+| macOS (Apple Silicon or Intel) | `Athena-Ledger_<version>_universal.dmg` |
+| Windows 10 / 11 (x64) | `Athena-Ledger_<version>_x64-setup.exe` |
+| Linux (x64) | `Athena-Ledger_<version>_amd64.AppImage` |
 
 Each artifact is built by the `Release` GitHub Actions workflow straight
 from a tagged commit on `main` — the same `vX.Y.Z` release also carries
@@ -41,16 +41,16 @@ ID yet). That's enough for the signature to be valid, but macOS Sonoma
 further — any browser-downloaded artifact carries a
 `com.apple.quarantine` extended attribute, and on those OS versions
 Gatekeeper refuses to launch ad-hoc-signed quarantined apps, with the
-misleading *"Athena Accounting est endommagé et ne peut pas être
+misleading *"Athena Ledger est endommagé et ne peut pas être
 ouvert"* dialog. Right-click → Open no longer bypasses this.
 
 The one-shot cure is a single Terminal command that strips the quarantine
 attribute:
 
-1. Open the `.dmg` and drag **Athena Accounting** into `Applications`.
+1. Open the `.dmg` and drag **Athena Ledger** into `Applications`.
 2. Open **Terminal** and run:
    ```bash
-   xattr -cr "/Applications/Athena Accounting.app"
+   xattr -cr "/Applications/Athena Ledger.app"
    ```
 3. Double-click the app in Finder. It launches normally from now on.
 
@@ -71,7 +71,7 @@ of this will be needed.
 
 ### Linux
 
-1. Mark the `.AppImage` executable: `chmod +x Athena-Accounting_*.AppImage`.
+1. Mark the `.AppImage` executable: `chmod +x Athena-Ledger_*.AppImage`.
 2. Double-click it, or run it from a terminal.
 
 ### After the window opens
@@ -93,9 +93,9 @@ leaves that directory; there is no network traffic beyond localhost.
 
 | OS | Path |
 |----|------|
-| macOS | `~/Library/Application Support/Athena Accounting/` |
-| Windows | `%APPDATA%\Athena Accounting\` (typically `C:\Users\<you>\AppData\Roaming\Athena Accounting\`) |
-| Linux | `~/.local/share/Athena Accounting/` (or `$XDG_DATA_HOME/Athena Accounting/` if set) |
+| macOS | `~/Library/Application Support/Athena Ledger/` |
+| Windows | `%APPDATA%\Athena Ledger\` (typically `C:\Users\<you>\AppData\Roaming\Athena Ledger\`) |
+| Linux | `~/.local/share/Athena Ledger/` (or `$XDG_DATA_HOME/Athena Ledger/` if set) |
 
 Inside you'll find:
 
@@ -132,12 +132,12 @@ scrapes it. Use a calendar reminder instead.
 ## Uninstall
 
 - **macOS** — drag the app to the Trash, then delete
-  `~/Library/Application Support/Athena Accounting/` if you also want
+  `~/Library/Application Support/Athena Ledger/` if you also want
   your data gone.
-- **Windows** — *Settings → Apps → Athena Accounting → Uninstall*, then
-  delete `%APPDATA%\Athena Accounting\` for the data.
+- **Windows** — *Settings → Apps → Athena Ledger → Uninstall*, then
+  delete `%APPDATA%\Athena Ledger\` for the data.
 - **Linux** — delete the `.AppImage`, then delete
-  `~/.local/share/Athena Accounting/`.
+  `~/.local/share/Athena Ledger/`.
 
 ## MCP from the desktop app
 

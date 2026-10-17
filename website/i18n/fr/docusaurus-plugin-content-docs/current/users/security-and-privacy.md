@@ -42,7 +42,7 @@ vos transactions — et les noms d'utilisateur sont uniques, donc personne ne
 peut s'enregistrer par-dessus le vôtre. L'inscription est limitée en débit
 (rate-limit) ; pour bloquer entièrement les nouvelles inscriptions,
 restreignez l'accès via un pare-feu ou un VPN (voir
-[SECURITY.md](https://github.com/Gekkotron/Athena-Accounting/blob/main/SECURITY.md)).
+[SECURITY.md](https://github.com/Gekkotron/Athena-Ledger/blob/main/SECURITY.md)).
 
 **Chemin Desktop.** Le build Tauri tourne avec `AUTH_MODE=none` : pas de
 cookies, pas d'écran de connexion, un unique utilisateur local est semé

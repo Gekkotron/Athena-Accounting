@@ -22,8 +22,8 @@ $ErrorActionPreference = 'Stop'
 Start-Process -FilePath (Resolve-Path $Installer) -ArgumentList '/S' -Wait
 
 $roots = @(
-  (Join-Path $env:LOCALAPPDATA 'Athena Accounting'),
-  (Join-Path $env:ProgramFiles 'Athena Accounting')
+  (Join-Path $env:LOCALAPPDATA 'Athena Ledger'),
+  (Join-Path $env:ProgramFiles 'Athena Ledger')
 )
 $exe = $null
 foreach ($root in $roots) {
@@ -37,7 +37,7 @@ foreach ($root in $roots) {
 if (-not $exe) { throw "installed exe not found under: $($roots -join ', ')" }
 Write-Host "launching: $($exe.FullName)"
 
-$dataDir = Join-Path $env:APPDATA 'com.athena.accounting.desktop'
+$dataDir = Join-Path $env:APPDATA 'com.athena.ledger.desktop'
 $portFile = Join-Path $dataDir '.mcp-port'
 Remove-Item -Force -ErrorAction SilentlyContinue $portFile
 

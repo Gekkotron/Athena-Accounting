@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Démo interactive
 
-Une version d'Athena Accounting tourne directement dans votre navigateur.
+Une version d'Athena Ledger tourne directement dans votre navigateur.
 Pas de compte, pas d'installation, pas de serveur : tout ce que vous
 faites est enregistré uniquement dans `localStorage` (sur votre machine,
 dans votre navigateur, isolé du reste du web).
@@ -25,7 +25,7 @@ dans votre navigateur, isolé du reste du web).
 
 <p style={{ textAlign: 'center', margin: '2rem 0' }}>
   <a
-    href="/Athena-Accounting/demo/"
+    href="/Athena-Ledger/demo/"
     className="button button--primary button--lg"
   >
     Ouvrir la démo →

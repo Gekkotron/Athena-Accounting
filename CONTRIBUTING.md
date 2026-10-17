@@ -1,4 +1,4 @@
-# Contributing to Athena Accounting
+# Contributing to Athena Ledger
 
 Thanks for your interest in the project. This document covers how to file
 issues, how to open pull requests, and what to expect from the maintainer.
@@ -105,7 +105,7 @@ git push --no-verify
 
 ## Maintainer bandwidth
 
-Athena Accounting is maintained by a single person in spare time. That means:
+Athena Ledger is maintained by a single person in spare time. That means:
 
 - Issue triage and PR review may take days, occasionally weeks.
 - Larger features may be closed with a "not in scope" note — please open an

@@ -267,7 +267,7 @@ pub fn run() {
                 .parse()
                 .expect("valid loopback url");
             WebviewWindowBuilder::new(&handle, "main", WebviewUrl::External(url))
-                .title("Athena Accounting")
+                .title("Athena Ledger")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(900.0, 600.0)
                 .resizable(true)

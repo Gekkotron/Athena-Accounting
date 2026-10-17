@@ -56,7 +56,7 @@
     "description": "SR-only heading above the dashboard screenshot"
   },
   "home.product.alt": {
-    "message": "Tableau de bord Athena Accounting : courbe de solde, camembert par catégorie, diagramme de Sankey, aperçus mensuels.",
+    "message": "Tableau de bord Athena Ledger : courbe de solde, camembert par catégorie, diagramme de Sankey, aperçus mensuels.",
     "description": "Alt text for the dashboard screenshot"
   },
   "home.product.caption": {
@@ -124,7 +124,7 @@
     "description": "Signature line at the bottom of the closing block"
   },
   "home.meta.title": {
-    "message": "Athena Accounting — un livre de comptes privé et auto-hébergé",
+    "message": "Athena Ledger — un livre de comptes privé et auto-hébergé",
     "description": "HTML <title> for the homepage"
   },
   "home.meta.description": {

@@ -30,7 +30,7 @@ describe('SettingsSecurity', () => {
   it('postgres driver shows only the pointer paragraph, no forms', async () => {
     apiMock.mockResolvedValue({ driver: 'postgres', encrypted: false, pendingDisable: false });
     renderPanel();
-    expect(await screen.findByText(/Athena-Accounting\/docs\/users\/encryption-at-rest/)).toBeInTheDocument();
+    expect(await screen.findByText(/Athena-Ledger\/docs\/users\/encryption-at-rest/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Activer le chiffrement' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Mot de passe')).not.toBeInTheDocument();
   });

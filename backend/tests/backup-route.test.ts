@@ -110,7 +110,7 @@ describe.skipIf(!RUN)('/api/backup', () => {
       await seedSomeData();
       const dump = await exportDump();
       expect(dump.version).toBe(4);
-      expect(dump.instance).toBe('athena-accounting');
+      expect(dump.instance).toBe('athena-ledger');
       expect(dump.counts.accounts).toBeGreaterThanOrEqual(1);
       expect(dump.counts.categories).toBeGreaterThanOrEqual(1);
       expect(dump.counts.rules).toBe(1);

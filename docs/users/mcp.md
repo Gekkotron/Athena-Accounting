@@ -59,7 +59,7 @@ Claude Desktop and several other MCP clients):
   "mcpServers": {
     "athena": {
       "command": "node",
-      "args": ["/absolute/path/to/Athena-Accounting/mcp/dist/index.js"],
+      "args": ["/absolute/path/to/Athena-Ledger/mcp/dist/index.js"],
       "env": {
         "ATHENA_API_URL": "http://<mini-pc-host>:8001",
         "ATHENA_MCP_USER": "<your-athena-username>",
@@ -96,7 +96,7 @@ bridge at the port file the app writes on startup:
   "mcpServers": {
     "athena": {
       "command": "node",
-      "args": ["/absolute/path/to/Athena-Accounting/mcp/dist/index.js"],
+      "args": ["/absolute/path/to/Athena-Ledger/mcp/dist/index.js"],
       "env": {
         "ATHENA_PORT_FILE": "<DATA_DIR>/.mcp-port",
         "ATHENA_MCP_USER": "<your-athena-username>",
@@ -110,9 +110,9 @@ bridge at the port file the app writes on startup:
 `<DATA_DIR>` is where the desktop app stores its data — the same folder that
 holds `athena.db`. Defaults per OS:
 
-- macOS: `~/Library/Application Support/com.athena.accounting.desktop/`
-- Linux: `~/.local/share/com.athena.accounting.desktop/`
-- Windows: `%APPDATA%\com.athena.accounting.desktop\`
+- macOS: `~/Library/Application Support/com.athena.ledger.desktop/`
+- Linux: `~/.local/share/com.athena.ledger.desktop/`
+- Windows: `%APPDATA%\com.athena.ledger.desktop\`
 
 The bridge reads the port from that file each time it starts, so opening and
 closing the desktop app between MCP client sessions works transparently. If

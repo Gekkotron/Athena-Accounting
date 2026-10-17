@@ -178,7 +178,7 @@
     "security": {
       "sectionTitle": "Security",
       "subtitle": "Account password, lock screen, two-factor authentication, and MCP access.",
-      "postgresPointer": "Encryption at rest protects the local database file (PGlite). This installation uses PostgreSQL, so protecting the data volume is up to your server infrastructure — see the documentation (https://gekkotron.github.io/Athena-Accounting/docs/users/encryption-at-rest) for the recommended setup (disk encryption, encrypted backups).",
+      "postgresPointer": "Encryption at rest protects the local database file (PGlite). This installation uses PostgreSQL, so protecting the data volume is up to your server infrastructure — see the documentation (https://gekkotron.github.io/Athena-Ledger/docs/users/encryption-at-rest) for the recommended setup (disk encryption, encrypted backups).",
       "noRecoveryWarning": "Warning: if you forget this password, your data will be permanently unrecoverable — unless you have a backup exported beforehand. There is no way to reset this password.",
       "disablePending": "Disabling encryption is scheduled: it will take effect the next time the application starts.",
       "wrongPassword": "Incorrect password.",

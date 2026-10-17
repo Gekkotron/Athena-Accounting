@@ -14,8 +14,8 @@ option pour une meilleure boucle de dev, Node 20.
 Clonez et générez les secrets :
 
 ```bash
-git clone https://github.com/Gekkotron/Athena-Accounting.git
-cd Athena-Accounting
+git clone https://github.com/Gekkotron/Athena-Ledger.git
+cd Athena-Ledger
 ./install.sh
 ```
 

@@ -29,9 +29,9 @@ plus rien à récupérer.
 
 - **Application bureau (Tauri).** Le fichier PGlite `athena.db` vit
   dans `$DATA_DIR`, qui vaut par défaut :
-  - macOS : `~/Library/Application Support/Athena Accounting/`
-  - Linux : `~/.local/share/Athena Accounting/`
-  - Windows : `%APPDATA%\Athena Accounting\`
+  - macOS : `~/Library/Application Support/Athena Ledger/`
+  - Linux : `~/.local/share/Athena Ledger/`
+  - Windows : `%APPDATA%\Athena Ledger\`
   (Athena crée le dossier au premier lancement.)
 - **Serveur familial (Docker).** Le volume nommé `athena_pgdata` est
   monté sur `/var/lib/postgresql/data` dans le conteneur Postgres.
@@ -198,7 +198,7 @@ sur une base PGlite temporaire (210 transactions, 2 comptes, 8
 catégories, 5 règles, 3 budgets, 1 checkpoint), hash l'état avant
 export, restaure le fichier téléchargé, puis re-hash. Les deux
 empreintes doivent correspondre. Le rapport de la dernière exécution
-vit dans [`docs/dev/backup-drill-report.md`](https://github.com/Gekkotron/Athena-Accounting/blob/main/docs/dev/backup-drill-report.md).
+vit dans [`docs/dev/backup-drill-report.md`](https://github.com/Gekkotron/Athena-Ledger/blob/main/docs/dev/backup-drill-report.md).
 
 ## Voir aussi
 

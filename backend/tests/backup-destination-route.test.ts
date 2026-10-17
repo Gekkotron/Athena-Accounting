@@ -159,7 +159,7 @@ describe.skipIf(!RUN)('/api/backup/destination', () => {
     expect(filename).toMatch(/^athena-backup-\d{4}-\d{2}-\d{2}-\d{6,9}\.enc\.json$/);
     const envelope = JSON.parse((await readFile(join(dir, filename))).toString()) as EncryptedEnvelope;
     const dump = JSON.parse(decryptEnvelope(envelope, PASSPHRASE));
-    expect(dump.instance).toBe('athena-accounting');
+    expect(dump.instance).toBe('athena-ledger');
     const get = await app.inject({
       method: 'GET',
       url: '/api/backup/destination',
@@ -281,7 +281,7 @@ describe.skipIf(!RUN)('/api/backup/destination', () => {
       const stored = ftp.files.get(filename);
       expect(stored).toBeDefined();
       const dump = JSON.parse(decryptEnvelope(JSON.parse(stored!.toString()) as EncryptedEnvelope, PASSPHRASE));
-      expect(dump.instance).toBe('athena-accounting');
+      expect(dump.instance).toBe('athena-ledger');
 
       // Password encrypted at rest.
       const rows = await db
@@ -380,7 +380,7 @@ describe.skipIf(!RUN)('/api/backup/destination', () => {
       expect(run.statusCode).toBe(200);
       const stored = ftp.files.get(run.json().filename);
       const dump = JSON.parse(decryptEnvelope(JSON.parse(stored!.toString()) as EncryptedEnvelope, PASSPHRASE));
-      expect(dump.instance).toBe('athena-accounting');
+      expect(dump.instance).toBe('athena-ledger');
     } finally {
       await ftp.close();
       await db.delete(schema.backupDestinations).where(eq(schema.backupDestinations.userId, userAId));

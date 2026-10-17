@@ -1,7 +1,7 @@
-# Athena Accounting
+# Athena Ledger
 
-[![CI](https://github.com/Gekkotron/Athena-Accounting/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gekkotron/Athena-Accounting/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Gekkotron/Athena-Accounting/graph/badge.svg?token=Im41zFoBmH)](https://codecov.io/gh/Gekkotron/Athena-Accounting)
+[![CI](https://github.com/Gekkotron/Athena-Ledger/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gekkotron/Athena-Ledger/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Gekkotron/Athena-Ledger/graph/badge.svg?token=Im41zFoBmH)](https://codecov.io/gh/Gekkotron/Athena-Ledger)
 
 **Self-hosted personal finance for people who want YNAB-style budgeting
 without a cloud account.** Imports every statement format your bank
@@ -35,7 +35,7 @@ your box, your rules.
 
 ## Try the demo
 
-[![Try the demo](https://img.shields.io/badge/Try%20the%20demo-in%20your%20browser-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Accounting/demo/)
+[![Try the demo](https://img.shields.io/badge/Try%20the%20demo-in%20your%20browser-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Ledger/demo/)
 
 A fully interactive Athena runs directly in your browser — no account,
 no install, no server. All state lives in `localStorage`; a **Reset
@@ -45,7 +45,7 @@ plausible French bank data.
 
 ## Documentation
 
-[![Read the docs](https://img.shields.io/badge/Read%20the%20docs-online-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started)
+[![Read the docs](https://img.shields.io/badge/Read%20the%20docs-online-8b5cf6?style=for-the-badge)](https://gekkotron.github.io/Athena-Ledger/docs/users/getting-started)
 
 The same content also lives in [`docs/`](docs/README.md) in the repo,
 split into a user track (install, importing, dashboard, security), a
@@ -59,7 +59,7 @@ how you want to use Athena:
 
 [![Docker install](https://img.shields.io/badge/Install-Docker%20%28family%20server%29-2496ed?logo=docker&logoColor=white)](docs/users/getting-started.md)
 [![Desktop install](https://img.shields.io/badge/Install-Desktop%20app%20%28solo%20user%29-4b8bbe?logo=tauri&logoColor=white)](docs/users/desktop-install.md)
-[![Latest release](https://img.shields.io/github/v/release/Gekkotron/Athena-Accounting?label=Latest%20release&color=brightgreen)](https://github.com/Gekkotron/Athena-Accounting/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/Gekkotron/Athena-Ledger?label=Latest%20release&color=brightgreen)](https://github.com/Gekkotron/Athena-Ledger/releases/latest)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Gekkotron)
 
 - **Family server (Docker).** Runs the full stack (Postgres + Fastify +
@@ -256,7 +256,7 @@ libraries and why each one).
 ```
 
 `update-release.sh` resolves the newest published
-[release](https://github.com/Gekkotron/Athena-Accounting/releases), pins
+[release](https://github.com/Gekkotron/Athena-Ledger/releases), pins
 it in `.env`, pulls the multi-arch (amd64 + arm64) images from GHCR, and
 starts the stack — re-run it any time to update (it backs up the
 database first). Set `TZ=Europe/Paris` (your zone) in `.env` so
@@ -425,7 +425,7 @@ labels.
 
 ## Roadmap
 
-Athena Accounting is a solo-maintained side project. The roadmap below is a
+Athena Ledger is a solo-maintained side project. The roadmap below is a
 **direction of travel**, not a schedule — see [`CHANGELOG.md`](CHANGELOG.md)
 for what's landed, [`STATUS.md`](STATUS.md) for the most recent work, and
 [`TODO.md`](TODO.md) for the raw brainstorm behind the v2 candidates.

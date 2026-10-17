@@ -60,7 +60,7 @@ export function TotpSection(): JSX.Element | null {
           application authentificateur (Google Authenticator, Aegis, 1Password…).{' '}
           <a
             className="text-sage-300 hover:text-sage-200 underline-offset-2 hover:underline"
-            href="https://gekkotron.github.io/Athena-Accounting/docs/users/two-factor-auth"
+            href="https://gekkotron.github.io/Athena-Ledger/docs/users/two-factor-auth"
             target="_blank"
             rel="noopener noreferrer"
           >Guide complet</a>.

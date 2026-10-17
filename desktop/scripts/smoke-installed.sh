@@ -24,7 +24,7 @@ set -euo pipefail
 ARTIFACT="${1:?usage: smoke-installed.sh <path to .dmg or .deb>}"
 # Absolute path — the Linux branch runs it from a different cwd.
 ARTIFACT="$(cd "$(dirname "$ARTIFACT")" && pwd)/$(basename "$ARTIFACT")"
-IDENTIFIER="com.athena.accounting.desktop"
+IDENTIFIER="com.athena.ledger.desktop"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORK="$(mktemp -d)"
 APP_PID=""

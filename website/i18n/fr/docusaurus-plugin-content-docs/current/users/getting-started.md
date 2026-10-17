@@ -69,8 +69,8 @@ Athena n'a **pas** besoin de nom de domaine, de certificat TLS ou d'IP publique.
 Clonez le dépôt et lancez le script d'installation :
 
 ```bash
-git clone https://github.com/Gekkotron/Athena-Accounting.git
-cd Athena-Accounting
+git clone https://github.com/Gekkotron/Athena-Ledger.git
+cd Athena-Ledger
 ./install.sh
 ```
 
@@ -80,7 +80,7 @@ Puis lancez la stack — deux options :
 
 ### Option A — images précompilées (recommandé)
 
-Chaque [release](https://github.com/Gekkotron/Athena-Accounting/releases) publie des images Docker multi-arch (amd64 + arm64) sur GHCR : rien à compiler sur l'hôte, pas besoin de Node :
+Chaque [release](https://github.com/Gekkotron/Athena-Ledger/releases) publie des images Docker multi-arch (amd64 + arm64) sur GHCR : rien à compiler sur l'hôte, pas besoin de Node :
 
 ```bash
 ./update-release.sh
@@ -141,10 +141,10 @@ Vous faites déjà tourner la stack construite depuis les sources ? `./update-re
 Vous pouvez le brancher sur un cron pour un auto-update homelab léger ; une cadence raisonnable est une fois par jour aux heures creuses :
 
 ```cron
-0 4 * * * /path/to/Athena-Accounting/update.sh >> /var/log/athena-update.log 2>&1
+0 4 * * * /path/to/Athena-Ledger/update.sh >> /var/log/athena-update.log 2>&1
 ```
 
-Les utilisateurs de la version bureau mettent à jour en téléchargeant le dernier installateur depuis la [page Releases](https://github.com/Gekkotron/Athena-Accounting/releases) et en le lançant par-dessus l'application existante — le dossier de données est intact.
+Les utilisateurs de la version bureau mettent à jour en téléchargeant le dernier installateur depuis la [page Releases](https://github.com/Gekkotron/Athena-Ledger/releases) et en le lançant par-dessus l'application existante — le dossier de données est intact.
 
 ## Vos dix premières minutes
 

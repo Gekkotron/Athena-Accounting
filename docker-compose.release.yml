@@ -37,7 +37,7 @@ services:
       retries: 20
 
   backend:
-    image: ghcr.io/gekkotron/athena-accounting-backend:${ATHENA_VERSION:-latest}
+    image: ghcr.io/gekkotron/athena-ledger-backend:${ATHENA_VERSION:-latest}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -58,7 +58,7 @@ services:
       - "${BACKEND_PORT:-8001}:3000"
 
   frontend:
-    image: ghcr.io/gekkotron/athena-accounting-frontend:${ATHENA_VERSION:-latest}
+    image: ghcr.io/gekkotron/athena-ledger-frontend:${ATHENA_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       - backend

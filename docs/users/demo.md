@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Interactive demo
 
-A version of Athena Accounting runs directly in your browser. No account, no install, no server: everything you do is saved only in `localStorage` (on your machine, in your browser, walled off from the rest of the web).
+A version of Athena Ledger runs directly in your browser. No account, no install, no server: everything you do is saved only in `localStorage` (on your machine, in your browser, walled off from the rest of the web).
 
 - The default dataset covers the last six months of a fictional profile (two accounts, ~180 transactions, budgets, categories, rules).
 - Sample-data labels — category, envelope and account names — are in French because the fictional profile is based in France. The UI itself follows whatever language you pick from the switcher, top-right of the sidebar.
@@ -16,7 +16,7 @@ A version of Athena Accounting runs directly in your browser. No account, no ins
 
 <p style={{ textAlign: 'center', margin: '2rem 0' }}>
   <a
-    href="/Athena-Accounting/demo/"
+    href="/Athena-Ledger/demo/"
     className="button button--primary button--lg"
   >
     Open the demo →

@@ -227,8 +227,8 @@ or an antivirus quarantined it mid-write.
 
 ```sh
 # macOS
-mv "~/Library/Application Support/Athena Accounting/athena.db" \
-   "~/Library/Application Support/Athena Accounting/athena.db.corrupt"
+mv "~/Library/Application Support/Athena Ledger/athena.db" \
+   "~/Library/Application Support/Athena Ledger/athena.db.corrupt"
 ```
 
 Relaunch the app, go through onboarding, then use **Settings → Data →
@@ -474,7 +474,7 @@ design — no email server, no external dependency).
 ### macOS Gatekeeper blocks the first launch
 
 **Symptom.** Double-clicking the downloaded `.dmg` or `.app` produces
-a dialog like *"Athena Accounting cannot be opened because Apple
+a dialog like *"Athena Ledger cannot be opened because Apple
 cannot check it for malicious software"*.
 
 **Cause.** The build is signed but not notarised for every macOS
@@ -484,7 +484,7 @@ signing certificate.
 **Fix.** Right-click the app icon → **Open** (not double-click) —
 this shows an "Open anyway" dialog that only appears via the right-
 click path. Alternatively: **System Settings → Privacy & Security**,
-scroll to the "Athena Accounting was blocked…" message, click **Open
+scroll to the "Athena Ledger was blocked…" message, click **Open
 anyway**.
 
 ### App won't start after an update
@@ -514,7 +514,7 @@ certificate the updater doesn't trust.
 
 **Fix.** Cancel the in-app update, download the latest installer
 directly from
-[GitHub Releases](https://github.com/Gekkotron/Athena-Accounting/releases),
+[GitHub Releases](https://github.com/Gekkotron/Athena-Ledger/releases),
 and install over the current version — your local data is
 preserved.
 

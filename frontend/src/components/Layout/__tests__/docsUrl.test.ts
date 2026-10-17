@@ -38,7 +38,7 @@ describe('docsSlugFor', () => {
 describe('docsUrlFor', () => {
   it('prepends the users-docs base URL', () => {
     expect(docsUrlFor('/rules/list')).toBe(
-      'https://gekkotron.github.io/Athena-Accounting/docs/users/categorization',
+      'https://gekkotron.github.io/Athena-Ledger/docs/users/categorization',
     );
   });
 });

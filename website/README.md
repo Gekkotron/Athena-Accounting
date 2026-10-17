@@ -1,6 +1,6 @@
-# Athena Accounting website
+# Athena Ledger website
 
-Docusaurus site published to <https://gekkotron.github.io/Athena-Accounting/>.
+Docusaurus site published to <https://gekkotron.github.io/Athena-Ledger/>.
 
 ## Local development
 
@@ -10,7 +10,7 @@ npm install
 npm run start
 ```
 
-Opens http://localhost:3000/Athena-Accounting/.
+Opens http://localhost:3000/Athena-Ledger/.
 
 ## Build
 

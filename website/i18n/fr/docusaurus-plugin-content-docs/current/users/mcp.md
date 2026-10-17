@@ -38,7 +38,7 @@ Pointez votre client MCP vers le serveur construit, en passant les trois variabl
   "mcpServers": {
     "athena": {
       "command": "node",
-      "args": ["/chemin/absolu/vers/Athena-Accounting/mcp/dist/index.js"],
+      "args": ["/chemin/absolu/vers/Athena-Ledger/mcp/dist/index.js"],
       "env": {
         "ATHENA_API_URL": "http://<mini-pc-host>:8001",
         "ATHENA_MCP_USER": "<votre-nom-utilisateur-athena>",
@@ -68,7 +68,7 @@ La distribution bureau lie Fastify à `127.0.0.1` sur un port assigné par l'OS,
   "mcpServers": {
     "athena": {
       "command": "node",
-      "args": ["/chemin/absolu/vers/Athena-Accounting/mcp/dist/index.js"],
+      "args": ["/chemin/absolu/vers/Athena-Ledger/mcp/dist/index.js"],
       "env": {
         "ATHENA_PORT_FILE": "<DATA_DIR>/.mcp-port",
         "ATHENA_MCP_USER": "<votre-nom-utilisateur-athena>",
@@ -81,9 +81,9 @@ La distribution bureau lie Fastify à `127.0.0.1` sur un port assigné par l'OS,
 
 `<DATA_DIR>` est l'endroit où l'application bureau stocke ses données — le même dossier qui contient `athena.db`. Valeurs par défaut par OS :
 
-- macOS : `~/Library/Application Support/com.athena.accounting.desktop/`
-- Linux : `~/.local/share/com.athena.accounting.desktop/`
-- Windows : `%APPDATA%\com.athena.accounting.desktop\`
+- macOS : `~/Library/Application Support/com.athena.ledger.desktop/`
+- Linux : `~/.local/share/com.athena.ledger.desktop/`
+- Windows : `%APPDATA%\com.athena.ledger.desktop\`
 
 Le pont lit le port depuis ce fichier à chaque démarrage, donc ouvrir et fermer l'application bureau entre les sessions du client MCP fonctionne de manière transparente. Si `ATHENA_API_URL` et `ATHENA_PORT_FILE` sont tous les deux définis, `ATHENA_API_URL` prend le pas.
 

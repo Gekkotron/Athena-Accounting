@@ -120,7 +120,7 @@ This is the standard "characterization test before refactor" pattern from *Worki
 **Skeleton:**
 
 ```markdown
-# Status — Athena Accounting
+# Status — Athena Ledger
 
 _Last updated: YYYY-MM-DD_
 

@@ -10,12 +10,12 @@ artifacts, checksums, and auto-generated changelog — lives on GitHub:
 
 <p>
   <a
-    href="https://github.com/Gekkotron/Athena-Accounting/releases"
+    href="https://github.com/Gekkotron/Athena-Ledger/releases"
     target="_blank"
     rel="noopener noreferrer"
   >
     <img
-      src="https://img.shields.io/github/v/release/Gekkotron/Athena-Accounting?label=All%20releases%20on%20GitHub&color=brightgreen&style=for-the-badge"
+      src="https://img.shields.io/github/v/release/Gekkotron/Athena-Ledger?label=All%20releases%20on%20GitHub&color=brightgreen&style=for-the-badge"
       alt="All releases on GitHub"
     />
   </a>
@@ -25,7 +25,7 @@ The pages below are **milestone deep-dives** — a note is written for a
 release only when there's something worth explaining in prose
 (packaging pivots, Gatekeeper workarounds, major surface expansions).
 Routine release-candidate re-cuts live only in the
-[`CHANGELOG.md`](https://github.com/Gekkotron/Athena-Accounting/blob/main/CHANGELOG.md)
+[`CHANGELOG.md`](https://github.com/Gekkotron/Athena-Ledger/blob/main/CHANGELOG.md)
 at the root of the repo.
 
 ## Milestone notes

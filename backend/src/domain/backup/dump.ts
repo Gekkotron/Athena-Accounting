@@ -87,7 +87,7 @@ export async function buildDump(uid: number) {
     const dump = {
       version: VERSION,
       exportedAt: new Date().toISOString(),
-      instance: 'athena-accounting',
+      instance: 'athena-ledger',
       counts: {
         accounts: accs.length,
         categories: cats.length,

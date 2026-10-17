@@ -3,11 +3,11 @@ title: Documentation home
 sidebar_position: 0
 ---
 
-# Athena-Accounting Documentation
+# Athena-Ledger Documentation
 
-Athena-Accounting is self-hosted personal accounting for people who
+Athena-Ledger is self-hosted personal accounting for people who
 want their bank data to stay on their own network. This is the deep
-dive; if you just want to install and run, the [top-level README](https://github.com/Gekkotron/Athena-Accounting#readme)
+dive; if you just want to install and run, the [top-level README](https://github.com/Gekkotron/Athena-Ledger#readme)
 covers the quickstart.
 
 The docs are split into two tracks and a reference bucket.
@@ -58,7 +58,7 @@ Pure lookup, no narrative.
 
 ## Not what you're looking for?
 
-- The **[top-level README](https://github.com/Gekkotron/Athena-Accounting#readme)** is the entry point for
+- The **[top-level README](https://github.com/Gekkotron/Athena-Ledger#readme)** is the entry point for
   installing Athena.
-- **Bugs and requests** live on the [issue tracker](https://github.com/Gekkotron/Athena-Accounting/issues).
+- **Bugs and requests** live on the [issue tracker](https://github.com/Gekkotron/Athena-Ledger/issues).
 - If Athena helps you, consider **[sponsoring the project](https://github.com/sponsors/Gekkotron)**.

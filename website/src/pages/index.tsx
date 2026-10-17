@@ -87,7 +87,7 @@ function HeroCtas() {
         </Translate>
       </Link>
       <Link
-        href="https://github.com/Gekkotron/Athena-Accounting"
+        href="https://github.com/Gekkotron/Athena-Ledger"
         className={styles.ctaTextLink}>
         <Translate id="home.cta.source" description="Tertiary CTA — view source">
           View the source
@@ -138,7 +138,7 @@ function ProductShot() {
           alt={translate({
             id: 'home.product.alt',
             message:
-              'Athena Accounting dashboard: balance curve, category donut, Sankey flow, monthly insights.',
+              'Athena Ledger dashboard: balance curve, category donut, Sankey flow, monthly insights.',
           })}
         />
       </div>
@@ -215,7 +215,7 @@ export default function Home(): React.JSX.Element {
     <Layout
       title={translate({
         id: 'home.meta.title',
-        message: 'Athena Accounting — a private, self-hosted ledger',
+        message: 'Athena Ledger — a private, self-hosted ledger',
       })}
       description={translate({
         id: 'home.meta.description',

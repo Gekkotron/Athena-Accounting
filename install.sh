@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Athena Accounting — installer
+# Athena Ledger — installer
 #
 # Generates a .env file with cryptographically random secrets.
 # Idempotent: refuses to overwrite an existing .env unless --force is passed.

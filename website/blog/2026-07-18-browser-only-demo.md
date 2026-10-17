@@ -5,9 +5,9 @@ authors: [Gekkotron]
 tags: [demo, release, frontend]
 ---
 
-Athena Accounting now has a fully interactive demo running in the
+Athena Ledger now has a fully interactive demo running in the
 browser at
-[**gekkotron.github.io/Athena-Accounting/demo/**](https://gekkotron.github.io/Athena-Accounting/demo/).
+[**gekkotron.github.io/Athena-Ledger/demo/**](https://gekkotron.github.io/Athena-Ledger/demo/).
 No account, no server, no download. Everything the app does — dashboard,
 transactions, budgets, categorisation, rules — is wired to a
 localStorage-backed adapter and pre-seeded with six months of plausible
@@ -61,7 +61,7 @@ The docs workflow now builds the demo alongside the Docusaurus site
 and merges `frontend/dist-demo/` into `website/build/demo/`. Both
 deploy through the same GitHub Pages step, so the docs URL and the
 demo URL share the same origin. The demo's Vite `base` is set to
-`/Athena-Accounting/demo/` so hashed asset URLs resolve; the router's
+`/Athena-Ledger/demo/` so hashed asset URLs resolve; the router's
 `basename` reads the same value from `import.meta.env.BASE_URL`.
 
 ## What it doesn't do

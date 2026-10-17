@@ -13,13 +13,13 @@ Si vous voulez un serveur familial auquel tout le foyer se connecte, sautez cett
 
 Choisissez le fichier correspondant à votre OS dans la dernière release :
 
-- **[Dernière release sur GitHub](https://github.com/Gekkotron/Athena-Accounting/releases/latest)**
+- **[Dernière release sur GitHub](https://github.com/Gekkotron/Athena-Ledger/releases/latest)**
 
 | OS | Fichier |
 |----|---------|
-| macOS (Apple Silicon ou Intel) | `Athena-Accounting_<version>_universal.dmg` |
-| Windows 10 / 11 (x64) | `Athena-Accounting_<version>_x64-setup.exe` |
-| Linux (x64) | `Athena-Accounting_<version>_amd64.AppImage` |
+| macOS (Apple Silicon ou Intel) | `Athena-Ledger_<version>_universal.dmg` |
+| Windows 10 / 11 (x64) | `Athena-Ledger_<version>_x64-setup.exe` |
+| Linux (x64) | `Athena-Ledger_<version>_amd64.AppImage` |
 
 Chaque artefact est construit par le workflow GitHub Actions `desktop-release` directement depuis un commit tagué sur `main`. Les sommes de contrôle sont publiées à côté des artefacts, sur la même page de release.
 
@@ -27,9 +27,9 @@ Chaque artefact est construit par le workflow GitHub Actions `desktop-release` d
 
 ### macOS
 
-1. Ouvrez le `.dmg` et glissez **Athena Accounting** dans `Applications`.
-2. Au premier lancement, macOS affiche *« Athena Accounting can't be opened because Apple cannot check it for malicious software »* — l'application n'est pas encore signée avec un certificat Apple Developer. Fermez la boîte de dialogue, puis clic droit sur l'app dans le Finder → **Ouvrir** → **Ouvrir** dans la nouvelle boîte de dialogue. macOS mémorise votre choix ; les lancements suivants se font par un double-clic normal.
-3. Si Gatekeeper refuse malgré le clic droit → Ouvrir, exécutez une fois depuis un terminal : `xattr -dr com.apple.quarantine "/Applications/Athena Accounting.app"`.
+1. Ouvrez le `.dmg` et glissez **Athena Ledger** dans `Applications`.
+2. Au premier lancement, macOS affiche *« Athena Ledger can't be opened because Apple cannot check it for malicious software »* — l'application n'est pas encore signée avec un certificat Apple Developer. Fermez la boîte de dialogue, puis clic droit sur l'app dans le Finder → **Ouvrir** → **Ouvrir** dans la nouvelle boîte de dialogue. macOS mémorise votre choix ; les lancements suivants se font par un double-clic normal.
+3. Si Gatekeeper refuse malgré le clic droit → Ouvrir, exécutez une fois depuis un terminal : `xattr -dr com.apple.quarantine "/Applications/Athena Ledger.app"`.
 
 ### Windows
 
@@ -38,7 +38,7 @@ Chaque artefact est construit par le workflow GitHub Actions `desktop-release` d
 
 ### Linux
 
-1. Rendez le `.AppImage` exécutable : `chmod +x Athena-Accounting_*.AppImage`.
+1. Rendez le `.AppImage` exécutable : `chmod +x Athena-Ledger_*.AppImage`.
 2. Double-cliquez, ou lancez-le depuis un terminal.
 
 ### Une fois la fenêtre ouverte
@@ -53,9 +53,9 @@ L'application écrit tout — le fichier PGlite, les relevés importés, les exp
 
 | OS | Chemin |
 |----|--------|
-| macOS | `~/Library/Application Support/Athena Accounting/` |
-| Windows | `%APPDATA%\Athena Accounting\` (typiquement `C:\Users\<vous>\AppData\Roaming\Athena Accounting\`) |
-| Linux | `~/.local/share/Athena Accounting/` (ou `$XDG_DATA_HOME/Athena Accounting/` si défini) |
+| macOS | `~/Library/Application Support/Athena Ledger/` |
+| Windows | `%APPDATA%\Athena Ledger\` (typiquement `C:\Users\<vous>\AppData\Roaming\Athena Ledger\`) |
+| Linux | `~/.local/share/Athena Ledger/` (ou `$XDG_DATA_HOME/Athena Ledger/` si défini) |
 
 À l'intérieur, vous trouverez :
 
@@ -77,9 +77,9 @@ La métrique Prometheus `athena_backup_last_success_timestamp_seconds` que le mo
 
 ## Désinstaller
 
-- **macOS** — glissez l'application dans la corbeille, puis supprimez `~/Library/Application Support/Athena Accounting/` si vous voulez aussi effacer vos données.
-- **Windows** — *Paramètres → Applications → Athena Accounting → Désinstaller*, puis supprimez `%APPDATA%\Athena Accounting\` pour les données.
-- **Linux** — supprimez le `.AppImage`, puis supprimez `~/.local/share/Athena Accounting/`.
+- **macOS** — glissez l'application dans la corbeille, puis supprimez `~/Library/Application Support/Athena Ledger/` si vous voulez aussi effacer vos données.
+- **Windows** — *Paramètres → Applications → Athena Ledger → Désinstaller*, puis supprimez `%APPDATA%\Athena Ledger\` pour les données.
+- **Linux** — supprimez le `.AppImage`, puis supprimez `~/.local/share/Athena Ledger/`.
 
 ## MCP depuis l'application bureau
 

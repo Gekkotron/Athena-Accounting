@@ -37,7 +37,7 @@ app on your network can create their own account from the login screen
 can never see your transactions — and usernames are unique, so nobody can
 register over the top of yours. Registration is rate-limited; if you want
 to stop new sign-ups entirely, restrict access with a firewall or VPN (see
-[SECURITY.md](https://github.com/Gekkotron/Athena-Accounting/blob/main/SECURITY.md)).
+[SECURITY.md](https://github.com/Gekkotron/Athena-Ledger/blob/main/SECURITY.md)).
 
 **Desktop path.** The Tauri build runs with `AUTH_MODE=none`: no cookies,
 no login screen, a single hard-coded local user is seeded on first boot.

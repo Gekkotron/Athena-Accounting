@@ -84,8 +84,8 @@ IP. It runs on your LAN and stays there.
 Clone the repo and run the install script:
 
 ```bash
-git clone https://github.com/Gekkotron/Athena-Accounting.git
-cd Athena-Accounting
+git clone https://github.com/Gekkotron/Athena-Ledger.git
+cd Athena-Ledger
 ./install.sh
 ```
 
@@ -97,7 +97,7 @@ Then bring the stack up — two options:
 
 ### Option A — prebuilt images (recommended)
 
-Every [release](https://github.com/Gekkotron/Athena-Accounting/releases)
+Every [release](https://github.com/Gekkotron/Athena-Ledger/releases)
 publishes multi-arch (amd64 + arm64) Docker images to GHCR, so the host
 needs no Node and compiles nothing:
 
@@ -193,11 +193,11 @@ You can wire it to a cron for a light-touch homelab auto-update; a
 sensible cadence is once a day off-peak:
 
 ```cron
-0 4 * * * /path/to/Athena-Accounting/update.sh >> /var/log/athena-update.log 2>&1
+0 4 * * * /path/to/Athena-Ledger/update.sh >> /var/log/athena-update.log 2>&1
 ```
 
 Desktop users update by downloading the latest installer from the
-[Releases page](https://github.com/Gekkotron/Athena-Accounting/releases)
+[Releases page](https://github.com/Gekkotron/Athena-Ledger/releases)
 and running it over the existing app — the data directory is untouched.
 
 ## Your first ten minutes

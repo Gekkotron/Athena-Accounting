@@ -71,10 +71,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: athena-accounting-backend
+          - image: athena-ledger-backend
             context: ./backend
             dockerfile: backend/Dockerfile
-          - image: athena-accounting-frontend
+          - image: athena-ledger-frontend
             # Repo-root context, same reason as docker-compose.yml:
             # frontend/tsconfig.json includes ../shared/**/*.ts, which is
             # invisible with context=./frontend.
@@ -406,11 +406,11 @@ jobs:
             echo "Prebuilt multi-arch images (amd64 + arm64) for this release:"
             echo ""
             echo '```sh'
-            echo "docker pull ghcr.io/gekkotron/athena-accounting-backend:${version}"
-            echo "docker pull ghcr.io/gekkotron/athena-accounting-frontend:${version}"
+            echo "docker pull ghcr.io/gekkotron/athena-ledger-backend:${version}"
+            echo "docker pull ghcr.io/gekkotron/athena-ledger-frontend:${version}"
             echo '```'
             echo ""
-            echo "Run them with [\`docker-compose.release.yml\`](https://github.com/Gekkotron/Athena-Accounting/blob/v${version}/docker-compose.release.yml) — no local build needed. See the README quickstart."
+            echo "Run them with [\`docker-compose.release.yml\`](https://github.com/Gekkotron/Athena-Ledger/blob/v${version}/docker-compose.release.yml) — no local build needed. See the README quickstart."
           } >> release-notes.md
 
       - name: Create GitHub Release

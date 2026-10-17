@@ -1,4 +1,4 @@
-const DOCS_BASE = 'https://gekkotron.github.io/Athena-Accounting/docs/users/';
+const DOCS_BASE = 'https://gekkotron.github.io/Athena-Ledger/docs/users/';
 
 const ROUTE_SLUGS: readonly (readonly [string, string])[] = [
   ['/transactions', 'walkthroughs/categorise-transactions'],

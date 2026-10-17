@@ -56,7 +56,7 @@ export function DemoUnavailableModal() {
           <button className="btn-ghost" onClick={() => setOpen(false)}>Fermer</button>
           <a
             className="btn-primary"
-            href="https://gekkotron.github.io/Athena-Accounting/docs/users/getting-started"
+            href="https://gekkotron.github.io/Athena-Ledger/docs/users/getting-started"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}

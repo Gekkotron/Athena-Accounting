@@ -3,15 +3,15 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'Athena Accounting',
+  title: 'Athena Ledger',
   tagline: 'Self-hosted personal accounting. Your bank data never leaves your network.',
   favicon: 'img/logo.png',
 
   url: 'https://gekkotron.github.io',
-  baseUrl: '/Athena-Accounting/',
+  baseUrl: '/Athena-Ledger/',
 
   organizationName: 'Gekkotron',
-  projectName: 'Athena-Accounting',
+  projectName: 'Athena-Ledger',
   trailingSlash: false,
 
   onBrokenLinks: 'throw',
@@ -42,7 +42,7 @@ const config: Config = {
           routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
           editUrl: ({ docPath }) =>
-            `https://github.com/Gekkotron/Athena-Accounting/edit/main/docs/${docPath}`,
+            `https://github.com/Gekkotron/Athena-Ledger/edit/main/docs/${docPath}`,
           exclude: [
             '**/_*.{js,jsx,ts,tsx,md,mdx}',
             '**/_*/**',
@@ -54,7 +54,7 @@ const config: Config = {
         },
         blog: {
           showReadingTime: true,
-          blogTitle: 'Athena Accounting blog',
+          blogTitle: 'Athena Ledger blog',
           blogDescription: 'Release notes and news',
         },
         theme: {
@@ -72,9 +72,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'Athena Accounting',
+      title: 'Athena Ledger',
       logo: {
-        alt: 'Athena Accounting logo',
+        alt: 'Athena Ledger logo',
         src: 'img/logo.png',
       },
       items: [
@@ -85,10 +85,10 @@ const config: Config = {
         // `pathname://` prefix tells Docusaurus not to route this
         // through its own SPA router, so the link falls through to a
         // full document load and the demo bundle boots on its own.
-        { href: 'pathname:///Athena-Accounting/demo/', label: 'Live demo', position: 'left' },
+        { href: 'pathname:///Athena-Ledger/demo/', label: 'Live demo', position: 'left' },
         { type: 'localeDropdown', position: 'right' },
         {
-          href: 'https://github.com/Gekkotron/Athena-Accounting',
+          href: 'https://github.com/Gekkotron/Athena-Ledger',
           label: 'GitHub',
           position: 'right',
         },
@@ -108,19 +108,19 @@ const config: Config = {
         {
           title: 'Community',
           items: [
-            { label: 'Issues', href: 'https://github.com/Gekkotron/Athena-Accounting/issues' },
+            { label: 'Issues', href: 'https://github.com/Gekkotron/Athena-Ledger/issues' },
             { label: 'Sponsor', href: 'https://github.com/sponsors/Gekkotron' },
           ],
         },
         {
           title: 'More',
           items: [
-            { label: 'GitHub', href: 'https://github.com/Gekkotron/Athena-Accounting' },
+            { label: 'GitHub', href: 'https://github.com/Gekkotron/Athena-Ledger' },
             { label: 'Blog', to: '/blog' },
           ],
         },
       ],
-      copyright: `Athena Accounting. Built by Gekkotron. MIT licensed.`,
+      copyright: `Athena Ledger. Built by Gekkotron. MIT licensed.`,
     },
     prism: {
       // Light — subtle; Dark — Nord/Oceanic-style tones that read well on the

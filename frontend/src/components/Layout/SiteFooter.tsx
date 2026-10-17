@@ -39,10 +39,10 @@ export function SiteFooter() {
   return (
     <footer className="mt-16 pt-6 border-t border-ink-800/60 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-ink-500">
       <div className="flex items-center gap-1.5">
-        <span>Athena Accounting</span>
+        <span>Athena Ledger</span>
         <span aria-hidden>·</span>
         <a
-          href="https://github.com/Gekkotron/Athena-Accounting"
+          href="https://github.com/Gekkotron/Athena-Ledger"
           target="_blank"
           rel="noopener noreferrer"
           className={linkClass}

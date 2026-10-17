@@ -14,8 +14,8 @@ dev loop) Node 20 installed.
 Clone and generate secrets:
 
 ```bash
-git clone https://github.com/Gekkotron/Athena-Accounting.git
-cd Athena-Accounting
+git clone https://github.com/Gekkotron/Athena-Ledger.git
+cd Athena-Ledger
 ./install.sh
 ```
 

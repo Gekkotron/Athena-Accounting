@@ -3,7 +3,7 @@
 **Date:** 2026-07-10
 **Status:** Design approved, awaiting user review
 **Author:** Gekkotron + Claude (brainstorming session)
-**Parent programme:** Athena Accounting full redesign (spec 1 of 7)
+**Parent programme:** Athena Ledger full redesign (spec 1 of 7)
 
 ## Context
 

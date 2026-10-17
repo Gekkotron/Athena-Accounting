@@ -112,7 +112,7 @@ describe('runUnlockServer', () => {
     expect(home.status).toBe(200);
     expect(home.headers.get('content-type')).toContain('text/html');
     const html = await home.text();
-    expect(html).toContain('Athena Accounting');
+    expect(html).toContain('Athena Ledger');
     expect(html).toContain('Mot de passe');
     expect(html).toContain('Déverrouiller');
     expect(html).toContain('Mot de passe incorrect');

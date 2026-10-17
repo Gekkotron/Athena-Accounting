@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you believe you've found a security vulnerability in Athena Accounting,
+If you believe you've found a security vulnerability in Athena Ledger,
 please report it privately rather than opening a public issue.
 
 - **Contact:** `60887050+Gekkotron@users.noreply.github.com`
@@ -19,7 +19,7 @@ disclose publicly, whether or not a fix has shipped.
 
 ## No SLA
 
-Athena Accounting is a **solo-maintainer, open-source project** with no paid
+Athena Ledger is a **solo-maintainer, open-source project** with no paid
 support and no service-level agreement. Reports will be triaged on a
 best-effort basis, and response times may vary. Critical issues are
 prioritized, but there is no guaranteed time-to-fix.
@@ -31,7 +31,7 @@ pre-release builds are not maintained.
 
 ## Threat model
 
-Athena Accounting is designed as a **single-tenant, LAN-only** deployment
+Athena Ledger is designed as a **single-tenant, LAN-only** deployment
 (a home mini-PC, an intranet server, or similar). By default:
 
 - The frontend and backend containers bind to **every host interface**

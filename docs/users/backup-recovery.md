@@ -14,9 +14,9 @@ Export files contain the full set of your accounts, transactions, rules and budg
 ## Where is the database?
 
 - **Desktop app (Tauri).** The PGlite file `athena.db` lives in `$DATA_DIR`, which defaults to:
-  - macOS: `~/Library/Application Support/Athena Accounting/`
-  - Linux: `~/.local/share/Athena Accounting/`
-  - Windows: `%APPDATA%\Athena Accounting\`
+  - macOS: `~/Library/Application Support/Athena Ledger/`
+  - Linux: `~/.local/share/Athena Ledger/`
+  - Windows: `%APPDATA%\Athena Ledger\`
   (Athena creates the folder on first launch.)
 - **Home server (Docker).** The named volume `athena_pgdata` is mounted at `/var/lib/postgresql/data` in the Postgres container. Backing up the raw volume is possible, but the JSON export described below is more portable — it works across versions and restores just as well onto the desktop app as onto Docker.
 
@@ -138,7 +138,7 @@ If you don't have a recent export, `athena.db.corrupt` can sometimes be read by 
 
 ## Proof of correctness
 
-The script `backend/scripts/backup-drill.ts` runs a round-trip on a temporary PGlite database (210 transactions, 2 accounts, 8 categories, 5 rules, 3 budgets, 1 checkpoint), hashes the state before exporting, restores the downloaded file, then re-hashes. The two fingerprints must match. The report from the latest run lives in [`docs/dev/backup-drill-report.md`](https://github.com/Gekkotron/Athena-Accounting/blob/main/docs/dev/backup-drill-report.md).
+The script `backend/scripts/backup-drill.ts` runs a round-trip on a temporary PGlite database (210 transactions, 2 accounts, 8 categories, 5 rules, 3 budgets, 1 checkpoint), hashes the state before exporting, restores the downloaded file, then re-hashes. The two fingerprints must match. The report from the latest run lives in [`docs/dev/backup-drill-report.md`](https://github.com/Gekkotron/Athena-Ledger/blob/main/docs/dev/backup-drill-report.md).
 
 ## See also
 

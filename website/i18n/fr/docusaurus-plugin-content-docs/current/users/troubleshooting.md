@@ -248,8 +248,8 @@ d'écriture.
 
 ```sh
 # macOS
-mv "~/Library/Application Support/Athena Accounting/athena.db" \
-   "~/Library/Application Support/Athena Accounting/athena.db.corrupt"
+mv "~/Library/Application Support/Athena Ledger/athena.db" \
+   "~/Library/Application Support/Athena Ledger/athena.db.corrupt"
 ```
 
 Relancez l'application, passez par l'onboarding, puis utilisez
@@ -521,7 +521,7 @@ pas de serveur SMTP, pas de dépendance externe).
 ### Gatekeeper macOS bloque le premier lancement
 
 **Symptôme.** Double-cliquer sur le `.dmg` ou l'`.app` téléchargé
-produit une boîte de dialogue du style *« Athena Accounting ne peut
+produit une boîte de dialogue du style *« Athena Ledger ne peut
 pas être ouvert car Apple ne peut pas vérifier qu'il ne contient pas
 de logiciel malveillant »*.
 
@@ -533,7 +533,7 @@ vis d'un certificat de signature récent.
 double-clic) — ce chemin fait apparaître une boîte « Ouvrir quand
 même » qui n'apparaît pas au double-clic. Alternative : **Réglages
 Système → Confidentialité et sécurité**, descendez jusqu'au message
-« Athena Accounting a été bloqué… », cliquez sur **Ouvrir quand
+« Athena Ledger a été bloqué… », cliquez sur **Ouvrir quand
 même**.
 
 ### L'application ne démarre plus après une mise à jour
@@ -548,7 +548,7 @@ PGlite, ou l'updater n'a pas pu terminer l'écrasement d'une
 ressource.
 
 **Correction.** Forcez la fermeture de toutes les instances en cours
-d'exécution (macOS : `⌘⌥⎋` → Athena Accounting → Forcer à quitter ;
+d'exécution (macOS : `⌘⌥⎋` → Athena Ledger → Forcer à quitter ;
 Windows : Gestionnaire de tâches → Fin de tâche sur chaque processus
 Athena). Relancez. Si le crash se répète, suivez
 [`athena.db` est corrompu](#athenadb-est-corrompu-application-bureau) — le
@@ -566,7 +566,7 @@ certificat auquel l'updater ne fait pas confiance.
 
 **Correction.** Annulez la mise à jour dans l'application, téléchargez
 le dernier installeur directement depuis
-[GitHub Releases](https://github.com/Gekkotron/Athena-Accounting/releases),
+[GitHub Releases](https://github.com/Gekkotron/Athena-Ledger/releases),
 et installez par-dessus la version courante — vos données locales
 sont conservées.
 

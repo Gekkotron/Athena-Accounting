@@ -7,7 +7,7 @@
 ## Goals
 
 - Make the React frontend translatable, shipping English and French on day one, with a file layout that supports additional languages by dropping in a new locale folder.
-- Publish a public documentation site at `https://gekkotron.github.io/Athena-Accounting/` that reads the existing `docs/` tree, offers a language switcher, and can host release notes and a landing page.
+- Publish a public documentation site at `https://gekkotron.github.io/Athena-Ledger/` that reads the existing `docs/` tree, offers a language switcher, and can host release notes and a landing page.
 - Keep the app 100% functional in French throughout the migration — English coverage grows page by page, never regresses French UX.
 
 ## Non-goals
@@ -76,7 +76,7 @@ frontend/src/
 **Directory layout**
 
 ```
-Athena-Accounting/
+Athena-Ledger/
 ├── docs/                                # existing MD files (English source, unchanged)
 │   ├── users/            # translated
 │   ├── reference/        # EN only
@@ -98,9 +98,9 @@ Athena-Accounting/
 
 **Config essentials** (`website/docusaurus.config.ts`)
 - `url: 'https://gekkotron.github.io'`
-- `baseUrl: '/Athena-Accounting/'`
-- `organizationName: 'Gekkotron'`, `projectName: 'Athena-Accounting'`
-- `presets: [['classic', { docs: { path: '../docs', sidebarPath: './sidebars.ts', editUrl: 'https://github.com/Gekkotron/Athena-Accounting/edit/main/' }, blog: {}, theme: { customCss: './src/css/custom.css' } }]]`
+- `baseUrl: '/Athena-Ledger/'`
+- `organizationName: 'Gekkotron'`, `projectName: 'Athena-Ledger'`
+- `presets: [['classic', { docs: { path: '../docs', sidebarPath: './sidebars.ts', editUrl: 'https://github.com/Gekkotron/Athena-Ledger/edit/main/' }, blog: {}, theme: { customCss: './src/css/custom.css' } }]]`
 - `i18n: { defaultLocale: 'en', locales: ['en', 'fr'] }`
 - Navbar: logo + "Docs" (→ `/docs/users/getting-started`) + "Blog" + language dropdown + GitHub link.
 
@@ -142,7 +142,7 @@ Twelve files across `users/`, `reference/`, `contributors/`. `README.md` files i
   5. `actions/upload-pages-artifact@v3` with `path: website/build`
   6. `actions/deploy-pages@v4`
 - **Repo settings**: Settings → Pages → Source = "GitHub Actions" (one-time manual step, documented in the follow-up commit's message).
-- **Result**: site live at `https://gekkotron.github.io/Athena-Accounting/`.
+- **Result**: site live at `https://gekkotron.github.io/Athena-Ledger/`.
 
 ## Migration plan
 
